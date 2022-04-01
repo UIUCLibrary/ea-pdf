@@ -15,6 +15,11 @@ EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "DArcMail", "DArcMail\DArcMail.pyproj", "{27A815E6-00A3-4B5C-863A-946EC0012B68}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SampleFiles", "SampleFiles", "{0C7BCAA5-D029-4DC8-9134-1C215F4E471E}"
+	ProjectSection(SolutionItems) = preProject
+		SampleFiles\DLF Distributed Library = SampleFiles\DLF Distributed Library
+		SampleFiles\Drafts = SampleFiles\Drafts
+		SampleFiles\Inbox = SampleFiles\Inbox
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
