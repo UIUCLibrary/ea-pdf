@@ -1,0 +1,85 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="doc.css">
+</head>
+<body>
+<center><a href="index.html">Help Top</a></center>
+
+<h1>Searching for messages</h1>
+<blockquote>
+<p><ul>
+<li>You can search for messages using any combination of
+the search boxes in the search form.
+If you supply values for two or more
+of the search boxes, then the search must match all of the values you supply
+(that is, non-empty search boxes are logically AND'ed in the search).
+<li>All text fields are automatically wild-carded at the beginning and end.
+<li>The "Data From" field is wild-carded as follows: "2014" is interpreted as "2014-01-01",
+and "2014-03" is interpreted as "2014-03-01".
+<li>The "Data To" field is wild-carded as follows: "2014" is interpreted as "2014-12-31",
+and "2014-03" is interpreted as "2014-03-31".
+<li>"From", "To", and "Cc" fields will search both email addresses and email names
+(see <a href="address.html">Address</a> for treatment of addresses and names).
+<li>Text searches are case-insensitive.
+<li>You can search on attachment names even if the attachment itself is stored externally.
+As a text field that is automatically wild-carded, if you supply the string ".jpg"
+in the "Attachment Name" field, the search will find all messages with at least one
+part that is an attachment having ".jpg" in the attachment name.
+<li>If you supply a search string for the "Body Text" field, only messages
+with Content-Type text/plain and text/html will be searched, and only content
+that is stored internally will be searched.
+<p>Note that message content is stored
+(and therefore searched)
+in its original transfer encoding. Content-Type 'text/html' is usually encoded as
+'<a href="http://en.wikipedia.org/wiki/Quoted-printable">quoted-printable</a>';
+this may affect your search results. In addition,
+if you specify a search of 'text/html' content, your search may match
+html tags which are not in fact visible in the rendered html.
+A message part with Content-Type 'text/html' is usually accompanied by a part containing
+the same information with Content-Type 'text/plain'. For all these reasons,
+you will probably prefer to restrict your search to 'text/plain'.
+<li>If you do not supply any search string, the search will match all messages.
+</ul>
+</blockquote>
+
+<h1>Message List</h1>
+<blockquote>
+<p>A message search results in a list of messages that match the search;
+a pop-up dialog will inform you if there are no messages matching the search.
+<p>Each row in a message list has a checkbox for selecting the message, a numeric message id
+that is hyperlinked to a Message Info page, the date of the message, and the subject of the
+message. Long message lists are paged, with pagination links appearing at the top of the page.
+To the left of the pagination list is a pulldown that allows you to select or deselect all the
+messages on the current page. The selection status of a message is preserved for the duration
+of a login session (even if the relevant message list page is deleted),
+but the selection status is not retained across login sessions. You can change the selection status of
+a message multiple times in a login session.
+<p>There are only two functions associated with selection status:
+<ol>
+<li>Selection status can be used as a criterion in a message search.
+<li>Selection status determines which messages are determined in an
+<a href="export_mbox.html">export</a>.
+(but note that at the point of export, you can decide whether to export
+all messages that ARE selected or all messages that ARE NOT selected).
+</ol>
+</blockquote>
+
+<h1>Message info page</h1>
+<blockquote>
+<p>A message info page has two parts:
+<ol>
+<li>The top part of the page some attributes of the message,
+including information from these MBOX header lines "Message-Id:",
+"Date:", "Subject:", "From:", "To:", and if present, "Cc:", "Bcc:", and "In-Reply-To:".
+If the message has an "In-Reply-To:" header and if the replied-to message is in the
+DArcMail database, then the message id of the replied-to message is hyperlinked to its
+message info page. If the message itself has replies, then the text "Get Replies" (or "Get Reply")
+is hyperlinked to a list of the replying messages.
+<li>The bottom part of the page lists the message parts. See <a href="content.html">Message Content</a>
+for information on the structure of the message content list.
+</ol>
+</blockquote>
+
+<center><a href="index.html">Help Top</a></center>
+
+</body>

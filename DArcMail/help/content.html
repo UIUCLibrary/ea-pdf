@@ -1,0 +1,70 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="doc.css">
+</head>
+<body>
+<center><a href="index.html">Help Top</a></center>
+
+<h1>Message content</h1>
+<blockquote>
+<p>An MBOX message may have just one body part or it may have multiple body parts
+(with a Content-Type of multipart/alternative or multipart/mixed or multipart/related or multipart/report, etc.)
+If a message is multipart, then its first part is simply the multipart container whose contents are the other parts.
+A multipart message part (a "container" part)
+does not appear in the message content list at the bottom of a DArcMail message info page.
+<p>Each message part that is not itself a multipart is shown in the message content list if it is not empty
+(that is, if it has a length > 0)
+<p>
+<ul>
+</ul>
+</blockquote>
+
+<h1>The message content list</h1>
+<blockquote>
+The message content list shows these fields for each non-empty, non-multipart message part:
+<ul>
+<li>Action. This is 'view', 'download', or 'show path'.
+<ul>
+<li>If the Content-Type of the message part is 'text/html' or 'text/plain'
+AND either
+<blockquote>
+(a) the Storage is 'internal' OR
+</blockquote>
+<blockquote>
+(b) Storage is 'external' and the external file
+is visible from the computer on which the DArcMail application is running.
+</blockquote>
+then the action is 'view', meaning that you can view the content directly
+in the DArcMail application.
+<li>If the Content-Type is not 'text/plain' or 'text/html' AND either
+<blockquote>
+(a) the Storage is 'internal' OR
+</blockquote>
+<blockquote>
+(b) Storage is 'external' and the external file
+is visible from the computer on which the DArcMail application is running,
+</blockquote>
+then the action is 'download'.
+<li>If the Storage is 'external' and the external file is NOT visible from
+the computer on which the DArcMail application is running,
+then the action is 'show path', meaning that DArcMail will show the full path of the
+external file in a separate window.
+</ul>
+<p>If a message part has a Content-Transfer-Encoding of
+'<a href="http://en.wikipedia.org/wiki/Base64">base64</a> or
+'<a href="http://en.wikipedia.org/wiki/Quoted-printable">quoted-printable</a>',
+DArcMail will decode the content to its original representation before viewing or downloading.
+<li>Content-Type. This is the MIME type of the message part,
+as given in the Content-Type header of the message part.
+If a message part has Content-Type 'text/html' the preceding or following message part
+may be a 'text/plain' rendering of the same information.
+<li>Content Length. This is the length of the content, in bytes.
+<li>Original Name. DArcMail preserves the original names of attachments.
+<li>Part Id. This is the sequential part number assigned in the original MBOX format input.
+If there is numbering gap in the Part Id column, then the missing
+part was a multipart "container", or it was a part with zero length.
+</ul>
+</blockquote>
+
+<center><a href="index.html">Help Top</a></center>
+</body>

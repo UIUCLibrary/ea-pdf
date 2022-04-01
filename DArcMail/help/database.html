@@ -1,0 +1,42 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="doc.css">
+</head>
+<body>
+<center><a href="index.html">Help Top</a></center>
+
+<h1>When is the Database Required?</h1>
+<blockquote>
+<p>If you only want to
+convert MBOX files to XML using the DArcMailXml or CmdDArcMailXml programs,
+then you do not need a database. But if you want
+to search an account for messages, view message content, and export message subsets,
+then you need the DArcMail program and database.
+The DArcMail program uses SQLite as the database.
+</blockquote>
+
+<h1>SQLite</h1>
+<blockquote>
+<p><a href="https://sqlite.org">SQLite</a> is a widely-used, open-source, light-weight SQL database. Like the proprietary Microsoft Access,
+SQLite is a file-based system, with all the data for a single database being contained
+in a single host file. Application-programming interface (API) libraries to the SQLite database
+engine are freely available in current programming languages
+(Java, Python, Perl, C, C++, Ruby). As there are no database installation or maintenance procedures,
+there is no requirement for database administration experience.
+<ul>
+<li>The SQLite API does not require a userid and password to access data.
+Rather, access
+privileges to a SQLite database file are determined by the privileges that the host
+operating system has granted to a host-defined userid for the given SQLite database file.
+<li>An SQLite database file can be stored anywhere in the host file system, and it can
+be moved, copied, or deleted using ordinary operating system commands (assuming the
+user has the appropriate privileges).
+</ul>
+</blockquote>
+
+<h1>Accounts and Database Files</h1>
+<blockquote>
+An email account is stored in one SQLite database file, and a single SQLite database file can contain only one email account. The contents of a DArcMal email account depend depend entirely on the host file structure. In DArcMail, an email account includes all the MBOX files contained directly or indirectly in the <a href="directory.html">account directory</a>.
+</blockquote>
+<center><a href="index.html">Help Top</a></center>
+</body>

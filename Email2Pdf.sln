@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32210.238
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Email2Pdf", "Email2Pdf\Email2Pdf.csproj", "{19F6A151-BC5F-48C1-80D5-1FF4E21758BA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestEAPDF", "TestEAPDF\TestEAPDF.csproj", "{78295937-D598-42E5-B896-7948EBE30972}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{100AE2D8-47A2-44F6-B8AE-B01180FA323C}"
+	ProjectSection(SolutionItems) = preProject
+		README.txt = README.txt
+	EndProjectSection
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "DArcMail", "DArcMail\DArcMail.pyproj", "{27A815E6-00A3-4B5C-863A-946EC0012B68}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SampleFiles", "SampleFiles", "{0C7BCAA5-D029-4DC8-9134-1C215F4E471E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{19F6A151-BC5F-48C1-80D5-1FF4E21758BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19F6A151-BC5F-48C1-80D5-1FF4E21758BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19F6A151-BC5F-48C1-80D5-1FF4E21758BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19F6A151-BC5F-48C1-80D5-1FF4E21758BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78295937-D598-42E5-B896-7948EBE30972}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78295937-D598-42E5-B896-7948EBE30972}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78295937-D598-42E5-B896-7948EBE30972}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78295937-D598-42E5-B896-7948EBE30972}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27A815E6-00A3-4B5C-863A-946EC0012B68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27A815E6-00A3-4B5C-863A-946EC0012B68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CFFF8FA0-BCE8-4554-AC69-D9397B85F72B}
+	EndGlobalSection
+EndGlobal

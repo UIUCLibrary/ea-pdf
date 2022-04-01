@@ -1,0 +1,65 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="doc.css">
+</head>
+<body>
+<center><a href="index.html">Help Top</a></center>
+
+<h1>Loading data into the DArcMail database</h1>
+<blockquote>
+<p>
+The "Load DArcMail Data" screen asks for the following information:
+<ul>
+<li>Name.&nbsp;&nbsp;&nbsp;This is the DArcMail name of the email account.
+This can be the email address that is associated with the email account
+(e.g., "john.smith@jamestowncolony.com") or any other format (e.g., "John Smith", "Smith, J; Jamestown", etc.).
+If the email account name does not aleady exist in the DArcMail database, it will be created in the loading process.
+<li>Directory.&nbsp;&nbsp;&nbsp;This is the <a href="directory.html">account directory</a>.
+This must already exist and must contain (directly or indirectly) one or more
+<a href="http://tools.ietf.org/html/rfc4155">MBOX-format</a>
+files with the .mbox file extension.
+If you have already loaded some email folders for this account,
+and if you are trying to load another <a href="folder.html">email folder</a> into the same account,
+then the account directory you specify must be the same as
+the account directory already recorded in the database
+(alternatively, you can delete all account data from the database and start
+over with the new account directory)
+<li><a href="folder.html">Folder</a>.&nbsp;&nbsp;&nbsp;If "ALL FOLDERS" is specified, then the program will load
+message data from all the MBOX files that are contained below the account directory.
+If the "yes" box is checked and a single folder -- for example, "archive/deleted items" -- is specified,
+then the program will load message data only from the MBOX file with the path "&lt;account_directory&gt;\archive\deleted items.mbox".
+If the specified folder has already been loaded, you must first delete it
+before reloading.
+<li>Store attachments externally.&nbsp;&nbsp;&nbsp;If "yes" is checked, then each message
+attachment will be stored in a separate file; the attachment will not be loaded into the database file.
+See <a href="storage.html">attachment storage</a> for further information.
+</ul>
+<p>
+The load process produces one output file, dm_load.log.txt, in the account directory.
+The contents of this file are also displayed in a pop-up window when the load process has completed.
+<ul>
+</blockquote>
+
+<h1>Duplicate messages</h1>
+
+<blockquote>
+<p>It is possible for the set of MBOX files for a single account to contain
+multiple copies of a message. The MBOX 
+"Message-ID" message header determines the unique
+identity of a message; this value appears as the "Global Id" field
+in a DArcMail Info page. Typically, duplication arises when the originating mail
+system allows a user to copy (rather than move) a message across
+mail folders. A DArcMail database does not preserve redundant copies of a message; it
+retains only the <i>first</i> copy of a message that is loaded.
+
+<p>Suppose Inbox.mbox and Budget.mbox both have copies of the same message.
+If you load the Inbox folder first, then the message will appear only in
+the Inbox folder. On the other hand, if the loading process loads the Budget
+folder first, then the message will appear only in the Budget folder.
+
+Duplicate messages <i>are</i> preserved when an MBOX is converted to an XLM file by DArcMailXml.
+
+</blockquote>
+
+<center><a href="index.html">Help Top</a></center>
+</body>
