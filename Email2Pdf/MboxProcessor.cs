@@ -1,12 +1,15 @@
 ﻿using Microsoft.Extensions.Logging;
 using MimeKit;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Xml;
 
 namespace Email2Pdf
 {
     public class MboxProcessor : IDisposable
     {
+        private bool disposedValue;
+
         public const string EOL_TYPE_CR = "CR";
         public const string EOL_TYPE_LF = "LF";
         public const string EOL_TYPE_CRLF = "CRLF";
@@ -55,13 +58,15 @@ namespace Email2Pdf
 
         private readonly ILogger _logger;
 
-        private readonly FileStream _mboxStream;
-
         private readonly string _mboxFilePath;
-        private bool disposedValue;
+        private readonly FileStream _mboxStream;
+        private readonly CryptoStream _cryptoStream;
+        private readonly HashAlgorithm _cryptoHash;
 
         private string Eol = EOL_TYPE_UNK;
-        private byte[] Sha1Hash;
+        private byte[] Sha1Hash = new byte[0];
+        private Dictionary<string, int> EolCounts = new Dictionary<string, int>();
+
 
         public MboxProcessor(ILogger<MboxProcessor> logger, string mboxFilePath)
         {
@@ -80,22 +85,14 @@ namespace Email2Pdf
 
             _mboxFilePath = mboxFilePath;
             _mboxStream = new FileStream(_mboxFilePath, FileMode.Open, FileAccess.Read);
-
-            //calculate sha1 hash for whole file and also determine eol for whole file
-            int c = -1;
-            long i = 0;
-            do {
-                c = _mboxStream.ReadByte();
-                i++;
-            } while (c !=-1);
-
-            _mboxStream.Position = 0;
+            _cryptoHash = SHA1.Create();
+            _cryptoStream = new CryptoStream(_mboxStream, _cryptoHash, CryptoStreamMode.Read);
 
         }
-
-        public int ConvertMbox2EAPDF(ref string outFilePath)
+        
+        public long ConvertMbox2EAPDF(ref string outFilePath)
         {
-            int ret = 0;
+            long ret = 0;
 
             if (string.IsNullOrWhiteSpace(outFilePath))
             {
@@ -120,9 +117,9 @@ namespace Email2Pdf
             return ret;
         }
 
-        public int ConvertMbox2EAXS(ref string outFilePath, string accntId, string accntEmails = "")
+        public long ConvertMbox2EAXS(ref string outFilePath, string accntId, string accntEmails = "")
         {
-            int ret = 0;
+            long localId = 0;
 
 
             if (string.IsNullOrWhiteSpace(accntId))
@@ -153,12 +150,12 @@ namespace Email2Pdf
             {
                 xwriter.WriteElementString("EmailAddress", XM_NS, addr);
             }
-            xwriter.WriteElementString( "GlobalId", XM_NS, accntId);
+            xwriter.WriteElementString("GlobalId", XM_NS, accntId);
 
-            xwriter.WriteStartElement( "Folder", XM_NS);
-            xwriter.WriteElementString( "Name", XM_NS, Path.GetFileNameWithoutExtension(_mboxFilePath));
+            xwriter.WriteStartElement("Folder", XM_NS);
+            xwriter.WriteElementString("Name", XM_NS, Path.GetFileNameWithoutExtension(_mboxFilePath));
 
-            var parser = new MimeParser(_mboxStream, MimeFormat.Mbox);
+            var parser = new MimeParser(_cryptoStream, MimeFormat.Mbox);
 
             //parser.MimeMessageBegin += Parser_MimeMessageBegin;
             parser.MimeMessageEnd += Parser_MimeMessageEnd;
@@ -170,55 +167,81 @@ namespace Email2Pdf
                 var message = parser.ParseMessage();
                 if (message != null)
                 {
-                    ret++;
+                    localId++;
 
                     xwriter.WriteStartElement("Message", XM_NS);
-                    ConvertMessageToEAXS(message, xwriter, ret);
+                    localId=ConvertMessageToEAXS(message, xwriter, localId);
                     xwriter.WriteEndElement(); //Message
 
                 }
                 Eol = EOL_TYPE_UNK;
             }
 
+            //make sure to read to the end of the stream so the hash is correct
+            int i = -1;
+            do
+            {
+                i = _cryptoStream.ReadByte();
+            } while (i != -1);
+            
+            xwriter.WriteStartElement("Mbox", XM_NS);
+            //TODO: RelPath
+            xwriter.WriteElementString("RelPath", XM_NS, "xxx");
+            xwriter.WriteElementString("Eol", XM_NS, MostCommonEol);
+            if (UsesDifferentEols)
+            {
+                var msg = $"Mbox file contains multiple different EOLs: CR: {EolCounts["CR"]}, LF: {EolCounts["LF"]}, CRLF: {EolCounts["CRLF"]}";
+                _logger.LogWarning(msg);
+                xwriter.WriteComment(msg);
+            }
+            xwriter.WriteStartElement("Hash", XM_NS);
+            xwriter.WriteStartElement("Value", XM_NS);
+            xwriter.WriteBinHex(_cryptoHash.Hash, 0, _cryptoHash.Hash.Length);
+            xwriter.WriteEndElement(); //Value
+            xwriter.WriteElementString("Function", XM_NS, "SHA1");
+            xwriter.WriteEndElement(); //Hash
+            xwriter.WriteEndElement(); //Mbox
 
             xwriter.WriteEndElement(); //Folder
             xwriter.WriteEndElement(); //Account
 
             xwriter.WriteEndDocument();
 
-            _logger.LogInformation("Converted {0} messages", ret);
+            _logger.LogInformation("Converted {0} messages", localId);
 
-            return ret;
+            return localId;
         }
 
-        private void ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long cnt, bool isChildMessage=false)
+        private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, bool isChildMessage = false)
         {
-            _logger.LogInformation("Converting Message {0} Subject: {1}", cnt, message.Subject);
+            //TODO: Add line to CSV file for each message in the mbox
+            
+            _logger.LogInformation("Converting Message {0} Subject: {1}", localId, message.Subject);
 
             //TODO: RelPath 
 
-            xwriter.WriteStartElement( "LocalId", XM_NS);
-            xwriter.WriteValue(cnt);
+            xwriter.WriteStartElement("LocalId", XM_NS);
+            xwriter.WriteValue(localId);
             xwriter.WriteEndElement();
 
-            xwriter.WriteStartElement( "MessageId", XM_NS);
+            xwriter.WriteStartElement("MessageId", XM_NS);
             xwriter.WriteString(message.MessageId);
             xwriter.WriteEndElement();
 
             if (message.MimeVersion != null)
             {
-                xwriter.WriteStartElement( "MimeVersion", XM_NS);
+                xwriter.WriteStartElement("MimeVersion", XM_NS);
                 xwriter.WriteString(message.MimeVersion.ToString());
                 xwriter.WriteEndElement();
             }
 
-            xwriter.WriteStartElement( "OrigDate", XM_NS);
+            xwriter.WriteStartElement("OrigDate", XM_NS);
             xwriter.WriteValue(message.Date);
             xwriter.WriteEndElement();
 
             foreach (var addr in message.From)
             {
-                xwriter.WriteStartElement( "From", XM_NS);
+                xwriter.WriteStartElement("From", XM_NS);
                 xwriter.WriteString(addr.ToString());
                 xwriter.WriteEndElement();
             }
@@ -232,38 +255,38 @@ namespace Email2Pdf
 
             foreach (var addr in message.To)
             {
-                xwriter.WriteStartElement( "To", XM_NS);
+                xwriter.WriteStartElement("To", XM_NS);
                 xwriter.WriteValue(addr.ToString());
                 xwriter.WriteEndElement();
             }
 
             foreach (var addr in message.Cc)
             {
-                xwriter.WriteStartElement( "Cc", XM_NS);
+                xwriter.WriteStartElement("Cc", XM_NS);
                 xwriter.WriteValue(addr.ToString());
                 xwriter.WriteEndElement();
             }
 
             foreach (var addr in message.Bcc)
             {
-                xwriter.WriteStartElement( "Bcc", XM_NS);
+                xwriter.WriteStartElement("Bcc", XM_NS);
                 xwriter.WriteValue(addr.ToString());
                 xwriter.WriteEndElement();
             }
 
             if (!string.IsNullOrWhiteSpace(message.InReplyTo))
             {
-                xwriter.WriteElementString( "InReplyTo", XM_NS, message.InReplyTo);
+                xwriter.WriteElementString("InReplyTo", XM_NS, message.InReplyTo);
             }
 
             foreach (var id in message.References)
             {
-                xwriter.WriteElementString( "References", XM_NS, id);
+                xwriter.WriteElementString("References", XM_NS, id);
             }
 
             if (!string.IsNullOrWhiteSpace(message.Subject))
             {
-                xwriter.WriteElementString( "Subject", XM_NS, message.Subject);
+                xwriter.WriteElementString("Subject", XM_NS, message.Subject);
             }
 
             //TODO: Comments
@@ -272,9 +295,9 @@ namespace Email2Pdf
 
             foreach (var hdr in message.Headers) //TODO: Might need to use the raw values here; the schema docs indicate to use the minumum transformations
             {
-                xwriter.WriteStartElement( "Header", XM_NS);
-                xwriter.WriteElementString( "Name", XM_NS, hdr.Field);
-                xwriter.WriteElementString( "Value", XM_NS, hdr.Value);
+                xwriter.WriteStartElement("Header", XM_NS);
+                xwriter.WriteElementString("Name", XM_NS, hdr.Field);
+                xwriter.WriteElementString("Value", XM_NS, hdr.Value);
                 //TODO: Comments
                 xwriter.WriteEndElement();
             }
@@ -309,7 +332,7 @@ namespace Email2Pdf
                 }
             }
 
-            ConvertBody2EAXS(message.Body, xwriter);
+            localId = ConvertBody2EAXS(message.Body, xwriter, localId);
 
             //TODO: Incomplete
 
@@ -325,10 +348,12 @@ namespace Email2Pdf
                 xwriter.WriteEndElement();//Hash
             }
 
+            return localId;
         }
 
-        private void ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter)
+        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId)
         {
+            //TODO:  Convert binary attachments to external files
             bool isMultipart = false;
 
             MimePart? part = mimeEntity as MimePart;
@@ -338,15 +363,15 @@ namespace Email2Pdf
             if (mimeEntity is Multipart)
             {
                 isMultipart = true;
-                xwriter.WriteStartElement( "MultiBody", XM_NS);
+                xwriter.WriteStartElement("MultiBody", XM_NS);
             }
             else if (mimeEntity is MimePart)
             {
-                xwriter.WriteStartElement( "SingleBody", XM_NS);
+                xwriter.WriteStartElement("SingleBody", XM_NS);
             }
             else if (mimeEntity is MessagePart)
             {
-                xwriter.WriteStartElement( "SingleBody", XM_NS);
+                xwriter.WriteStartElement("SingleBody", XM_NS);
             }
             else
             {
@@ -358,19 +383,19 @@ namespace Email2Pdf
 
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentType.MimeType))
             {
-                xwriter.WriteElementString( "ContentType", XM_NS, mimeEntity.ContentType.MimeType);
+                xwriter.WriteElementString("ContentType", XM_NS, mimeEntity.ContentType.MimeType);
             }
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentType.Charset))
             {
-                xwriter.WriteElementString( "Charset", XM_NS, mimeEntity.ContentType.Charset);
+                xwriter.WriteElementString("Charset", XM_NS, mimeEntity.ContentType.Charset);
             }
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentType.Name))
             {
-                xwriter.WriteElementString( "ContentName", XM_NS, mimeEntity.ContentType.Name);
+                xwriter.WriteElementString("ContentName", XM_NS, mimeEntity.ContentType.Name);
             }
             if (isMultipart && !string.IsNullOrWhiteSpace(mimeEntity.ContentType.Boundary))
             {
-                xwriter.WriteElementString( "BoundaryString", XM_NS, mimeEntity.ContentType.Boundary);
+                xwriter.WriteElementString("BoundaryString", XM_NS, mimeEntity.ContentType.Boundary);
             }
             else if (!isMultipart && !string.IsNullOrWhiteSpace(mimeEntity.ContentType.Boundary))
             {
@@ -391,29 +416,29 @@ namespace Email2Pdf
             string[] except = { "id", "name" };
             foreach (var param in mimeEntity.ContentType.Parameters.Where(p => !except.Contains(p.Name, StringComparer.InvariantCultureIgnoreCase))) //Except id and name, case-insensitive; TODO: Why exclude id and name?
             {
-                xwriter.WriteStartElement( "ContentTypeParam", XM_NS);
-                xwriter.WriteElementString( "Name", XM_NS, param.Name);
-                xwriter.WriteElementString( "Value", XM_NS, param.Value);
+                xwriter.WriteStartElement("ContentTypeParam", XM_NS);
+                xwriter.WriteElementString("Name", XM_NS, param.Name);
+                xwriter.WriteElementString("Value", XM_NS, param.Value);
                 xwriter.WriteEndElement(); //ContentTypeParam
             }
             //TODO: Content-Transfer-Encoding is only applicable to single body messages, so not sure why it is allowed in MultiBody by the XML Schema
             if (part != null && part.ContentTransferEncoding != ContentEncoding.Default)
             {
-                xwriter.WriteElementString( "TransferEncoding", XM_NS, GetContentEncodingString(part.ContentTransferEncoding));
+                xwriter.WriteElementString("TransferEncoding", XM_NS, GetContentEncodingString(part.ContentTransferEncoding));
             }
 
             //TODO: TransferEncodingComments
 
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentId))
             {
-                xwriter.WriteElementString( "ContentId", XM_NS, mimeEntity.ContentId);
+                xwriter.WriteElementString("ContentId", XM_NS, mimeEntity.ContentId);
             }
 
             //TODO: ContentIdComments
 
             if (isMultipart && !string.IsNullOrWhiteSpace(part?.ContentDescription))
             {
-                xwriter.WriteElementString( "Description", XM_NS, part.ContentDescription);
+                xwriter.WriteElementString("Description", XM_NS, part.ContentDescription);
             }
 
             //TODO: DescriptionComments
@@ -422,7 +447,7 @@ namespace Email2Pdf
             {
                 if (isMultipart && !string.IsNullOrWhiteSpace(mimeEntity.ContentDisposition.Disposition)) //only used for multipart.  TODO:  Why is this?
                 {
-                    xwriter.WriteElementString( "Disposition", XM_NS, mimeEntity.ContentDisposition.Disposition);
+                    xwriter.WriteElementString("Disposition", XM_NS, mimeEntity.ContentDisposition.Disposition);
                 }
                 else if (!isMultipart && !string.IsNullOrWhiteSpace(mimeEntity.ContentDisposition.Disposition))
                 {
@@ -432,7 +457,7 @@ namespace Email2Pdf
                 }
                 if (!string.IsNullOrWhiteSpace(mimeEntity.ContentDisposition.FileName))
                 {
-                    xwriter.WriteElementString( "DispositionFileName", XM_NS, mimeEntity.ContentDisposition.FileName);
+                    xwriter.WriteElementString("DispositionFileName", XM_NS, mimeEntity.ContentDisposition.FileName);
                 }
 
                 //TODO: DispositionComments
@@ -448,41 +473,41 @@ namespace Email2Pdf
                     {
                         xwriter.WriteStartElement("DispositionParam", XM_NS);
                     }
-                    xwriter.WriteElementString( "Name", XM_NS, param.Name);
-                    xwriter.WriteElementString( "Value", XM_NS, param.Value);
+                    xwriter.WriteElementString("Name", XM_NS, param.Name);
+                    xwriter.WriteElementString("Value", XM_NS, param.Value);
                     xwriter.WriteEndElement(); //DispositionParam(s)
                 }
             }
 
-            except =  new string[] {"content-type","content-transfer-encoding","content-id","content-description","content-disposition"};
-            foreach (var hdr in mimeEntity.Headers.Where(h=>!except.Contains(h.Field,StringComparer.InvariantCultureIgnoreCase)))
+            except = new string[] { "content-type", "content-transfer-encoding", "content-id", "content-description", "content-disposition" };
+            foreach (var hdr in mimeEntity.Headers.Where(h => !except.Contains(h.Field, StringComparer.InvariantCultureIgnoreCase)))
             {
-                xwriter.WriteStartElement( "OtherMimeHeader", XM_NS);
-                xwriter.WriteElementString( "Name", XM_NS, hdr.Field);
-                xwriter.WriteElementString( "Value", XM_NS, hdr.Value);
+                xwriter.WriteStartElement("OtherMimeHeader", XM_NS);
+                xwriter.WriteElementString("Name", XM_NS, hdr.Field);
+                xwriter.WriteElementString("Value", XM_NS, hdr.Value);
                 //TODO: Comments
                 xwriter.WriteEndElement(); //OtherMimeHeaders
             }
 
-            if(isMultipart && multipart!=null && !string.IsNullOrWhiteSpace(multipart.Preamble))
+            if (isMultipart && multipart != null && !string.IsNullOrWhiteSpace(multipart.Preamble))
             {
-                xwriter.WriteElementString( "Preamble", XM_NS, multipart.Preamble);
+                xwriter.WriteElementString("Preamble", XM_NS, multipart.Preamble);
             }
 
-            if (isMultipart && multipart != null && multipart.Count>0)
+            if (isMultipart && multipart != null && multipart.Count > 0)
             {
-                foreach(var item in multipart)
+                foreach (var item in multipart)
                 {
-                    ConvertBody2EAXS(item, xwriter);
+                    localId = ConvertBody2EAXS(item, xwriter, localId);
                 }
             }
-            else if(isMultipart && multipart != null && multipart.Count == 0)
+            else if (isMultipart && multipart != null && multipart.Count == 0)
             {
                 var warning = $"Item is multipart, but there are no parts";
                 _logger.LogWarning(warning);
                 xwriter.WriteComment(warning);
             }
-            else if(isMultipart && multipart == null)
+            else if (isMultipart && multipart == null)
             {
                 var warning = $"Item is erroneously flagged as multipart";
                 _logger.LogWarning(warning);
@@ -492,16 +517,16 @@ namespace Email2Pdf
             {
                 if (part != null)
                 {
-                    xwriter.WriteStartElement( "BodyContent", XM_NS);
+                    xwriter.WriteStartElement("BodyContent", XM_NS);
 
                     var content = part.Content;
-  
+
                     if (part.ContentType.MediaType.Equals("text", StringComparison.InvariantCultureIgnoreCase))
                     {
                         xwriter.WriteStartElement("Content", XM_NS);
                         Stream decoded = content.Open();
                         //decode the stream and treat it as whatever the charset advertised in the content-type header
-                        StreamReader reader = new StreamReader(decoded,part.ContentType.CharsetEncoding,true);
+                        StreamReader reader = new StreamReader(decoded, part.ContentType.CharsetEncoding, true);
                         xwriter.WriteString(reader.ReadToEnd());
                         xwriter.WriteEndElement(); //Content
                     }
@@ -509,20 +534,20 @@ namespace Email2Pdf
                     {
                         xwriter.WriteStartElement("Content", XM_NS);
                         //treat the stream as ASCII
-                        StreamReader reader = new StreamReader(content.Stream,System.Text.Encoding.ASCII);
+                        StreamReader reader = new StreamReader(content.Stream, System.Text.Encoding.ASCII);
                         xwriter.WriteCData(reader.ReadToEnd());
                         xwriter.WriteEndElement(); //Content
-                        xwriter.WriteElementString( "TransferEncoding", XM_NS, GetContentEncodingString(content.Encoding));
+                        xwriter.WriteElementString("TransferEncoding", XM_NS, GetContentEncodingString(content.Encoding));
                     }
 
                     xwriter.WriteEndElement(); //BodyContent
                     //TODO: Do we need to support ExtBodyContent?
                 }
-                else if(message != null)
+                else if (message != null)
                 {
-                    xwriter.WriteStartElement( "ChildMessage", XM_NS);
-                    long cnt = 1; //TODO: Not sure what to use for child messages
-                    ConvertMessageToEAXS(message.Message, xwriter, cnt, true);
+                    xwriter.WriteStartElement("ChildMessage", XM_NS);
+                    localId++;
+                    ConvertMessageToEAXS(message.Message, xwriter, localId, true);
                     xwriter.WriteEndElement(); //ChildMessage
                 }
                 else
@@ -537,12 +562,13 @@ namespace Email2Pdf
 
             if (isMultipart && multipart != null && !string.IsNullOrWhiteSpace(multipart.Epilogue))
             {
-                xwriter.WriteElementString( "Epilogue", XM_NS, multipart.Epilogue);
+                xwriter.WriteElementString("Epilogue", XM_NS, multipart.Epilogue);
             }
 
 
             xwriter.WriteEndElement(); //SingleBody or MultiBody
 
+            return localId;
         }
 
 
@@ -706,6 +732,7 @@ namespace Email2Pdf
             _mboxStream.Position = origPos;
 
             //Look for first EOL marker to determine which kind are being used.
+            //Assume the same kind will be used throughout
             long i = 1;
             while (i < buffer.Length - 1)
             {
@@ -725,6 +752,19 @@ namespace Email2Pdf
                     break;
                 }
                 i++;
+            }
+
+            //Check that messages use the same EOL treatment throughout
+            if (Eol != EOL_TYPE_UNK)
+            {
+                if (EolCounts.ContainsKey(Eol))
+                {
+                    EolCounts[Eol]++;
+                }
+                else
+                {
+                    EolCounts.Add(Eol, 1);
+                }
             }
 
             //trim all LWSP and EOL chars from the end and then add one eol marker back
@@ -766,6 +806,32 @@ namespace Email2Pdf
 
         }
 
+        private bool UsesDifferentEols
+        {
+            get
+            {
+                return EolCounts.Count > 1;
+            }
+        }
+
+        private string MostCommonEol
+        {
+            get
+            {
+                var ret = "";
+                var max = 0;
+                foreach (var kvp in EolCounts)
+                {
+                    if (kvp.Value > max)
+                    {
+                        max = kvp.Value;
+                        ret = kvp.Key;
+                    }
+                }
+                return ret;
+            }
+        }
+
         //private void Parser_MimeMessageBegin(object? sender, MimeMessageBeginEventArgs e)
         //{
         //}
@@ -785,7 +851,9 @@ namespace Email2Pdf
                 if (disposing)
                 {
                     // dispose managed state (managed objects)
+                    _cryptoStream.Close();
                     _mboxStream.Close();
+                    _cryptoStream.Dispose();
                     _mboxStream.Dispose();
                 }
 
