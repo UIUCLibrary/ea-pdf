@@ -77,14 +77,14 @@ namespace TestEAPDF
                 XmlNode? hashValueNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Value", xmlns);
                 XmlNode? hashFuncNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Function", xmlns);
 
-                Assert.AreEqual("SHA1", hashFuncNd?.InnerText);
+                Assert.AreEqual(MboxProcessor.HASH_DEFAULT, hashFuncNd?.InnerText);
 
-                var expectedHash = CalculateSHA1(sampleFile);
+                var expectedHash = CalculateHash(sampleFile);
                 Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
 
                 //make sure xml is schema valid
                 validXml = true;
-                xdoc.Schemas.Add(MboxProcessor.XM_NS, "eaxs_schema_v1.xsd");
+                xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
                 xdoc.Validate(XmlValidationEventHandler);
                 Assert.IsTrue(validXml);
 
@@ -117,15 +117,18 @@ namespace TestEAPDF
 
                 var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
                 //make sure each message is marked as draft
-                foreach (XmlElement message in messages)
+                if(messages!= null)
                 {
-                    var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
-                    Assert.IsNotNull(draft);
+                    foreach (XmlElement message in messages)
+                    {
+                        var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
+                        Assert.IsNotNull(draft);
+                    }
                 }
 
                 //make sure xml is schema valid
                 validXml = true;
-                xdoc.Schemas.Add(MboxProcessor.XM_NS, "eaxs_schema_v1.xsd");
+                xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
                 xdoc.Validate(XmlValidationEventHandler);
                 Assert.IsTrue(validXml);
 
@@ -158,7 +161,7 @@ namespace TestEAPDF
 
                 //make sure xml is schema valid
                 validXml = true;
-                xdoc.Schemas.Add(MboxProcessor.XM_NS, "eaxs_schema_v1.xsd");
+                xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
                 xdoc.Validate(XmlValidationEventHandler);
                 Assert.IsTrue(validXml);
 
@@ -183,10 +186,10 @@ namespace TestEAPDF
             }
         }
 
-        string CalculateSHA1(string filePath)
+        string CalculateHash(string filePath)
         {
             var fstream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            var sha1 = SHA1.Create();
+            var sha1 = HashAlgorithm.Create(MboxProcessor.HASH_DEFAULT) ?? SHA256.Create(); //Fallback to know hash algorithm
             var cstream = new CryptoStream(fstream, sha1, CryptoStreamMode.Read);
 
             //read to end of stream
@@ -196,7 +199,7 @@ namespace TestEAPDF
                 i = cstream.ReadByte(); 
             } while (i != -1);
 
-            var hash = sha1.Hash;
+            var hash = sha1.Hash ?? new byte[0];
 
             return Convert.ToHexString(hash);
         }

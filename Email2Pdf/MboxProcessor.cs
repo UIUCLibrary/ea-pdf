@@ -3,12 +3,15 @@ using MimeKit;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Xml;
+using Wiry.Base32;
 
 namespace Email2Pdf
 {
     public class MboxProcessor : IDisposable
     {
         private bool disposedValue;
+
+        public const string HASH_DEFAULT = "SHA256";
 
         public const string EOL_TYPE_CR = "CR";
         public const string EOL_TYPE_LF = "LF";
@@ -54,17 +57,19 @@ namespace Email2Pdf
         }
 
         public const string XM = "xm";
-        public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs";
+        public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2";
+        public const string XM_XSD = "eaxs_schema_v2.xsd";
 
         private readonly ILogger _logger;
 
         private readonly string _mboxFilePath;
         private readonly FileStream _mboxStream;
         private readonly CryptoStream _cryptoStream;
-        private readonly HashAlgorithm _cryptoHash;
+        private readonly HashAlgorithm _cryptoHashAlg;
 
+        public string HashName = HASH_DEFAULT;
         private string Eol = EOL_TYPE_UNK;
-        private byte[] Sha1Hash = new byte[0];
+        private byte[] MboxHash = new byte[0];
         private Dictionary<string, int> EolCounts = new Dictionary<string, int>();
 
 
@@ -83,13 +88,24 @@ namespace Email2Pdf
             _logger = logger;
             _logger.LogInformation("MboxProcessor Created");
 
-            _mboxFilePath = mboxFilePath;
+            _mboxFilePath = Path.GetFullPath(mboxFilePath);
             _mboxStream = new FileStream(_mboxFilePath, FileMode.Open, FileAccess.Read);
-            _cryptoHash = SHA1.Create();
-            _cryptoStream = new CryptoStream(_mboxStream, _cryptoHash, CryptoStreamMode.Read);
+            var alg = HashAlgorithm.Create(HashName);
+            if (alg != null)
+            {
+                _cryptoHashAlg = alg;
+            }
+            else
+            {
+                //default to a known algorithm
+                _logger.LogWarning($"Unable to instantiate hash algorithm '{HashName}', using 'SHA256' instead");
+                HashName = "SHA256";
+                _cryptoHashAlg = SHA256.Create();
+            }
+            _cryptoStream = new CryptoStream(_mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
 
         }
-        
+
         public long ConvertMbox2EAPDF(ref string outFilePath)
         {
             long ret = 0;
@@ -145,7 +161,8 @@ namespace Email2Pdf
             using var xwriter = XmlWriter.Create(outFilePath, xset);
             xwriter.WriteStartDocument();
             xwriter.WriteStartElement("Account", XM_NS);
-            xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "https://raw.githubusercontent.com/StateArchivesOfNorthCarolina/tomes-eaxs/master/versions/1/eaxs_schema_v1.xsd");
+            //TODO:  Need to find a web location for the new schema version
+            xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
             foreach (var addr in accntEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 xwriter.WriteElementString("EmailAddress", XM_NS, addr);
@@ -194,12 +211,22 @@ namespace Email2Pdf
                 _logger.LogWarning(msg);
                 xwriter.WriteComment(msg);
             }
-            xwriter.WriteStartElement("Hash", XM_NS);
-            xwriter.WriteStartElement("Value", XM_NS);
-            xwriter.WriteBinHex(_cryptoHash.Hash, 0, _cryptoHash.Hash.Length);
-            xwriter.WriteEndElement(); //Value
-            xwriter.WriteElementString("Function", XM_NS, "SHA1");
-            xwriter.WriteEndElement(); //Hash
+            if (_cryptoHashAlg.Hash != null)
+            {
+                xwriter.WriteStartElement("Hash", XM_NS);
+                xwriter.WriteStartElement("Value", XM_NS);
+                xwriter.WriteBinHex(_cryptoHashAlg.Hash, 0, _cryptoHashAlg.Hash.Length);
+                xwriter.WriteEndElement(); //Value
+                xwriter.WriteElementString("Function", XM_NS, HashName);
+                xwriter.WriteEndElement(); //Hash
+            }
+            else
+            {
+                var warn = $"Unable to calculate the hash value for the Mbox";
+                _logger.LogWarning(warn);
+                xwriter.WriteComment(warn);
+            }
+
             xwriter.WriteEndElement(); //Mbox
 
             xwriter.WriteEndElement(); //Folder
@@ -291,7 +318,7 @@ namespace Email2Pdf
 
             //TODO: Comments
 
-            //TODO:  Keywords
+            //TODO:  Keywords: use the X-Keywords header
 
             foreach (var hdr in message.Headers) //TODO: Might need to use the raw values here; the schema docs indicate to use the minumum transformations
             {
@@ -342,16 +369,16 @@ namespace Email2Pdf
 
                 xwriter.WriteStartElement("Hash", XM_NS);
                 xwriter.WriteStartElement("Value", XM_NS);
-                xwriter.WriteBinHex(Sha1Hash, 0, Sha1Hash.Length);
+                xwriter.WriteBinHex(MboxHash, 0, MboxHash.Length);
                 xwriter.WriteEndElement();//Value
-                xwriter.WriteElementString("Function", XM_NS, "SHA1");
+                xwriter.WriteElementString("Function", XM_NS, HashName);
                 xwriter.WriteEndElement();//Hash
             }
 
             return localId;
         }
 
-        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId)
+        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId, bool saveBinaryExt=true)
         {
             //TODO:  Convert binary attachments to external files
             bool isMultipart = false;
@@ -445,15 +472,9 @@ namespace Email2Pdf
 
             if (mimeEntity.ContentDisposition != null)
             {
-                if (isMultipart && !string.IsNullOrWhiteSpace(mimeEntity.ContentDisposition.Disposition)) //only used for multipart.  TODO:  Why is this?
+                if (!string.IsNullOrWhiteSpace(mimeEntity.ContentDisposition.Disposition)) //In original V1 XSD this was only applicable to multipart bodies
                 {
                     xwriter.WriteElementString("Disposition", XM_NS, mimeEntity.ContentDisposition.Disposition);
-                }
-                else if (!isMultipart && !string.IsNullOrWhiteSpace(mimeEntity.ContentDisposition.Disposition))
-                {
-                    string warn = $"Single bodied MIME type has disposition: {mimeEntity.ContentDisposition.Disposition}";
-                    _logger.LogInformation(warn);
-                    xwriter.WriteComment(warn);
                 }
                 if (!string.IsNullOrWhiteSpace(mimeEntity.ContentDisposition.FileName))
                 {
@@ -464,15 +485,7 @@ namespace Email2Pdf
 
                 foreach (var param in mimeEntity.ContentDisposition.Parameters.Where(p => !p.Name.Equals("filename", StringComparison.InvariantCultureIgnoreCase)))
                 {
-                    //This is because of a likely typo in the XML Schema
-                    if (isMultipart)
-                    {
-                        xwriter.WriteStartElement("DispositionParams", XM_NS);
-                    }
-                    else
-                    {
-                        xwriter.WriteStartElement("DispositionParam", XM_NS);
-                    }
+                    xwriter.WriteStartElement("DispositionParam", XM_NS); //In original V1 XSD this was named DispositionParams (plural) for SingleBody and DispositionParam for MultiBody.  For consistency, singular form now used for both.
                     xwriter.WriteElementString("Name", XM_NS, param.Name);
                     xwriter.WriteElementString("Value", XM_NS, param.Value);
                     xwriter.WriteEndElement(); //DispositionParam(s)
@@ -513,35 +526,93 @@ namespace Email2Pdf
                 _logger.LogWarning(warning);
                 xwriter.WriteComment(warning);
             }
-            else
+            else if(!isMultipart)
             {
                 if (part != null)
                 {
-                    xwriter.WriteStartElement("BodyContent", XM_NS);
 
                     var content = part.Content;
 
                     if (part.ContentType.MediaType.Equals("text", StringComparison.InvariantCultureIgnoreCase))
                     {
+                        //TODO:  Might want to save all attachments to an external file regardless of whether they are text or not
+                        xwriter.WriteStartElement("BodyContent", XM_NS);
                         xwriter.WriteStartElement("Content", XM_NS);
                         Stream decoded = content.Open();
                         //decode the stream and treat it as whatever the charset advertised in the content-type header
                         StreamReader reader = new StreamReader(decoded, part.ContentType.CharsetEncoding, true);
                         xwriter.WriteString(reader.ReadToEnd());
                         xwriter.WriteEndElement(); //Content
+                        xwriter.WriteEndElement(); //BodyContent
                     }
                     else
                     {
-                        xwriter.WriteStartElement("Content", XM_NS);
-                        //treat the stream as ASCII
-                        StreamReader reader = new StreamReader(content.Stream, System.Text.Encoding.ASCII);
-                        xwriter.WriteCData(reader.ReadToEnd());
-                        xwriter.WriteEndElement(); //Content
-                        xwriter.WriteElementString("TransferEncoding", XM_NS, GetContentEncodingString(content.Encoding));
+                        if (!saveBinaryExt)
+                        {
+                            //save non-text content in the XML using original encoding 
+                            xwriter.WriteStartElement("BodyContent", XM_NS);
+                            xwriter.WriteStartElement("Content", XM_NS);
+                            //treat the stream as ASCII
+                            StreamReader reader = new StreamReader(content.Stream, System.Text.Encoding.ASCII);
+                            xwriter.WriteCData(reader.ReadToEnd());
+                            xwriter.WriteEndElement(); //Content
+                            xwriter.WriteElementString("TransferEncoding", XM_NS, GetContentEncodingString(content.Encoding));
+                            xwriter.WriteEndElement(); //BodyContent
+                        }
+                        else
+                        {
+                            //save non-text content externally
+
+                            string randomFilePath = "";
+                            do 
+                            {
+                                randomFilePath = Path.Combine(Path.GetDirectoryName(_mboxFilePath) ?? "",Path.GetRandomFileName());
+                            } while(File.Exists(randomFilePath));
+
+                            //TODO: Exception Handling
+
+                            //Write the content to an external file
+                            //Use the hash as the filename, try to use the file extension if there is one
+                            //write content to a file and generate the hash which will be used as the file name
+                            using var contentStream = new FileStream(randomFilePath, FileMode.CreateNew,FileAccess.Write);
+                            using var cryptoHashAlg = HashAlgorithm.Create(HashName) ?? SHA256.Create();  //Fallback to known hash algorithm
+                            using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);
+                            content.DecodeTo(cryptoStream);
+                            cryptoStream.Close();
+                            contentStream.Close();
+                            string hashStr = "";
+                            if (cryptoHashAlg.Hash != null)
+                                hashStr = Base32Encoding.ZBase32.GetString(cryptoHashAlg.Hash, 0, cryptoHashAlg.Hash.Length); // uses z-base-32 encodingfor file names, https://en.wikipedia.org/wiki/Base32
+                            else
+                                throw new Exception($"Unable to calculate hash value for the content");
+                            var hashFileName = Path.Combine(Path.GetDirectoryName(_mboxFilePath) ?? "", "ExtBodyContent", hashStr[..2], Path.ChangeExtension(hashStr,Path.GetExtension(part.FileName)));
+                            Directory.CreateDirectory(Path.GetDirectoryName(hashFileName) ?? "");
+
+                            //Deal with duplicate attachments, which should only be stored once, make sure the randomFilePath file is deleted
+                            if (File.Exists(hashFileName))
+                            {
+                                var msg = $"Duplicate attachment has already been saved";
+                                _logger.LogInformation(msg);
+                                xwriter.WriteComment(msg);  
+                                File.Delete(randomFilePath);
+                            }
+                            else
+                            {
+                                File.Move(randomFilePath, hashFileName);
+                            }
+
+                            xwriter.WriteStartElement("ExtBodyContent", XM_NS);
+                            xwriter.WriteElementString("RelPath", XM_NS, Path.GetRelativePath(_mboxFilePath,hashFileName));
+                            //CharSet and TransferEncoding are the same as for the SingleBody
+                            localId++;
+                            xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
+                            xwriter.WriteElementString("XMLWrapped", XM_NS, "false");
+                            //Eol is not applicable since we are not wrapping the content in XML
+                            //TODO: Hash
+                            xwriter.WriteEndElement(); //ExtBodyContent
+                        }
                     }
 
-                    xwriter.WriteEndElement(); //BodyContent
-                    //TODO: Do we need to support ExtBodyContent?
                 }
                 else if (message != null)
                 {
@@ -556,6 +627,12 @@ namespace Email2Pdf
                     _logger.LogWarning(warn);
                     xwriter.WriteComment(warn);
                 }
+            }
+            else
+            {
+                string warn = $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}";
+                _logger.LogWarning(warn);
+                xwriter.WriteComment(warn);
             }
 
             //TODO: PhantomBody
@@ -722,7 +799,14 @@ namespace Email2Pdf
             var endOffset = e.EndOffset;
             var beginOffset = e.BeginOffset;
             var headersEndOffset = e.HeadersEndOffset;
-            var mboxMarkerOffset = parser.MboxMarkerOffset;
+            long mboxMarkerOffset = 0;
+            if (parser != null)
+                mboxMarkerOffset = parser.MboxMarkerOffset;
+            else
+            {
+                mboxMarkerOffset = beginOffset; //use the start of the message, instead of the start of the Mbox marker
+                _logger.LogWarning("Unable to determine the start of the Mbox marker");
+            }
 
             // get the raw data from the stream to calculate eol and hash for the xml
             byte[] buffer = new byte[endOffset - mboxMarkerOffset];
@@ -796,8 +880,8 @@ namespace Email2Pdf
                 throw new Exception("Unable to determine EOL marker");
             }
 
-            var sha1 = System.Security.Cryptography.SHA1.Create();
-            Sha1Hash = sha1.ComputeHash(newBuffer);
+            var hashAlg = HashAlgorithm.Create(HashName) ?? SHA256.Create(); //Fallback to known hash algorithm
+            MboxHash = hashAlg.ComputeHash(newBuffer);
 
             //convert buffer to string
             //var bufStr = parser.Options.CharsetEncoding.GetString(buffer);
