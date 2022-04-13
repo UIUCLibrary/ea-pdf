@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Xml;
 using Wiry.Base32;
+using CsvHelper;
 
 namespace Email2Pdf
 {
@@ -223,6 +224,7 @@ namespace Email2Pdf
                         LocalId = messageId,
                         From = message.From.ToString(),
                         To = message.To.ToString(),
+                        Date=message.Date,
                         Subject = message.Subject,
                         MessageID = message.MessageId,
                         Hash = Convert.ToHexString(MessageHash, 0, MessageHash.Length),
@@ -274,6 +276,11 @@ namespace Email2Pdf
             xwriter.WriteEndElement(); //Account
 
             xwriter.WriteEndDocument();
+
+            //write the csv file
+            using var csvStream = new StreamWriter(csvFilePath);
+            using var csvWriter = new CsvWriter(csvStream,CultureInfo.InvariantCulture);
+            csvWriter.WriteRecords(messageList);
 
             _logger.LogInformation("Converted {0} messages", localId);
 
