@@ -18,6 +18,8 @@ namespace Email2Pdf
         public const string EOL_TYPE_CRLF = "CRLF";
         public const string EOL_TYPE_UNK = "UNKNOWN";
 
+        public const string EXT_CONTENT_DIR = "ExtBodyContent";
+
         const byte CR = 13;
         const byte LF = 10;
         const byte SP = 32;
@@ -157,6 +159,11 @@ namespace Email2Pdf
                 Indent = true
             };
 
+            if (!Directory.Exists(Path.GetDirectoryName(outFilePath)))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(outFilePath) ?? "");
+            }
+
 
             using var xwriter = XmlWriter.Create(outFilePath, xset);
             xwriter.WriteStartDocument();
@@ -187,9 +194,8 @@ namespace Email2Pdf
                     localId++;
 
                     xwriter.WriteStartElement("Message", XM_NS);
-                    localId=ConvertMessageToEAXS(message, xwriter, localId);
+                    localId=ConvertMessageToEAXS(message, xwriter, localId, outFilePath);
                     xwriter.WriteEndElement(); //Message
-
                 }
                 Eol = EOL_TYPE_UNK;
             }
@@ -202,8 +208,8 @@ namespace Email2Pdf
             } while (i != -1);
             
             xwriter.WriteStartElement("Mbox", XM_NS);
-            //TODO: RelPath
-            xwriter.WriteElementString("RelPath", XM_NS, "xxx");
+            var relPath = Path.GetRelativePath(Path.GetDirectoryName(outFilePath) ?? "",_mboxFilePath);
+            xwriter.WriteElementString("RelPath", XM_NS, relPath);
             xwriter.WriteElementString("Eol", XM_NS, MostCommonEol);
             if (UsesDifferentEols)
             {
@@ -239,13 +245,16 @@ namespace Email2Pdf
             return localId;
         }
 
-        private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, bool isChildMessage = false)
+        private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, string outFilePath, bool isChildMessage = false)
         {
             //TODO: Add line to CSV file for each message in the mbox
             
             _logger.LogInformation("Converting Message {0} Subject: {1}", localId, message.Subject);
 
-            //TODO: RelPath 
+            if (!isChildMessage)
+            {
+                xwriter.WriteElementString("RelPath", XM_NS, EXT_CONTENT_DIR);
+            }
 
             xwriter.WriteStartElement("LocalId", XM_NS);
             xwriter.WriteValue(localId);
@@ -316,9 +325,19 @@ namespace Email2Pdf
                 xwriter.WriteElementString("Subject", XM_NS, message.Subject);
             }
 
-            //TODO: Comments
+            //Comments
+            string[] cmtHdrs = { "x-comments", "x-comment", "comments", "comment" };
+            foreach (var kwds in message.Headers.Where(h => cmtHdrs.Contains(h.Field, StringComparer.InvariantCultureIgnoreCase)))
+            {
+                xwriter.WriteElementString("Comments", XM_NS, kwds.Value);
+            }
 
-            //TODO:  Keywords: use the X-Keywords header
+            //Keywords
+            string[] kwHdrs = { "x-keywords", "x-keyword", "keywords", "keyword" };
+            foreach(var kwds in message.Headers.Where(h => kwHdrs.Contains(h.Field,StringComparer.InvariantCultureIgnoreCase)))
+            {
+                xwriter.WriteElementString("Keywords", XM_NS, kwds.Value);
+            }
 
             foreach (var hdr in message.Headers) //TODO: Might need to use the raw values here; the schema docs indicate to use the minumum transformations
             {
@@ -359,7 +378,7 @@ namespace Email2Pdf
                 }
             }
 
-            localId = ConvertBody2EAXS(message.Body, xwriter, localId);
+            localId = ConvertBody2EAXS(message.Body, xwriter, localId, outFilePath);
 
             //TODO: Incomplete
 
@@ -378,7 +397,7 @@ namespace Email2Pdf
             return localId;
         }
 
-        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId, bool saveBinaryExt=true)
+        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath, bool saveBinaryExt=true)
         {
             //TODO:  Convert binary attachments to external files
             bool isMultipart = false;
@@ -511,7 +530,7 @@ namespace Email2Pdf
             {
                 foreach (var item in multipart)
                 {
-                    localId = ConvertBody2EAXS(item, xwriter, localId);
+                    localId = ConvertBody2EAXS(item, xwriter, localId, outFilePath);
                 }
             }
             else if (isMultipart && multipart != null && multipart.Count == 0)
@@ -566,7 +585,7 @@ namespace Email2Pdf
                             string randomFilePath = "";
                             do 
                             {
-                                randomFilePath = Path.Combine(Path.GetDirectoryName(_mboxFilePath) ?? "",Path.GetRandomFileName());
+                                randomFilePath = Path.Combine(Path.GetDirectoryName(outFilePath) ?? "",Path.GetRandomFileName());
                             } while(File.Exists(randomFilePath));
 
                             //TODO: Exception Handling
@@ -585,7 +604,7 @@ namespace Email2Pdf
                                 hashStr = Base32Encoding.ZBase32.GetString(cryptoHashAlg.Hash, 0, cryptoHashAlg.Hash.Length); // uses z-base-32 encodingfor file names, https://en.wikipedia.org/wiki/Base32
                             else
                                 throw new Exception($"Unable to calculate hash value for the content");
-                            var hashFileName = Path.Combine(Path.GetDirectoryName(_mboxFilePath) ?? "", "ExtBodyContent", hashStr[..2], Path.ChangeExtension(hashStr,Path.GetExtension(part.FileName)));
+                            var hashFileName = Path.Combine(Path.GetDirectoryName(outFilePath) ?? "", EXT_CONTENT_DIR, hashStr[..2], Path.ChangeExtension(hashStr,Path.GetExtension(part.FileName)));
                             Directory.CreateDirectory(Path.GetDirectoryName(hashFileName) ?? "");
 
                             //Deal with duplicate attachments, which should only be stored once, make sure the randomFilePath file is deleted
@@ -602,7 +621,7 @@ namespace Email2Pdf
                             }
 
                             xwriter.WriteStartElement("ExtBodyContent", XM_NS);
-                            xwriter.WriteElementString("RelPath", XM_NS, Path.GetRelativePath(_mboxFilePath,hashFileName));
+                            xwriter.WriteElementString("RelPath", XM_NS, Path.GetRelativePath(Path.Combine(Path.GetDirectoryName(outFilePath) ?? "",EXT_CONTENT_DIR),hashFileName));
                             //CharSet and TransferEncoding are the same as for the SingleBody
                             localId++;
                             xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
@@ -618,7 +637,7 @@ namespace Email2Pdf
                 {
                     xwriter.WriteStartElement("ChildMessage", XM_NS);
                     localId++;
-                    ConvertMessageToEAXS(message.Message, xwriter, localId, true);
+                    ConvertMessageToEAXS(message.Message, xwriter, localId, outFilePath, true);
                     xwriter.WriteEndElement(); //ChildMessage
                 }
                 else

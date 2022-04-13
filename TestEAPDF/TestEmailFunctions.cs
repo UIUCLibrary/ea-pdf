@@ -39,12 +39,14 @@ namespace TestEAPDF
             if (logger != null)
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
-                var pdfFile = "";
+                var pdfFile = @"";
                 var eapdf = new MboxProcessor(logger, sampleFile);
                 var cnt = eapdf.ConvertMbox2EAPDF(ref pdfFile);
 
+                //output file name is derived from the input file name
                 Assert.AreEqual(".pdf", Path.GetExtension(pdfFile));
                 Assert.AreEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(pdfFile));
+
                 Assert.IsTrue(cnt > 0);
             }
             else
@@ -59,12 +61,14 @@ namespace TestEAPDF
             if (logger != null)
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
-                var xmlFile = "";
+                var xmlFile = @"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout\out.two";
                 var eapdf = new MboxProcessor(logger, sampleFile);
                 var cnt = eapdf.ConvertMbox2EAXS(ref xmlFile, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
-                Assert.AreEqual(".xml", Path.GetExtension(xmlFile));
-                Assert.AreEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(xmlFile));
+                //output file name is not derived from the input file name
+                Assert.AreNotEqual(".xml", Path.GetExtension(xmlFile));
+                Assert.AreNotEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(xmlFile));
+
                 Assert.IsTrue(cnt > 0);
 
                 var xdoc = new XmlDocument();
@@ -105,8 +109,10 @@ namespace TestEAPDF
                 var eapdf = new MboxProcessor(logger, sampleFile);
                 var cnt = eapdf.ConvertMbox2EAXS(ref xmlFile, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
+                //output file name is derived from the input file name
                 Assert.AreEqual(".xml", Path.GetExtension(xmlFile));
                 Assert.AreEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(xmlFile));
+
                 Assert.IsTrue(cnt > 0);
 
                 var xdoc = new XmlDocument();
@@ -149,8 +155,10 @@ namespace TestEAPDF
                 var eapdf = new MboxProcessor(logger, sampleFile);
                 var cnt = eapdf.ConvertMbox2EAXS(ref xmlFile, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
+                //output file name is derived from the input file name
                 Assert.AreEqual(".xml", Path.GetExtension(xmlFile));
                 Assert.AreEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(xmlFile));
+
                 Assert.IsTrue(cnt > 0);
 
                 var xdoc = new XmlDocument();
