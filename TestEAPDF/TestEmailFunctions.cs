@@ -67,12 +67,12 @@ namespace TestEAPDF
             if (logger != null)
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
-                var outFolder = @"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout\out.two";
+                var outFolder = @"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout";
                 var eapdf = new MboxProcessor(logger, sampleFile);
                 var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //test explicitly setting the output folder path
-                Assert.AreEqual(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout\out.two", outFolder);
+                Assert.AreEqual(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout", outFolder);
                 var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
                 var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
                 Assert.IsTrue(File.Exists(xmlPathStr));

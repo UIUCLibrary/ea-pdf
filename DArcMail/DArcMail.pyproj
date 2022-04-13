@@ -12,7 +12,7 @@
     <Name>DArcMail</Name>
     <RootNamespace>DArcMail</RootNamespace>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>-a thabing@illinois.edu -d ..\SampleFiles </CommandLineArguments>
+    <CommandLineArguments>-a thabing@illinois.edu -d ..\SampleFiles\Python</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

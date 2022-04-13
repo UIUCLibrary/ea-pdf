@@ -71,7 +71,7 @@ namespace Email2Pdf
 
         public string HashName = HASH_DEFAULT;
         private string Eol = EOL_TYPE_UNK;
-        private byte[] MboxHash = new byte[0];
+        private byte[] MessageHash = new byte[0];
         private Dictionary<string, int> EolCounts = new Dictionary<string, int>();
 
 
@@ -123,6 +123,7 @@ namespace Email2Pdf
 
             var outFilePath = Path.Combine(outFolderPath,Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "pdf")));
 
+            var csvFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "csv")));
 
 
             _logger.LogInformation("Convert email file: '{0}' into PDF file: '{1}'", _mboxFilePath, outFilePath);
@@ -164,6 +165,9 @@ namespace Email2Pdf
             }
 
             var outFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "xml")));
+            var csvFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "csv")));
+
+            var messageList = new List<MessageBrief>();
 
 
             _logger.LogInformation("Convert email file: '{0}' into XML file: '{1}'", _mboxFilePath, outFilePath);
@@ -208,10 +212,25 @@ namespace Email2Pdf
                 if (message != null)
                 {
                     localId++;
+                    var messageId = localId;
 
                     xwriter.WriteStartElement("Message", XM_NS);
                     localId=ConvertMessageToEAXS(message, xwriter, localId, outFilePath);
                     xwriter.WriteEndElement(); //Message
+
+                    messageList.Add(new MessageBrief()
+                    {
+                        LocalId = messageId,
+                        From = message.From.ToString(),
+                        To = message.To.ToString(),
+                        Subject = message.Subject,
+                        MessageID = message.MessageId,
+                        Hash = Convert.ToHexString(MessageHash, 0, MessageHash.Length),
+                        //TODO: Parser error handling
+                        Errors = 0,
+                        FirstErrorMessage = ""
+
+                    });
                 }
                 Eol = EOL_TYPE_UNK;
             }
@@ -404,7 +423,7 @@ namespace Email2Pdf
 
                 xwriter.WriteStartElement("Hash", XM_NS);
                 xwriter.WriteStartElement("Value", XM_NS);
-                xwriter.WriteBinHex(MboxHash, 0, MboxHash.Length);
+                xwriter.WriteBinHex(MessageHash, 0, MessageHash.Length);
                 xwriter.WriteEndElement();//Value
                 xwriter.WriteElementString("Function", XM_NS, HashName);
                 xwriter.WriteEndElement();//Hash
@@ -915,7 +934,7 @@ namespace Email2Pdf
             }
 
             var hashAlg = HashAlgorithm.Create(HashName) ?? SHA256.Create(); //Fallback to known hash algorithm
-            MboxHash = hashAlg.ComputeHash(newBuffer);
+            MessageHash = hashAlg.ComputeHash(newBuffer);
 
             //convert buffer to string
             //var bufStr = parser.Options.CharsetEncoding.GetString(buffer);
