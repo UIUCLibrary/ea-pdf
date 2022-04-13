@@ -39,13 +39,19 @@ namespace TestEAPDF
             if (logger != null)
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
-                var pdfFile = @"";
-                var eapdf = new MboxProcessor(logger, sampleFile);
-                var cnt = eapdf.ConvertMbox2EAPDF(ref pdfFile);
+                var outFolder = @"";
 
-                //output file name is derived from the input file name
-                Assert.AreEqual(".pdf", Path.GetExtension(pdfFile));
-                Assert.AreEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(pdfFile));
+                var eapdf = new MboxProcessor(logger, sampleFile);
+                var cnt = eapdf.ConvertMbox2EAPDF(ref outFolder);
+
+                //output folder is the same as the mbox folder
+                var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);
+                var outPathStr = Path.GetFullPath(outFolder) ;
+                Assert.AreEqual(samplePathStr, outPathStr);
+                var pdfPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "pdf"));
+                var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
+                //TODO Assert.IsTrue(File.Exists(pdfPathStr));
+                //TODO Assert.IsTrue(File.Exists(csvPathStr));
 
                 Assert.IsTrue(cnt > 0);
             }
@@ -61,18 +67,21 @@ namespace TestEAPDF
             if (logger != null)
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
-                var xmlFile = @"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout\out.two";
+                var outFolder = @"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout\out.two";
                 var eapdf = new MboxProcessor(logger, sampleFile);
-                var cnt = eapdf.ConvertMbox2EAXS(ref xmlFile, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
-                //output file name is not derived from the input file name
-                Assert.AreNotEqual(".xml", Path.GetExtension(xmlFile));
-                Assert.AreNotEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(xmlFile));
+                //test explicitly setting the output folder path
+                Assert.AreEqual(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout\out.two", outFolder);
+                var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
+                var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
+                Assert.IsTrue(File.Exists(xmlPathStr));
+                //TODO: Assert.IsTrue(File.Exists(csvPathStr));
 
                 Assert.IsTrue(cnt > 0);
 
                 var xdoc = new XmlDocument();
-                xdoc.Load(xmlFile);
+                xdoc.Load(xmlPathStr);
 
                 var xmlns = new XmlNamespaceManager(xdoc.NameTable);
                 xmlns.AddNamespace(MboxProcessor.XM, MboxProcessor.XM_NS);
@@ -105,18 +114,23 @@ namespace TestEAPDF
             if (logger != null)
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\Drafts";
-                var xmlFile = "";
+                var outFolder = "";
                 var eapdf = new MboxProcessor(logger, sampleFile);
-                var cnt = eapdf.ConvertMbox2EAXS(ref xmlFile, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
-                //output file name is derived from the input file name
-                Assert.AreEqual(".xml", Path.GetExtension(xmlFile));
-                Assert.AreEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(xmlFile));
+                //output folder is the same as the mbox folder
+                var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);
+                var outPathStr = Path.GetFullPath(outFolder);
+                Assert.AreEqual(samplePathStr, outPathStr);
+                var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
+                var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
+                Assert.IsTrue(File.Exists(xmlPathStr));
+                //TODO Assert.IsTrue(File.Exists(csvPathStr));
 
                 Assert.IsTrue(cnt > 0);
 
                 var xdoc = new XmlDocument();
-                xdoc.Load(xmlFile);
+                xdoc.Load(xmlPathStr);
 
                 var xmlns = new XmlNamespaceManager(xdoc.NameTable);
                 xmlns.AddNamespace(MboxProcessor.XM, MboxProcessor.XM_NS);
@@ -151,18 +165,23 @@ namespace TestEAPDF
             if (logger != null)
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\Inbox";
-                var xmlFile = "";
+                var outFolder = "";
                 var eapdf = new MboxProcessor(logger, sampleFile);
-                var cnt = eapdf.ConvertMbox2EAXS(ref xmlFile, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
-                //output file name is derived from the input file name
-                Assert.AreEqual(".xml", Path.GetExtension(xmlFile));
-                Assert.AreEqual(Path.GetFileNameWithoutExtension(sampleFile), Path.GetFileNameWithoutExtension(xmlFile));
+                //output folder is the same as the mbox folder
+                var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);
+                var outPathStr = Path.GetFullPath(outFolder);
+                Assert.AreEqual(samplePathStr, outPathStr);
+                var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
+                var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
+                Assert.IsTrue(File.Exists(xmlPathStr));
+                //TODO Assert.IsTrue(File.Exists(csvPathStr));
 
                 Assert.IsTrue(cnt > 0);
 
                 var xdoc = new XmlDocument();
-                xdoc.Load(xmlFile);
+                xdoc.Load(xmlPathStr);
 
                 var xmlns = new XmlNamespaceManager(xdoc.NameTable);
                 xmlns.AddNamespace(MboxProcessor.XM, MboxProcessor.XM_NS);

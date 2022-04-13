@@ -107,15 +107,23 @@ namespace Email2Pdf
             _cryptoStream = new CryptoStream(_mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
 
         }
-
-        public long ConvertMbox2EAPDF(ref string outFilePath)
+        /// <summary>
+        /// Convert the mbox file into an archival PDF file
+        /// </summary>
+        /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mbox file</param>
+        /// <returns></returns>
+        public long ConvertMbox2EAPDF(ref string outFolderPath)
         {
             long ret = 0;
 
-            if (string.IsNullOrWhiteSpace(outFilePath))
+            if (string.IsNullOrWhiteSpace(outFolderPath))
             {
-                outFilePath = Path.ChangeExtension(_mboxFilePath, "pdf");
+                outFolderPath = Path.GetDirectoryName(_mboxFilePath) ?? "";
             }
+
+            var outFilePath = Path.Combine(outFolderPath,Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "pdf")));
+
+
 
             _logger.LogInformation("Convert email file: '{0}' into PDF file: '{1}'", _mboxFilePath, outFilePath);
 
@@ -135,7 +143,12 @@ namespace Email2Pdf
             return ret;
         }
 
-        public long ConvertMbox2EAXS(ref string outFilePath, string accntId, string accntEmails = "")
+        /// <summary>
+        /// Convert the mbox file into an archival XML file
+        /// </summary>
+        /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mbox file</param>
+        /// <returns></returns>
+        public long ConvertMbox2EAXS(ref string outFolderPath, string accntId, string accntEmails = "")
         {
             long localId = 0;
 
@@ -145,10 +158,13 @@ namespace Email2Pdf
                 throw new Exception("acctId is a required parameter");
             }
 
-            if (string.IsNullOrWhiteSpace(outFilePath))
+            if (string.IsNullOrWhiteSpace(outFolderPath))
             {
-                outFilePath = Path.ChangeExtension(_mboxFilePath, "xml");
+                outFolderPath = Path.GetDirectoryName(_mboxFilePath) ?? "";
             }
+
+            var outFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "xml")));
+
 
             _logger.LogInformation("Convert email file: '{0}' into XML file: '{1}'", _mboxFilePath, outFilePath);
 
@@ -399,7 +415,6 @@ namespace Email2Pdf
 
         private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath, bool saveBinaryExt=true)
         {
-            //TODO:  Convert binary attachments to external files
             bool isMultipart = false;
 
             MimePart? part = mimeEntity as MimePart;
