@@ -76,7 +76,7 @@ namespace TestEAPDF
                 var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
                 var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
                 Assert.IsTrue(File.Exists(xmlPathStr));
-                //TODO: Assert.IsTrue(File.Exists(csvPathStr));
+                Assert.IsTrue(File.Exists(csvPathStr));
 
                 Assert.IsTrue(cnt > 0);
 
@@ -125,7 +125,7 @@ namespace TestEAPDF
                 var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
                 var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
                 Assert.IsTrue(File.Exists(xmlPathStr));
-                //TODO Assert.IsTrue(File.Exists(csvPathStr));
+                Assert.IsTrue(File.Exists(csvPathStr));
 
                 Assert.IsTrue(cnt > 0);
 
@@ -176,7 +176,7 @@ namespace TestEAPDF
                 var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
                 var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
                 Assert.IsTrue(File.Exists(xmlPathStr));
-                //TODO Assert.IsTrue(File.Exists(csvPathStr));
+                Assert.IsTrue(File.Exists(csvPathStr));
 
                 Assert.IsTrue(cnt > 0);
 

@@ -122,7 +122,7 @@ namespace Email2Pdf
                 outFolderPath = Path.GetDirectoryName(_mboxFilePath) ?? "";
             }
 
-            var outFilePath = Path.Combine(outFolderPath,Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "pdf")));
+            var outFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "pdf")));
 
             var csvFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "csv")));
 
@@ -216,7 +216,7 @@ namespace Email2Pdf
                     var messageId = localId;
 
                     xwriter.WriteStartElement("Message", XM_NS);
-                    localId=ConvertMessageToEAXS(message, xwriter, localId, outFilePath);
+                    localId = ConvertMessageToEAXS(message, xwriter, localId, outFilePath);
                     xwriter.WriteEndElement(); //Message
 
                     messageList.Add(new MessageBrief()
@@ -224,7 +224,7 @@ namespace Email2Pdf
                         LocalId = messageId,
                         From = message.From.ToString(),
                         To = message.To.ToString(),
-                        Date=message.Date,
+                        Date = message.Date,
                         Subject = message.Subject,
                         MessageID = message.MessageId,
                         Hash = Convert.ToHexString(MessageHash, 0, MessageHash.Length),
@@ -243,16 +243,16 @@ namespace Email2Pdf
             {
                 i = _cryptoStream.ReadByte();
             } while (i != -1);
-            
+
             xwriter.WriteStartElement("Mbox", XM_NS);
-            var relPath = Path.GetRelativePath(Path.GetDirectoryName(outFilePath) ?? "",_mboxFilePath);
+            var relPath = Path.GetRelativePath(Path.GetDirectoryName(outFilePath) ?? "", _mboxFilePath);
             xwriter.WriteElementString("RelPath", XM_NS, relPath);
             xwriter.WriteElementString("Eol", XM_NS, MostCommonEol);
             if (UsesDifferentEols)
             {
-                var msg = $"Mbox file contains multiple different EOLs: CR: {EolCounts["CR"]}, LF: {EolCounts["LF"]}, CRLF: {EolCounts["CRLF"]}";
-                _logger.LogWarning(msg);
-                xwriter.WriteComment(msg);
+                var warn = $"Mbox file contains multiple different EOLs: CR: {EolCounts["CR"]}, LF: {EolCounts["LF"]}, CRLF: {EolCounts["CRLF"]}";
+                _logger.LogWarning(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
             }
             if (_cryptoHashAlg.Hash != null)
             {
@@ -267,7 +267,7 @@ namespace Email2Pdf
             {
                 var warn = $"Unable to calculate the hash value for the Mbox";
                 _logger.LogWarning(warn);
-                xwriter.WriteComment(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
             }
 
             xwriter.WriteEndElement(); //Mbox
@@ -279,7 +279,7 @@ namespace Email2Pdf
 
             //write the csv file
             using var csvStream = new StreamWriter(csvFilePath);
-            using var csvWriter = new CsvWriter(csvStream,CultureInfo.InvariantCulture);
+            using var csvWriter = new CsvWriter(csvStream, CultureInfo.InvariantCulture);
             csvWriter.WriteRecords(messageList);
 
             _logger.LogInformation("Converted {0} messages", localId);
@@ -289,8 +289,7 @@ namespace Email2Pdf
 
         private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, string outFilePath, bool isChildMessage = false)
         {
-            //TODO: Add line to CSV file for each message in the mbox
-            
+
             _logger.LogInformation("Converting Message {0} Subject: {1}", localId, message.Subject);
 
             if (!isChildMessage)
@@ -376,12 +375,12 @@ namespace Email2Pdf
 
             //Keywords
             string[] kwHdrs = { "x-keywords", "x-keyword", "keywords", "keyword" };
-            foreach(var kwds in message.Headers.Where(h => kwHdrs.Contains(h.Field,StringComparer.InvariantCultureIgnoreCase)))
+            foreach (var kwds in message.Headers.Where(h => kwHdrs.Contains(h.Field, StringComparer.InvariantCultureIgnoreCase)))
             {
                 xwriter.WriteElementString("Keywords", XM_NS, kwds.Value);
             }
 
-            foreach (var hdr in message.Headers) //TODO: Might need to use the raw values here; the schema docs indicate to use the minumum transformations
+            foreach (var hdr in message.Headers) //All headers even if already covered above
             {
                 xwriter.WriteStartElement("Header", XM_NS);
                 xwriter.WriteElementString("Name", XM_NS, hdr.Field);
@@ -422,7 +421,7 @@ namespace Email2Pdf
 
             localId = ConvertBody2EAXS(message.Body, xwriter, localId, outFilePath);
 
-            //TODO: Incomplete
+            //TODO: Incomplete; Seems related to errors
 
             if (!isChildMessage)
             {
@@ -439,7 +438,7 @@ namespace Email2Pdf
             return localId;
         }
 
-        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath, bool saveBinaryExt=true)
+        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath, bool saveBinaryExt = true)
         {
             bool isMultipart = false;
 
@@ -464,7 +463,7 @@ namespace Email2Pdf
             {
                 string warn = $"Unexpected MIME Entity Type: '{mimeEntity.GetType().FullName}' -- '{mimeEntity.ContentType.MimeType}'";
                 _logger.LogWarning(warn);
-                xwriter.WriteComment(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
                 xwriter.WriteStartElement("SingleBody", XM_NS);
             }
 
@@ -488,30 +487,40 @@ namespace Email2Pdf
             {
                 string warn = $"MIME type boundary parameter '{mimeEntity.ContentType.Boundary}' found for a non-multipart mime type";
                 _logger.LogWarning(warn);
-                xwriter.WriteComment(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
 
             }
             else if (isMultipart && string.IsNullOrWhiteSpace(mimeEntity.ContentType.Boundary))
             {
                 string warn = "MIME type boundary parameter is missing for a multipart mime type";
                 _logger.LogWarning(warn);
-                xwriter.WriteComment(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
             }
 
             //TODO: ContentTypeComments
 
-            string[] except = { "id", "name" };
-            foreach (var param in mimeEntity.ContentType.Parameters.Where(p => !except.Contains(p.Name, StringComparer.InvariantCultureIgnoreCase))) //Except id and name, case-insensitive; TODO: Why exclude id and name?
+            string[] except = { "boundary", "charset", "name" };  //QUESTION: XML Schema says to exclude id, name, and boundary.  Why id and not charset?
+            foreach (var param in mimeEntity.ContentType.Parameters.Where(p => !except.Contains(p.Name, StringComparer.InvariantCultureIgnoreCase))) 
             {
                 xwriter.WriteStartElement("ContentTypeParam", XM_NS);
                 xwriter.WriteElementString("Name", XM_NS, param.Name);
                 xwriter.WriteElementString("Value", XM_NS, param.Value);
                 xwriter.WriteEndElement(); //ContentTypeParam
             }
-            //TODO: Content-Transfer-Encoding is only applicable to single body messages, so not sure why it is allowed in MultiBody by the XML Schema
-            if (part != null && part.ContentTransferEncoding != ContentEncoding.Default)
+
+            //MimeKit only exposes Content-Transfer-Encoding as a property for single body messages.
+            //According to specs it can be used for multipart entities, but it must be 7bit, 8bit, or binary, and always 7bit for practical purposes.
+            //Getting it directly from the Headers property to cover both cases since the XML schema allows it
+            if (mimeEntity.Headers.Contains("Content-Transfer-Encoding"))
             {
-                xwriter.WriteElementString("TransferEncoding", XM_NS, GetContentEncodingString(part.ContentTransferEncoding));
+                var transferEncoding = mimeEntity.Headers["Content-Transfer-Encoding"].ToLowerInvariant();
+                xwriter.WriteElementString("TransferEncoding", XM_NS, transferEncoding);
+                if(isMultipart && !transferEncoding.Equals("7bit",StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var warn = $"A multipart entity has a Content-Transfer-Encoding of '{transferEncoding}'; normally this should only be 7bit for multipart entities.";
+                    _logger.LogWarning(warn);
+                    xwriter.WriteComment($"WARNING: {warn}");
+                }
             }
 
             //TODO: TransferEncodingComments
@@ -543,7 +552,8 @@ namespace Email2Pdf
 
                 //TODO: DispositionComments
 
-                foreach (var param in mimeEntity.ContentDisposition.Parameters.Where(p => !p.Name.Equals("filename", StringComparison.InvariantCultureIgnoreCase)))
+                string[] except2 = { "filename" };
+                foreach (var param in mimeEntity.ContentDisposition.Parameters.Where(p => !except2.Contains(p.Name, StringComparer.InvariantCultureIgnoreCase)))
                 {
                     xwriter.WriteStartElement("DispositionParam", XM_NS); //In original V1 XSD this was named DispositionParams (plural) for SingleBody and DispositionParam for MultiBody.  For consistency, singular form now used for both.
                     xwriter.WriteElementString("Name", XM_NS, param.Name);
@@ -576,17 +586,17 @@ namespace Email2Pdf
             }
             else if (isMultipart && multipart != null && multipart.Count == 0)
             {
-                var warning = $"Item is multipart, but there are no parts";
-                _logger.LogWarning(warning);
-                xwriter.WriteComment(warning);
+                var warn = $"Item is multipart, but there are no parts";
+                _logger.LogWarning(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
             }
             else if (isMultipart && multipart == null)
             {
-                var warning = $"Item is erroneously flagged as multipart";
-                _logger.LogWarning(warning);
-                xwriter.WriteComment(warning);
+                var warn = $"Item is erroneously flagged as multipart";
+                _logger.LogWarning(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
             }
-            else if(!isMultipart)
+            else if (!isMultipart)
             {
                 if (part != null)
                 {
@@ -624,17 +634,17 @@ namespace Email2Pdf
                             //save non-text content externally
 
                             string randomFilePath = "";
-                            do 
+                            do
                             {
-                                randomFilePath = Path.Combine(Path.GetDirectoryName(outFilePath) ?? "",Path.GetRandomFileName());
-                            } while(File.Exists(randomFilePath));
+                                randomFilePath = Path.Combine(Path.GetDirectoryName(outFilePath) ?? "", Path.GetRandomFileName());
+                            } while (File.Exists(randomFilePath));
 
                             //TODO: Exception Handling
 
                             //Write the content to an external file
                             //Use the hash as the filename, try to use the file extension if there is one
                             //write content to a file and generate the hash which will be used as the file name
-                            using var contentStream = new FileStream(randomFilePath, FileMode.CreateNew,FileAccess.Write);
+                            using var contentStream = new FileStream(randomFilePath, FileMode.CreateNew, FileAccess.Write);
                             using var cryptoHashAlg = HashAlgorithm.Create(HashName) ?? SHA256.Create();  //Fallback to known hash algorithm
                             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);
                             content.DecodeTo(cryptoStream);
@@ -645,7 +655,7 @@ namespace Email2Pdf
                                 hashStr = Base32Encoding.ZBase32.GetString(cryptoHashAlg.Hash, 0, cryptoHashAlg.Hash.Length); // uses z-base-32 encodingfor file names, https://en.wikipedia.org/wiki/Base32
                             else
                                 throw new Exception($"Unable to calculate hash value for the content");
-                            var hashFileName = Path.Combine(Path.GetDirectoryName(outFilePath) ?? "", EXT_CONTENT_DIR, hashStr[..2], Path.ChangeExtension(hashStr,Path.GetExtension(part.FileName)));
+                            var hashFileName = Path.Combine(Path.GetDirectoryName(outFilePath) ?? "", EXT_CONTENT_DIR, hashStr[..2], Path.ChangeExtension(hashStr, Path.GetExtension(part.FileName)));
                             Directory.CreateDirectory(Path.GetDirectoryName(hashFileName) ?? "");
 
                             //Deal with duplicate attachments, which should only be stored once, make sure the randomFilePath file is deleted
@@ -653,7 +663,7 @@ namespace Email2Pdf
                             {
                                 var msg = $"Duplicate attachment has already been saved";
                                 _logger.LogInformation(msg);
-                                xwriter.WriteComment(msg);  
+                                xwriter.WriteComment($"INFO: {msg}");
                                 File.Delete(randomFilePath);
                             }
                             else
@@ -662,13 +672,18 @@ namespace Email2Pdf
                             }
 
                             xwriter.WriteStartElement("ExtBodyContent", XM_NS);
-                            xwriter.WriteElementString("RelPath", XM_NS, Path.GetRelativePath(Path.Combine(Path.GetDirectoryName(outFilePath) ?? "",EXT_CONTENT_DIR),hashFileName));
+                            xwriter.WriteElementString("RelPath", XM_NS, Path.GetRelativePath(Path.Combine(Path.GetDirectoryName(outFilePath) ?? "", EXT_CONTENT_DIR), hashFileName));
                             //CharSet and TransferEncoding are the same as for the SingleBody
                             localId++;
                             xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
                             xwriter.WriteElementString("XMLWrapped", XM_NS, "false");
                             //Eol is not applicable since we are not wrapping the content in XML
-                            //TODO: Hash
+                            xwriter.WriteStartElement("Hash", XM_NS);
+                            xwriter.WriteStartElement("Value", XM_NS);
+                            xwriter.WriteBinHex(cryptoHashAlg.Hash, 0, cryptoHashAlg.Hash.Length);
+                            xwriter.WriteEndElement(); //Value
+                            xwriter.WriteElementString("Function", XM_NS, HashName);
+                            xwriter.WriteEndElement(); //Hash
                             xwriter.WriteEndElement(); //ExtBodyContent
                         }
                     }
@@ -685,17 +700,17 @@ namespace Email2Pdf
                 {
                     string warn = $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}";
                     _logger.LogWarning(warn);
-                    xwriter.WriteComment(warn);
+                    xwriter.WriteComment($"WARNING: {warn}");
                 }
             }
             else
             {
                 string warn = $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}";
                 _logger.LogWarning(warn);
-                xwriter.WriteComment(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
             }
 
-            //TODO: PhantomBody
+            //TODO: PhantomBody; Content-Type message/external-body
 
             if (isMultipart && multipart != null && !string.IsNullOrWhiteSpace(multipart.Epilogue))
             {
@@ -789,9 +804,12 @@ namespace Email2Pdf
             var ret = false;
             status = "";
 
-            //For Mozilla: I think the way to get this for Mozilla is to determine if the message came from a file called 'Draft'
-            //TODO: There is also the X-Mozilla-Draft-Info header which could indicate whether a message is draft
-            if (Path.GetFileNameWithoutExtension(_mboxFilePath).Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status"))
+            //If it is a Mozilla message that came from a file called 'Draft' then assume it is a 'draft' message
+            //There is also the X-Mozilla-Draft-Info header which could indicate whether a message is draft
+            if (
+                (Path.GetFileNameWithoutExtension(_mboxFilePath).Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status"))
+                || message.Headers.Contains("X-Mozilla-Draft-Info")
+                )
             {
                 ret = true;
                 status = "Draft";
