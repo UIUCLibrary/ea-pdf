@@ -69,14 +69,21 @@ namespace Email2Pdf
         private readonly FileStream _mboxStream;
         private readonly CryptoStream _cryptoStream;
         private readonly HashAlgorithm _cryptoHashAlg;
+        private readonly string _hashName = HASH_DEFAULT;
 
-        public string HashName = HASH_DEFAULT;
         private string Eol = EOL_TYPE_UNK;
         private byte[] MessageHash = new byte[0];
         private Dictionary<string, int> EolCounts = new Dictionary<string, int>();
 
+        public string HashName
+        {
+            get
+            {
+                return _hashName;
+            }
+        }
 
-        public MboxProcessor(ILogger<MboxProcessor> logger, string mboxFilePath)
+        public MboxProcessor(ILogger<MboxProcessor> logger, string mboxFilePath, string hashAlg= HASH_DEFAULT)
         {
             if (string.IsNullOrWhiteSpace(mboxFilePath))
             {
@@ -87,6 +94,8 @@ namespace Email2Pdf
             {
                 throw new ArgumentNullException(nameof(logger));
             }
+
+            _hashName=hashAlg;
 
             _logger = logger;
             _logger.LogInformation("MboxProcessor Created");
@@ -101,8 +110,8 @@ namespace Email2Pdf
             else
             {
                 //default to a known algorithm
-                _logger.LogWarning($"Unable to instantiate hash algorithm '{HashName}', using 'SHA256' instead");
-                HashName = "SHA256";
+                _logger.LogWarning($"Unable to instantiate hash algorithm '{HashName}', using '{HASH_DEFAULT}' instead");
+                _hashName = HASH_DEFAULT;
                 _cryptoHashAlg = SHA256.Create();
             }
             _cryptoStream = new CryptoStream(_mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
