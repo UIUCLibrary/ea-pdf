@@ -71,7 +71,7 @@ namespace TestEAPDF
                 var eapdf = new MboxProcessor(logger, sampleFile);
                 var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
-                //test explicitly setting the output folder path
+                //explicitly setting the output folder path
                 Assert.AreEqual(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles\testout", outFolder);
                 var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
                 var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
@@ -107,6 +107,10 @@ namespace TestEAPDF
                 Assert.Fail("Logger was not initialized");
             }
         }
+        
+        //TODO: Test different combinations of settings; maybe experiment with using parameterized tests
+        //TODO: Test saveBinaryExt parameter
+        //TODO: Test the SerializeContentInXml preserveEncodingIfPossible parameter
 
         [TestMethod]
         public void TestMozillaDrafts2Xml()
