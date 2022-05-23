@@ -124,42 +124,6 @@ namespace Email2Pdf
         public MboxProcessor(ILogger<MboxProcessor> logger, string mboxFilePath) : this(logger, mboxFilePath, new MBoxProcessorSettings()) {  }
 
 
-        /// <summary>
-        /// Convert the mbox file into an archival PDF file
-        /// </summary>
-        /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mbox file</param>
-        /// <returns></returns>
-        public long ConvertMbox2EAPDF(ref string outFolderPath)
-        {
-            long ret = 0;
-
-            if (string.IsNullOrWhiteSpace(outFolderPath))
-            {
-                outFolderPath = Path.GetDirectoryName(_mboxFilePath) ?? "";
-            }
-
-            var outFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "pdf")));
-
-            var csvFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "csv")));
-
-
-            _logger.LogInformation("Convert email file: '{0}' into PDF file: '{1}'", _mboxFilePath, outFilePath);
-
-            var parser = new MimeParser(_mboxStream, MimeFormat.Mbox);
-            while (!parser.IsEndOfStream)
-            {
-                var message = parser.ParseMessage();
-                if (message != null)
-                {
-                    ret++;
-                    _logger.LogInformation("Message {0} Parsed\r\nSubject: {1}", ret, message.Subject);
-                }
-            }
-
-            _logger.LogInformation("Parsed {0} messages", ret);
-
-            return ret;
-        }
 
         /// <summary>
         /// Convert the mbox file into an archival XML file
