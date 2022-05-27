@@ -7,6 +7,7 @@ using System.Xml.Schema;
 using System.Xml.XPath;
 using System.Security.Cryptography;
 using System;
+using System.Reflection;
 
 namespace TestEAPDF
 {
@@ -38,24 +39,30 @@ namespace TestEAPDF
         //TODO: Test saveBinaryExt parameter
         //TODO: Test the SerializeContentInXml preserveEncodingIfPossible parameter
 
-        [DataRow("SHA256", true, false, false,"test1")]
-        [DataRow("SHA1", true, false, false,"test2")]
+        [DataRow("SHA256", false, false, false, "sha256", DisplayName = "sha256")]
+        [DataRow("SHA1", false, false, false, "sha1", DisplayName = "sha1")]
+        [DataRow("SHA256", true, false, false, "sha256-ext", DisplayName = "sha256-ext")]
+        [DataRow("SHA1", true, false, false, "sha1-ext", DisplayName = "sha1-ext")]
+        [DataRow("SHA256", true, true, false, "sha256-ext-wrap", DisplayName = "sha256-ext-wrap")]
+        [DataRow("SHA1", true, true, false, "sha1-ext-wrap", DisplayName = "sha1-ext-wrap")]
         [DataTestMethod]
         public void Test2Xml(string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, string testOutFolder)
         {
             if (logger != null)
             {
-                var settings = new MBoxProcessorSettings(){
+                var settings = new MBoxProcessorSettings()
+                {
                     HashAlgorithmName = hashAlg,
                     SaveAttachmentsAndBinaryContentExternally = extContent,
                     WrapExternalContentInXml = wrapExtInXml,
                     PreserveContentTransferEncodingIfPossible = preserveEnc
                 };
 
+
                 var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
                 var expectedOutFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles", testOutFolder);
-                var outFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles",testOutFolder);
-                
+                var outFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles", testOutFolder);
+
                 //clean out the output folder
                 if (Directory.Exists(outFolder))
                 {
@@ -69,8 +76,8 @@ namespace TestEAPDF
                 //make sure output folders and files exist
                 Assert.AreEqual(expectedOutFolder, outFolder);
                 Assert.IsTrue(Directory.Exists(outFolder));
-                var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
-                var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
+                string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
+                string csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
                 Assert.IsTrue(File.Exists(xmlPathStr));
                 Assert.IsTrue(File.Exists(csvPathStr));
 
@@ -88,26 +95,31 @@ namespace TestEAPDF
                 Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
                 Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
 
-                var expectedHash = CalculateHash(hashAlg,sampleFile);
+                var expectedHash = CalculateHash(hashAlg, sampleFile);
                 Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
 
                 //make sure xml is schema valid 
                 validXml = true;
                 xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
-                xdoc.Validate(XmlValidationEventHandler);
+                Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
+                xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
                 Assert.IsTrue(validXml);
-                
+
                 if (extContent)
                 {
                     //make sure all attachments or binary content are external and that the file exists and hashes match
                     XmlNodeList? nodes = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message//xm:SingleBody[xm:Disposition='attachment' or (not(starts-with(translate(xm:ContentType,'TEXT','tex'),'tex')) and not(starts-with(translate(xm:ContentType,'MESAG','mesag'),'message')))]", xmlns);
                     Assert.IsTrue(nodes != null && nodes.Count > 0);
+
+                    var extdoc = new XmlDocument();
+                    extdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
+
                     foreach (XmlElement node in nodes)
                     {
                         Assert.IsNull(node.SelectSingleNode("xm:BodyContent", xmlns));
                         XmlElement? extNode = node.SelectSingleNode("xm:ExtBodyContent", xmlns) as XmlElement;
                         Assert.IsNotNull(extNode);
-                        string? extPath = extNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText ;
+                        string? extPath = extNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText;
                         Assert.IsFalse(string.IsNullOrWhiteSpace(extPath));
                         var extFilepath = Path.Combine(outFolder, MboxProcessor.EXT_CONTENT_DIR, extPath);
                         Assert.IsTrue(File.Exists(extFilepath));
@@ -116,11 +128,59 @@ namespace TestEAPDF
                         Assert.AreEqual(extHash, calcHash);
                         string? calcHashAlg = extNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText;
                         Assert.AreEqual(hashAlg, calcHashAlg);
+                        if (wrapExtInXml)
+                        {
+                            //make sure external content is wrapped in XML
+                            var wrapped = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
+                            Assert.IsTrue(wrapped.Equals("true", StringComparison.OrdinalIgnoreCase));
+
+                            Assert.IsTrue(Path.GetExtension(extFilepath) == ".xml");
+
+                            //make sure external file is valid xml
+                            validXml = true;
+                            extdoc.Load(extFilepath);
+                            Assert.IsTrue(extdoc.DocumentElement?.LocalName == "BodyContent");
+                            Assert.IsTrue(extdoc.DocumentElement?.NamespaceURI == MboxProcessor.XM_NS);
+                            extdoc.Validate(XmlValidationEventHandler, extdoc.DocumentElement);
+                            Assert.IsTrue(validXml);
+                        }
+                        else
+                        {
+                            //make sure is not wrapped
+                            var wrapped = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
+                            Assert.IsTrue(wrapped.Equals("false", StringComparison.OrdinalIgnoreCase));
+                            //TODO: Test that file is not XML
+                            validXml = true;
+                            try
+                            {
+                                extdoc.Load(extFilepath);
+                                //must be well formed XML, so make sure it is not a wrapped email content xml
+                                Assert.IsFalse(extdoc.DocumentElement?.LocalName == "BodyContent");
+                                Assert.IsFalse(extdoc.DocumentElement?.NamespaceURI == MboxProcessor.XM_NS);
+                                validXml = false;  //if it gets here, it is XML but not a wrapped email content, so it is invalid
+                            }
+                            catch (XmlException)
+                            {
+                                //probably not even XML
+                                validXml = false;
+                            }
+                            Assert.IsFalse(validXml);
+
+
+                        }
                     }
                 }
                 else
                 {
-                    
+                    //make sure all content is saved in the XML 
+                    XmlNodeList? nodes = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message//xm:SingleBody", xmlns);
+                    Assert.IsTrue(nodes != null && nodes.Count > 0);
+                    foreach (XmlElement node in nodes)
+                    {
+                        Assert.IsNull(node.SelectSingleNode("xm:ExtBodyContent", xmlns));
+                        Assert.IsNotNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage", xmlns));
+
+                    }
                 }
 
             }
@@ -129,7 +189,7 @@ namespace TestEAPDF
                 Assert.Fail("Logger was not initialized");
             }
         }
-        
+
         [TestMethod]
         public void TestMozillaDrafts2Xml()
         {
@@ -159,7 +219,7 @@ namespace TestEAPDF
 
                 var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
                 //make sure each message is marked as draft
-                if(messages!= null)
+                if (messages != null)
                 {
                     foreach (XmlElement message in messages)
                     {
@@ -171,7 +231,8 @@ namespace TestEAPDF
                 //make sure xml is schema valid
                 validXml = true;
                 xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
-                xdoc.Validate(XmlValidationEventHandler);
+                Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
+                xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
                 Assert.IsTrue(validXml);
 
             }
@@ -211,7 +272,8 @@ namespace TestEAPDF
                 //make sure xml is schema valid
                 validXml = true;
                 xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
-                xdoc.Validate(XmlValidationEventHandler);
+                Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
+                xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
                 Assert.IsTrue(validXml);
 
             }
@@ -235,7 +297,7 @@ namespace TestEAPDF
             }
         }
 
-        string CalculateHash(string algName,string filePath)
+        string CalculateHash(string algName, string filePath)
         {
             var fstream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
@@ -243,9 +305,9 @@ namespace TestEAPDF
 
             //read to end of stream
             int i = -1;
-            do 
-            { 
-                i = cstream.ReadByte(); 
+            do
+            {
+                i = cstream.ReadByte();
             } while (i != -1);
 
             var hash = alg.Hash ?? new byte[0];

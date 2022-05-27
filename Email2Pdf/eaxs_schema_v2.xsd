@@ -5,16 +5,29 @@
         elementFormDefault="qualified">
 	<annotation>
 		<documentation>This is a modification of the original XML Schema located here:  https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs</documentation>
-		<documentation>Modified by Tom Habing, thabing@illinois.edu, for the IMLS-funded "Email Archiving in PDF: From Initial Specification to Community of Practice" project</documentation>
+		<documentation>Modified by Tom Habing, thabing@illinois.edu, for the IMLS-funded "Email Archiving in PDF: From Initial Specification to Community of Practice" project.  See the change log below:</documentation>
 		<documentation>
+			CHANGE LOG
+			=========
 			2022-04-09
 			* Rename element SingleBody/DispositionParams to SingleBody/DispositionParam (not plural) to match the name in MultiBody element
 			* Added SingleBody/Disposition element
+			
+			2022-05-25
+			* Made BodyContent a valid root-level element for use when wrapping external content in XML
 		</documentation>
 		<documentation>
 			TODO:  There are many improvements that could be made to this schema to improve modularity and extensibility
 		</documentation>
 	</annotation>
+
+	<element name="BodyContent" type="xm:int-body-content-type">
+		<annotation>
+			<documentation>
+				This is the root element used when external content is wrapped in XML
+			</documentation>
+		</annotation>
+	</element>
 
 	<element name="Account">
 		<complexType>

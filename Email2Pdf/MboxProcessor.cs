@@ -630,7 +630,7 @@ namespace Email2Pdf
                         if (!Settings.SaveAttachmentsAndBinaryContentExternally)
                         {
                             //save non-text content or attachments as part of the XML
-                            SerializeContentInXml(part, xwriter);
+                            SerializeContentInXml(part, xwriter,false);
                         }
                         else
                         {
@@ -687,12 +687,17 @@ namespace Email2Pdf
         /// <param name="part">the MIME part to serialize</param>
         /// <param name="xwriter">the XML writer to serialize it to</param>
         /// <param name="preserveEncodingIfPossible">if true write text as unicode and use the original content encoding if possible; if false write it as either unicode text or as base64 encoded binary</param>
-        private void SerializeContentInXml(MimePart part, XmlWriter xwriter)
+        private void SerializeContentInXml(MimePart part, XmlWriter xwriter, bool ExtContent)
         {
             //TEST: Need a test of preserveEncodingIfPossible true and false
             var content = part.Content;
 
             xwriter.WriteStartElement("BodyContent", XM_NS);
+            if(ExtContent)
+            {
+                xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
+            }
+
             xwriter.WriteStartElement("Content", XM_NS);
 
             var encoding = GetContentEncodingString(content.Encoding);
@@ -774,7 +779,7 @@ namespace Email2Pdf
             {
                 var extXmlWriter = XmlWriter.Create(cryptoStream, new XmlWriterSettings { Indent = true, Encoding = System.Text.Encoding.UTF8 });
                 extXmlWriter.WriteStartDocument();
-                SerializeContentInXml(part, extXmlWriter);
+                SerializeContentInXml(part, extXmlWriter,true);
                 extXmlWriter.WriteEndDocument();
                 extXmlWriter.Close();
             }
