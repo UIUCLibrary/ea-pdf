@@ -10,6 +10,9 @@ namespace Email2Pdf
 {
     public class MboxProcessor : IDisposable
     {
+
+        //TODO: Need to add some IO Exception Handling throughout for creating, reading, and writing to files and folders.
+
         private bool disposedValue;
 
         public const string EOL_TYPE_CR = "CR";
@@ -19,7 +22,7 @@ namespace Email2Pdf
 
         public const string EXT_CONTENT_DIR = "ExtBodyContent";
 
-        //for LWSP (Linear White Space) detection
+        //for LWSP (Linear White Space) detection, compaction, and trimming
         const byte CR = 13;
         const byte LF = 10;
         const byte SP = 32;
@@ -214,9 +217,9 @@ namespace Email2Pdf
                     {
                         localId = ConvertMessageToEAXS(message, xwriter, localId, outFilePath, false);
                     }
-                    else //log an error and create an incomplete message 
+                    else //log an error and create an incomplete message; <Incomplete> Seems related to errors
                     {
-                        //TEST:  Will need to create a deliberately malformed mbox to test this
+                        //NEEDSTEST:  Will need to create a deliberately malformed mbox to test this
                         _logger.LogError(errMsg);
                         xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
                         xwriter.WriteStartElement("MessageId", XM_NS);
@@ -432,8 +435,6 @@ namespace Email2Pdf
 
             localId = ConvertBody2EAXS(message.Body, xwriter, localId, outFilePath);
 
-            //TODO: Incomplete; Seems related to errors
-
             if (!isChildMessage)
             {
                 xwriter.WriteElementString("Eol", XM_NS, Eol);
@@ -579,7 +580,7 @@ namespace Email2Pdf
                 xwriter.WriteStartElement("OtherMimeHeader", XM_NS);
                 xwriter.WriteElementString("Name", XM_NS, hdr.Field);
                 xwriter.WriteElementString("Value", XM_NS, hdr.Value);
-                //TODO: Comments, not currently supported by MimeKit
+                //TODO: OtherMimeHeader/Comments, not currently supported by MimeKit
                 xwriter.WriteEndElement(); //OtherMimeHeaders
             }
 
@@ -662,7 +663,7 @@ namespace Email2Pdf
             }
 
             //PhantomBody; Content-Type message/external-body
-            //TEST: Need to write a test for this
+            //NEEDSTEST: Need to write a test for this
             if(!isMultipart && part!=null && part.ContentType.IsMimeType("message", "external-body"))
             {
                 var streamReader = new StreamReader(part.Content.Open(), part.ContentType.CharsetEncoding, true);
@@ -689,7 +690,6 @@ namespace Email2Pdf
         /// <param name="preserveEncodingIfPossible">if true write text as unicode and use the original content encoding if possible; if false write it as either unicode text or as base64 encoded binary</param>
         private void SerializeContentInXml(MimePart part, XmlWriter xwriter, bool ExtContent)
         {
-            //TEST: Need a test of preserveEncodingIfPossible true and false
             var content = part.Content;
 
             xwriter.WriteStartElement("BodyContent", XM_NS);
@@ -750,9 +750,6 @@ namespace Email2Pdf
         /// <exception cref="Exception">thrown if unable to generate the hash</exception>
         private long SerializeContentInExtFile(MimePart part, XmlWriter xwriter, string outFilePath, long localId)
         {
-            //TODO: Add a parameter to wrap the content in XML, instead of just saving it as the original decoded file
-            //probably use the SerializeContentInXml function with a different xmlWiter to do this
-            
             var content = part.Content;
 
             //get random file name that doesn't already exist
@@ -761,8 +758,6 @@ namespace Email2Pdf
             {
                 randomFilePath = Path.Combine(Path.GetDirectoryName(outFilePath) ?? "", Path.GetRandomFileName());
             } while (File.Exists(randomFilePath));
-
-            //TODO: IO Exception Handling
 
             //Write the content to an external file
             //Use the hash as the filename, try to use the file extension if there is one
@@ -946,16 +941,22 @@ namespace Email2Pdf
 
         private bool TryGetDraft(MimeMessage message, out string status)
         {
-            //TODO: Need to determine how other email clients might encode these values
-            
+            //See https://docs.python.org/3/library/mailbox.html#mailbox.MaildirMessage for more hints -- maybe encoded in the filename of an "info" section?
+            //See https://opensource.apple.com/source/dovecot/dovecot-293/dovecot/doc/wiki/MailboxFormat.mbox.txt.auto.html about the X-Status 'T' flag
+
             var ret = false;
             status = "";
+
+            
+            var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
+
 
             //If it is a Mozilla message that came from a file called 'Draft' then assume it is a 'draft' message
             //There is also the X-Mozilla-Draft-Info header which could indicate whether a message is draft
             if (
-                (Path.GetFileNameWithoutExtension(_mboxFilePath).Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status"))
-                || message.Headers.Contains("X-Mozilla-Draft-Info")
+                (Path.GetFileNameWithoutExtension(_mboxFilePath).Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
+                || message.Headers.Contains("X-Mozilla-Draft-Info")  //Mozilla uses this header for draft messages
+                || mimeStatus.Contains('T')  //Some clients encode draft as "T" in the X-Status header
                 )
             {
                 ret = true;
@@ -1160,13 +1161,13 @@ namespace Email2Pdf
                     _mboxStream.Dispose();
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
+                // also free unmanaged resources (unmanaged objects) and override finalizer
+                // also set large fields to null
                 disposedValue = true;
             }
         }
 
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // // also override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
         // ~MboxProcessor()
         // {
         //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method

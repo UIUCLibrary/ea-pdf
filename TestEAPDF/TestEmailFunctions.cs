@@ -33,18 +33,12 @@ namespace TestEAPDF
             if (loggerFactory != null) loggerFactory.Dispose();
         }
 
-
-
-        //TODO: Test different combinations of settings; maybe experiment with using parameterized tests
-        //TODO: Test saveBinaryExt parameter
-        //TODO: Test the SerializeContentInXml preserveEncodingIfPossible parameter
-
         [DataRow("SHA256", false, false, false, "sha256", DisplayName = "sha256")]
         [DataRow("SHA1", false, false, false, "sha1", DisplayName = "sha1")]
         [DataRow("SHA256", true, false, false, "sha256-ext", DisplayName = "sha256-ext")]
-        [DataRow("SHA1", true, false, false, "sha1-ext", DisplayName = "sha1-ext")]
         [DataRow("SHA256", true, true, false, "sha256-ext-wrap", DisplayName = "sha256-ext-wrap")]
-        [DataRow("SHA1", true, true, false, "sha1-ext-wrap", DisplayName = "sha1-ext-wrap")]
+        [DataRow("SHA256", false, false, true, "sha256---presvEnc", DisplayName = "sha256---presvEnc")]
+        [DataRow("SHA256", true, true, true, "sha256-ext-wrap", DisplayName = "sha256-ext-wrap-presvEnc")]
         [DataTestMethod]
         public void Test2Xml(string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, string testOutFolder)
         {
@@ -143,13 +137,28 @@ namespace TestEAPDF
                             Assert.IsTrue(extdoc.DocumentElement?.NamespaceURI == MboxProcessor.XM_NS);
                             extdoc.Validate(XmlValidationEventHandler, extdoc.DocumentElement);
                             Assert.IsTrue(validXml);
+
+                            //Test the preserve transfer encoding setting
+                            var enc = extdoc.SelectSingleNode("/xm:BodyContent/xm:TransferEncoding", xmlns)?.InnerText;
+                            var origEnc = node.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText;
+                            if (preserveEnc)
+                            {
+                                if (enc != null)
+                                    Assert.AreEqual(origEnc, enc);
+                            }
+                            else
+                            {
+                                if (enc != null)
+                                    Assert.AreEqual("base64", enc);
+                            }
+
                         }
                         else
                         {
                             //make sure is not wrapped
                             var wrapped = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
                             Assert.IsTrue(wrapped.Equals("false", StringComparison.OrdinalIgnoreCase));
-                            //TODO: Test that file is not XML
+                            //Test that file is not XML
                             validXml = true;
                             try
                             {
@@ -180,8 +189,23 @@ namespace TestEAPDF
                         Assert.IsNull(node.SelectSingleNode("xm:ExtBodyContent", xmlns));
                         Assert.IsNotNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage", xmlns));
 
+                        //Test the preserve transfer encoding setting
+                        var enc = node.SelectSingleNode("xm:BodyContent/xm:TransferEncoding", xmlns)?.InnerText;
+                        var origEnc = node.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText;
+                        if (preserveEnc)
+                        {
+                            if (enc != null)
+                                Assert.AreEqual(origEnc, enc);
+                        }
+                        else
+                        {
+                            if (enc != null)
+                                Assert.AreEqual("base64", enc);
+                        }
+
                     }
                 }
+
 
             }
             else
