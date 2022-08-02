@@ -221,7 +221,7 @@ namespace TestEAPDF
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\Drafts";
                 var outFolder = "";
-                var eapdf = new MboxProcessor(logger, sampleFile);
+                var eapdf = new MboxProcessor(logger, sampleFile,new MBoxProcessorSettings());
                 var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder
@@ -273,7 +273,7 @@ namespace TestEAPDF
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\Inbox";
                 var outFolder = "";
-                var eapdf = new MboxProcessor(logger, sampleFile);
+                var eapdf = new MboxProcessor(logger, sampleFile, new MBoxProcessorSettings());
                 var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder

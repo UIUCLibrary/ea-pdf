@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--TODO: Need to find permanent external URL for this XSD -->
 <schema xmlns="http://www.w3.org/2001/XMLSchema"
         xmlns:xm="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
         targetNamespace="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
         elementFormDefault="qualified">
 	<annotation>
 		<documentation>This is a modification of the original XML Schema located here:  https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs</documentation>
-		<documentation>Modified by Tom Habing, thabing@illinois.edu, for the IMLS-funded "Email Archiving in PDF: From Initial Specification to Community of Practice" project.  See the change log below:</documentation>
+		<documentation>Modified by Tom Habing (TGH), thabing@illinois.edu, for the IMLS-funded "Email Archiving in PDF: From Initial Specification to Community of Practice" project.  See the change log below:</documentation>
 		<documentation>
 			CHANGE LOG
 			=========
@@ -270,6 +271,11 @@
 				</annotation>
 			</element>
 		</sequence>
+		<attribute name="IsAttachment" type="boolean" use="optional">
+			<annotation>
+				<documentation>TGH_2022-06-10: A quick way to determine whether the content should be treated as an attachment or not</documentation>
+			</annotation>
+		</attribute>
 	</complexType>
 
 	<complexType name="multi-body-type">
@@ -328,6 +334,11 @@
 			</choice>
 			<element name="Epilogue" type="string" minOccurs="0"/>
 		</sequence>
+		<attribute name="IsAttachment" type="boolean" use="optional">
+			<annotation>
+				<documentation>TGH_2022-06-10: A quick way to determine whether the content should be treated as an attachment or not</documentation>
+			</annotation>
+		</attribute>
 	</complexType>
 
 	<complexType name="child-message-type">
@@ -522,6 +533,13 @@
 			<enumeration value="CR"/>
 			<enumeration value="LF"/>
 			<enumeration value="CRLF"/>
+			<enumeration value="UNKNOWN">
+				<annotation>
+					<documentation>
+						TGH_2022-06-10: The EOL might be unknown if there was an error parsing the mbox file.
+					</documentation>
+				</annotation>
+			</enumeration>
 		</restriction>
 	</simpleType>
 
