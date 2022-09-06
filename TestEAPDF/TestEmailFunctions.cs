@@ -54,8 +54,8 @@ namespace TestEAPDF
 
 
                 var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
-                var expectedOutFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles", testOutFolder);
-                var outFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\Email2Pdf\SampleFiles", testOutFolder);
+                var expectedOutFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles", testOutFolder);
+                var outFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles", testOutFolder);
 
                 //clean out the output folder
                 if (Directory.Exists(outFolder))
