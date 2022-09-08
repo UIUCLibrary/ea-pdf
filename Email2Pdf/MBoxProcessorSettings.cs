@@ -12,7 +12,7 @@ namespace Email2Pdf
         /// The name of the HashAlgorithm to use, must be one of the values in the System.Security.Cryptography.HashAlgorithmNames class.
         /// Default is SHA256
         /// </summary>
-        public string HashAlgorithmName { get; set; } = MboxProcessor.HASH_DEFAULT;
+        public string HashAlgorithmName { get; set; } = EmailProcessor.HASH_DEFAULT;
 
         /// <summary>
         /// If true, all attachments and binary content is saved external to the XML file; if false, attachments and binary content is saved inline.

@@ -8,7 +8,7 @@ using CsvHelper;
 
 namespace Email2Pdf
 {
-    public class MboxProcessor : IDisposable
+    public class EmailProcessor : IDisposable
     {
 
         //TODO: Need to add some IO Exception Handling throughout for creating, reading, and writing to files and folders.
@@ -98,18 +98,16 @@ namespace Email2Pdf
         /// <param name="settings"></param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
-        public MboxProcessor(ILogger<MboxProcessor> logger, string mboxFilePath, MBoxProcessorSettings settings)
+        public EmailProcessor(ILogger<EmailProcessor> logger, string mboxFilePath, MBoxProcessorSettings settings)
         {
-            Settings = settings;
+            if (logger == null)
+            {
+                throw new ArgumentNullException(nameof(logger));
+            }
 
             if (string.IsNullOrWhiteSpace(mboxFilePath))
             {
                 throw new ArgumentNullException(nameof(mboxFilePath));
-            }
-
-            if (logger == null)
-            {
-                throw new ArgumentNullException(nameof(logger));
             }
 
             if (!File.Exists(mboxFilePath) && !Directory.Exists(mboxFilePath))
@@ -117,11 +115,19 @@ namespace Email2Pdf
                 throw new FileNotFoundException(mboxFilePath);
             }
 
+            if(settings == null)
+            {
+                throw new ArgumentNullException(nameof(settings));
+            }
+
+            Settings = settings;
+
             _logger = logger;
             _logger.LogInformation("MboxProcessor Created");
 
             _mboxFilePath = Path.GetFullPath(mboxFilePath);
             _mboxStream = new FileStream(_mboxFilePath, FileMode.Open, FileAccess.Read);
+
             var alg = HashAlgorithm.Create(Settings.HashAlgorithmName);
             if (alg != null)
             {
@@ -280,7 +286,7 @@ namespace Email2Pdf
                 errMsg = ex.Message;
                 message = new MimeMessage(); //create dummy message
             }
-            
+
             if (message != null)
             {
 
@@ -510,7 +516,7 @@ namespace Email2Pdf
             xwriter.WriteStartAttribute("IsAttachment");
             xwriter.WriteValue(mimeEntity.IsAttachment);
             xwriter.WriteEndAttribute();
-            
+
             WriteMimeContentType(xwriter, mimeEntity, isMultipart);
 
             WriteMimeOtherStandardHeaders(xwriter, mimeEntity, isMultipart);

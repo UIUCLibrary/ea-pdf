@@ -14,7 +14,7 @@ namespace TestEAPDF
     [TestClass]
     public class TestEmailFunctions
     {
-        ILogger<MboxProcessor>? logger;
+        ILogger<EmailProcessor>? logger;
         ILoggerFactory? loggerFactory;
         bool validXml = true;
 
@@ -22,7 +22,7 @@ namespace TestEAPDF
         public void InitTest()
         {
             loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-            logger = loggerFactory.CreateLogger<MboxProcessor>();
+            logger = loggerFactory.CreateLogger<EmailProcessor>();
             logger.LogInformation("Starting Test");
         }
 
@@ -52,7 +52,7 @@ namespace TestEAPDF
                     PreserveContentTransferEncodingIfPossible = preserveEnc
                 };
 
-
+                //TODO: make the tests resilient to moving code to different folder structure
                 var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
                 var expectedOutFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles", testOutFolder);
                 var outFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles", testOutFolder);
@@ -63,7 +63,7 @@ namespace TestEAPDF
                     Directory.Delete(outFolder, true);
                 }
 
-                var proc = new MboxProcessor(logger, sampleFile, settings);
+                var proc = new EmailProcessor(logger, sampleFile, settings);
                 var cnt = proc.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                 Assert.IsTrue(cnt > 0);
 
@@ -79,7 +79,7 @@ namespace TestEAPDF
                 xdoc.Load(xmlPathStr);
 
                 var xmlns = new XmlNamespaceManager(xdoc.NameTable);
-                xmlns.AddNamespace(MboxProcessor.XM, MboxProcessor.XM_NS);
+                xmlns.AddNamespace(EmailProcessor.XM, EmailProcessor.XM_NS);
 
                 //make sure hash is correct
                 XmlNode? hashValueNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Value", xmlns);
@@ -94,7 +94,7 @@ namespace TestEAPDF
 
                 //make sure xml is schema valid 
                 validXml = true;
-                xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
+                xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
                 Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
                 xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
                 Assert.IsTrue(validXml);
@@ -106,7 +106,7 @@ namespace TestEAPDF
                     Assert.IsTrue(nodes != null && nodes.Count > 0);
 
                     var extdoc = new XmlDocument();
-                    extdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
+                    extdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
 
                     foreach (XmlElement node in nodes)
                     {
@@ -115,7 +115,7 @@ namespace TestEAPDF
                         Assert.IsNotNull(extNode);
                         string? extPath = extNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText;
                         Assert.IsFalse(string.IsNullOrWhiteSpace(extPath));
-                        var extFilepath = Path.Combine(outFolder, MboxProcessor.EXT_CONTENT_DIR, extPath);
+                        var extFilepath = Path.Combine(outFolder, EmailProcessor.EXT_CONTENT_DIR, extPath);
                         Assert.IsTrue(File.Exists(extFilepath));
                         var extHash = CalculateHash(hashAlg, extFilepath);
                         string? calcHash = extNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText;
@@ -134,7 +134,7 @@ namespace TestEAPDF
                             validXml = true;
                             extdoc.Load(extFilepath);
                             Assert.IsTrue(extdoc.DocumentElement?.LocalName == "BodyContent");
-                            Assert.IsTrue(extdoc.DocumentElement?.NamespaceURI == MboxProcessor.XM_NS);
+                            Assert.IsTrue(extdoc.DocumentElement?.NamespaceURI == EmailProcessor.XM_NS);
                             extdoc.Validate(XmlValidationEventHandler, extdoc.DocumentElement);
                             Assert.IsTrue(validXml);
 
@@ -165,7 +165,7 @@ namespace TestEAPDF
                                 extdoc.Load(extFilepath);
                                 //must be well formed XML, so make sure it is not a wrapped email content xml
                                 Assert.IsFalse(extdoc.DocumentElement?.LocalName == "BodyContent");
-                                Assert.IsFalse(extdoc.DocumentElement?.NamespaceURI == MboxProcessor.XM_NS);
+                                Assert.IsFalse(extdoc.DocumentElement?.NamespaceURI == EmailProcessor.XM_NS);
                                 validXml = false;  //if it gets here, it is XML but not a wrapped email content, so it is invalid
                             }
                             catch (XmlException)
@@ -221,7 +221,7 @@ namespace TestEAPDF
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\Drafts";
                 var outFolder = "";
-                var eapdf = new MboxProcessor(logger, sampleFile,new MBoxProcessorSettings());
+                var eapdf = new EmailProcessor(logger, sampleFile,new MBoxProcessorSettings());
                 var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder
@@ -239,7 +239,7 @@ namespace TestEAPDF
                 xdoc.Load(xmlPathStr);
 
                 var xmlns = new XmlNamespaceManager(xdoc.NameTable);
-                xmlns.AddNamespace(MboxProcessor.XM, MboxProcessor.XM_NS);
+                xmlns.AddNamespace(EmailProcessor.XM, EmailProcessor.XM_NS);
 
                 var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
                 //make sure each message is marked as draft
@@ -254,7 +254,7 @@ namespace TestEAPDF
 
                 //make sure xml is schema valid
                 validXml = true;
-                xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
+                xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
                 Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
                 xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
                 Assert.IsTrue(validXml);
@@ -273,7 +273,7 @@ namespace TestEAPDF
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\Inbox";
                 var outFolder = "";
-                var eapdf = new MboxProcessor(logger, sampleFile, new MBoxProcessorSettings());
+                var eapdf = new EmailProcessor(logger, sampleFile, new MBoxProcessorSettings());
                 var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder
@@ -291,11 +291,11 @@ namespace TestEAPDF
                 xdoc.Load(xmlPathStr);
 
                 var xmlns = new XmlNamespaceManager(xdoc.NameTable);
-                xmlns.AddNamespace(MboxProcessor.XM, MboxProcessor.XM_NS);
+                xmlns.AddNamespace(EmailProcessor.XM, EmailProcessor.XM_NS);
 
                 //make sure xml is schema valid
                 validXml = true;
-                xdoc.Schemas.Add(MboxProcessor.XM_NS, MboxProcessor.XM_XSD);
+                xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
                 Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
                 xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
                 Assert.IsTrue(validXml);
