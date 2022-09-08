@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Email2Pdf
 {
-    public class MBoxProcessorSettings
+    public class EmailProcessorSettings
     {
         /// <summary>
         /// The name of the HashAlgorithm to use, must be one of the values in the System.Security.Cryptography.HashAlgorithmNames class.

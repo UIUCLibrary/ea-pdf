@@ -44,7 +44,7 @@ namespace TestEAPDF
         {
             if (logger != null)
             {
-                var settings = new MBoxProcessorSettings()
+                var settings = new EmailProcessorSettings()
                 {
                     HashAlgorithmName = hashAlg,
                     SaveAttachmentsAndBinaryContentExternally = extContent,
@@ -63,8 +63,8 @@ namespace TestEAPDF
                     Directory.Delete(outFolder, true);
                 }
 
-                var proc = new EmailProcessor(logger, sampleFile, settings);
-                var cnt = proc.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                var proc = new EmailProcessor(logger, settings);
+                var cnt = proc.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                 Assert.IsTrue(cnt > 0);
 
                 //make sure output folders and files exist
@@ -221,8 +221,8 @@ namespace TestEAPDF
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\Drafts";
                 var outFolder = "";
-                var eapdf = new EmailProcessor(logger, sampleFile,new MBoxProcessorSettings());
-                var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings());
+                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder
                 var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);
@@ -273,8 +273,8 @@ namespace TestEAPDF
             {
                 var sampleFile = @"..\..\..\..\SampleFiles\Inbox";
                 var outFolder = "";
-                var eapdf = new EmailProcessor(logger, sampleFile, new MBoxProcessorSettings());
-                var cnt = eapdf.ConvertMbox2EAXS(ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings());
+                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder
                 var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);

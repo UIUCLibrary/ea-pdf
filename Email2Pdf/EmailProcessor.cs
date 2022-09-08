@@ -73,11 +73,11 @@ namespace Email2Pdf
         public const string XM_XSD = "eaxs_schema_v2.xsd";
 
         private readonly ILogger _logger;
-
-        private readonly string _mboxFilePath;
-        private readonly FileStream _mboxStream;
-        private readonly CryptoStream _cryptoStream;
         private readonly HashAlgorithm _cryptoHashAlg;
+
+        private string? _mboxFilePath;
+        private FileStream? _mboxStream;
+        private CryptoStream? _cryptoStream;
 
         public const string HASH_DEFAULT = "SHA256";
 
@@ -86,34 +86,23 @@ namespace Email2Pdf
         private Dictionary<string, int> EolCounts = new Dictionary<string, int>();
 
 
-        public MBoxProcessorSettings Settings { get; }
+        public EmailProcessorSettings Settings { get; }
 
 
         /// <summary>
-        /// Create a processor for mbox files.  If the mboxFilePath points to a file just that file and any correspondingly named subdirectories will be processed.
-        /// If the mboxFilePath points to a directory, all mbox files in the directory and correspondingly named subdirectories will be processed.
+        /// Create a processor for email files, initializing the logger and settings
         /// </summary>
         /// <param name="logger"></param>
-        /// <param name="mboxFilePath"></param>
         /// <param name="settings"></param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
-        public EmailProcessor(ILogger<EmailProcessor> logger, string mboxFilePath, MBoxProcessorSettings settings)
+        public EmailProcessor(ILogger<EmailProcessor> logger, EmailProcessorSettings settings)
         {
             if (logger == null)
             {
                 throw new ArgumentNullException(nameof(logger));
             }
 
-            if (string.IsNullOrWhiteSpace(mboxFilePath))
-            {
-                throw new ArgumentNullException(nameof(mboxFilePath));
-            }
-
-            if (!File.Exists(mboxFilePath) && !Directory.Exists(mboxFilePath))
-            {
-                throw new FileNotFoundException(mboxFilePath);
-            }
 
             if(settings == null)
             {
@@ -124,9 +113,6 @@ namespace Email2Pdf
 
             _logger = logger;
             _logger.LogInformation("MboxProcessor Created");
-
-            _mboxFilePath = Path.GetFullPath(mboxFilePath);
-            _mboxStream = new FileStream(_mboxFilePath, FileMode.Open, FileAccess.Read);
 
             var alg = HashAlgorithm.Create(Settings.HashAlgorithmName);
             if (alg != null)
@@ -140,7 +126,6 @@ namespace Email2Pdf
                 Settings.HashAlgorithmName = HASH_DEFAULT;
                 _cryptoHashAlg = SHA256.Create();
             }
-            _cryptoStream = new CryptoStream(_mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
 
         }
 
@@ -152,11 +137,25 @@ namespace Email2Pdf
         /// <param name="accntId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertMbox2EAXS(ref string outFolderPath, string accntId, string accntEmails = "")
+        public long ConvertMbox2EAXS(string mboxFilePath, ref string outFolderPath, string accntId, string accntEmails = "")
         {
             //TODO: manage the case where the mboxFilePath is a directory and not just a single file
             //TODO: add code to process correspondingly named subdirectories as sub folders to a given mbox file.
             //TODO: add code to process directory and subdirectory or single email message EML files.
+
+            if (string.IsNullOrWhiteSpace(mboxFilePath))
+            {
+                throw new ArgumentNullException(nameof(mboxFilePath));
+            }
+
+            if (!File.Exists(mboxFilePath) && !Directory.Exists(mboxFilePath))
+            {
+                throw new FileNotFoundException(mboxFilePath);
+            }
+
+            _mboxFilePath = Path.GetFullPath(mboxFilePath);
+            _mboxStream = new FileStream(_mboxFilePath, FileMode.Open, FileAccess.Read);
+            _cryptoStream = new CryptoStream(_mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
 
             long localId = 0;
 
@@ -1015,7 +1014,7 @@ namespace Email2Pdf
             //If it is a Mozilla message that came from a file called 'Draft' then assume it is a 'draft' message
             //There is also the X-Mozilla-Draft-Info header which could indicate whether a message is draft
             if (
-                (Path.GetFileNameWithoutExtension(_mboxFilePath).Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
+                (Path.GetFileNameWithoutExtension(_mboxFilePath ?? "").Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
                 || message.Headers.Contains("X-Mozilla-Draft-Info")  //Mozilla uses this header for draft messages
                 || mimeStatus.Contains('T')  //Some clients encode draft as "T" in the X-Status header
                 )
@@ -1111,6 +1110,11 @@ namespace Email2Pdf
 
         private void Parser_MimeMessageEnd(object? sender, MimeMessageEndEventArgs e)
         {
+            if (_mboxStream == null)
+            {
+                throw new NullReferenceException("The _mboxStream object cannot be null at this point in the code.");
+            }
+            
             var parser = sender as MimeParser;
             var endOffset = e.EndOffset;
             var beginOffset = e.BeginOffset;
@@ -1244,10 +1248,12 @@ namespace Email2Pdf
                 if (disposing)
                 {
                     // dispose managed state (managed objects)
-                    _cryptoStream.Close();
-                    _mboxStream.Close();
-                    _cryptoStream.Dispose();
-                    _mboxStream.Dispose();
+                    if(_cryptoStream!=null) _cryptoStream.Close();
+                    if(_mboxStream!=null) _mboxStream.Close();
+                    if(_cryptoStream!=null) _cryptoStream.Dispose();
+                    if(_mboxStream!=null) _mboxStream.Dispose();
+                    _cryptoStream = null;
+                    _mboxStream = null;
                 }
 
                 // also free unmanaged resources (unmanaged objects) and override finalizer
