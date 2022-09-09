@@ -127,6 +127,7 @@ namespace UIUCLibrary.EaPdf
         /// <summary>
         /// Convert the mbox directory or file into an archival email XML file.
         /// </summary>
+        /// <param name="mboxFilePath">the path to the mbox file or directory of mbox files to process</param>
         /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mbox file</param>
         /// <param name="accntId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
@@ -149,8 +150,8 @@ namespace UIUCLibrary.EaPdf
 
             //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
             mboxFilePath = Path.GetFullPath(mboxFilePath);
-            FileStream mboxStream = new FileStream(mboxFilePath, FileMode.Open, FileAccess.Read);
-            CryptoStream cryptoStream = new CryptoStream(mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
+            using FileStream mboxStream = new FileStream(mboxFilePath, FileMode.Open, FileAccess.Read);
+            using CryptoStream cryptoStream = new CryptoStream(mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
 
             long localId = 0;
 
