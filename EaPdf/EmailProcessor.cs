@@ -8,12 +8,10 @@ using CsvHelper;
 
 namespace UIUCLibrary.EaPdf
 {
-    public class EmailProcessor : IDisposable
+    public class EmailProcessor
     {
 
         //TODO: Need to add some IO Exception Handling throughout for creating, reading, and writing to files and folders.
-
-        private bool disposedValue;
 
         public const string EOL_TYPE_CR = "CR";
         public const string EOL_TYPE_LF = "LF";
@@ -75,10 +73,6 @@ namespace UIUCLibrary.EaPdf
         private readonly ILogger _logger;
         private readonly HashAlgorithm _cryptoHashAlg;
 
-        private string? _mboxFilePath;
-        private FileStream? _mboxStream;
-        private CryptoStream? _cryptoStream;
-
         public const string HASH_DEFAULT = "SHA256";
 
         private string Eol = EOL_TYPE_UNK;
@@ -104,7 +98,7 @@ namespace UIUCLibrary.EaPdf
             }
 
 
-            if(settings == null)
+            if (settings == null)
             {
                 throw new ArgumentNullException(nameof(settings));
             }
@@ -153,12 +147,12 @@ namespace UIUCLibrary.EaPdf
                 throw new FileNotFoundException(mboxFilePath);
             }
 
-            _mboxFilePath = Path.GetFullPath(mboxFilePath);
-            _mboxStream = new FileStream(_mboxFilePath, FileMode.Open, FileAccess.Read);
-            _cryptoStream = new CryptoStream(_mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
+            //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
+            mboxFilePath = Path.GetFullPath(mboxFilePath);
+            FileStream mboxStream = new FileStream(mboxFilePath, FileMode.Open, FileAccess.Read);
+            CryptoStream cryptoStream = new CryptoStream(mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
 
             long localId = 0;
-
 
             if (string.IsNullOrWhiteSpace(accntId))
             {
@@ -167,16 +161,16 @@ namespace UIUCLibrary.EaPdf
 
             if (string.IsNullOrWhiteSpace(outFolderPath))
             {
-                outFolderPath = Path.GetDirectoryName(_mboxFilePath) ?? "";
+                outFolderPath = Path.GetDirectoryName(mboxFilePath) ?? "";
             }
 
-            var outFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "xml")));
-            var csvFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(_mboxFilePath, "csv")));
+            var outFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(mboxFilePath, "xml")));
+            var csvFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(mboxFilePath, "csv")));
 
             var messageList = new List<MessageBrief>(); //used to create the CSV file
 
 
-            _logger.LogInformation("Convert email file: '{0}' into XML file: '{1}'", _mboxFilePath, outFilePath);
+            _logger.LogInformation("Convert email file: '{0}' into XML file: '{1}'", mboxFilePath, outFilePath);
 
 
             var xset = new XmlWriterSettings()
@@ -204,26 +198,26 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("GlobalId", XM_NS, accntId);
 
             xwriter.WriteStartElement("Folder", XM_NS);
-            xwriter.WriteElementString("Name", XM_NS, Path.GetFileNameWithoutExtension(_mboxFilePath));
+            xwriter.WriteElementString("Name", XM_NS, Path.GetFileNameWithoutExtension(mboxFilePath));
 
-            var parser = new MimeParser(_cryptoStream, MimeFormat.Mbox);
+            var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);
 
-            parser.MimeMessageEnd += Parser_MimeMessageEnd;
+            parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream);
 
             while (!parser.IsEndOfStream)
             {
-                localId = ProcessCurrentMessage(parser, xwriter, localId, messageList, outFilePath, accntId);
+                localId = ProcessCurrentMessage(mboxFilePath, parser, xwriter, localId, messageList, outFilePath, accntId);
             }
 
             //make sure to read to the end of the stream so the hash is correct
             int i = -1;
             do
             {
-                i = _cryptoStream.ReadByte();
+                i = cryptoStream.ReadByte();
             } while (i != -1);
 
             xwriter.WriteStartElement("Mbox", XM_NS);
-            var relPath = Path.GetRelativePath(Path.GetDirectoryName(outFilePath) ?? "", _mboxFilePath);
+            var relPath = Path.GetRelativePath(Path.GetDirectoryName(outFilePath) ?? "", mboxFilePath);
             xwriter.WriteElementString("RelPath", XM_NS, relPath);
             xwriter.WriteElementString("Eol", XM_NS, MostCommonEol);
             if (UsesDifferentEols)
@@ -270,7 +264,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteEndElement(); //Hash
         }
 
-        private long ProcessCurrentMessage(MimeParser parser, XmlWriter xwriter, long localId, List<MessageBrief> messageList, string outFilePath, string accntId)
+        private long ProcessCurrentMessage(string mboxFilePath, MimeParser parser, XmlWriter xwriter, long localId, List<MessageBrief> messageList, string outFilePath, string accntId)
         {
             MimeMessage? message;
             int errCnt = 0;
@@ -295,7 +289,7 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteStartElement("Message", XM_NS);
                 if (errCnt == 0) //process the message
                 {
-                    localId = ConvertMessageToEAXS(message, xwriter, localId, outFilePath, false);
+                    localId = ConvertMessageToEAXS(mboxFilePath, message, xwriter, localId, outFilePath, false);
                 }
                 else //log an error and create an incomplete message; <Incomplete> Seems related to errors
                 {
@@ -338,7 +332,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("Eol", XM_NS, Eol); //This might be unknown at this point if there was an error
         }
 
-        private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, string outFilePath, bool isChildMessage)
+        private long ConvertMessageToEAXS(string mboxFilePath, MimeMessage message, XmlWriter xwriter, long localId, string outFilePath, bool isChildMessage)
         {
 
             _logger.LogInformation("Converting Message {0} Subject: {1}", localId, message.Subject);
@@ -358,10 +352,10 @@ namespace UIUCLibrary.EaPdf
 
             if (!isChildMessage)
             {
-                WriteMessageStatuses(xwriter, message);
+                WriteMessageStatuses(xwriter, mboxFilePath, message);
             }
 
-            localId = ConvertBody2EAXS(message.Body, xwriter, localId, outFilePath);
+            localId = ConvertBody2EAXS(mboxFilePath, message.Body, xwriter, localId, outFilePath);
 
             if (!isChildMessage)
             {
@@ -373,7 +367,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void WriteMessageStatuses(XmlWriter xwriter, MimeMessage message)
+        private void WriteMessageStatuses(XmlWriter xwriter, string mboxFilepath, MimeMessage message)
         {
             //StatusFlags
             string status = "";
@@ -393,7 +387,7 @@ namespace UIUCLibrary.EaPdf
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (TryGetDraft(message, out status))
+            if (TryGetDraft(mboxFilepath, message, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
@@ -483,7 +477,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath)
+        private long ConvertBody2EAXS(string mboxFilePath, MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath)
         {
             bool isMultipart = false;
 
@@ -533,7 +527,7 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (var item in multipart)
                 {
-                    localId = ConvertBody2EAXS(item, xwriter, localId, outFilePath);
+                    localId = ConvertBody2EAXS(mboxFilePath, item, xwriter, localId, outFilePath);
                 }
             }
             else if (isMultipart && multipart != null && multipart.Count == 0)
@@ -556,7 +550,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 else if (message != null)
                 {
-                    WriteSingleBodyChildMessage(xwriter, message, localId, outFilePath);
+                    WriteSingleBodyChildMessage(xwriter, mboxFilePath, message, localId, outFilePath);
                 }
                 else
                 {
@@ -592,11 +586,11 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void WriteSingleBodyChildMessage(XmlWriter xwriter, MessagePart message, long localId, string outFilePath)
+        private void WriteSingleBodyChildMessage(XmlWriter xwriter, string mboxFilePath, MessagePart message, long localId, string outFilePath)
         {
             xwriter.WriteStartElement("ChildMessage", XM_NS);
             localId++;
-            ConvertMessageToEAXS(message.Message, xwriter, localId, outFilePath, true);
+            ConvertMessageToEAXS(mboxFilePath, message.Message, xwriter, localId, outFilePath, true);
             xwriter.WriteEndElement(); //ChildMessage
         }
 
@@ -999,7 +993,7 @@ namespace UIUCLibrary.EaPdf
             return ret;
         }
 
-        private bool TryGetDraft(MimeMessage message, out string status)
+        private bool TryGetDraft(string mboxFilePath, MimeMessage message, out string status)
         {
             //See https://docs.python.org/3/library/mailbox.html#mailbox.MaildirMessage for more hints -- maybe encoded in the filename of an "info" section?
             //See https://opensource.apple.com/source/dovecot/dovecot-293/dovecot/doc/wiki/MailboxFormat.mbox.txt.auto.html about the X-Status 'T' flag
@@ -1014,7 +1008,7 @@ namespace UIUCLibrary.EaPdf
             //If it is a Mozilla message that came from a file called 'Draft' then assume it is a 'draft' message
             //There is also the X-Mozilla-Draft-Info header which could indicate whether a message is draft
             if (
-                (Path.GetFileNameWithoutExtension(_mboxFilePath ?? "").Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
+                (Path.GetFileNameWithoutExtension(mboxFilePath ?? "").Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
                 || message.Headers.Contains("X-Mozilla-Draft-Info")  //Mozilla uses this header for draft messages
                 || mimeStatus.Contains('T')  //Some clients encode draft as "T" in the X-Status header
                 )
@@ -1108,20 +1102,18 @@ namespace UIUCLibrary.EaPdf
             };
         }
 
-        private void Parser_MimeMessageEnd(object? sender, MimeMessageEndEventArgs e)
+        private void Parser_MimeMessageEnd(object? sender, MimeMessageEndEventArgs e, Stream mboxStream)
         {
-            if (_mboxStream == null)
-            {
-                throw new NullReferenceException("The _mboxStream object cannot be null at this point in the code.");
-            }
-            
+
             var parser = sender as MimeParser;
             var endOffset = e.EndOffset;
             var beginOffset = e.BeginOffset;
             var headersEndOffset = e.HeadersEndOffset;
             long mboxMarkerOffset = 0;
             if (parser != null)
+            {
                 mboxMarkerOffset = parser.MboxMarkerOffset;
+            }
             else
             {
                 mboxMarkerOffset = beginOffset; //use the start of the message, instead of the start of the Mbox marker
@@ -1130,10 +1122,10 @@ namespace UIUCLibrary.EaPdf
 
             // get the raw data from the stream to calculate eol and hash for the xml
             byte[] buffer = new byte[endOffset - mboxMarkerOffset];
-            var origPos = _mboxStream.Position;
-            _mboxStream.Seek(mboxMarkerOffset, SeekOrigin.Begin);
-            _mboxStream.Read(buffer, 0, buffer.Length);
-            _mboxStream.Position = origPos;
+            var origPos = mboxStream.Position;
+            mboxStream.Seek(mboxMarkerOffset, SeekOrigin.Begin);
+            mboxStream.Read(buffer, 0, buffer.Length);
+            mboxStream.Position = origPos;
 
             //Look for first EOL marker to determine which kind are being used.
             //Assume the same kind will be used throughout
@@ -1239,42 +1231,5 @@ namespace UIUCLibrary.EaPdf
                 return ret;
             }
         }
-
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    // dispose managed state (managed objects)
-                    if(_cryptoStream!=null) _cryptoStream.Close();
-                    if(_mboxStream!=null) _mboxStream.Close();
-                    if(_cryptoStream!=null) _cryptoStream.Dispose();
-                    if(_mboxStream!=null) _mboxStream.Dispose();
-                    _cryptoStream = null;
-                    _mboxStream = null;
-                }
-
-                // also free unmanaged resources (unmanaged objects) and override finalizer
-                // also set large fields to null
-                disposedValue = true;
-            }
-        }
-
-        // // also override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~MboxProcessor()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
     }
 }
