@@ -6,7 +6,7 @@ using System.Xml;
 using Wiry.Base32;
 using CsvHelper;
 
-namespace Email2Pdf
+namespace UIUCLibrary.EaPdf
 {
     public class EmailProcessor : IDisposable
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Email2Pdf
+namespace UIUCLibrary.EaPdf
 {
     public class EmailProcessorSettings
     {

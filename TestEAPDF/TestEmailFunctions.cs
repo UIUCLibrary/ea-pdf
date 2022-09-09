@@ -1,15 +1,13 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Email2Pdf;
+using UIUCLibrary.EaPdf;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Xml;
 using System.Xml.Schema;
-using System.Xml.XPath;
 using System.Security.Cryptography;
 using System;
-using System.Reflection;
 
-namespace TestEAPDF
+namespace UIUCLibrary.TestEAPDF
 {
     [TestClass]
     public class TestEmailFunctions
@@ -17,7 +15,7 @@ namespace TestEAPDF
         ILogger<EmailProcessor>? logger;
         ILoggerFactory? loggerFactory;
         bool validXml = true;
-
+        
         [TestInitialize]
         public void InitTest()
         {

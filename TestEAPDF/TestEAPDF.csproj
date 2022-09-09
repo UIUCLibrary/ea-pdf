@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
+
+    <RootNamespace>UIUCLibraray.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Email2Pdf\Email2Pdf.csproj" />
+    <ProjectReference Include="..\EaPdf\EaPdf.csproj" />
   </ItemGroup>
 
 </Project>

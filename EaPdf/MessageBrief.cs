@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CsvHelper.Configuration.Attributes;
 
-namespace Email2Pdf
+namespace UIUCLibrary.EaPdf
 {
     internal class MessageBrief
     {
