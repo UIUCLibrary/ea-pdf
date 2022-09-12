@@ -6,6 +6,9 @@ using System.Xml;
 using System.Xml.Schema;
 using System.Security.Cryptography;
 using System;
+using Extensions.Logging.ListOfString;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace UIUCLibrary.TestEAPDF
 {
@@ -15,11 +18,14 @@ namespace UIUCLibrary.TestEAPDF
         ILogger<EmailProcessor>? logger;
         ILoggerFactory? loggerFactory;
         bool validXml = true;
-        
+        List<string> loggedLines = new List<string>();
+
         [TestInitialize]
         public void InitTest()
         {
             loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            //using StringListLogger for testing purposes https://www.nuget.org/packages/Extensions.Logging.ListOfString https://github.com/chrisfcarroll/TestBase
+            loggerFactory.AddStringListLogger(loggedLines);
             logger = loggerFactory.CreateLogger<EmailProcessor>();
             logger.LogInformation("Starting Test");
         }
@@ -204,6 +210,8 @@ namespace UIUCLibrary.TestEAPDF
                     }
                 }
 
+                //make sure there is nothing but info messages in the log output
+                Assert.AreEqual(0, StringListLogger.Instance.LoggedLines.Where(s => !s.StartsWith("[Information]")).Count());
 
             }
             else
@@ -257,6 +265,9 @@ namespace UIUCLibrary.TestEAPDF
                 xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
                 Assert.IsTrue(validXml);
 
+                //make sure there is nothing but info messages in the log output
+                Assert.AreEqual(0, StringListLogger.Instance.LoggedLines.Where(s => !s.StartsWith("[Information]")).Count());
+
             }
             else
             {
@@ -298,6 +309,8 @@ namespace UIUCLibrary.TestEAPDF
                 xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
                 Assert.IsTrue(validXml);
 
+                //make sure there is nothing but info messages in the log output
+                Assert.AreEqual(0, StringListLogger.Instance.LoggedLines.Where(s => !s.StartsWith("[Information]")).Count());
             }
             else
             {
