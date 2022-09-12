@@ -75,9 +75,7 @@ namespace UIUCLibrary.EaPdf
 
         public const string HASH_DEFAULT = "SHA256";
 
-        private string Eol = EOL_TYPE_UNK;
         private byte[] MessageHash = new byte[0];
-        private Dictionary<string, int> EolCounts = new Dictionary<string, int>();
 
 
         public EmailProcessorSettings Settings { get; }
@@ -148,6 +146,10 @@ namespace UIUCLibrary.EaPdf
                 throw new FileNotFoundException(mboxFilePath);
             }
 
+            //Keep track of the line endings used in the mbox file
+            Dictionary<string, int> eolCounts = new Dictionary<string, int>();
+            string eol = EOL_TYPE_UNK;
+
             //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
             mboxFilePath = Path.GetFullPath(mboxFilePath);
             using FileStream mboxStream = new FileStream(mboxFilePath, FileMode.Open, FileAccess.Read);
@@ -200,14 +202,14 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteStartElement("Folder", XM_NS);
             xwriter.WriteElementString("Name", XM_NS, Path.GetFileNameWithoutExtension(mboxFilePath));
-
+            
             var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);
 
-            parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream);
+            parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream, eolCounts, ref eol);
 
             while (!parser.IsEndOfStream)
             {
-                localId = ProcessCurrentMessage(mboxFilePath, parser, xwriter, localId, messageList, outFilePath, accntId);
+                localId = ProcessCurrentMessage(mboxFilePath, parser, xwriter, localId, messageList, outFilePath, accntId, ref eol);
             }
 
             //make sure to read to the end of the stream so the hash is correct
@@ -220,10 +222,10 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteStartElement("Mbox", XM_NS);
             var relPath = Path.GetRelativePath(Path.GetDirectoryName(outFilePath) ?? "", mboxFilePath);
             xwriter.WriteElementString("RelPath", XM_NS, relPath);
-            xwriter.WriteElementString("Eol", XM_NS, MostCommonEol);
-            if (UsesDifferentEols)
+            xwriter.WriteElementString("Eol", XM_NS, MostCommonEol(eolCounts));
+            if (UsesDifferentEols(eolCounts))
             {
-                var warn = $"Mbox file contains multiple different EOLs: CR: {EolCounts["CR"]}, LF: {EolCounts["LF"]}, CRLF: {EolCounts["CRLF"]}";
+                var warn = $"Mbox file contains multiple different EOLs: CR: {eolCounts["CR"]}, LF: {eolCounts["LF"]}, CRLF: {eolCounts["CRLF"]}";
                 _logger.LogWarning(warn);
                 xwriter.WriteComment($"WARNING: {warn}");
             }
@@ -265,7 +267,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteEndElement(); //Hash
         }
 
-        private long ProcessCurrentMessage(string mboxFilePath, MimeParser parser, XmlWriter xwriter, long localId, List<MessageBrief> messageList, string outFilePath, string accntId)
+        private long ProcessCurrentMessage(string mboxFilePath, MimeParser parser, XmlWriter xwriter, long localId, List<MessageBrief> messageList, string outFilePath, string accntId, ref string eol)
         {
             MimeMessage? message;
             int errCnt = 0;
@@ -290,13 +292,13 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteStartElement("Message", XM_NS);
                 if (errCnt == 0) //process the message
                 {
-                    localId = ConvertMessageToEAXS(mboxFilePath, message, xwriter, localId, outFilePath, false);
+                    localId = ConvertMessageToEAXS(mboxFilePath, message, xwriter, localId, outFilePath, false, eol);
                 }
                 else //log an error and create an incomplete message; <Incomplete> Seems related to errors
                 {
                     //NEEDSTEST:  Will need to create a deliberately malformed mbox to test this
                     _logger.LogError(errMsg);
-                    WriteIncompleteMessage(localId, accntId, xwriter, errMsg, parser.Position);
+                    WriteIncompleteMessage(localId, accntId, xwriter, errMsg, parser.Position, eol);
                 }
                 xwriter.WriteEndElement(); //Message
 
@@ -314,12 +316,12 @@ namespace UIUCLibrary.EaPdf
 
                 });
             }
-            Eol = EOL_TYPE_UNK;
+            eol = EOL_TYPE_UNK;
 
             return localId;
         }
 
-        private void WriteIncompleteMessage(long localId, string accntId, XmlWriter xwriter, string errMsg, long position)
+        private void WriteIncompleteMessage(long localId, string accntId, XmlWriter xwriter, string errMsg, long position, string eol)
         {
             xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
             xwriter.WriteStartElement("MessageId", XM_NS);
@@ -330,10 +332,10 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("ErrorType", XM_NS, errMsg);
             xwriter.WriteElementString("ErrorLocation", XM_NS, $"Stream Position: {position}");
             xwriter.WriteEndElement(); //Incomplete
-            xwriter.WriteElementString("Eol", XM_NS, Eol); //This might be unknown at this point if there was an error
+            xwriter.WriteElementString("Eol", XM_NS, eol); //This might be unknown at this point if there was an error
         }
 
-        private long ConvertMessageToEAXS(string mboxFilePath, MimeMessage message, XmlWriter xwriter, long localId, string outFilePath, bool isChildMessage)
+        private long ConvertMessageToEAXS(string mboxFilePath, MimeMessage message, XmlWriter xwriter, long localId, string outFilePath, bool isChildMessage,string eol)
         {
 
             _logger.LogInformation("Converting Message {0} Subject: {1}", localId, message.Subject);
@@ -356,11 +358,11 @@ namespace UIUCLibrary.EaPdf
                 WriteMessageStatuses(xwriter, mboxFilePath, message);
             }
 
-            localId = ConvertBody2EAXS(mboxFilePath, message.Body, xwriter, localId, outFilePath);
+            localId = ConvertBody2EAXS(mboxFilePath, message.Body, xwriter, localId, outFilePath, eol);
 
             if (!isChildMessage)
             {
-                xwriter.WriteElementString("Eol", XM_NS, Eol);
+                xwriter.WriteElementString("Eol", XM_NS, eol);
 
                 WriteHash(xwriter, MessageHash, Settings.HashAlgorithmName);
             }
@@ -478,7 +480,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private long ConvertBody2EAXS(string mboxFilePath, MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath)
+        private long ConvertBody2EAXS(string mboxFilePath, MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath,string eol)
         {
             bool isMultipart = false;
 
@@ -528,7 +530,7 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (var item in multipart)
                 {
-                    localId = ConvertBody2EAXS(mboxFilePath, item, xwriter, localId, outFilePath);
+                    localId = ConvertBody2EAXS(mboxFilePath, item, xwriter, localId, outFilePath, eol);
                 }
             }
             else if (isMultipart && multipart != null && multipart.Count == 0)
@@ -551,7 +553,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 else if (message != null)
                 {
-                    WriteSingleBodyChildMessage(xwriter, mboxFilePath, message, localId, outFilePath);
+                    WriteSingleBodyChildMessage(xwriter, mboxFilePath, message, localId, outFilePath, eol);
                 }
                 else
                 {
@@ -583,15 +585,15 @@ namespace UIUCLibrary.EaPdf
 
 
             xwriter.WriteEndElement(); //SingleBody or MultiBody
-
+            
             return localId;
         }
 
-        private void WriteSingleBodyChildMessage(XmlWriter xwriter, string mboxFilePath, MessagePart message, long localId, string outFilePath)
+        private void WriteSingleBodyChildMessage(XmlWriter xwriter, string mboxFilePath, MessagePart message, long localId, string outFilePath, string eol)
         {
             xwriter.WriteStartElement("ChildMessage", XM_NS);
             localId++;
-            ConvertMessageToEAXS(mboxFilePath, message.Message, xwriter, localId, outFilePath, true);
+            ConvertMessageToEAXS(mboxFilePath, message.Message, xwriter, localId, outFilePath, true, eol);
             xwriter.WriteEndElement(); //ChildMessage
         }
 
@@ -1103,7 +1105,7 @@ namespace UIUCLibrary.EaPdf
             };
         }
 
-        private void Parser_MimeMessageEnd(object? sender, MimeMessageEndEventArgs e, Stream mboxStream)
+        private void Parser_MimeMessageEnd(object? sender, MimeMessageEndEventArgs e, Stream mboxStream, Dictionary<string, int> eolCounts, ref string eol)
         {
 
             var parser = sender as MimeParser;
@@ -1135,55 +1137,56 @@ namespace UIUCLibrary.EaPdf
             {
                 if (buffer[i] == LF && buffer[i - 1] == CR)
                 {
-                    Eol = EOL_TYPE_CRLF;
+                    eol = EOL_TYPE_CRLF;
                     break;
                 }
                 else if (buffer[i] == LF)
                 {
-                    Eol = EOL_TYPE_LF;
+                    eol = EOL_TYPE_LF;
                     break;
                 }
                 else if (buffer[i] == CR && buffer[i + 1] != LF)
                 {
-                    Eol = EOL_TYPE_CR;
+                    eol = EOL_TYPE_CR;
                     break;
                 }
                 i++;
             }
 
-            //Check that messages use the same EOL treatment throughout
-            if (Eol != EOL_TYPE_UNK)
+            //Check that messages use the same EOL treatment throughout the mbox
+            if (eol != EOL_TYPE_UNK)
             {
-                if (EolCounts.ContainsKey(Eol))
+                if (eolCounts.ContainsKey(eol))
                 {
-                    EolCounts[Eol]++;
+                    eolCounts[eol]++;
                 }
                 else
                 {
-                    EolCounts.Add(Eol, 1);
+                    eolCounts.Add(eol, 1);
                 }
             }
 
             //trim all LWSP and EOL chars from the end and then add one eol marker back
+            //assumes that the same EOL markers are used throughout the mbox
             i = buffer.Length - 1;
             while (buffer[i] == LF || buffer[i] == CR || buffer[i] == SP || buffer[i] == TAB)
                 --i;
             long j = 1;
-            if (Eol == EOL_TYPE_CRLF)
+            if (eol == EOL_TYPE_CRLF)
                 j = 2;
             byte[] newBuffer = new byte[i + 1 + j];
 
             Array.Copy(buffer, 0, newBuffer, 0, i + 1);
-            if (Eol == EOL_TYPE_CRLF)
+            if (eol == EOL_TYPE_CRLF)
             {
                 newBuffer[newBuffer.Length - 1] = LF;
                 newBuffer[newBuffer.Length - 2] = CR;
             }
-            else if (Eol == EOL_TYPE_LF)
+            else if (eol == EOL_TYPE_LF)
             {
                 newBuffer[newBuffer.Length - 1] = LF;
             }
-            else if (Eol == EOL_TYPE_CR)
+            else if (eol == EOL_TYPE_CR)
             {
                 newBuffer[newBuffer.Length - 1] = CR;
             }
@@ -1203,34 +1206,28 @@ namespace UIUCLibrary.EaPdf
         /// If thtere are different line endings in the file this will return true
         /// Otyherwise, it returns false
         /// </summary>
-        private bool UsesDifferentEols
+        private bool UsesDifferentEols(Dictionary<string, int> eolCounts)
         {
-            get
-            {
-                return EolCounts.Count > 1;
-            }
+            return eolCounts.Count > 1;
         }
 
         /// <summary>
         /// The processor keeps tracks of the different line ending styles used in the mbox file.
         /// This will return the most common line ending style used in the file.
         /// </summary>
-        private string MostCommonEol
+        private string MostCommonEol(Dictionary<string, int> eolCounts)
         {
-            get
+            var ret = "";
+            var max = 0;
+            foreach (var kvp in eolCounts)
             {
-                var ret = "";
-                var max = 0;
-                foreach (var kvp in EolCounts)
+                if (kvp.Value > max)
                 {
-                    if (kvp.Value > max)
-                    {
-                        max = kvp.Value;
-                        ret = kvp.Key;
-                    }
+                    max = kvp.Value;
+                    ret = kvp.Key;
                 }
-                return ret;
             }
+            return ret;
         }
     }
 }
