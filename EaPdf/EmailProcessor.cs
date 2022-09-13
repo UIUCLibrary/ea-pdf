@@ -114,38 +114,67 @@ namespace UIUCLibrary.EaPdf
 
         }
 
-
         /// <summary>
-        /// Convert the mbox directory or file into an archival email XML file.
+        /// Convert a folder of mbox files into an archival emal XML file
         /// </summary>
-        /// <param name="mboxFilePath">the path to the mbox file or directory of mbox files to process</param>
-        /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mbox file</param>
+        /// <param name="mboxFolderPath">the path to the folder to process, all mbox files in the folder will be processed</param>
+        /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mboxFolderPath</param>
         /// <param name="accntId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
+        /// <param name="includeSubFolders">if true subfolders in the directory will also be processed</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertMbox2EAXS(string mboxFilePath, ref string outFolderPath, string accntId, string accntEmails = "")
+        public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, ref string outFolderPath, string accntId, string accntEmails = "", bool includeSubFolders = true)
         {
-            //TODO: manage the case where the mboxFilePath is a directory and not just a single file
+            if (string.IsNullOrWhiteSpace(mboxFolderPath))
+            {
+                throw new ArgumentNullException(nameof(mboxFolderPath));
+            }
+
+            if (!Directory.Exists(mboxFolderPath))
+            {
+                throw new DirectoryNotFoundException(mboxFolderPath);
+            }
+
+            long localId = 0;
+
+            //UNDONE
+
+            return localId;
+        }
+
+
+
+        /// <summary>
+        /// Convert one mbox file into an archival email XML file.
+        /// </summary>
+        /// <param name="mboxFilePath">the path to the mbox file to process</param>
+        /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mboxFilePath</param>
+        /// <param name="accntId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
+        /// <param name="accntEmails">Comma-separated list of email addresses</param>
+        /// <param name="includeSubFolders">if true, a subfolder (if any) matching the name of the mbox file will also be processed, including all of its files and subfolders recursively</param>
+        /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
+        public long ConvertMbox2EAXS(string mboxFilePathOrig, ref string outFolderPath, string accntId, string accntEmails = "", bool includeSubFolders = true)
+        {
             //TODO: add code to process correspondingly named subdirectories as sub folders to a given mbox file.
             //TODO: add code to process directory and subdirectory or single email message EML files.
 
-            if (string.IsNullOrWhiteSpace(mboxFilePath))
+            if (string.IsNullOrWhiteSpace(mboxFilePathOrig))
             {
-                throw new ArgumentNullException(nameof(mboxFilePath));
+                throw new ArgumentNullException(nameof(mboxFilePathOrig));
             }
 
-            if (!File.Exists(mboxFilePath) && !Directory.Exists(mboxFilePath))
+            if (!File.Exists(mboxFilePathOrig))
             {
-                throw new FileNotFoundException(mboxFilePath);
+                throw new FileNotFoundException(mboxFilePathOrig);
             }
 
             //Keep track of the line endings used in the mbox file
             Dictionary<string, int> eolCounts = new Dictionary<string, int>();
-
+            //Keep track of properties for an individual messager, such as Eol and Hash
             MimeMessageProperties mmProps = new MimeMessageProperties();
 
             //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
-            mboxFilePath = Path.GetFullPath(mboxFilePath);
+            string mboxFilePath = Path.GetFullPath(mboxFilePathOrig);
             using FileStream mboxStream = new FileStream(mboxFilePath, FileMode.Open, FileAccess.Read);
             using CryptoStream cryptoStream = new CryptoStream(mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
 
@@ -195,12 +224,13 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("GlobalId", XM_NS, accntId);
 
             xwriter.WriteStartElement("Folder", XM_NS);
-            xwriter.WriteElementString("Name", XM_NS, Path.GetFileNameWithoutExtension(mboxFilePath));
-            
+            var mboxName = Path.GetFileNameWithoutExtension(mboxFilePath);
+            xwriter.WriteElementString("Name", XM_NS, mboxName);
+
             var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);
 
             parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream, eolCounts, mmProps);
-            
+
             while (!parser.IsEndOfStream)
             {
                 localId = ProcessCurrentMessage(mboxFilePath, parser, xwriter, localId, messageList, outFilePath, accntId, mmProps);
@@ -212,6 +242,37 @@ namespace UIUCLibrary.EaPdf
             {
                 i = cryptoStream.ReadByte();
             } while (i != -1);
+
+            if (includeSubFolders)
+            {
+                //look for a subfolder named the same as the mbox file ignoring extensions
+                //i.e. Mozilla Thunderbird will append the extension '.sbd' to the folder name
+                string? subfolderName = null;
+                try
+                {
+                    subfolderName = Directory.GetDirectories(Path.GetDirectoryName(mboxFilePath) ?? "", $"{mboxName}.*").SingleOrDefault();
+                }
+                catch (InvalidOperationException ex)
+                {
+                    var err = $"There is more than one folder that matches '{mboxName}.*'; skipping all subfolders";
+                    _logger.LogWarning(err);
+                    xwriter.WriteComment($"ERROR: {err}");
+                    subfolderName = null;
+                }
+                catch(Exception ex)
+                {
+                    var err = ex.Message;
+                    _logger.LogWarning(err);
+                    xwriter.WriteComment($"ERROR: {err}");
+                    subfolderName = null;
+                }
+
+                if (!string.IsNullOrWhiteSpace(subfolderName))
+                {
+                    _logger.LogInformation($"Processing Subfolder: {subfolderName}");
+                    
+                }
+            }
 
             xwriter.WriteStartElement("Mbox", XM_NS);
             var relPath = Path.GetRelativePath(Path.GetDirectoryName(outFilePath) ?? "", mboxFilePath);
@@ -247,6 +308,31 @@ namespace UIUCLibrary.EaPdf
             csvWriter.WriteRecords(messageList);
 
             _logger.LogInformation("Converted {0} messages", localId);
+
+            return localId;
+        }
+
+        private long ProcessMbox(XmlWriter xwriter, string mboxFilePath, long localId)
+        {
+            xwriter.WriteStartElement("Folder", XM_NS);
+            var mboxName = Path.GetFileNameWithoutExtension(mboxFilePath);
+            xwriter.WriteElementString("Name", XM_NS, mboxName);
+
+            var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);
+
+            parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream, eolCounts, mmProps);
+
+            while (!parser.IsEndOfStream)
+            {
+                localId = ProcessCurrentMessage(mboxFilePath, parser, xwriter, localId, messageList, outFilePath, accntId, mmProps);
+            }
+
+            //make sure to read to the end of the stream so the hash is correct
+            int i = -1;
+            do
+            {
+                i = cryptoStream.ReadByte();
+            } while (i != -1);
 
             return localId;
         }
@@ -329,7 +415,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("Eol", XM_NS, eol); //This might be unknown at this point if there was an error
         }
 
-        private long ConvertMessageToEAXS(string mboxFilePath, MimeMessage message, XmlWriter xwriter, long localId, string outFilePath, bool isChildMessage,MimeMessageProperties mmProps)
+        private long ConvertMessageToEAXS(string mboxFilePath, MimeMessage message, XmlWriter xwriter, long localId, string outFilePath, bool isChildMessage, MimeMessageProperties mmProps)
         {
 
             _logger.LogInformation("Converting Message {0} Subject: {1}", localId, message.Subject);
@@ -474,7 +560,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private long ConvertBody2EAXS(string mboxFilePath, MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath,MimeMessageProperties mmProps)
+        private long ConvertBody2EAXS(string mboxFilePath, MimeEntity mimeEntity, XmlWriter xwriter, long localId, string outFilePath, MimeMessageProperties mmProps)
         {
             bool isMultipart = false;
 
@@ -519,7 +605,7 @@ namespace UIUCLibrary.EaPdf
             {
                 xwriter.WriteElementString("Preamble", XM_NS, multipart.Preamble.Trim());
             }
-            
+
             if (isMultipart && multipart != null && multipart.Count > 0)
             {
                 foreach (var item in multipart)
@@ -579,7 +665,7 @@ namespace UIUCLibrary.EaPdf
 
 
             xwriter.WriteEndElement(); //SingleBody or MultiBody
-            
+
             return localId;
         }
 
@@ -1201,17 +1287,17 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         private string MostCommonEol(Dictionary<string, int> eolCounts)
         {
-                var ret = "";
-                var max = 0;
-                foreach (var kvp in eolCounts)
+            var ret = "";
+            var max = 0;
+            foreach (var kvp in eolCounts)
+            {
+                if (kvp.Value > max)
                 {
-                    if (kvp.Value > max)
-                    {
-                        max = kvp.Value;
-                        ret = kvp.Key;
-                    }
+                    max = kvp.Value;
+                    ret = kvp.Key;
                 }
-                return ret;
+            }
+            return ret;
         }
 
         /// <summary>
@@ -1221,7 +1307,7 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         private bool UsesDifferentEols(Dictionary<string, int> eolCounts)
         {
-                return eolCounts.Count > 1;
+            return eolCounts.Count > 1;
         }
 
     }

@@ -21,6 +21,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SampleFiles", "SampleFiles"
 		SampleFiles\Inbox = SampleFiles\Inbox
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DLF Distributed Library.sbd", "DLF Distributed Library.sbd", "{0A374F6C-3649-4957-95DA-BF6235DD6776}"
+	ProjectSection(SolutionItems) = preProject
+		SampleFiles\DLF Distributed Library.sbd\Emory OAI Workshop = SampleFiles\DLF Distributed Library.sbd\Emory OAI Workshop
+		SampleFiles\DLF Distributed Library.sbd\ScholarsPanel2006-05-23 = SampleFiles\DLF Distributed Library.sbd\ScholarsPanel2006-05-23
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +46,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0A374F6C-3649-4957-95DA-BF6235DD6776} = {0C7BCAA5-D029-4DC8-9134-1C215F4E471E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CFFF8FA0-BCE8-4554-AC69-D9397B85F72B}
