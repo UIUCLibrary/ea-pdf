@@ -230,7 +230,7 @@ namespace UIUCLibrary.TestEAPDF
                 var sampleFile = @"..\..\..\..\SampleFiles\Drafts";
                 var outFolder = "";
                 var eapdf = new EmailProcessor(logger, new EmailProcessorSettings());
-                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu",false);
 
                 //output folder is the same as the mbox folder
                 var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);
@@ -285,7 +285,7 @@ namespace UIUCLibrary.TestEAPDF
                 var sampleFile = @"..\..\..\..\SampleFiles\Inbox";
                 var outFolder = "";
                 var eapdf = new EmailProcessor(logger, new EmailProcessorSettings());
-                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu",false);
 
                 //output folder is the same as the mbox folder
                 var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);

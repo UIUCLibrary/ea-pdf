@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace UIUCLibrary.EaPdf
 {
     /// <summary>
-    /// Represents misc. properties of a MIME message needed for the EAXS XML Schema
+    /// Properties that need to be persisted while processing an email message
     /// </summary>
     internal class MimeMessageProperties
     {
