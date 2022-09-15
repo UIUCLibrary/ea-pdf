@@ -188,7 +188,7 @@ namespace UIUCLibrary.EaPdf
 
             var messageList = new List<MessageBrief>(); //used to create the CSV file
 
-            _logger.LogInformation("Convert email file: '{0}' into XML file: '{1}'", mboxFilePath, outFilePath);
+            _logger.LogInformation("Convert email file: '{mboxFilePath}' into XML file: '{outFilePath}'", mboxFilePath, outFilePath);
 
             var xset = new XmlWriterSettings()
             {
@@ -233,7 +233,7 @@ namespace UIUCLibrary.EaPdf
             using var csvWriter = new CsvWriter(csvStream, CultureInfo.InvariantCulture);
             csvWriter.WriteRecords(messageList);
 
-            _logger.LogInformation("Converted {0} messages", localId);
+            _logger.LogInformation("Converted {localId} messages", localId);
 
             return localId;
         }
@@ -406,7 +406,7 @@ namespace UIUCLibrary.EaPdf
         private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, bool isChildMessage, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
 
-            _logger.LogInformation("Converting {child} {localId} Subject: {subject}", isChildMessage ? "Child Message" : "Message", localId, message.Subject);
+            _logger.LogInformation("Converting {messageType} {localId} Subject: {subject}", isChildMessage ? "Child Message" : "Message", localId, message.Subject);
 
             if (!isChildMessage)
             {
