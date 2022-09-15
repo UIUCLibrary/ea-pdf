@@ -251,7 +251,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("Name", XM_NS, mboxProps.MboxName);
 
             var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);
-            
+
             parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream, mboxProps, msgProps);
 
             while (!parser.IsEndOfStream)
@@ -335,7 +335,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteEndElement(); //Hash
         }
 
-        private long ProcessCurrentMessage( MimeParser parser, XmlWriter xwriter, long localId, List<MessageBrief> messageList, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        private long ProcessCurrentMessage(MimeParser parser, XmlWriter xwriter, long localId, List<MessageBrief> messageList, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
             MimeMessage? message;
             int errCnt = 0;
@@ -356,7 +356,7 @@ namespace UIUCLibrary.EaPdf
 
                 localId++;
                 var messageId = localId;
-                
+
                 xwriter.WriteStartElement("Message", XM_NS);
                 if (errCnt == 0) //process the message
                 {
@@ -403,10 +403,10 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("Eol", XM_NS, msgProps.Eol); //This might be unknown at this point if there was an error
         }
 
-        private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId,  bool isChildMessage, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, bool isChildMessage, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
 
-            _logger.LogInformation("Converting Message {0} Subject: {1}", localId, message.Subject);
+            _logger.LogInformation("Converting {child} {localId} Subject: {subject}", isChildMessage ? "Child Message" : "Message", localId, message.Subject);
 
             if (!isChildMessage)
             {
@@ -621,7 +621,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 else if (message != null)
                 {
-                    WriteSingleBodyChildMessage(xwriter, message, localId, mboxProps, msgProps);
+                    localId = WriteSingleBodyChildMessage(xwriter, message, localId, mboxProps, msgProps);
                 }
                 else
                 {
@@ -657,12 +657,13 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void WriteSingleBodyChildMessage(XmlWriter xwriter, MessagePart message, long localId, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        private long WriteSingleBodyChildMessage(XmlWriter xwriter, MessagePart message, long localId, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
             xwriter.WriteStartElement("ChildMessage", XM_NS);
             localId++;
-            ConvertMessageToEAXS(message.Message, xwriter, localId, true, mboxProps, msgProps);
+            localId = ConvertMessageToEAXS(message.Message, xwriter, localId, true, mboxProps, msgProps);
             xwriter.WriteEndElement(); //ChildMessage
+            return localId;
         }
 
         private void WriteSingleBodyContent(XmlWriter xwriter, MimePart part, long localId, MboxProperties mboxProps)

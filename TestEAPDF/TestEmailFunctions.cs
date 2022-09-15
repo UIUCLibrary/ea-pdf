@@ -91,6 +91,30 @@ namespace UIUCLibrary.TestEAPDF
                 XmlNode? hashValueNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Value", xmlns);
                 XmlNode? hashFuncNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Function", xmlns);
 
+                //make sure the localId values start at 1 and all increase by 1
+                var localIds = xdoc.SelectNodes("//xm:LocalId", xmlns);
+                if (localIds != null)
+                {
+                    long prevId = 0;
+                    long id = 0;
+                    foreach (XmlElement localId in localIds)
+                    {
+                        if (long.TryParse(localId.InnerText, out id))
+                        {
+                            Assert.AreEqual(id,prevId+1);
+                            prevId = id;
+                        }
+                        else
+                        {
+                            Assert.Fail("localId is not a number");
+                        }
+                    }
+                }
+                else
+                {
+                    Assert.Fail("No localIds found");
+                }
+
                 //make sure hashes match
                 Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
                 Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
