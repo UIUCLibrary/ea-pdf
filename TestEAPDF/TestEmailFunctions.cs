@@ -20,6 +20,8 @@ namespace UIUCLibrary.TestEAPDF
         bool validXml = true;
         List<string> loggedLines = new List<string>();
 
+        string testFilesBaseDirectory = @"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles\Testing";
+
         [TestInitialize]
         public void InitTest()
         {
@@ -37,13 +39,13 @@ namespace UIUCLibrary.TestEAPDF
             if (loggerFactory != null) loggerFactory.Dispose();
         }
 
-        [DataRow("SHA256", false, false, false, "sha256", true, DisplayName = "sha256----includeSubs")]
+        [DataRow("SHA256", false, false, false, "sha256----includeSubs", true, DisplayName = "sha256----includeSubs")]
         [DataRow("SHA256", false, false, false, "sha256", false, DisplayName = "sha256")]
         [DataRow("SHA1", false, false, false, "sha1", false, DisplayName = "sha1")]
         [DataRow("SHA256", true, false, false, "sha256-ext", false, DisplayName = "sha256-ext")]
         [DataRow("SHA256", true, true, false, "sha256-ext-wrap", false, DisplayName = "sha256-ext-wrap")]
         [DataRow("SHA256", false, false, true, "sha256---presvEnc", false, DisplayName = "sha256---presvEnc")]
-        [DataRow("SHA256", true, true, true, "sha256-ext-wrap", false, DisplayName = "sha256-ext-wrap-presvEnc")]
+        [DataRow("SHA256", true, true, true, "sha256-ext-wrap-presvEnc", false, DisplayName = "sha256-ext-wrap-presvEnc")]
         [DataTestMethod]
         public void Test2Xml(string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, string testOutFolder, bool includeSub)
         {
@@ -59,9 +61,9 @@ namespace UIUCLibrary.TestEAPDF
 
                 //TODO: make the tests resilient to moving code to different folder structure
                 //Also save the sample test files in the test project and automate the folder setup and cleanup
-                var sampleFile = @"..\..\..\..\SampleFiles\DLF Distributed Library";
-                var expectedOutFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles", testOutFolder);
-                var outFolder = Path.Combine(@"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles", testOutFolder);
+                var sampleFile = Path.Combine(testFilesBaseDirectory,"DLF Distributed Library");
+                var expectedOutFolder = Path.Combine(testFilesBaseDirectory, testOutFolder);
+                var outFolder = Path.Combine(testFilesBaseDirectory, testOutFolder);
 
                 //clean out the output folder
                 if (Directory.Exists(outFolder))
@@ -251,7 +253,7 @@ namespace UIUCLibrary.TestEAPDF
         {
             if (logger != null)
             {
-                var sampleFile = @"..\..\..\..\SampleFiles\Drafts";
+                var sampleFile = Path.Combine(testFilesBaseDirectory,"Drafts");
                 var outFolder = "";
                 var eapdf = new EmailProcessor(logger, new EmailProcessorSettings());
                 var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu",false);
@@ -306,7 +308,7 @@ namespace UIUCLibrary.TestEAPDF
         {
             if (logger != null)
             {
-                var sampleFile = @"..\..\..\..\SampleFiles\Inbox";
+                var sampleFile = Path.Combine(testFilesBaseDirectory,"Inbox");
                 var outFolder = "";
                 var eapdf = new EmailProcessor(logger, new EmailProcessorSettings());
                 var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu",false);

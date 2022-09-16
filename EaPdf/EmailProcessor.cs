@@ -617,7 +617,7 @@ namespace UIUCLibrary.EaPdf
             {
                 if (part != null)
                 {
-                    WriteSingleBodyContent(xwriter, part, localId, mboxProps);
+                    localId = WriteSingleBodyContent(xwriter, part, localId, mboxProps);
                 }
                 else if (message != null)
                 {
@@ -666,7 +666,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void WriteSingleBodyContent(XmlWriter xwriter, MimePart part, long localId, MboxProperties mboxProps)
+        private long WriteSingleBodyContent(XmlWriter xwriter, MimePart part, long localId, MboxProperties mboxProps)
         {
             var content = part.Content;
 
@@ -686,14 +686,15 @@ namespace UIUCLibrary.EaPdf
                 if (!Settings.SaveAttachmentsAndBinaryContentExternally)
                 {
                     //save non-text content or attachments as part of the XML
-                    SerializeContentInXml(part, xwriter, false);
+                    SerializeContentInXml(part, xwriter, false, localId);
                 }
                 else
                 {
                     //save non-text content or attachments externally, possibly wrapped in XML
-                    SerializeContentInExtFile(part, xwriter, localId, mboxProps);
+                    localId = SerializeContentInExtFile(part, xwriter, localId, mboxProps);
                 }
             }
+            return localId;
         }
 
         private void WriteMimeOtherStandardHeaders(XmlWriter xwriter, MimeEntity mimeEntity, bool isMultipart)
@@ -817,7 +818,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="part">the MIME part to serialize</param>
         /// <param name="xwriter">the XML writer to serialize it to</param>
         /// <param name="preserveEncodingIfPossible">if true write text as unicode and use the original content encoding if possible; if false write it as either unicode text or as base64 encoded binary</param>
-        private void SerializeContentInXml(MimePart part, XmlWriter xwriter, bool ExtContent)
+        private void SerializeContentInXml(MimePart part, XmlWriter xwriter, bool ExtContent, long localId)
         {
             var content = part.Content;
 
@@ -825,6 +826,7 @@ namespace UIUCLibrary.EaPdf
             if (ExtContent)
             {
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
+                xwriter.WriteComment($"LocalId: {localId}");
             }
 
             xwriter.WriteStartElement("Content", XM_NS);
@@ -873,12 +875,12 @@ namespace UIUCLibrary.EaPdf
         /// <param name="xwriter">the XML writer to serialize it to</param>
         /// <param name="outFilePath">path to the folder to write it to</param>
         /// <param name="localId">the current localId value</param>
-        /// <param name="wrapInXml">if true the content is wrapped in XML; if false it is decoded an saved as the original file</param>
-        /// <param name="preserveEncodingIfPossible">only applies if wrapInXml is true; if true write text as unicode and use the original content encoding if possible; if false write it as either unicode text or as base64 encoded binary</param>
+        /// <param name="mboxProps">Mbox properties needed to serialize the content</param>
         /// <returns>the new localId value after incrementing it for the new file</returns>
         /// <exception cref="Exception">thrown if unable to generate the hash</exception>
         private long SerializeContentInExtFile(MimePart part, XmlWriter xwriter, long localId, MboxProperties mboxProps)
         {
+            localId++;
             var content = part.Content;
 
             //get random file name that doesn't already exist
@@ -903,7 +905,7 @@ namespace UIUCLibrary.EaPdf
             {
                 var extXmlWriter = XmlWriter.Create(cryptoStream, new XmlWriterSettings { Indent = true, Encoding = System.Text.Encoding.UTF8 });
                 extXmlWriter.WriteStartDocument();
-                SerializeContentInXml(part, extXmlWriter, true);
+                SerializeContentInXml(part, extXmlWriter, true, localId);
                 extXmlWriter.WriteEndDocument();
                 extXmlWriter.Close();
             }
@@ -942,7 +944,6 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteStartElement("ExtBodyContent", XM_NS);
             xwriter.WriteElementString("RelPath", XM_NS, Path.GetRelativePath(Path.Combine(mboxProps.OutDirectoryName, EXT_CONTENT_DIR), hashFileName));
             //CharSet and TransferEncoding are the same as for the SingleBody
-            localId++;
             xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
             xwriter.WriteElementString("XMLWrapped", XM_NS, Settings.WrapExternalContentInXml.ToString().ToLower());
             //Eol is not applicable since we are not wrapping the content in XML
