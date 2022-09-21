@@ -39,7 +39,7 @@ namespace UIUCLibrary.TestEAPDF
             if (loggerFactory != null) loggerFactory.Dispose();
         }
 
-        [DataRow("SHA256", false, false, false, "sha256----includeSubs", true, DisplayName = "sha256----includeSubs")]
+        [DataRow("SHA256", true, false, false, "sha256-ext---includeSubs", true, DisplayName = "sha256-ext---includeSubs")]
         [DataRow("SHA256", false, false, false, "sha256", false, DisplayName = "sha256")]
         [DataRow("SHA1", false, false, false, "sha1", false, DisplayName = "sha1")]
         [DataRow("SHA256", true, false, false, "sha256-ext", false, DisplayName = "sha256-ext")]
@@ -56,7 +56,8 @@ namespace UIUCLibrary.TestEAPDF
                     HashAlgorithmName = hashAlg,
                     SaveAttachmentsAndBinaryContentExternally = extContent,
                     WrapExternalContentInXml = wrapExtInXml,
-                    PreserveContentTransferEncodingIfPossible = preserveEnc
+                    PreserveContentTransferEncodingIfPossible = preserveEnc,
+                    IncludeSubFolders=includeSub
                 };
 
                 //TODO: make the tests resilient to moving code to different folder structure
@@ -72,7 +73,7 @@ namespace UIUCLibrary.TestEAPDF
                 }
 
                 var proc = new EmailProcessor(logger, settings);
-                var cnt = proc.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu",includeSub);
+                var cnt = proc.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                 Assert.IsTrue(cnt > 0);
 
                 //make sure output folders and files exist
@@ -255,8 +256,8 @@ namespace UIUCLibrary.TestEAPDF
             {
                 var sampleFile = Path.Combine(testFilesBaseDirectory,"Drafts");
                 var outFolder = "";
-                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings());
-                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu",false);
+                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings() { IncludeSubFolders=false});
+                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder
                 var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);
@@ -302,7 +303,7 @@ namespace UIUCLibrary.TestEAPDF
                 Assert.Fail("Logger was not initialized");
             }
         }
-
+        
         [TestMethod]
         public void TestInboxXml()
         {
@@ -310,8 +311,8 @@ namespace UIUCLibrary.TestEAPDF
             {
                 var sampleFile = Path.Combine(testFilesBaseDirectory,"Inbox");
                 var outFolder = "";
-                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings());
-                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu",false);
+                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings() { IncludeSubFolders=false});
+                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder
                 var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);

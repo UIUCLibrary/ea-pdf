@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,6 +12,13 @@ namespace UIUCLibrary.EaPdf
     /// </summary>
     internal class MboxProperties
     {
+
+        public MboxProperties()
+        {
+            //init the hash algorithm
+            HashAlgorithm = SHA256.Create();
+            HashAlgorithmName = "SHA256";
+        }
 
         public string MboxFilePath { get; set; } = "";
 
@@ -32,8 +40,8 @@ namespace UIUCLibrary.EaPdf
 
         public string AccountId { get; set; } = "";
 
-        public string OutFilePath { get; set; }="";
-        
+        public string OutFilePath { get; set; } = "";
+
         public string OutDirectoryName
         {
             get
@@ -42,8 +50,6 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-
-        public bool IncludeSubFolders { get; set; } = true;
 
         /// <summary>
         /// The processor keeps tracks of the different line ending styles used in the mbox file.
@@ -83,5 +89,37 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
+        /// <summary>
+        /// The hash algorithm used for the mbox, defaults to SHA256
+        /// Each mbox file needs its own since it records state
+        /// </summary>
+        public HashAlgorithm HashAlgorithm { get; private set; }
+
+        /// <summary>
+        /// The name of the hash algorithm to use
+        /// </summary>
+        public string HashAlgorithmName { get; private set; }
+
+        public string TrySetHashAlgorithm(string hashName)
+        {
+            if (hashName == HashAlgorithmName)
+            {
+                //its already set correctly
+                return HashAlgorithmName;
+            }
+
+            var alg = HashAlgorithm.Create(hashName);
+            if (alg != null)
+            {
+                HashAlgorithm = alg;
+                HashAlgorithmName = hashName;
+                return HashAlgorithmName;
+            }
+            else
+            {
+                //couldn't be changed to this algoritm so just leaving it as is
+                return HashAlgorithmName;
+            }
+        }
     }
 }

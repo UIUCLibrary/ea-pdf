@@ -5,6 +5,9 @@ using System.Security.Cryptography;
 using System.Xml;
 using Wiry.Base32;
 using CsvHelper;
+using Org.BouncyCastle.Utilities.Encoders;
+using Org.BouncyCastle.Asn1.X509.Qualified;
+using MimeKit.Utils;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -61,15 +64,18 @@ namespace UIUCLibrary.EaPdf
         const string STATUS_DRAFT = "Draft";
         const string STATUS_RECENT = "Recent";
 
+        //TODO: Add constants for the Status and X-Status header values
+
         public const string XM = "xm";
         public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2";
         public const string XM_XSD = "eaxs_schema_v2.xsd";
 
         private readonly ILogger _logger;
-        private readonly HashAlgorithm _cryptoHashAlg;
 
         public const string HASH_DEFAULT = "SHA256";
 
+        const string EX_MBOX_FROM_MARKER = "Failed to find mbox From marker";
+        const string EX_MBOX_PARSE_HEADERS = "Failed to parse message headers";
 
         public EmailProcessorSettings Settings { get; }
 
@@ -99,19 +105,6 @@ namespace UIUCLibrary.EaPdf
             _logger = logger;
             _logger.LogInformation("MboxProcessor Created");
 
-            var alg = HashAlgorithm.Create(Settings.HashAlgorithmName);
-            if (alg != null)
-            {
-                _cryptoHashAlg = alg;
-            }
-            else
-            {
-                //default to a known algorithm
-                _logger.LogWarning($"Unable to instantiate hash algorithm '{Settings.HashAlgorithmName}', using '{HASH_DEFAULT}' instead");
-                Settings.HashAlgorithmName = HASH_DEFAULT;
-                _cryptoHashAlg = SHA256.Create();
-            }
-
         }
 
         /// <summary>
@@ -123,7 +116,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <param name="includeSubFolders">if true subfolders in the directory will also be processed</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, ref string outFolderPath, string accntId, string accntEmails = "", bool includeSubFolders = true)
+        public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, ref string outFolderPath, string accntId, string accntEmails = "")
         {
             if (string.IsNullOrWhiteSpace(mboxFolderPath))
             {
@@ -151,9 +144,8 @@ namespace UIUCLibrary.EaPdf
         /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mboxFilePath</param>
         /// <param name="accntId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
-        /// <param name="includeSubFolders">if true, a subfolder (if any) matching the name of the mbox file will also be processed, including all of its files and subfolders recursively</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertMbox2EAXS(string mboxFilePath, ref string outFolderPath, string accntId, string accntEmails = "", bool includeSubFolders = true)
+        public long ConvertMbox2EAXS(string mboxFilePath, ref string outFolderPath, string accntId, string accntEmails = "")
         {
             //TODO: add code to process correspondingly named subdirectories as sub folders to a given mbox file.
             //TODO: add code to process directory and subdirectory or single email message EML files.
@@ -205,7 +197,7 @@ namespace UIUCLibrary.EaPdf
 
             using var xwriter = XmlWriter.Create(outFilePath, xset);
             xwriter.WriteStartDocument();
-            xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}");
+            xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}");
             xwriter.WriteStartElement("Account", XM_NS);
             xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
             foreach (var addr in accntEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
@@ -219,8 +211,8 @@ namespace UIUCLibrary.EaPdf
                 MboxFilePath = mboxFilePath,
                 AccountId = accntId,
                 OutFilePath = outFilePath,
-                IncludeSubFolders = includeSubFolders
             };
+            SetHashAlgorithm(xwriter, mboxProps);
 
             localId = ProcessMbox(xwriter, localId, messageList, mboxProps);
 
@@ -245,18 +237,83 @@ namespace UIUCLibrary.EaPdf
 
             //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
             using FileStream mboxStream = new FileStream(mboxProps.MboxFilePath, FileMode.Open, FileAccess.Read);
-            using CryptoStream cryptoStream = new CryptoStream(mboxStream, _cryptoHashAlg, CryptoStreamMode.Read);
+            using CryptoStream cryptoStream = new CryptoStream(mboxStream, mboxProps.HashAlgorithm, CryptoStreamMode.Read);
 
-            xwriter.WriteStartElement("Folder", XM_NS);
-            xwriter.WriteElementString("Name", XM_NS, mboxProps.MboxName);
 
-            var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);
+            var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);  
 
             parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream, mboxProps, msgProps);
 
+            long prevParserPos = 0;
+            bool validMboxFile = false;
+            MimeMessage? message = null;
+            string errMsg = "";
             while (!parser.IsEndOfStream)
             {
-                localId = ProcessCurrentMessage(parser, xwriter, localId, messageList, mboxProps, msgProps);
+                try
+                {
+                    message = parser.ParseMessage();
+                }
+                catch (FormatException fex1) when (fex1.Message.Contains(EX_MBOX_FROM_MARKER, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (prevParserPos == 0)
+                    {
+                        errMsg = $"{fex1.Message} -- skipping file, probably not an mbox file";
+                        xwriter.WriteComment($"INFO: {errMsg}");
+                        _logger.LogInformation(errMsg);
+                        return localId; //the file probably isn't an mbox file, so just bail on the whole file
+                    }
+                    else
+                    {
+                        errMsg = fex1.Message;
+                        xwriter.WriteComment($"ERROR: {errMsg}");
+                        _logger.LogError(errMsg);
+                        break; //don't try processing any more messages
+                        //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
+                    }
+                }
+                catch (FormatException fex2) when (fex2.Message.Contains(EX_MBOX_PARSE_HEADERS, StringComparison.OrdinalIgnoreCase))
+                {
+                    errMsg = fex2.Message;
+                    xwriter.WriteComment($"ERROR: {errMsg}");
+                    _logger.LogError(errMsg);
+                    break;//don't try processing any more messages
+                    //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
+                }
+                catch (Exception ex)
+                {
+                    errMsg = ex.Message;
+                    xwriter.WriteComment($"ERROR: {errMsg}");
+                    _logger.LogError(errMsg);
+                    break; //don't try processing any more messages
+                   //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
+                }
+
+                //NOTE:  if the parser throws an exception, the position may not advance which could lead to an endless loop,
+                //so do a position check here, if the position hasn't advanced, then there is a problem
+                if (parser.Position == prevParserPos)
+                {
+                    //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
+                    break;
+                }
+
+                if (prevParserPos == 0)  //this is the first message in the file
+                {
+                    //Defer creating these tags until after we can verify that the file is a valid mbox file
+                    xwriter.WriteStartElement("Folder", XM_NS);
+                    xwriter.WriteElementString("Name", XM_NS, mboxProps.MboxName);
+                    validMboxFile = true;
+                }
+                if (message != null)
+                {
+                    localId = ProcessCurrentMessage(message, xwriter, localId, messageList, mboxProps, msgProps);
+                }
+                else
+                {
+                    ProcessIncompleteMessage(localId, xwriter, "ERROR", parser.Position, messageList, mboxProps, msgProps);
+                }
+                prevParserPos = parser.Position;
+
             }
 
             //make sure to read to the end of the stream so the hash is correct
@@ -266,7 +323,7 @@ namespace UIUCLibrary.EaPdf
                 i = cryptoStream.ReadByte();
             } while (i != -1);
 
-            if (mboxProps.IncludeSubFolders)
+            if (validMboxFile && Settings.IncludeSubFolders)
             {
                 //look for a subfolder named the same as the mbox file ignoring extensions
                 //i.e. Mozilla Thunderbird will append the extension '.sbd' to the folder name
@@ -284,8 +341,8 @@ namespace UIUCLibrary.EaPdf
                 }
                 catch (Exception ex)
                 {
-                    var err = ex.Message;
-                    _logger.LogWarning(err);
+                    var err = $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}";
+                    _logger.LogError(err);
                     xwriter.WriteComment($"ERROR: {err}");
                     subfolderName = null;
                 }
@@ -293,6 +350,41 @@ namespace UIUCLibrary.EaPdf
                 if (!string.IsNullOrWhiteSpace(subfolderName))
                 {
                     _logger.LogInformation($"Processing Subfolder: {subfolderName}");
+                    //look for mbox files in this subdirectory
+                    string[]? childMboxes = null;
+                    try
+                    {
+                        childMboxes = Directory.GetFiles(subfolderName);
+                    }
+                    catch (Exception ex)
+                    {
+                        var err = $"Skipping this subfolder. {ex.GetType().Name}: {ex.Message}";
+                        _logger.LogError(err);
+                        xwriter.WriteComment($"ERROR: {err}");
+                        subfolderName = null;
+                    }
+
+                    if (childMboxes != null && childMboxes.Count() > 0)
+                    {
+                        //this is all the files, so need to determine which ones are mbox files or not
+                        foreach (var childMbox in childMboxes)
+                        {
+                            //create new MboxProperties which is copy of parent MboxProperties except for the MboxFilePath
+                            MboxProperties childMboxProps = new MboxProperties()
+                            {
+                                MboxFilePath = childMbox,
+                                AccountId = mboxProps.AccountId,
+                                OutFilePath = mboxProps.OutFilePath,
+                            };
+                            SetHashAlgorithm(xwriter, mboxProps);
+
+                            //just try to process it, if no errors thrown, its probably an mbox file
+                            var msg = $"Processing Child Mbox: {childMbox}";
+                            _logger.LogInformation(msg);
+                            xwriter.WriteComment($"INFO: {msg}");
+                            localId = ProcessMbox(xwriter, localId, messageList, childMboxProps);
+                        }
+                    }
 
                 }
             }
@@ -307,9 +399,9 @@ namespace UIUCLibrary.EaPdf
                 _logger.LogWarning(warn);
                 xwriter.WriteComment($"WARNING: {warn}");
             }
-            if (_cryptoHashAlg.Hash != null)
+            if (mboxProps.HashAlgorithm.Hash != null)
             {
-                WriteHash(xwriter, _cryptoHashAlg.Hash, Settings.HashAlgorithmName);
+                WriteHash(xwriter, mboxProps.HashAlgorithm.Hash, mboxProps.HashAlgorithmName);
             }
             else
             {
@@ -325,6 +417,18 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
+        private void SetHashAlgorithm(XmlWriter xwriter,MboxProperties mboxProps)
+        {
+            var name = mboxProps.TrySetHashAlgorithm(Settings.HashAlgorithmName);
+            if (name != Settings.HashAlgorithmName)
+            {
+                var warn = $"The hash algorithm '{Settings.HashAlgorithmName}' is not supported.  Using '{name}' instead.";
+                _logger.LogWarning(warn);
+                xwriter.WriteComment($"WARNING: {warn}");
+                Settings.HashAlgorithmName = name;
+            }
+        }
+
         private void WriteHash(XmlWriter xwriter, byte[] hash, string hashAlgorithmName)
         {
             xwriter.WriteStartElement("Hash", XM_NS);
@@ -335,72 +439,85 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteEndElement(); //Hash
         }
 
-        private long ProcessCurrentMessage(MimeParser parser, XmlWriter xwriter, long localId, List<MessageBrief> messageList, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        private long ProcessCurrentMessage(MimeMessage message, XmlWriter xwriter, long localId, List<MessageBrief> messageList, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
-            MimeMessage? message;
-            int errCnt = 0;
-            string errMsg = String.Empty;
-            try
+
+            localId++;
+            var messageId = localId;
+
+            xwriter.WriteStartElement("Message", XM_NS);
+
+            localId = ConvertMessageToEAXS(message, xwriter, localId, false, mboxProps, msgProps);
+
+            xwriter.WriteEndElement(); //Message
+
+            messageList.Add(new MessageBrief()
             {
-                message = parser.ParseMessage();
-            }
-            catch (Exception ex)
-            {
-                errCnt++;
-                errMsg = ex.Message;
-                message = new MimeMessage(); //create dummy message
-            }
+                LocalId = messageId,
+                From = message.From.ToString(),
+                To = message.To.ToString(),
+                Date = message.Date,
+                Subject = message.Subject,
+                MessageID = message.MessageId,
+                Hash = Convert.ToHexString(msgProps.MessageHash, 0, msgProps.MessageHash.Length),
+                Errors = 0,
+                FirstErrorMessage = ""
 
-            if (message != null)
-            {
+            });
 
-                localId++;
-                var messageId = localId;
-
-                xwriter.WriteStartElement("Message", XM_NS);
-                if (errCnt == 0) //process the message
-                {
-                    localId = ConvertMessageToEAXS(message, xwriter, localId, false, mboxProps, msgProps);
-                }
-                else //log an error and create an incomplete message; <Incomplete> Seems related to errors
-                {
-                    //NEEDSTEST:  Will need to create a deliberately malformed mbox to test this
-                    _logger.LogError(errMsg);
-                    WriteIncompleteMessage(localId, xwriter, errMsg, parser.Position, mboxProps, msgProps);
-                }
-                xwriter.WriteEndElement(); //Message
-
-                messageList.Add(new MessageBrief()
-                {
-                    LocalId = messageId,
-                    From = message.From.ToString(),
-                    To = message.To.ToString(),
-                    Date = message.Date,
-                    Subject = message.Subject,
-                    MessageID = message.MessageId,
-                    Hash = Convert.ToHexString(msgProps.MessageHash, 0, msgProps.MessageHash.Length),
-                    Errors = errCnt,
-                    FirstErrorMessage = errMsg
-
-                });
-            }
             msgProps.Eol = MimeMessageProperties.EOL_TYPE_UNK;
 
             return localId;
         }
-
-        private void WriteIncompleteMessage(long localId, XmlWriter xwriter, string errMsg, long position, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        /// <summary>
+        /// Create a dummy message as a placeholder for incomplete messages which indicate some sort of error while parsing the mbox
+        /// </summary>
+        /// <param name="localId"></param>
+        /// <param name="xwriter"></param>
+        /// <param name="errMsg"></param>
+        /// <param name="position"></param>
+        /// <param name="messageList"></param>
+        /// <param name="mboxProps"></param>
+        /// <param name="msgProps"></param>
+        private void ProcessIncompleteMessage(long localId, XmlWriter xwriter, string errMsg, long position, List<MessageBrief> messageList, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
+            string messageId = MimeUtils.GenerateMessageId();
+
+            xwriter.WriteStartElement("Message", XM_NS);
             xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
             xwriter.WriteStartElement("MessageId", XM_NS);
             xwriter.WriteAttributeString("Supplied", "true");
-            xwriter.WriteString($"{mboxProps.AccountId}-{localId}"); //concat the accountId and the localId to create a unique message id
+            xwriter.WriteString(messageId);
             xwriter.WriteEndElement(); //MessageId
             xwriter.WriteStartElement("Incomplete", XM_NS);
             xwriter.WriteElementString("ErrorType", XM_NS, errMsg);
             xwriter.WriteElementString("ErrorLocation", XM_NS, $"Stream Position: {position}");
             xwriter.WriteEndElement(); //Incomplete
             xwriter.WriteElementString("Eol", XM_NS, msgProps.Eol); //This might be unknown at this point if there was an error
+            xwriter.WriteEndElement(); //Message
+
+            //create dummy message
+            MimeMessage message = new MimeMessage()
+            {
+                MessageId = messageId
+            };
+
+            messageList.Add(new MessageBrief()
+            {
+                LocalId = localId,
+                From = message.From.ToString(),
+                To = message.To.ToString(),
+                Date = message.Date,
+                Subject = message.Subject,
+                MessageID = message.MessageId,
+                Hash = Convert.ToHexString(msgProps.MessageHash, 0, msgProps.MessageHash.Length),
+                Errors = 1,
+                FirstErrorMessage = errMsg
+
+            });
+
+            msgProps.Eol = MimeMessageProperties.EOL_TYPE_UNK;
+
         }
 
         private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, bool isChildMessage, MboxProperties mboxProps, MimeMessageProperties msgProps)
@@ -719,7 +836,7 @@ namespace UIUCLibrary.EaPdf
             {
                 xwriter.WriteElementString("ContentId", XM_NS, mimeEntity.ContentId);
             }
-            //TODO: ContentIdComments, not currently supported by MimeKit, actually might not be allowed by the RFC - not sure of ContentId is a structured header type
+            //TODO: ContentIdComments, not currently supported by MimeKit, actually might not be allowed by the RFC - not sure if ContentId is a structured header type
 
             MimePart? part = mimeEntity as MimePart;
             if (isMultipart && !string.IsNullOrWhiteSpace(part?.ContentDescription))
@@ -826,7 +943,7 @@ namespace UIUCLibrary.EaPdf
             if (ExtContent)
             {
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
-                xwriter.WriteComment($"LocalId: {localId}");
+                xwriter.WriteComment($"INFO: LocalId {localId}");
             }
 
             xwriter.WriteStartElement("Content", XM_NS);
