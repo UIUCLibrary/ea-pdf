@@ -1217,7 +1217,7 @@ namespace UIUCLibrary.EaPdf
             if (
                 (Path.GetFileNameWithoutExtension(mboxFilePath ?? "").Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
                 || message.Headers.Contains("X-Mozilla-Draft-Info")  //Mozilla uses this header for draft messages
-                || mimeStatus.Contains(STATUS_DRAFT)  //Some clients encode draft as "T" in the X-Status header
+                || mimeStatus.Contains(STATUS_FLAG_DRAFT)  //Some clients encode draft as "T" in the X-Status header
                 )
             {
                 ret = true;
