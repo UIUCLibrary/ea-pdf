@@ -64,7 +64,13 @@ namespace UIUCLibrary.EaPdf
         const string STATUS_DRAFT = "Draft";
         const string STATUS_RECENT = "Recent";
 
-        //TODO: Add constants for the Status and X-Status header values
+        //Constants for the Status and X-Status header values, see https://docs.python.org/3/library/mailbox.html#mboxmessage
+        const char STATUS_FLAG_READ = 'R';
+        const char STATUS_FLAG_OLD = 'O';
+        const char STATUS_FLAG_DELETED = 'D';
+        const char STATUS_FLAG_FLAGGED = 'F';
+        const char STATUS_FLAG_ANSWERED = 'A';
+        const char STATUS_FLAG_DRAFT = 'T';
 
         public const string XM = "xm";
         public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2";
@@ -1096,7 +1102,7 @@ namespace UIUCLibrary.EaPdf
 
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
 
-            if (mimeStatus.Contains('R')) //Read
+            if (mimeStatus.Contains(STATUS_FLAG_READ)) //Read
             {
                 ret = true;
                 status = STATUS_SEEN;
@@ -1123,7 +1129,7 @@ namespace UIUCLibrary.EaPdf
 
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
 
-            if (mimeStatus.Contains('A')) //Answered
+            if (mimeStatus.Contains(STATUS_FLAG_ANSWERED)) //Answered
             {
                 ret = true;
                 status = STATUS_ANSWERED;
@@ -1150,7 +1156,7 @@ namespace UIUCLibrary.EaPdf
 
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
 
-            if (mimeStatus.Contains('F')) //Flagged
+            if (mimeStatus.Contains(STATUS_FLAG_FLAGGED)) //Flagged
             {
                 ret = true;
                 status = STATUS_FLAGGED;
@@ -1178,7 +1184,7 @@ namespace UIUCLibrary.EaPdf
 
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
 
-            if (mimeStatus.Contains('D')) //Deleted
+            if (mimeStatus.Contains(STATUS_FLAG_DELETED)) //Deleted
             {
                 ret = true;
                 status = STATUS_DELETED;
@@ -1211,7 +1217,7 @@ namespace UIUCLibrary.EaPdf
             if (
                 (Path.GetFileNameWithoutExtension(mboxFilePath ?? "").Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
                 || message.Headers.Contains("X-Mozilla-Draft-Info")  //Mozilla uses this header for draft messages
-                || mimeStatus.Contains('T')  //Some clients encode draft as "T" in the X-Status header
+                || mimeStatus.Contains(STATUS_DRAFT)  //Some clients encode draft as "T" in the X-Status header
                 )
             {
                 ret = true;
@@ -1235,7 +1241,7 @@ namespace UIUCLibrary.EaPdf
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
 
             //if there is a status header but it does not contain the 'O' (Old) flag then it is recent
-            if (message.Headers.Contains(HeaderId.Status) && !mimeStatus.Contains('O')) //Not Old
+            if (message.Headers.Contains(HeaderId.Status) && !mimeStatus.Contains(STATUS_FLAG_OLD)) //Not Old
             {
                 ret = true;
                 status = STATUS_RECENT;
