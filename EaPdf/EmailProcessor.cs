@@ -240,7 +240,7 @@ namespace UIUCLibrary.EaPdf
             using CryptoStream cryptoStream = new CryptoStream(mboxStream, mboxProps.HashAlgorithm, CryptoStreamMode.Read);
 
 
-            var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);  
+            var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);
 
             parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream, mboxProps, msgProps);
 
@@ -286,7 +286,7 @@ namespace UIUCLibrary.EaPdf
                     xwriter.WriteComment($"ERROR: {errMsg}");
                     _logger.LogError(errMsg);
                     break; //don't try processing any more messages
-                   //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
+                           //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
                 }
 
                 //NOTE:  if the parser throws an exception, the position may not advance which could lead to an endless loop,
@@ -417,7 +417,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void SetHashAlgorithm(XmlWriter xwriter,MboxProperties mboxProps)
+        private void SetHashAlgorithm(XmlWriter xwriter, MboxProperties mboxProps)
         {
             var name = mboxProps.TrySetHashAlgorithm(Settings.HashAlgorithmName);
             if (name != Settings.HashAlgorithmName)
@@ -732,9 +732,13 @@ namespace UIUCLibrary.EaPdf
             }
             else if (!isMultipart)
             {
-                if (part != null)
+                if (part != null && !IsXMozillaExternalAttachment(part))
                 {
                     localId = WriteSingleBodyContent(xwriter, part, localId, mboxProps);
+                }
+                else if (part != null && IsXMozillaExternalAttachment(part))
+                {
+                    xwriter.WriteComment($"INFO: The content is an inaccessible external attachment");
                 }
                 else if (message != null)
                 {
@@ -755,8 +759,12 @@ namespace UIUCLibrary.EaPdf
             }
 
             //PhantomBody; Content-Type message/external-body
+            //Mozilla uses different headers to indicate this situtation, for example:
+            //      X-Mozilla-External-Attachment-URL: file://///libgrrudra/Users/thabing/My%20Documents/EMAILS/Attachments/DLFSCHOLARS2004-2.pdf
+            //      X-Mozilla-Altered: AttachmentDetached; date = "Fri May 19 09:27:32 2006"
             //NEEDSTEST: Need to write a test for this
-            if (!isMultipart && part != null && part.ContentType.IsMimeType("message", "external-body"))
+
+            if (!isMultipart && part != null && (part.ContentType.IsMimeType("message", "external-body") || IsXMozillaExternalAttachment(part)))
             {
                 var streamReader = new StreamReader(part.Content.Open(), part.ContentType.CharsetEncoding, true);
                 xwriter.WriteElementString("PhantomBody", XM_NS, streamReader.ReadToEnd());
@@ -800,6 +808,9 @@ namespace UIUCLibrary.EaPdf
             }
             else //it is not text or it is an attachment
             {
+                //TODO:  Need to see if we can process message/external-body parts where the content is referenced by the other content-type parameters
+                //       See https://www.oreilly.com/library/view/programming-internet-email/9780596802585/ch04s04s01.html
+                //       Also consider the "X-Mozilla-External-Attachment-URL: url" and the "X-Mozilla-Altered: AttachmentDetached; date="Thu Jul 06 21:38:39 2006"" headers
                 if (!Settings.SaveAttachmentsAndBinaryContentExternally)
                 {
                     //save non-text content or attachments as part of the XML
@@ -1254,6 +1265,11 @@ namespace UIUCLibrary.EaPdf
                 }
             }
             return ret;
+        }
+
+        private bool IsXMozillaExternalAttachment(MimePart part)
+        {
+            return part.Headers.Contains("X-Mozilla-External-Attachment-URL") && (part.Headers["X-Mozilla-Altered"] ?? "").Contains("AttachmentDetached");
         }
 
         private XMozillaStatusFlags2 GetXMozillaStatus2(MimeMessage message)

@@ -39,6 +39,7 @@ namespace UIUCLibrary.TestEAPDF
             if (loggerFactory != null) loggerFactory.Dispose();
         }
 
+        [DataRow("SHA256", false, false, false, "sha256----includeSubs", true, DisplayName = "sha256----includeSubs")]
         [DataRow("SHA256", true, false, false, "sha256-ext---includeSubs", true, DisplayName = "sha256-ext---includeSubs")]
         [DataRow("SHA256", false, false, false, "sha256", false, DisplayName = "sha256")]
         [DataRow("SHA1", false, false, false, "sha1", false, DisplayName = "sha1")]
