@@ -14,9 +14,7 @@ namespace UIUCLibrary.EaPdf
     public class EmailProcessor
     {
 
-        //TODO: Need to add some IO Exception Handling throughout for creating, reading, and writing to files and folders.
-
-        //TODO: Add support for mbx files, see https://uofi.box.com/s/51v7xzfzqod2dv9lxmjgbrrgz5ejjydk 
+        //NEWFEATURE: Add support for mbx files, see https://uofi.box.com/s/51v7xzfzqod2dv9lxmjgbrrgz5ejjydk 
 
         public const string EXT_CONTENT_DIR = "ExtBodyContent";
 
@@ -155,8 +153,6 @@ namespace UIUCLibrary.EaPdf
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
         public long ConvertMbox2EAXS(string mboxFilePath, ref string outFolderPath, string accntId, string accntEmails = "")
         {
-            //TODO: add code to process correspondingly named subdirectories as sub folders to a given mbox file.
-            //TODO: add code to process directory and subdirectory or single email message EML files.
 
             if (string.IsNullOrWhiteSpace(mboxFilePath))
             {
@@ -288,8 +284,9 @@ namespace UIUCLibrary.EaPdf
                     //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
                 }
 
-                //NOTE:  if the parser throws an exception, the position may not advance which could lead to an endless loop,
+                //NOTE:  if the parser throws an exception, but is allowed to continue, the position may not advance which could lead to an endless loop,
                 //so do a position check here, if the position hasn't advanced, then there is a problem
+                //NOTE:  This should not currently happen because all exceptions already cause a break from the loop
                 if (parser.Position == prevParserPos)
                 {
                     WriteErrorMessage(xwriter, "Parse position has not advanced which indicates a possible problem with the file");
@@ -578,7 +575,7 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteStartElement("Header", XM_NS);
                 xwriter.WriteElementString("Name", XM_NS, hdr.Field);
                 xwriter.WriteElementString("Value", XM_NS, hdr.Value);
-                //TODO: Comments, not currently supported by MimeKit
+                //UNSUPPORTED: Comments, not currently supported by MimeKit
                 xwriter.WriteEndElement();
             }
         }
@@ -784,7 +781,7 @@ namespace UIUCLibrary.EaPdf
             }
             else //it is not text or it is an attachment
             {
-                //TODO:  Need to see if we can process message/external-body parts where the content is referenced by the other content-type parameters
+                //NEWFEATURE:  Need to see if we can access and process 'message/external-body' parts where the content is referenced by the other content-type parameters
                 //       See https://www.oreilly.com/library/view/programming-internet-email/9780596802585/ch04s04s01.html
                 //       Also consider the "X-Mozilla-External-Attachment-URL: url" and the "X-Mozilla-Altered: AttachmentDetached; date="Thu Jul 06 21:38:39 2006"" headers
                 
@@ -816,20 +813,20 @@ namespace UIUCLibrary.EaPdf
                     WriteWarningMessage(xwriter, $"A multipart entity has a Content-Transfer-Encoding of '{transferEncoding}'; normally this should only be 7bit for multipart entities.");
                 }
             }
-            //TODO: TransferEncodingComments, not currently supported by MimeKit
+            //UNSUPPORTED: TransferEncodingComments, not currently supported by MimeKit
 
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentId))
             {
                 xwriter.WriteElementString("ContentId", XM_NS, mimeEntity.ContentId);
             }
-            //TODO: ContentIdComments, not currently supported by MimeKit, actually might not be allowed by the RFC - not sure if ContentId is a structured header type
+            //UNSUPPORTED: ContentIdComments, not currently supported by MimeKit, actually might not be allowed by the RFC - not sure if ContentId is a structured header type
 
             MimePart? part = mimeEntity as MimePart;
             if (isMultipart && !string.IsNullOrWhiteSpace(part?.ContentDescription))
             {
                 xwriter.WriteElementString("Description", XM_NS, part.ContentDescription);
             }
-            //TODO: DescriptionComments, not currently supported by MimeKit, actually might not be allowed by the RFC since Description is not a structured header type
+            //UNSUPPORTED: DescriptionComments, not currently supported by MimeKit, actually might not be allowed by the RFC since Description is not a structured header type
         }
 
         private void WriteMimeOtherHeaders(XmlWriter xwriter, MimeEntity mimeEntity)
@@ -840,7 +837,7 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteStartElement("OtherMimeHeader", XM_NS);
                 xwriter.WriteElementString("Name", XM_NS, hdr.Field);
                 xwriter.WriteElementString("Value", XM_NS, hdr.Value);
-                //TODO: OtherMimeHeader/Comments, not currently supported by MimeKit
+                //UNSUPPORTED: OtherMimeHeader/Comments, not currently supported by MimeKit
                 xwriter.WriteEndElement(); //OtherMimeHeaders
             }
         }
@@ -858,7 +855,7 @@ namespace UIUCLibrary.EaPdf
                     xwriter.WriteElementString("DispositionFileName", XM_NS, mimeEntity.ContentDisposition.FileName);
                 }
 
-                //TODO: DispositionComments, not currently supported by MimeKit
+                //UNSUPPORTED: DispositionComments, not currently supported by MimeKit
 
                 string[] except2 = { "filename" };
                 foreach (var param in mimeEntity.ContentDisposition.Parameters.Where(p => !except2.Contains(p.Name, StringComparer.InvariantCultureIgnoreCase)))
@@ -899,7 +896,7 @@ namespace UIUCLibrary.EaPdf
                 WriteWarningMessage(xwriter, "MIME type boundary parameter is missing for a multipart mime type");
             }
 
-            //TODO: ContentTypeComments, not currently supported by MimeKit
+            //UNSUPPORTED: ContentTypeComments, not currently supported by MimeKit
 
             string[] except = { "boundary", "charset", "name" };  //QUESTION: XML Schema says to exclude id, name, and boundary.  Why id and not charset?
             foreach (var param in mimeEntity.ContentType.Parameters.Where(p => !except.Contains(p.Name, StringComparer.InvariantCultureIgnoreCase)))
