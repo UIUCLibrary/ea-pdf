@@ -52,7 +52,7 @@ namespace UIUCLibrary.TestEAPDF
         {
 
             testFilesBaseDirectory = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird");
-            
+
             if (logger != null)
             {
                 var settings = new EmailProcessorSettings()
@@ -61,12 +61,11 @@ namespace UIUCLibrary.TestEAPDF
                     SaveAttachmentsAndBinaryContentExternally = extContent,
                     WrapExternalContentInXml = wrapExtInXml,
                     PreserveContentTransferEncodingIfPossible = preserveEnc,
-                    IncludeSubFolders=includeSub
+                    IncludeSubFolders = includeSub
                 };
 
-                //TODO: make the tests resilient to moving code to different folder structure
                 //Also save the sample test files in the test project and automate the folder setup and cleanup
-                var sampleFile = Path.Combine(testFilesBaseDirectory,"DLF Distributed Library");
+                var sampleFile = Path.Combine(testFilesBaseDirectory, "DLF Distributed Library");
                 var expectedOutFolder = Path.Combine(testFilesBaseDirectory, testOutFolder);
                 var outFolder = Path.Combine(testFilesBaseDirectory, testOutFolder);
 
@@ -94,10 +93,6 @@ namespace UIUCLibrary.TestEAPDF
                 var xmlns = new XmlNamespaceManager(xdoc.NameTable);
                 xmlns.AddNamespace(EmailProcessor.XM, EmailProcessor.XM_NS);
 
-                //make sure hash is correct
-                XmlNode? hashValueNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Value", xmlns);
-                XmlNode? hashFuncNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Function", xmlns);
-
                 //make sure the localId values start at 1 and all increase by 1
                 var localIds = xdoc.SelectNodes("//xm:LocalId", xmlns);
                 if (localIds != null)
@@ -108,7 +103,7 @@ namespace UIUCLibrary.TestEAPDF
                     {
                         if (long.TryParse(localId.InnerText, out id))
                         {
-                            Assert.AreEqual(id,prevId+1);
+                            Assert.AreEqual(id, prevId + 1);
                             prevId = id;
                         }
                         else
@@ -121,6 +116,10 @@ namespace UIUCLibrary.TestEAPDF
                 {
                     Assert.Fail("No localIds found");
                 }
+
+                //get the hash values from the xml
+                XmlNode? hashValueNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Value", xmlns);
+                XmlNode? hashFuncNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Function", xmlns);
 
                 //make sure hashes match
                 Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
@@ -246,6 +245,30 @@ namespace UIUCLibrary.TestEAPDF
                 //make sure there is nothing but info messages in the log output
                 Assert.AreEqual(0, StringListLogger.Instance.LoggedLines.Where(s => !s.StartsWith("[Information]")).Count());
 
+
+                //check that any PhantomBody elements are valid
+                XmlNodeList? nds = xdoc.SelectNodes("//xm:SingleBody[xm:PhantomBody]", xmlns);
+                if (nds != null)
+                {
+                    foreach (XmlElement nd in nds)
+                    {
+                        //check that the content-type is message/external-body or that there are X-Mozilla-* headers
+                        var contentType = nd.SelectSingleNode("xm:ContentType", xmlns)?.InnerText;
+                        var xMozillaExternal = nd.SelectSingleNode("xm:OtherMimeHeader/xm:Name['X-Mozilla-External-Attachment-URL']", xmlns);
+                        Assert.IsTrue((!string.IsNullOrWhiteSpace(contentType) && contentType.Equals("message/external-body", StringComparison.OrdinalIgnoreCase)) || (xMozillaExternal != null));
+                    }
+                }
+                XmlNodeList? nds2 = xdoc.SelectNodes("//xm:SingleBody[translate(xm:ContentType,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz') = 'message/external-body'] | //xm:SingleBody[translate(xm:OtherMimeHeader/xm:Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz') = 'x-mozilla-external-attachment-url']", xmlns);
+                if (nds2 != null)
+                {
+                    foreach (XmlElement nd in nds2)
+                    {
+                        //check that there is a PhantomBody element
+                        var phantom = nd.SelectSingleNode("xm:PhantomBody",xmlns);
+                        Assert.IsNotNull(phantom);
+                    }
+                }
+
             }
             else
             {
@@ -260,9 +283,9 @@ namespace UIUCLibrary.TestEAPDF
 
             if (logger != null)
             {
-                var sampleFile = Path.Combine(testFilesBaseDirectory,"Drafts");
+                var sampleFile = Path.Combine(testFilesBaseDirectory, "Drafts");
                 var outFolder = "";
-                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings() { IncludeSubFolders=false});
+                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings() { IncludeSubFolders = false });
                 var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder
@@ -309,7 +332,7 @@ namespace UIUCLibrary.TestEAPDF
                 Assert.Fail("Logger was not initialized");
             }
         }
-        
+
         [TestMethod]
         public void TestInboxXml()
         {
@@ -317,9 +340,9 @@ namespace UIUCLibrary.TestEAPDF
 
             if (logger != null)
             {
-                var sampleFile = Path.Combine(testFilesBaseDirectory,"Inbox");
+                var sampleFile = Path.Combine(testFilesBaseDirectory, "Inbox");
                 var outFolder = "";
-                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings() { IncludeSubFolders=false});
+                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings() { IncludeSubFolders = false });
                 var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 //output folder is the same as the mbox folder

@@ -738,7 +738,7 @@ namespace UIUCLibrary.EaPdf
             //Mozilla uses different headers to indicate this situtation, for example:
             //      X-Mozilla-External-Attachment-URL: file://///libgrrudra/Users/thabing/My%20Documents/EMAILS/Attachments/DLFSCHOLARS2004-2.pdf
             //      X-Mozilla-Altered: AttachmentDetached; date = "Fri May 19 09:27:32 2006"
-            //NEEDSTEST: Need to write a test for this
+            //NEEDSTEST:  Find or construct a sample message with content-type message/external-body
 
             if (!isMultipart && part != null && (part.ContentType.IsMimeType("message", "external-body") || IsXMozillaExternalAttachment(part)))
             {
