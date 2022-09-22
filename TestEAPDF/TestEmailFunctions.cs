@@ -50,6 +50,9 @@ namespace UIUCLibrary.TestEAPDF
         [DataTestMethod]
         public void Test2Xml(string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, string testOutFolder, bool includeSub)
         {
+
+            testFilesBaseDirectory = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird");
+            
             if (logger != null)
             {
                 var settings = new EmailProcessorSettings()
@@ -253,6 +256,8 @@ namespace UIUCLibrary.TestEAPDF
         [TestMethod]
         public void TestMozillaDrafts2Xml()
         {
+            testFilesBaseDirectory = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird");
+
             if (logger != null)
             {
                 var sampleFile = Path.Combine(testFilesBaseDirectory,"Drafts");
@@ -308,6 +313,8 @@ namespace UIUCLibrary.TestEAPDF
         [TestMethod]
         public void TestInboxXml()
         {
+            testFilesBaseDirectory = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird");
+
             if (logger != null)
             {
                 var sampleFile = Path.Combine(testFilesBaseDirectory,"Inbox");

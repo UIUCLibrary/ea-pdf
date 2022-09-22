@@ -16,21 +16,85 @@ EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "DArcMail", "DArcMail\DArcMail.pyproj", "{27A815E6-00A3-4B5C-863A-946EC0012B68}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SampleFiles", "SampleFiles", "{0C7BCAA5-D029-4DC8-9134-1C215F4E471E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MozillaThunderbird", "MozillaThunderbird", "{3ED14E52-BE9B-4856-8FCE-49A975CD029E}"
 	ProjectSection(SolutionItems) = preProject
-		SampleFiles\Testing\DLF Distributed Library = SampleFiles\Testing\DLF Distributed Library
-		SampleFiles\Testing\DLF Distributed Library.msf = SampleFiles\Testing\DLF Distributed Library.msf
-		SampleFiles\Testing\Drafts = SampleFiles\Testing\Drafts
-		SampleFiles\Testing\Drafts.msf = SampleFiles\Testing\Drafts.msf
-		SampleFiles\Testing\Inbox = SampleFiles\Testing\Inbox
-		SampleFiles\Testing\INBOX.msf = SampleFiles\Testing\INBOX.msf
+		SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library = SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library
+		SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.msf = SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.msf
+		SampleFiles\Testing\MozillaThunderbird\Drafts = SampleFiles\Testing\MozillaThunderbird\Drafts
+		SampleFiles\Testing\MozillaThunderbird\Drafts.msf = SampleFiles\Testing\MozillaThunderbird\Drafts.msf
+		SampleFiles\Testing\MozillaThunderbird\Inbox = SampleFiles\Testing\MozillaThunderbird\Inbox
+		SampleFiles\Testing\MozillaThunderbird\INBOX.msf = SampleFiles\Testing\MozillaThunderbird\INBOX.msf
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DLF Distributed Library.sbd", "DLF Distributed Library.sbd", "{0A374F6C-3649-4957-95DA-BF6235DD6776}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pine", "Pine", "{A623C912-2DD1-4DDD-A5B5-D0FD8BF7B102}"
 	ProjectSection(SolutionItems) = preProject
-		SampleFiles\Testing\DLF Distributed Library.sbd\Emory OAI Workshop = SampleFiles\Testing\DLF Distributed Library.sbd\Emory OAI Workshop
-		SampleFiles\Testing\DLF Distributed Library.sbd\Emory OAI Workshop.msf = SampleFiles\Testing\DLF Distributed Library.sbd\Emory OAI Workshop.msf
-		SampleFiles\Testing\DLF Distributed Library.sbd\ScholarsPanel2006-05-23 = SampleFiles\Testing\DLF Distributed Library.sbd\ScholarsPanel2006-05-23
-		SampleFiles\Testing\DLF Distributed Library.sbd\ScholarsPanel2006-05-23.msf = SampleFiles\Testing\DLF Distributed Library.sbd\ScholarsPanel2006-05-23.msf
+		SampleFiles\Testing\Pine\sent-mail-aug-2007 = SampleFiles\Testing\Pine\sent-mail-aug-2007
+		SampleFiles\Testing\Pine\sent-mail-jul-2003 = SampleFiles\Testing\Pine\sent-mail-jul-2003
+		SampleFiles\Testing\Pine\sent-mail-jul-2005 = SampleFiles\Testing\Pine\sent-mail-jul-2005
+		SampleFiles\Testing\Pine\sent-mail-jul-2006 = SampleFiles\Testing\Pine\sent-mail-jul-2006
+		SampleFiles\Testing\Pine\sent-mail-jun-2000 = SampleFiles\Testing\Pine\sent-mail-jun-2000
+		SampleFiles\Testing\Pine\sent-mail-jun-2001 = SampleFiles\Testing\Pine\sent-mail-jun-2001
+		SampleFiles\Testing\Pine\sent-mail-jun-2002 = SampleFiles\Testing\Pine\sent-mail-jun-2002
+		SampleFiles\Testing\Pine\sent-mail-jun-2003 = SampleFiles\Testing\Pine\sent-mail-jun-2003
+		SampleFiles\Testing\Pine\sent-mail-jun-2004 = SampleFiles\Testing\Pine\sent-mail-jun-2004
+		SampleFiles\Testing\Pine\sent-mail-jun-2006 = SampleFiles\Testing\Pine\sent-mail-jun-2006
+		SampleFiles\Testing\Pine\sent-mail-jun-2007 = SampleFiles\Testing\Pine\sent-mail-jun-2007
+		SampleFiles\Testing\Pine\sent-mail-jun-2008 = SampleFiles\Testing\Pine\sent-mail-jun-2008
+		SampleFiles\Testing\Pine\sent-mail-jun-2009 = SampleFiles\Testing\Pine\sent-mail-jun-2009
+		SampleFiles\Testing\Pine\sent-mail-mar-2000 = SampleFiles\Testing\Pine\sent-mail-mar-2000
+		SampleFiles\Testing\Pine\sent-mail-mar-2001 = SampleFiles\Testing\Pine\sent-mail-mar-2001
+		SampleFiles\Testing\Pine\sent-mail-mar-2002 = SampleFiles\Testing\Pine\sent-mail-mar-2002
+		SampleFiles\Testing\Pine\sent-mail-mar-2004 = SampleFiles\Testing\Pine\sent-mail-mar-2004
+		SampleFiles\Testing\Pine\sent-mail-mar-2005 = SampleFiles\Testing\Pine\sent-mail-mar-2005
+		SampleFiles\Testing\Pine\sent-mail-mar-2006 = SampleFiles\Testing\Pine\sent-mail-mar-2006
+		SampleFiles\Testing\Pine\sent-mail-mar-2009 = SampleFiles\Testing\Pine\sent-mail-mar-2009
+		SampleFiles\Testing\Pine\sent-mail-may-2000 = SampleFiles\Testing\Pine\sent-mail-may-2000
+		SampleFiles\Testing\Pine\sent-mail-may-2001 = SampleFiles\Testing\Pine\sent-mail-may-2001
+		SampleFiles\Testing\Pine\sent-mail-may-2002 = SampleFiles\Testing\Pine\sent-mail-may-2002
+		SampleFiles\Testing\Pine\sent-mail-may-2004 = SampleFiles\Testing\Pine\sent-mail-may-2004
+		SampleFiles\Testing\Pine\sent-mail-may-2005 = SampleFiles\Testing\Pine\sent-mail-may-2005
+		SampleFiles\Testing\Pine\sent-mail-may-2006 = SampleFiles\Testing\Pine\sent-mail-may-2006
+		SampleFiles\Testing\Pine\sent-mail-may-2007 = SampleFiles\Testing\Pine\sent-mail-may-2007
+		SampleFiles\Testing\Pine\sent-mail-may-2008 = SampleFiles\Testing\Pine\sent-mail-may-2008
+		SampleFiles\Testing\Pine\sent-mail-may-2009 = SampleFiles\Testing\Pine\sent-mail-may-2009
+		SampleFiles\Testing\Pine\sent-mail-nov-1999 = SampleFiles\Testing\Pine\sent-mail-nov-1999
+		SampleFiles\Testing\Pine\sent-mail-nov-2000 = SampleFiles\Testing\Pine\sent-mail-nov-2000
+		SampleFiles\Testing\Pine\sent-mail-nov-2001 = SampleFiles\Testing\Pine\sent-mail-nov-2001
+		SampleFiles\Testing\Pine\sent-mail-nov-2002 = SampleFiles\Testing\Pine\sent-mail-nov-2002
+		SampleFiles\Testing\Pine\sent-mail-nov-2003 = SampleFiles\Testing\Pine\sent-mail-nov-2003
+		SampleFiles\Testing\Pine\sent-mail-nov-2004 = SampleFiles\Testing\Pine\sent-mail-nov-2004
+		SampleFiles\Testing\Pine\sent-mail-nov-2005 = SampleFiles\Testing\Pine\sent-mail-nov-2005
+		SampleFiles\Testing\Pine\sent-mail-nov-2006 = SampleFiles\Testing\Pine\sent-mail-nov-2006
+		SampleFiles\Testing\Pine\sent-mail-nov-2007 = SampleFiles\Testing\Pine\sent-mail-nov-2007
+		SampleFiles\Testing\Pine\sent-mail-nov-2008 = SampleFiles\Testing\Pine\sent-mail-nov-2008
+		SampleFiles\Testing\Pine\sent-mail-oct-1999 = SampleFiles\Testing\Pine\sent-mail-oct-1999
+		SampleFiles\Testing\Pine\sent-mail-oct-2000 = SampleFiles\Testing\Pine\sent-mail-oct-2000
+		SampleFiles\Testing\Pine\sent-mail-oct-2001 = SampleFiles\Testing\Pine\sent-mail-oct-2001
+		SampleFiles\Testing\Pine\sent-mail-oct-2002 = SampleFiles\Testing\Pine\sent-mail-oct-2002
+		SampleFiles\Testing\Pine\sent-mail-oct-2003 = SampleFiles\Testing\Pine\sent-mail-oct-2003
+		SampleFiles\Testing\Pine\sent-mail-oct-2004 = SampleFiles\Testing\Pine\sent-mail-oct-2004
+		SampleFiles\Testing\Pine\sent-mail-oct-2005 = SampleFiles\Testing\Pine\sent-mail-oct-2005
+		SampleFiles\Testing\Pine\sent-mail-oct-2006 = SampleFiles\Testing\Pine\sent-mail-oct-2006
+		SampleFiles\Testing\Pine\sent-mail-oct-2007 = SampleFiles\Testing\Pine\sent-mail-oct-2007
+		SampleFiles\Testing\Pine\sent-mail-oct-2008 = SampleFiles\Testing\Pine\sent-mail-oct-2008
+		SampleFiles\Testing\Pine\sent-mail-sep-2000 = SampleFiles\Testing\Pine\sent-mail-sep-2000
+		SampleFiles\Testing\Pine\sent-mail-sep-2001 = SampleFiles\Testing\Pine\sent-mail-sep-2001
+		SampleFiles\Testing\Pine\sent-mail-sep-2002 = SampleFiles\Testing\Pine\sent-mail-sep-2002
+		SampleFiles\Testing\Pine\sent-mail-sep-2003 = SampleFiles\Testing\Pine\sent-mail-sep-2003
+		SampleFiles\Testing\Pine\sent-mail-sep-2005 = SampleFiles\Testing\Pine\sent-mail-sep-2005
+		SampleFiles\Testing\Pine\sent-mail-sep-2006 = SampleFiles\Testing\Pine\sent-mail-sep-2006
+		SampleFiles\Testing\Pine\sent-mail-sep-2007 = SampleFiles\Testing\Pine\sent-mail-sep-2007
+		SampleFiles\Testing\Pine\sent-mail-sept-2004 = SampleFiles\Testing\Pine\sent-mail-sept-2004
+		SampleFiles\Testing\Pine\sent-mail-sept-2008 = SampleFiles\Testing\Pine\sent-mail-sept-2008
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DLF Distributed Library.sbd", "DLF Distributed Library.sbd", "{A45E2730-0F3F-4140-ABD3-8CBE977E3BF3}"
+	ProjectSection(SolutionItems) = preProject
+		SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.sbd\Emory OAI Workshop = SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.sbd\Emory OAI Workshop
+		SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.sbd\Emory OAI Workshop.msf = SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.sbd\Emory OAI Workshop.msf
+		SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.sbd\ScholarsPanel2006-05-23 = SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.sbd\ScholarsPanel2006-05-23
+		SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.sbd\ScholarsPanel2006-05-23.msf = SampleFiles\Testing\MozillaThunderbird\DLF Distributed Library.sbd\ScholarsPanel2006-05-23.msf
 	EndProjectSection
 EndProject
 Global
@@ -54,7 +118,9 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{0A374F6C-3649-4957-95DA-BF6235DD6776} = {0C7BCAA5-D029-4DC8-9134-1C215F4E471E}
+		{3ED14E52-BE9B-4856-8FCE-49A975CD029E} = {0C7BCAA5-D029-4DC8-9134-1C215F4E471E}
+		{A623C912-2DD1-4DDD-A5B5-D0FD8BF7B102} = {0C7BCAA5-D029-4DC8-9134-1C215F4E471E}
+		{A45E2730-0F3F-4140-ABD3-8CBE977E3BF3} = {3ED14E52-BE9B-4856-8FCE-49A975CD029E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CFFF8FA0-BCE8-4554-AC69-D9397B85F72B}

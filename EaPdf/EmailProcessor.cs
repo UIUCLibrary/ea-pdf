@@ -16,6 +16,8 @@ namespace UIUCLibrary.EaPdf
 
         //TODO: Need to add some IO Exception Handling throughout for creating, reading, and writing to files and folders.
 
+        //TODO: Add support for mbx files, see https://uofi.box.com/s/51v7xzfzqod2dv9lxmjgbrrgz5ejjydk 
+
         public const string EXT_CONTENT_DIR = "ExtBodyContent";
 
         //for LWSP (Linear White Space) detection, compaction, and trimming
@@ -253,7 +255,6 @@ namespace UIUCLibrary.EaPdf
             long prevParserPos = 0;
             bool validMboxFile = false;
             MimeMessage? message = null;
-            string errMsg = "";
             while (!parser.IsEndOfStream)
             {
                 try
@@ -264,43 +265,36 @@ namespace UIUCLibrary.EaPdf
                 {
                     if (prevParserPos == 0)
                     {
-                        errMsg = $"{fex1.Message} -- skipping file, probably not an mbox file";
-                        xwriter.WriteComment($"INFO: {errMsg}");
-                        _logger.LogInformation(errMsg);
+                        WriteInfoMessage(xwriter, $"{fex1.Message} -- skipping file, probably not an mbox file");
                         return localId; //the file probably isn't an mbox file, so just bail on the whole file
                     }
                     else
                     {
-                        errMsg = fex1.Message;
-                        xwriter.WriteComment($"ERROR: {errMsg}");
-                        _logger.LogError(errMsg);
+                        WriteErrorMessage(xwriter, fex1.Message);
                         break; //don't try processing any more messages
                         //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
                     }
                 }
                 catch (FormatException fex2) when (fex2.Message.Contains(EX_MBOX_PARSE_HEADERS, StringComparison.OrdinalIgnoreCase))
                 {
-                    errMsg = fex2.Message;
-                    xwriter.WriteComment($"ERROR: {errMsg}");
-                    _logger.LogError(errMsg);
+                    WriteErrorMessage(xwriter, fex2.Message);
                     break;//don't try processing any more messages
                     //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
                 }
                 catch (Exception ex)
                 {
-                    errMsg = ex.Message;
-                    xwriter.WriteComment($"ERROR: {errMsg}");
-                    _logger.LogError(errMsg);
+                    WriteErrorMessage(xwriter, ex.Message);
                     break; //don't try processing any more messages
-                           //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
+                    //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
                 }
 
                 //NOTE:  if the parser throws an exception, the position may not advance which could lead to an endless loop,
                 //so do a position check here, if the position hasn't advanced, then there is a problem
                 if (parser.Position == prevParserPos)
                 {
+                    WriteErrorMessage(xwriter, "Parse position has not advanced which indicates a possible problem with the file");
+                    break;//don't try processing any more messages
                     //TODO: might still be salvageable records in the mbox if we can adjust the position and keep moving
-                    break;
                 }
 
                 if (prevParserPos == 0)  //this is the first message in the file
@@ -340,16 +334,12 @@ namespace UIUCLibrary.EaPdf
                 }
                 catch (InvalidOperationException)
                 {
-                    var err = $"There is more than one folder that matches '{mboxProps.MboxName}.*'; skipping all subfolders";
-                    _logger.LogWarning(err);
-                    xwriter.WriteComment($"ERROR: {err}");
+                    WriteErrorMessage(xwriter, $"There is more than one folder that matches '{mboxProps.MboxName}.*'; skipping all subfolders");
                     subfolderName = null;
                 }
                 catch (Exception ex)
                 {
-                    var err = $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}";
-                    _logger.LogError(err);
-                    xwriter.WriteComment($"ERROR: {err}");
+                    WriteErrorMessage(xwriter, $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}");
                     subfolderName = null;
                 }
 
@@ -364,9 +354,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     catch (Exception ex)
                     {
-                        var err = $"Skipping this subfolder. {ex.GetType().Name}: {ex.Message}";
-                        _logger.LogError(err);
-                        xwriter.WriteComment($"ERROR: {err}");
+                        WriteErrorMessage(xwriter, $"Skipping this subfolder. {ex.GetType().Name}: {ex.Message}");
                         subfolderName = null;
                     }
 
@@ -385,9 +373,7 @@ namespace UIUCLibrary.EaPdf
                             SetHashAlgorithm(xwriter, mboxProps);
 
                             //just try to process it, if no errors thrown, its probably an mbox file
-                            var msg = $"Processing Child Mbox: {childMbox}";
-                            _logger.LogInformation(msg);
-                            xwriter.WriteComment($"INFO: {msg}");
+                            WriteInfoMessage(xwriter, $"Processing Child Mbox: {childMbox}");
                             localId = ProcessMbox(xwriter, localId, messageList, childMboxProps);
                         }
                     }
@@ -401,9 +387,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("Eol", XM_NS, mboxProps.MostCommonEol);
             if (mboxProps.UsesDifferentEols)
             {
-                var warn = $"Mbox file contains multiple different EOLs: CR: {mboxProps.EolCounts["CR"]}, LF: {mboxProps.EolCounts["LF"]}, CRLF: {mboxProps.EolCounts["CRLF"]}";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, $"Mbox file contains multiple different EOLs: CR: {mboxProps.EolCounts["CR"]}, LF: {mboxProps.EolCounts["LF"]}, CRLF: {mboxProps.EolCounts["CRLF"]}");
             }
             if (mboxProps.HashAlgorithm.Hash != null)
             {
@@ -411,9 +395,7 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
-                var warn = $"Unable to calculate the hash value for the Mbox";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
             }
 
             xwriter.WriteEndElement(); //Mbox
@@ -428,9 +410,7 @@ namespace UIUCLibrary.EaPdf
             var name = mboxProps.TrySetHashAlgorithm(Settings.HashAlgorithmName);
             if (name != Settings.HashAlgorithmName)
             {
-                var warn = $"The hash algorithm '{Settings.HashAlgorithmName}' is not supported.  Using '{name}' instead.";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, $"The hash algorithm '{Settings.HashAlgorithmName}' is not supported.  Using '{name}' instead.");
                 Settings.HashAlgorithmName = name;
             }
         }
@@ -694,9 +674,7 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
-                string warn = $"Unexpected MIME Entity Type: '{mimeEntity.GetType().FullName}' -- '{mimeEntity.ContentType.MimeType}'";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, $"Unexpected MIME Entity Type: '{mimeEntity.GetType().FullName}' -- '{mimeEntity.ContentType.MimeType}'");
                 xwriter.WriteStartElement("SingleBody", XM_NS);
             }
 
@@ -726,15 +704,11 @@ namespace UIUCLibrary.EaPdf
             }
             else if (isMultipart && multipart != null && multipart.Count == 0)
             {
-                var warn = $"Item is multipart, but there are no parts";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, $"Item is multipart, but there are no parts");
             }
             else if (isMultipart && multipart == null)
             {
-                var warn = $"Item is erroneously flagged as multipart";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, $"Item is erroneously flagged as multipart");
             }
             else if (!isMultipart)
             {
@@ -744,7 +718,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 else if (part != null && IsXMozillaExternalAttachment(part))
                 {
-                    xwriter.WriteComment($"INFO: The content is an inaccessible external attachment");
+                    WriteInfoMessage(xwriter, "The content is an inaccessible external attachment");
                 }
                 else if (message != null)
                 {
@@ -752,16 +726,12 @@ namespace UIUCLibrary.EaPdf
                 }
                 else
                 {
-                    string warn = $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}";
-                    _logger.LogWarning(warn);
-                    xwriter.WriteComment($"WARNING: {warn}");
+                    WriteWarningMessage(xwriter, $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}");
                 }
             }
             else
             {
-                string warn = $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}");
             }
 
             //PhantomBody; Content-Type message/external-body
@@ -817,6 +787,7 @@ namespace UIUCLibrary.EaPdf
                 //TODO:  Need to see if we can process message/external-body parts where the content is referenced by the other content-type parameters
                 //       See https://www.oreilly.com/library/view/programming-internet-email/9780596802585/ch04s04s01.html
                 //       Also consider the "X-Mozilla-External-Attachment-URL: url" and the "X-Mozilla-Altered: AttachmentDetached; date="Thu Jul 06 21:38:39 2006"" headers
+                
                 if (!Settings.SaveAttachmentsAndBinaryContentExternally)
                 {
                     //save non-text content or attachments as part of the XML
@@ -842,9 +813,7 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteElementString("TransferEncoding", XM_NS, transferEncoding);
                 if (isMultipart && !transferEncoding.Equals("7bit", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    var warn = $"A multipart entity has a Content-Transfer-Encoding of '{transferEncoding}'; normally this should only be 7bit for multipart entities.";
-                    _logger.LogWarning(warn);
-                    xwriter.WriteComment($"WARNING: {warn}");
+                    WriteWarningMessage(xwriter, $"A multipart entity has a Content-Transfer-Encoding of '{transferEncoding}'; normally this should only be 7bit for multipart entities.");
                 }
             }
             //TODO: TransferEncodingComments, not currently supported by MimeKit
@@ -922,16 +891,12 @@ namespace UIUCLibrary.EaPdf
             }
             else if (!isMultipart && !string.IsNullOrWhiteSpace(mimeEntity.ContentType.Boundary))
             {
-                string warn = $"MIME type boundary parameter '{mimeEntity.ContentType.Boundary}' found for a non-multipart mime type";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, $"MIME type boundary parameter '{mimeEntity.ContentType.Boundary}' found for a non-multipart mime type");
 
             }
             else if (isMultipart && string.IsNullOrWhiteSpace(mimeEntity.ContentType.Boundary))
             {
-                string warn = "MIME type boundary parameter is missing for a multipart mime type";
-                _logger.LogWarning(warn);
-                xwriter.WriteComment($"WARNING: {warn}");
+                WriteWarningMessage(xwriter, "MIME type boundary parameter is missing for a multipart mime type");
             }
 
             //TODO: ContentTypeComments, not currently supported by MimeKit
@@ -951,6 +916,8 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         /// <param name="part">the MIME part to serialize</param>
         /// <param name="xwriter">the XML writer to serialize it to</param>
+        /// <param name="ExtContent">if true, it is being written to an external file</param>
+        /// <param name="localId">The local id of the content being written to an external file</param>
         /// <param name="preserveEncodingIfPossible">if true write text as unicode and use the original content encoding if possible; if false write it as either unicode text or as base64 encoded binary</param>
         private void SerializeContentInXml(MimePart part, XmlWriter xwriter, bool ExtContent, long localId)
         {
@@ -960,7 +927,7 @@ namespace UIUCLibrary.EaPdf
             if (ExtContent)
             {
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
-                xwriter.WriteComment($"INFO: LocalId {localId}");
+                WriteInfoMessage(xwriter, $"LocalId {localId} written to external file");
             }
 
             xwriter.WriteStartElement("Content", XM_NS);
@@ -1065,9 +1032,7 @@ namespace UIUCLibrary.EaPdf
             //Deal with duplicate attachments, which should only be stored once, make sure the randomFilePath file is deleted
             if (File.Exists(hashFileName))
             {
-                var msg = $"Duplicate attachment has already been saved";
-                _logger.LogInformation(msg);
-                xwriter.WriteComment($"INFO: {msg}");
+                WriteInfoMessage(xwriter, "Duplicate attachment has already been saved");
                 File.Delete(randomFilePath);
             }
             else
@@ -1312,6 +1277,27 @@ namespace UIUCLibrary.EaPdf
                 ContentEncoding.UUEncode => "uuencode",
                 _ => "",
             };
+        }
+
+        /// <summary>
+        /// Write a message to both the log and to the XML output file
+        /// </summary>
+        /// <param name="xwriter"></param>
+        /// <param name="message"></param>
+        private void WriteErrorMessage(XmlWriter xwriter, string message)
+        {
+            xwriter.WriteComment($"ERROR: {message}");
+            _logger.LogError(message);
+        }
+        private void WriteWarningMessage(XmlWriter xwriter, string message)
+        {
+            xwriter.WriteComment($"WARNING: {message}");
+            _logger.LogWarning(message);
+        }
+        private void WriteInfoMessage(XmlWriter xwriter, string message)
+        {
+            xwriter.WriteComment($"INFO: {message}");
+            _logger.LogInformation(message);
         }
 
         private void Parser_MimeMessageEnd(object? sender, MimeMessageEndEventArgs e, Stream mboxStream, MboxProperties mboxProps, MimeMessageProperties msgProps)

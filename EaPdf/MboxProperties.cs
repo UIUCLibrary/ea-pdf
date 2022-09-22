@@ -111,6 +111,8 @@ namespace UIUCLibrary.EaPdf
             var alg = HashAlgorithm.Create(hashName);
             if (alg != null)
             {
+                HashAlgorithm.Dispose(); //dispose of the previous algorithm
+                
                 HashAlgorithm = alg;
                 HashAlgorithmName = hashName;
                 return HashAlgorithmName;
