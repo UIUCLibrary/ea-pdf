@@ -27,5 +27,21 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public byte[] MessageHash { get; set; } = Array.Empty<byte>();
 
+        public string? IncompleteErrorType { get; set; } = null;
+
+        public string? IncompleteErrorLocation { get; set; } = null;
+
+        public void NotIncomplete()
+        {
+            IncompleteErrorType = null;
+            IncompleteErrorLocation = null;
+        }
+
+        public void Incomplete(string errorType, string errorLocation)
+        {
+            IncompleteErrorType = errorType;
+            IncompleteErrorLocation = errorLocation;
+        }
+
     }
 }

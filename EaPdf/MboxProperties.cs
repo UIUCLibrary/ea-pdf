@@ -123,5 +123,7 @@ namespace UIUCLibrary.EaPdf
                 return HashAlgorithmName;
             }
         }
+
+        public int MessageCount { get; set; } = 0;
     }
 }

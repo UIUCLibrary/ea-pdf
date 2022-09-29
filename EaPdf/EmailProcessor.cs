@@ -335,9 +335,10 @@ namespace UIUCLibrary.EaPdf
 
                 parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream, mboxProps, msgProps);
 
+                //Need to record the previous message so we can defer writing it to the XML until the next message can be interogated for error conditions 
+                //and we can add the <Incomplete> tag if needed.
+                MimeMessage? prevMessage = null;
                 MimeMessage? message = null;
-
-                int msgCount = 0; // the number of valid messages found in the file
 
                 while (!parser.IsEndOfStream)
                 {
@@ -356,7 +357,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     catch (FormatException fex1) when (fex1.Message.Contains(EX_MBOX_FROM_MARKER, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (msgCount == 0)
+                        if (mboxProps.MessageCount == 0)
                         {
                             WriteWarningMessage(xwriter, $"{fex1.Message} -- skipping file, probably not an mbox file");
                             //return localId; //the file probably isn't an mbox file, so just bail on the whole file
@@ -364,6 +365,7 @@ namespace UIUCLibrary.EaPdf
                         }
                         else
                         {
+                            WriteErrorMessage(xwriter, $"{fex1.Message} -- this is unexpected");
                             parser.SetStream(cryptoStream, MimeFormat.Mbox); //reset the parser and try to continue
                             continue; //skip the message, but keep going
                         }
@@ -373,36 +375,44 @@ namespace UIUCLibrary.EaPdf
                         //This is thrown when the parser discovers a '^From ' line followed by non-blank lines which are not valid headers
                         //Or when a message has no headers, see above "if (message.Headers.Count == 0)"
 
-                        //if there have been some messages found, we probably encountered an unescaped 'From ' line in the message body, so create an incomplete message (the previous message is the one which is probably incomplete
-                        if (msgCount > 0)
+                        //if there have been some messages found, we probably encountered an unmangled 'From ' line in the message body, so create an incomplete message (the previous message is the one which is probably incomplete
+                        if (mboxProps.MessageCount > 0)
                         {
-                            var msg = $"{fex2.Message} The content of the previous message, LocalId {localId}, is probably incomplete because of an unescaped 'From ' line in the message body. Content starting from offset {parser.MboxMarkerOffset} to the beginning of the next message is being skipped.";
+                            var msg = $"{fex2.Message} The content of the message is probably incomplete because of an unmangled 'From ' line in the message body. Content starting from offset {parser.MboxMarkerOffset} to the beginning of the next message will be skipped.";
                             _logger.LogWarning(msg);
-                            localId = WriteIncompleteMessage(localId, xwriter, msg, parser.MboxMarkerOffset, messageList, mboxProps, msgProps);
+                            msgProps.Incomplete(msg, $"Stream Position: {parser.MboxMarkerOffset}");
+                            
+                            //NEWFEATURE: Maybe try to recover lost message content when this happens.  This is probably very tricky except for the most basic cases of content-type: text/plain with no multipart messages or binary attachments
                         }
-
 
                         parser.SetStream(cryptoStream, MimeFormat.Mbox); //reset the parser and try to continue
                         continue; //skip the message, but keep going
                     }
                     catch (Exception ex)
                     {
-                        //probably an end-of-stream io error
                         WriteErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message}");
                         break; //some error we probably can't recover from, so just bail
                     }
 
 
-                    msgCount++;
-                    if (message != null)
+                    if (prevMessage != null)
                     {
-                        localId = ProcessCurrentMessage(message, xwriter, localId, messageList, mboxProps, msgProps);
+                        localId = ProcessCurrentMessage(prevMessage, xwriter, localId, messageList, mboxProps, msgProps);
+                        mboxProps.MessageCount++;
+                        msgProps.NotIncomplete();
                     }
-                    else
+                    else if(mboxProps.MessageCount > 0 && prevMessage==null)
                     {
                         WriteErrorMessage(xwriter, "Message is null");
                     }
+                    prevMessage = message;
 
+                }
+
+                if (message != null)
+                {
+                    localId = ProcessCurrentMessage(message, xwriter, localId, messageList, mboxProps, msgProps);
+                    mboxProps.MessageCount++;
                 }
 
                 //make sure to read to the end of the stream so the hash is correct
@@ -488,6 +498,9 @@ namespace UIUCLibrary.EaPdf
                     WriteWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
                 }
 
+                string cntMsg = $"Processed {mboxProps.MessageCount} messages";
+                WriteInfoMessage(xwriter, cntMsg);
+                
                 xwriter.WriteEndElement(); //Mbox
             }
             
@@ -546,61 +559,7 @@ namespace UIUCLibrary.EaPdf
 
             return localId;
         }
-        /// <summary>
-        /// Create a dummy message as a placeholder for incomplete messages which indicate some sort of error while parsing the mbox
-        /// </summary>
-        /// <param name="localId"></param>
-        /// <param name="xwriter"></param>
-        /// <param name="errMsg"></param>
-        /// <param name="position"></param>
-        /// <param name="messageList"></param>
-        /// <param name="mboxProps"></param>
-        /// <param name="msgProps"></param>
-        private long WriteIncompleteMessage(long localId, XmlWriter xwriter, string errMsg, long position, List<MessageBrief> messageList, MboxProperties mboxProps, MimeMessageProperties msgProps)
-        {
-            localId++;
-
-            string messageId = MimeUtils.GenerateMessageId();
-
-            xwriter.WriteStartElement("Message", XM_NS);
-            xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
-            xwriter.WriteStartElement("MessageId", XM_NS);
-            xwriter.WriteAttributeString("Supplied", "true");
-            xwriter.WriteString(messageId);
-            xwriter.WriteEndElement(); //MessageId
-            xwriter.WriteStartElement("Incomplete", XM_NS);
-            xwriter.WriteElementString("ErrorType", XM_NS, errMsg);
-            xwriter.WriteElementString("ErrorLocation", XM_NS, $"Stream Position: {position}");
-            xwriter.WriteEndElement(); //Incomplete
-            xwriter.WriteElementString("Eol", XM_NS, msgProps.Eol); //This might be unknown at this point if there was an error
-            xwriter.WriteEndElement(); //Message
-
-            //create dummy message
-            MimeMessage message = new MimeMessage()
-            {
-                MessageId = messageId
-            };
-
-            messageList.Add(new MessageBrief()
-            {
-                LocalId = localId,
-                From = message.From.ToString(),
-                To = message.To.ToString(),
-                Date = message.Date,
-                Subject = message.Subject,
-                MessageID = message.MessageId,
-                Hash = Convert.ToHexString(msgProps.MessageHash, 0, msgProps.MessageHash.Length),
-                Errors = 1,
-                FirstErrorMessage = errMsg
-
-            });
-
-            msgProps.Eol = MimeMessageProperties.EOL_TYPE_UNK;
-
-            return localId;
-
-        }
-
+        
         private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, bool isChildMessage, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
 
@@ -625,6 +584,14 @@ namespace UIUCLibrary.EaPdf
             }
 
             localId = ConvertBody2EAXS(message.Body, xwriter, localId, mboxProps, msgProps);
+
+            if(!string.IsNullOrWhiteSpace(msgProps.IncompleteErrorType) || !string.IsNullOrWhiteSpace(msgProps.IncompleteErrorLocation))
+            {
+                xwriter.WriteStartElement("Incomplete", XM_NS);
+                xwriter.WriteElementString("ErrorType", XM_NS, msgProps.IncompleteErrorType ?? "Unknown");
+                xwriter.WriteElementString("ErrorLocation", XM_NS, msgProps.IncompleteErrorLocation ?? "Unknown");
+                xwriter.WriteEndElement(); //Incomplete
+            }
 
             if (!isChildMessage)
             {
@@ -1330,7 +1297,7 @@ namespace UIUCLibrary.EaPdf
         private bool TryGetRecent(MimeMessage message, out string status)
         {
             //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
-            //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
+            //If the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
 
             var ret = false;
             status = "";
