@@ -38,5 +38,11 @@ namespace UIUCLibrary.EaPdf
         /// If true, any subfolders (if any) in the same directory as the mbox file and which match the name of the mbox file will also be processed, including all of its files and subfolders recursively
         /// </summary>
         public bool IncludeSubFolders { get; set; } = true;
+
+        /// <summary>
+        /// The folder to save external content to, always relative to the output folder
+        /// </summary>
+        public string ExternalContentFolder { get; set; } = "ExtBodyContent";
+
     }
 }

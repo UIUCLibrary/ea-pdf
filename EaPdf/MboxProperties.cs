@@ -26,7 +26,7 @@ namespace UIUCLibrary.EaPdf
         {
             get
             {
-                return System.IO.Path.GetFileNameWithoutExtension(MboxFilePath);
+                return System.IO.Path.GetFileName(MboxFilePath);
             }
         }
 
@@ -63,9 +63,9 @@ namespace UIUCLibrary.EaPdf
         {
             get
             {
-                var ret = "";
+                var ret = MimeMessageProperties.EOL_TYPE_UNK;
                 var max = 0;
-                foreach (var kvp in EolCounts)
+                foreach (var kvp in EolCounts.Where(c=>c.Key!=MimeMessageProperties.EOL_TYPE_UNK))
                 {
                     if (kvp.Value > max)
                     {
