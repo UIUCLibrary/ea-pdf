@@ -39,21 +39,32 @@ namespace UIUCLibrary.TestEAPDF
             if (loggerFactory != null) loggerFactory.Dispose();
         }
 
-        [DataRow("SHA256", false, false, false, "sha256----includeSubs", true, DisplayName = "sha256----includeSubs")]
-        [DataRow("SHA256", true, false, false, "sha256-ext---includeSubs", true, DisplayName = "sha256-ext---includeSubs")]
-        [DataRow("SHA256", false, false, false, "sha256", false, DisplayName = "sha256")]
-        [DataRow("SHA1", false, false, false, "sha1", false, DisplayName = "sha1")]
-        [DataRow("SHA256", true, false, false, "sha256-ext", false, DisplayName = "sha256-ext")]
-        [DataRow("SHA256", true, true, false, "sha256-ext-wrap", false, DisplayName = "sha256-ext-wrap")]
-        [DataRow("SHA256", false, false, true, "sha256---presvEnc", false, DisplayName = "sha256---presvEnc")]
-        [DataRow("SHA256", true, true, true, "sha256-ext-wrap-presvEnc", false, DisplayName = "sha256-ext-wrap-presvEnc")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, true, 0, 9, -1, DisplayName = "dlf-sha256----includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, true, 0, 9, -1, DisplayName = "dlf-sha256-ext---includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, 0, 0, -1, DisplayName = "dlf-sha256")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, 0, 0, -1, DisplayName = "dlf-sha1")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, 0, 0, -1, DisplayName = "dlf-sha256-ext")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, 0, 0, -1, DisplayName = "dlf-sha256-ext-wrap")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEnc", "SHA256", false, false, true, false, 0, 0, -1, DisplayName = "dlf-sha256---presvEnc")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEnc", "SHA256", true, true, true, false, 0, 0, -1, DisplayName = "dlf-sha256-ext-wrap-presvEnc")]
+        
+        [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, 0, 0, -1, DisplayName = "drafts")]
+        [DataRow("MozillaThunderbird\\Inbox", "", "SHA256", false, false, false, false, 0, 0, -1, DisplayName = "inbox")]
+        
+        [DataRow("Pine", "", "SHA256", false, false, false, false, 0, -1, -1, DisplayName = "pine")]
+        [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, 0, 1, -1, DisplayName = "pine-sent-mail-mar-2000")]
+        [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-jul-2006")]
+        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-aug-2007")]
+        [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-jun-2004")]
+
         [DataTestMethod]
-        public void Test2Xml(string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, string testOutFolder, bool includeSub)
+        public void TestSampleFiles(string inPath, string relOutPath, string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, bool includeSub, int expectedErrors, int expectedWarnings, int expectedCounts)
         {
 
-            testFilesBaseDirectory = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird");
+            testFilesBaseDirectory = Path.GetDirectoryName(Path.Combine(testFilesBaseDirectory, inPath)) ?? testFilesBaseDirectory;
+            string testFilePath = Path.GetFileName(inPath);
 
-            if (logger != null)
+            if (logger != null) 
             {
                 var settings = new EmailProcessorSettings()
                 {
@@ -65,19 +76,39 @@ namespace UIUCLibrary.TestEAPDF
                 };
 
                 //Also save the sample test files in the test project and automate the folder setup and cleanup
-                var sampleFile = Path.Combine(testFilesBaseDirectory, "DLF Distributed Library");
-                var expectedOutFolder = Path.Combine(testFilesBaseDirectory, testOutFolder);
-                var outFolder = Path.Combine(testFilesBaseDirectory, testOutFolder);
+                var sampleFile = Path.Combine(testFilesBaseDirectory, testFilePath);
+                var expectedOutFolder = Path.Combine(testFilesBaseDirectory, relOutPath);
+                var outFolder = Path.Combine(testFilesBaseDirectory, relOutPath);
 
                 //clean out the output folder
-                if (Directory.Exists(outFolder))
+                if (!string.IsNullOrWhiteSpace(relOutPath) && Directory.Exists(outFolder))
                 {
                     Directory.Delete(outFolder, true);
                 }
 
-                var proc = new EmailProcessor(logger, settings);
-                var cnt = proc.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-                Assert.IsTrue(cnt > 0);
+                var eProc = new EmailProcessor(logger, settings);
+
+                long validMessageCount = 0;
+                if (Directory.Exists(sampleFile))
+                {
+                    validMessageCount = eProc.ConvertFolderOfMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                    if (expectedCounts == -1)
+                        Assert.IsTrue(validMessageCount > 0);
+                    else
+                        Assert.AreEqual(expectedCounts, validMessageCount);
+                }
+                else if (File.Exists(sampleFile))
+                {
+                    validMessageCount = eProc.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                    if (expectedCounts == -1)
+                        Assert.IsTrue(validMessageCount > 0);
+                    else
+                        Assert.AreEqual(expectedCounts, validMessageCount);
+                }
+                else
+                {
+                    Assert.Fail($"Sample file or folder '{sampleFile}' does not exist");
+                }
 
                 //make sure output folders and files exist
                 Assert.AreEqual(expectedOutFolder, outFolder);
@@ -94,46 +125,49 @@ namespace UIUCLibrary.TestEAPDF
                 xmlns.AddNamespace(EmailProcessor.XM, EmailProcessor.XM_NS);
 
                 //make sure the localId values start at 1 and all increase by 1
-                var localIds = xdoc.SelectNodes("//xm:LocalId", xmlns);
-                if (localIds != null)
+                ValidateLocalIds(xdoc, xmlns);
+
+                //make sure hash values are correct for root-level mbox files
+
+                XmlNodeList? mboxNodes = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Mbox", xmlns);
+                if (mboxNodes != null)
                 {
-                    long prevId = 0;
-                    long id = 0;
-                    foreach (XmlElement localId in localIds)
+                    foreach (XmlElement mboxElem in mboxNodes)
                     {
-                        if (long.TryParse(localId.InnerText, out id))
-                        {
-                            Assert.AreEqual(id, prevId + 1);
-                            prevId = id;
-                        }
-                        else
-                        {
-                            Assert.Fail("localId is not a number");
-                        }
+                        //get the hash values from the xml
+                        XmlNode? hashValueNd = mboxElem.SelectSingleNode("xm:Hash/xm:Value", xmlns);
+                        XmlNode? hashFuncNd = mboxElem.SelectSingleNode("xm:Hash/xm:Function", xmlns);
+                        XmlNode? relPath = mboxElem.SelectSingleNode("xm:RelPath", xmlns);
+                        string absPath = Path.Combine(outFolder, relPath?.InnerText ?? "");
+
+                        //make sure hashes match
+                        Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
+                        Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
+
+                        var expectedHash = CalculateHash(hashAlg, absPath);
+                        Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
                     }
                 }
-                else
-                {
-                    Assert.Fail("No localIds found");
-                }
 
-                //get the hash values from the xml
-                XmlNode? hashValueNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Value", xmlns);
-                XmlNode? hashFuncNd = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Mbox/xm:Hash/xm:Function", xmlns);
-
-                //make sure hashes match
-                Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
-                Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
-
-                var expectedHash = CalculateHash(hashAlg, sampleFile);
-                Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
 
                 //make sure xml is schema valid 
-                validXml = true;
-                xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
-                Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
-                xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
-                Assert.IsTrue(validXml);
+                ValidateXmlSchema(xdoc);
+
+                //make sure we have the expected number of error or warning messages
+                //negative numbers mean the count should be greater than the absolute value of the number, i.e. -1 means at least 1 error
+                if (expectedErrors <= -1)
+                    Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count() >= -expectedErrors);
+                else
+                    Assert.AreEqual(expectedErrors, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count());
+
+                if (expectedWarnings <= -1)
+                    Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count() >= -expectedWarnings);
+                else
+                    Assert.AreEqual(expectedWarnings, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count());
+
+                //if there are no messages in the file, we can skip the rest of the tests
+                if (validMessageCount==0)
+                        return;
 
                 if (extContent)
                 {
@@ -151,7 +185,7 @@ namespace UIUCLibrary.TestEAPDF
                         Assert.IsNotNull(extNode);
                         string? extPath = extNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText;
                         Assert.IsFalse(string.IsNullOrWhiteSpace(extPath));
-                        var extFilepath = Path.Combine(outFolder, EmailProcessor.EXT_CONTENT_DIR, extPath);
+                        var extFilepath = Path.Combine(outFolder, eProc.Settings.ExternalContentFolder, extPath);
                         Assert.IsTrue(File.Exists(extFilepath));
                         var extHash = CalculateHash(hashAlg, extFilepath);
                         string? calcHash = extNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText;
@@ -235,15 +269,19 @@ namespace UIUCLibrary.TestEAPDF
                         }
                         else
                         {
+                            //quoted-printable will be used if the content is text but has XML invalid control chars 
+                            //otherwise it should be base64
                             if (enc != null)
-                                Assert.AreEqual("base64", enc);
+                            {
+                                var contentType = node.SelectSingleNode("xm:ContentType", xmlns)?.InnerText;
+
+                                Assert.IsTrue(enc == "base64" || (enc == "quoted-printable" && contentType != null && contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)));
+                            }
                         }
 
                     }
                 }
 
-                //make sure there is nothing but info messages in the log output
-                Assert.AreEqual(0, StringListLogger.Instance.LoggedLines.Where(s => !s.StartsWith("[Information]")).Count());
 
 
                 //check that any PhantomBody elements are valid
@@ -264,67 +302,18 @@ namespace UIUCLibrary.TestEAPDF
                     foreach (XmlElement nd in nds2)
                     {
                         //check that there is a PhantomBody element
-                        var phantom = nd.SelectSingleNode("xm:PhantomBody",xmlns);
+                        var phantom = nd.SelectSingleNode("xm:PhantomBody", xmlns);
                         Assert.IsNotNull(phantom);
                     }
                 }
 
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-        }
-
-        [TestMethod]
-        public void TestMozillaDrafts2Xml()
-        {
-            testFilesBaseDirectory = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird");
-
-            if (logger != null)
-            {
-                var sampleFile = Path.Combine(testFilesBaseDirectory, "Drafts");
-                var outFolder = "";
-                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings() { IncludeSubFolders = false });
-                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-
-                //output folder is the same as the mbox folder
-                var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);
-                var outPathStr = Path.GetFullPath(outFolder);
-                Assert.AreEqual(samplePathStr, outPathStr);
-                var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
-                var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
-                Assert.IsTrue(File.Exists(xmlPathStr));
-                Assert.IsTrue(File.Exists(csvPathStr));
-
-                Assert.IsTrue(cnt > 0);
-
-                var xdoc = new XmlDocument();
-                xdoc.Load(xmlPathStr);
-
-                var xmlns = new XmlNamespaceManager(xdoc.NameTable);
-                xmlns.AddNamespace(EmailProcessor.XM, EmailProcessor.XM_NS);
-
-                var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
-                //make sure each message is marked as draft
-                if (messages != null)
+                if (inPath == "MozillaThunderbird\\Drafts")
                 {
-                    foreach (XmlElement message in messages)
-                    {
-                        var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
-                        Assert.IsNotNull(draft);
-                    }
+                    //make sure each message is marked as draft
+                    CheckThatAllMessagesAreDraft(xdoc, xmlns);
                 }
 
-                //make sure xml is schema valid
-                validXml = true;
-                xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
-                Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
-                xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
-                Assert.IsTrue(validXml);
 
-                //make sure there is nothing but info messages in the log output
-                Assert.AreEqual(0, StringListLogger.Instance.LoggedLines.Where(s => !s.StartsWith("[Information]")).Count());
 
             }
             else
@@ -333,51 +322,18 @@ namespace UIUCLibrary.TestEAPDF
             }
         }
 
-        [TestMethod]
-        public void TestInboxXml()
+        void CheckThatAllMessagesAreDraft(XmlDocument xdoc, XmlNamespaceManager xmlns)
         {
-            testFilesBaseDirectory = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird");
-
-            if (logger != null)
+            var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
+            if (messages != null)
             {
-                var sampleFile = Path.Combine(testFilesBaseDirectory, "Inbox");
-                var outFolder = "";
-                var eapdf = new EmailProcessor(logger, new EmailProcessorSettings() { IncludeSubFolders = false });
-                var cnt = eapdf.ConvertMbox2EAXS(sampleFile, ref outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-
-                //output folder is the same as the mbox folder
-                var samplePathStr = Path.GetFullPath(Path.GetDirectoryName(sampleFile) ?? sampleFile);
-                var outPathStr = Path.GetFullPath(outFolder);
-                Assert.AreEqual(samplePathStr, outPathStr);
-                var xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
-                var csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
-                Assert.IsTrue(File.Exists(xmlPathStr));
-                Assert.IsTrue(File.Exists(csvPathStr));
-
-                Assert.IsTrue(cnt > 0);
-
-                var xdoc = new XmlDocument();
-                xdoc.Load(xmlPathStr);
-
-                var xmlns = new XmlNamespaceManager(xdoc.NameTable);
-                xmlns.AddNamespace(EmailProcessor.XM, EmailProcessor.XM_NS);
-
-                //make sure xml is schema valid
-                validXml = true;
-                xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
-                Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
-                xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
-                Assert.IsTrue(validXml);
-
-                //make sure there is nothing but info messages in the log output
-                Assert.AreEqual(0, StringListLogger.Instance.LoggedLines.Where(s => !s.StartsWith("[Information]")).Count());
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
+                foreach (XmlElement message in messages)
+                {
+                    var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
+                    Assert.IsNotNull(draft);
+                }
             }
         }
-
 
         void XmlValidationEventHandler(object? sender, ValidationEventArgs e)
         {
@@ -408,6 +364,42 @@ namespace UIUCLibrary.TestEAPDF
             var hash = alg.Hash ?? new byte[0];
 
             return Convert.ToHexString(hash);
+        }
+
+        void ValidateLocalIds(XmlDocument xdoc, XmlNamespaceManager xmlns)
+        {
+            //make sure the localId values start at 1 and all increase by 1
+            var localIds = xdoc.SelectNodes("//xm:LocalId", xmlns);
+            if (localIds != null)
+            {
+                long prevId = 0;
+                long id = 0;
+                foreach (XmlElement localId in localIds)
+                {
+                    if (long.TryParse(localId.InnerText, out id))
+                    {
+                        Assert.AreEqual(id, prevId + 1);
+                        prevId = id;
+                    }
+                    else
+                    {
+                        Assert.Fail("localId is not a number");
+                    }
+                }
+            }
+            else
+            {
+                Assert.Fail("No localIds found");
+            }
+        }
+
+        void ValidateXmlSchema(XmlDocument xdoc)
+        {
+            validXml = true;
+            xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
+            Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
+            xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
+            Assert.IsTrue(validXml);
         }
     }
 }
