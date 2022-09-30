@@ -411,6 +411,7 @@ namespace UIUCLibrary.EaPdf
 
                 if (message != null)
                 {
+                    //process the last message
                     localId = ProcessCurrentMessage(message, xwriter, localId, messageList, mboxProps, msgProps);
                     mboxProps.MessageCount++;
                 }
@@ -550,8 +551,8 @@ namespace UIUCLibrary.EaPdf
                 Subject = message.Subject,
                 MessageID = message.MessageId,
                 Hash = Convert.ToHexString(msgProps.MessageHash, 0, msgProps.MessageHash.Length),
-                Errors = 0,
-                FirstErrorMessage = ""
+                Errors = (string.IsNullOrWhiteSpace(msgProps.IncompleteErrorType) && string.IsNullOrWhiteSpace(msgProps.IncompleteErrorLocation)) ? 0 : 1,
+                FirstErrorMessage = $"{msgProps.IncompleteErrorLocation} {msgProps.IncompleteErrorType}".Trim()
 
             });
 

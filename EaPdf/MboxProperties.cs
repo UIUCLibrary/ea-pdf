@@ -77,6 +77,7 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// The path to the the output output XML file
+        /// Note that the other output files, such as the CSV or external attachments, will be in the same directory
         /// </summary>
         public string OutFilePath { get; set; } = "";
 
