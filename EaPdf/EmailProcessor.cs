@@ -119,11 +119,11 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         /// <param name="mboxFolderPath">the path to the folder to process, all mbox files in the folder will be processed</param>
         /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mboxFolderPath</param>
-        /// <param name="accntId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
+        /// <param name="globalId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <param name="includeSubFolders">if true subfolders in the directory will also be processed</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, ref string outFolderPath, string accntId, string accntEmails = "")
+        public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, ref string outFolderPath, string globalId, string accntEmails = "")
         {
             if (string.IsNullOrWhiteSpace(mboxFolderPath))
             {
@@ -141,9 +141,9 @@ namespace UIUCLibrary.EaPdf
                 outFolderPath = Path.GetDirectoryName(mboxFolderPath) ?? "";
             }
 
-            if (string.IsNullOrWhiteSpace(accntId))
+            if (string.IsNullOrWhiteSpace(globalId))
             {
-                throw new Exception("acctId is a required parameter");
+                throw new Exception("globalId is a required parameter");
             }
 
             mboxFolderPath = Path.GetFullPath(mboxFolderPath);
@@ -179,7 +179,7 @@ namespace UIUCLibrary.EaPdf
             {
                 xwriter.WriteElementString("EmailAddress", XM_NS, addr);
             }
-            xwriter.WriteElementString("GlobalId", XM_NS, accntId);
+            xwriter.WriteElementString("GlobalId", XM_NS, globalId);
 
             foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
             {
@@ -188,7 +188,7 @@ namespace UIUCLibrary.EaPdf
                 var mboxProps = new MboxProperties()
                 {
                     MboxFilePath = mboxFilePath,
-                    AccountId = accntId,
+                    GlobalId = globalId,
                     OutFilePath = outFilePath,
                 };
                 SetHashAlgorithm(xwriter, mboxProps);
@@ -218,10 +218,10 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         /// <param name="mboxFilePath">the path to the mbox file to process</param>
         /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mboxFilePath</param>
-        /// <param name="accntId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
+        /// <param name="globalId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertMbox2EAXS(string mboxFilePath, ref string outFolderPath, string accntId, string accntEmails = "")
+        public long ConvertMbox2EAXS(string mboxFilePath, ref string outFolderPath, string globalId, string accntEmails = "")
         {
 
             if (string.IsNullOrWhiteSpace(mboxFilePath))
@@ -240,9 +240,9 @@ namespace UIUCLibrary.EaPdf
                 outFolderPath = Path.GetDirectoryName(mboxFilePath) ?? "";
             }
 
-            if (string.IsNullOrWhiteSpace(accntId))
+            if (string.IsNullOrWhiteSpace(globalId))
             {
-                throw new Exception("acctId is a required parameter");
+                throw new Exception("globalId is a required parameter");
             }
 
             mboxFilePath = Path.GetFullPath(mboxFilePath);
@@ -278,12 +278,12 @@ namespace UIUCLibrary.EaPdf
             {
                 xwriter.WriteElementString("EmailAddress", XM_NS, addr);
             }
-            xwriter.WriteElementString("GlobalId", XM_NS, accntId);
+            xwriter.WriteElementString("GlobalId", XM_NS, globalId);
 
             var mboxProps = new MboxProperties()
             {
                 MboxFilePath = mboxFilePath,
-                AccountId = accntId,
+                GlobalId = globalId,
                 OutFilePath = outFilePath,
             };
             SetHashAlgorithm(xwriter, mboxProps);
@@ -466,7 +466,7 @@ namespace UIUCLibrary.EaPdf
                                 MboxProperties childMboxProps = new MboxProperties()
                                 {
                                     MboxFilePath = childMbox,
-                                    AccountId = mboxProps.AccountId,
+                                    GlobalId = mboxProps.GlobalId,
                                     OutFilePath = mboxProps.OutFilePath,
                                 };
                                 SetHashAlgorithm(xwriter, mboxProps);
