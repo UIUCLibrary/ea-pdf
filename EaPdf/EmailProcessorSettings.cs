@@ -44,5 +44,10 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public string ExternalContentFolder { get; set; } = "ExtBodyContent";
 
+        /// <summary>
+        /// If true, each mbox will have its own output file
+        /// </summary>
+        public bool OneFilePerMbox { get; set; } = false;   
+
     }
 }

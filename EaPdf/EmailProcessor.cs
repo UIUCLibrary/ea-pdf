@@ -10,6 +10,7 @@ using Org.BouncyCastle.Asn1.X509.Qualified;
 using MimeKit.Utils;
 using MimeKit.Encodings;
 using System.Text;
+using NDepend.Path;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -118,12 +119,12 @@ namespace UIUCLibrary.EaPdf
         /// Convert a folder of mbox files into an archival email XML file
         /// </summary>
         /// <param name="mboxFolderPath">the path to the folder to process, all mbox files in the folder will be processed</param>
-        /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mboxFolderPath</param>
+        /// <param name="outFolderPath">the path to the output folder, must be different than the mboxFolderPath</param>
         /// <param name="globalId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <param name="includeSubFolders">if true subfolders in the directory will also be processed</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, ref string outFolderPath, string globalId, string accntEmails = "")
+        public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, string outFolderPath, string globalId, string accntEmails = "")
         {
             if (string.IsNullOrWhiteSpace(mboxFolderPath))
             {
@@ -137,25 +138,33 @@ namespace UIUCLibrary.EaPdf
 
             if (string.IsNullOrWhiteSpace(outFolderPath))
             {
-                //default to the same folder as the mbox file
-                outFolderPath = Path.GetDirectoryName(mboxFolderPath) ?? "";
+                throw new ArgumentNullException(nameof(outFolderPath));
             }
-
+            
             if (string.IsNullOrWhiteSpace(globalId))
             {
-                throw new Exception("globalId is a required parameter");
+                throw new ArgumentNullException(nameof(globalId));
             }
 
-            mboxFolderPath = Path.GetFullPath(mboxFolderPath);
+            var fullMboxFolderPath = Path.GetFullPath(mboxFolderPath);
+            var fullOutFolderPath = Path.GetFullPath(outFolderPath);
+
+            //The outFolder path cannot be the same as the mboxFolderPath or a child of the mboxFolderPath
+            var fullIn = fullMboxFolderPath.ToAbsoluteDirectoryPath();
+            var fullOut = fullOutFolderPath.ToAbsoluteDirectoryPath();
+            if (fullOut.Equals(fullIn) || fullOut.IsChildOf(fullIn))
+            {
+                throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the mboxFolderPath, '{fullMboxFolderPath}'");
+            }
 
             long localId = 0;
 
-            var outFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(mboxFolderPath, "xml")));
-            var csvFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(mboxFolderPath, "csv")));
+            var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "xml")));
+            var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "csv")));
 
             var messageList = new List<MessageBrief>(); //used to create the CSV file
 
-            _logger.LogInformation("Convert mbox files in directory: '{mboxFolderPath}' into XML file: '{outFilePath}'", mboxFolderPath, outFilePath);
+            _logger.LogInformation("Convert mbox files in directory: '{fullMboxFolderPath}' into XML file: '{outFilePath}'", fullMboxFolderPath, xmlFilePath);
 
             var xset = new XmlWriterSettings()
             {
@@ -164,13 +173,13 @@ namespace UIUCLibrary.EaPdf
                 Encoding = System.Text.Encoding.UTF8
             };
 
-            if (!Directory.Exists(Path.GetDirectoryName(outFilePath)))
+            if (!Directory.Exists(Path.GetDirectoryName(xmlFilePath)))
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(outFilePath) ?? "");
+                Directory.CreateDirectory(Path.GetDirectoryName(xmlFilePath) ?? "");
             }
 
 
-            using var xwriter = XmlWriter.Create(outFilePath, xset);
+            using var xwriter = XmlWriter.Create(xmlFilePath, xset);
             xwriter.WriteStartDocument();
             xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}");
             xwriter.WriteStartElement("Account", XM_NS);
@@ -189,7 +198,7 @@ namespace UIUCLibrary.EaPdf
                 {
                     MboxFilePath = mboxFilePath,
                     GlobalId = globalId,
-                    OutFilePath = outFilePath,
+                    OutFilePath = xmlFilePath,
                 };
                 SetHashAlgorithm(xwriter, mboxProps);
 
@@ -216,12 +225,12 @@ namespace UIUCLibrary.EaPdf
         /// <summary>
         /// Convert one mbox file into an archival email XML file.
         /// </summary>
-        /// <param name="mboxFilePath">the path to the mbox file to process</param>
-        /// <param name="outFolderPath">the path to the output folder; if blank, defaults to the same folder as the mboxFilePath</param>
+        /// <param name="fullMboxFilePath">the path to the mbox file to process</param>
+        /// <param name="outFolderPath">the path to the output folder, must be different than the folder containing the mboxFilePath</param>
         /// <param name="globalId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertMbox2EAXS(string mboxFilePath, ref string outFolderPath, string globalId, string accntEmails = "")
+        public long ConvertMbox2EAXS(string mboxFilePath, string outFolderPath, string globalId, string accntEmails = "")
         {
 
             if (string.IsNullOrWhiteSpace(mboxFilePath))
@@ -236,25 +245,34 @@ namespace UIUCLibrary.EaPdf
 
             if (string.IsNullOrWhiteSpace(outFolderPath))
             {
-                //default to the same folder as the mbox file
-                outFolderPath = Path.GetDirectoryName(mboxFilePath) ?? "";
+                throw new ArgumentNullException(nameof(outFolderPath));
             }
-
+            
             if (string.IsNullOrWhiteSpace(globalId))
             {
                 throw new Exception("globalId is a required parameter");
             }
 
-            mboxFilePath = Path.GetFullPath(mboxFilePath);
+            string fullMboxFilePath = Path.GetFullPath(mboxFilePath);
+            string fullOutFolderPath = Path.GetFullPath(outFolderPath);
+
+            //The outFolderName cannot be the same as or a child folder of the mboxFileName taken as a directory path, ignoring extensions
+            //The reason is that this could output files inside child mbox folders when the IncludeSubFolders setting is true
+            var fullIn = Path.Combine(Path.GetDirectoryName(fullMboxFilePath) ?? "", Path.GetFileNameWithoutExtension(fullMboxFilePath)).ToAbsoluteDirectoryPath();
+            var fullOut = Path.Combine(Path.GetDirectoryName(fullOutFolderPath) ?? "", Path.GetFileNameWithoutExtension(fullOutFolderPath)).ToAbsoluteDirectoryPath();
+            if (fullOut.Equals(fullIn) || fullOut.IsChildOf(fullIn))
+            {
+                throw new ArgumentException($"The outFolderPath, '{fullOut}', cannot be the same as or a child of the mboxFilePath, '{fullIn}', ignoring any extensions");
+            }
 
             long localId = 0;
 
-            var outFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(mboxFilePath, "xml")));
-            var csvFilePath = Path.Combine(outFolderPath, Path.GetFileName(Path.ChangeExtension(mboxFilePath, "csv")));
+            var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFilePath, "xml")));
+            var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFilePath, "csv")));
 
             var messageList = new List<MessageBrief>(); //used to create the CSV file
 
-            _logger.LogInformation("Convert mbox file: '{mboxFilePath}' into XML file: '{outFilePath}'", mboxFilePath, outFilePath);
+            _logger.LogInformation("Convert mbox file: '{mboxFilePath}' into XML file: '{outFilePath}'", fullMboxFilePath, xmlFilePath);
 
             var xset = new XmlWriterSettings()
             {
@@ -263,13 +281,13 @@ namespace UIUCLibrary.EaPdf
                 Encoding = System.Text.Encoding.UTF8
             };
 
-            if (!Directory.Exists(Path.GetDirectoryName(outFilePath)))
+            if (!Directory.Exists(Path.GetDirectoryName(xmlFilePath)))
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(outFilePath) ?? "");
+                Directory.CreateDirectory(Path.GetDirectoryName(xmlFilePath) ?? "");
             }
 
 
-            using var xwriter = XmlWriter.Create(outFilePath, xset);
+            using var xwriter = XmlWriter.Create(xmlFilePath, xset);
             xwriter.WriteStartDocument();
             xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}");
             xwriter.WriteStartElement("Account", XM_NS);
@@ -282,9 +300,9 @@ namespace UIUCLibrary.EaPdf
 
             var mboxProps = new MboxProperties()
             {
-                MboxFilePath = mboxFilePath,
+                MboxFilePath = fullMboxFilePath,
                 GlobalId = globalId,
-                OutFilePath = outFilePath,
+                OutFilePath = xmlFilePath,
             };
             SetHashAlgorithm(xwriter, mboxProps);
 
