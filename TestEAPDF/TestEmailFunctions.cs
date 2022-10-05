@@ -341,8 +341,11 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
-        [TestMethod]
-        public void CheckErrorChecks()
+        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\folder", false, DisplayName = "path_check_drafts_folder")]
+        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\\\Drafts.out", true, DisplayName = "path_check_drafts_out")]
+        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\\\Drafts.out\\test", true, DisplayName = "path_check_drafts_out_test")] 
+        [DataTestMethod]
+        public void TestPathErrorChecks(string inFilePath, string outFolderPath, bool shouldFail)
         {
 
             if (logger != null)
@@ -350,103 +353,113 @@ namespace UIUCLibrary.TestEaPdf
                 var settings = new EmailProcessorSettings();
                 var eProc = new EmailProcessor(logger, settings);
 
-                var inFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\Drafts");
-                var outFolder = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\Drafts.out\\TEST");
+                var inFile = Path.Combine(testFilesBaseDirectory, inFilePath);
+                var outFolder = Path.Combine(testFilesBaseDirectory, outFolderPath);
 
                 try
                 {
-                    //this should throw an exception because the outfolder is named the same as the input file, ignoring extensions
                     var validMessageCount = eProc.ConvertMbox2EAXS(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-                    Assert.Fail("Expected an ArgumentException");
+                    if (shouldFail)
+                    {
+                        Assert.Fail("Expected an ArgumentException");
+                    }
                 }
-                catch (ArgumentException)
+                catch (ArgumentException aex)
                 {
+                    if (!shouldFail)
+                    {
+                        Assert.Fail(aex.Message);
+                    }
                 }
-                catch (Exception ex)
+                finally
                 {
-                    Assert.Fail(ex.Message);
+                    //cleanup
+                    if (Directory.Exists(outFolder))
+                    {
+                        Directory.Delete(outFolder, true);
+                    }
                 }
             }
         }
 
-    void CheckThatAllMessagesAreDraft(XmlDocument xdoc, XmlNamespaceManager xmlns)
-    {
-        var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
-        if (messages != null)
+        void CheckThatAllMessagesAreDraft(XmlDocument xdoc, XmlNamespaceManager xmlns)
         {
-            foreach (XmlElement message in messages)
+            var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
+            if (messages != null)
             {
-                var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
-                Assert.IsNotNull(draft);
+                foreach (XmlElement message in messages)
+                {
+                    var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
+                    Assert.IsNotNull(draft);
+                }
             }
         }
-    }
 
-    void XmlValidationEventHandler(object? sender, ValidationEventArgs e)
-    {
-        validXml = false;
-        if (e.Severity == XmlSeverityType.Warning)
+        void XmlValidationEventHandler(object? sender, ValidationEventArgs e)
         {
-            if (logger != null) logger.LogWarning($"Line: {e.Exception.LineNumber} -- {e.Message}");
-        }
-        else if (e.Severity == XmlSeverityType.Error)
-        {
-            if (logger != null) logger.LogError($"Line: {e.Exception.LineNumber} -- {e.Message}");
-        }
-    }
-
-    string CalculateHash(string algName, string filePath)
-    {
-        var fstream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
-        var cstream = new CryptoStream(fstream, alg, CryptoStreamMode.Read);
-
-        //read to end of stream
-        int i = -1;
-        do
-        {
-            i = cstream.ReadByte();
-        } while (i != -1);
-
-        var hash = alg.Hash ?? new byte[0];
-
-        return Convert.ToHexString(hash);
-    }
-
-    void ValidateLocalIds(XmlDocument xdoc, XmlNamespaceManager xmlns)
-    {
-        //make sure the localId values start at 1 and all increase by 1
-        var localIds = xdoc.SelectNodes("//xm:LocalId", xmlns);
-        if (localIds != null)
-        {
-            long prevId = 0;
-            long id = 0;
-            foreach (XmlElement localId in localIds)
+            validXml = false;
+            if (e.Severity == XmlSeverityType.Warning)
             {
-                if (long.TryParse(localId.InnerText, out id))
-                {
-                    Assert.AreEqual(id, prevId + 1);
-                    prevId = id;
-                }
-                else
-                {
-                    Assert.Fail("localId is not a number");
-                }
+                if (logger != null) logger.LogWarning($"Line: {e.Exception.LineNumber} -- {e.Message}");
+            }
+            else if (e.Severity == XmlSeverityType.Error)
+            {
+                if (logger != null) logger.LogError($"Line: {e.Exception.LineNumber} -- {e.Message}");
             }
         }
-        else
+
+        string CalculateHash(string algName, string filePath)
         {
-            Assert.Fail("No localIds found");
+            var fstream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+            var cstream = new CryptoStream(fstream, alg, CryptoStreamMode.Read);
+
+            //read to end of stream
+            int i = -1;
+            do
+            {
+                i = cstream.ReadByte();
+            } while (i != -1);
+
+            var hash = alg.Hash ?? new byte[0];
+
+            return Convert.ToHexString(hash);
+        }
+
+        void ValidateLocalIds(XmlDocument xdoc, XmlNamespaceManager xmlns)
+        {
+            //make sure the localId values start at 1 and all increase by 1
+            var localIds = xdoc.SelectNodes("//xm:LocalId", xmlns);
+            if (localIds != null)
+            {
+                long prevId = 0;
+                long id = 0;
+                foreach (XmlElement localId in localIds)
+                {
+                    if (long.TryParse(localId.InnerText, out id))
+                    {
+                        Assert.AreEqual(id, prevId + 1);
+                        prevId = id;
+                    }
+                    else
+                    {
+                        Assert.Fail("localId is not a number");
+                    }
+                }
+            }
+            else
+            {
+                Assert.Fail("No localIds found");
+            }
+        }
+
+        void ValidateXmlSchema(XmlDocument xdoc)
+        {
+            validXml = true;
+            xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
+            Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
+            xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
+            Assert.IsTrue(validXml);
         }
     }
-
-    void ValidateXmlSchema(XmlDocument xdoc)
-    {
-        validXml = true;
-        xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
-        Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
-        xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
-        Assert.IsTrue(validXml);
-    }
-}
 }

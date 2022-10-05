@@ -545,6 +545,11 @@
 	</simpleType>
 
 	<simpleType name="transfer-encoding-type">
+		<annotation>
+			<documentation>
+				TGH_2022-10-05: Added this type to allow for validation of allowable TransferEncoding values.
+			</documentation>
+		</annotation>
 		<restriction base="string">
 			<enumeration value="7bit"/>
 			<enumeration value="8bit"/>

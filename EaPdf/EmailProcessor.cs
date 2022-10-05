@@ -11,6 +11,7 @@ using MimeKit.Utils;
 using MimeKit.Encodings;
 using System.Text;
 using NDepend.Path;
+using System.ComponentModel;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -140,7 +141,7 @@ namespace UIUCLibrary.EaPdf
             {
                 throw new ArgumentNullException(nameof(outFolderPath));
             }
-            
+
             if (string.IsNullOrWhiteSpace(globalId))
             {
                 throw new ArgumentNullException(nameof(globalId));
@@ -247,7 +248,7 @@ namespace UIUCLibrary.EaPdf
             {
                 throw new ArgumentNullException(nameof(outFolderPath));
             }
-            
+
             if (string.IsNullOrWhiteSpace(globalId))
             {
                 throw new Exception("globalId is a required parameter");
@@ -256,13 +257,10 @@ namespace UIUCLibrary.EaPdf
             string fullMboxFilePath = Path.GetFullPath(mboxFilePath);
             string fullOutFolderPath = Path.GetFullPath(outFolderPath);
 
-            //The outFolderName cannot be the same as or a child folder of the mboxFileName taken as a directory path, ignoring extensions
-            //The reason is that this could output files inside child mbox folders when the IncludeSubFolders setting is true
-            var fullIn = Path.Combine(Path.GetDirectoryName(fullMboxFilePath) ?? "", Path.GetFileNameWithoutExtension(fullMboxFilePath)).ToAbsoluteDirectoryPath();
-            var fullOut = Path.Combine(Path.GetDirectoryName(fullOutFolderPath) ?? "", Path.GetFileNameWithoutExtension(fullOutFolderPath)).ToAbsoluteDirectoryPath();
-            if (fullOut.Equals(fullIn) || fullOut.IsChildOf(fullIn))
+            //Determine whether the output folder path is valid given the input path
+            if (!Helpers.PathHelpers.IsValidOutputPathForMboxFile(fullMboxFilePath, fullOutFolderPath))
             {
-                throw new ArgumentException($"The outFolderPath, '{fullOut}', cannot be the same as or a child of the mboxFilePath, '{fullIn}', ignoring any extensions");
+                throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the mboxFilePath, '{fullMboxFilePath}', ignoring any extensions");
             }
 
             long localId = 0;
@@ -335,7 +333,7 @@ namespace UIUCLibrary.EaPdf
             using FileStream mboxStream = new FileStream(mboxProps.MboxFilePath, FileMode.Open, FileAccess.Read);
 
             //first look for magic numbers, so certain non-mbox files can be ignored
-            byte[] magic =new byte[5];
+            byte[] magic = new byte[5];
             byte[] mbx = { 0x2a, 0x6d, 0x62, 0x78, 0x2a }; // *mbx* - Pine email format
             mboxStream.Read(magic, 0, magic.Length);
             if (magic.SequenceEqual(mbx))
@@ -399,7 +397,7 @@ namespace UIUCLibrary.EaPdf
                             var msg = $"{fex2.Message} The content of the message is probably incomplete because of an unmangled 'From ' line in the message body. Content starting from offset {parser.MboxMarkerOffset} to the beginning of the next message will be skipped.";
                             _logger.LogWarning(msg);
                             msgProps.Incomplete(msg, $"Stream Position: {parser.MboxMarkerOffset}");
-                            
+
                             //NEWFEATURE: Maybe try to recover lost message content when this happens.  This is probably very tricky except for the most basic cases of content-type: text/plain with no multipart messages or binary attachments
                         }
 
@@ -419,7 +417,7 @@ namespace UIUCLibrary.EaPdf
                         mboxProps.MessageCount++;
                         msgProps.NotIncomplete();
                     }
-                    else if(mboxProps.MessageCount > 0 && prevMessage==null)
+                    else if (mboxProps.MessageCount > 0 && prevMessage == null)
                     {
                         WriteErrorMessage(xwriter, "Message is null");
                     }
@@ -519,10 +517,10 @@ namespace UIUCLibrary.EaPdf
 
                 string cntMsg = $"Processed {mboxProps.MessageCount} messages";
                 WriteInfoMessage(xwriter, cntMsg);
-                
+
                 xwriter.WriteEndElement(); //Mbox
             }
-            
+
             xwriter.WriteEndElement(); //Folder
 
             return localId;
@@ -578,7 +576,7 @@ namespace UIUCLibrary.EaPdf
 
             return localId;
         }
-        
+
         private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, bool isChildMessage, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
 
@@ -604,7 +602,7 @@ namespace UIUCLibrary.EaPdf
 
             localId = ConvertBody2EAXS(message.Body, xwriter, localId, mboxProps, msgProps);
 
-            if(!string.IsNullOrWhiteSpace(msgProps.IncompleteErrorType) || !string.IsNullOrWhiteSpace(msgProps.IncompleteErrorLocation))
+            if (!string.IsNullOrWhiteSpace(msgProps.IncompleteErrorType) || !string.IsNullOrWhiteSpace(msgProps.IncompleteErrorLocation))
             {
                 xwriter.WriteStartElement("Incomplete", XM_NS);
                 xwriter.WriteElementString("ErrorType", XM_NS, msgProps.IncompleteErrorType ?? "Unknown");
@@ -897,7 +895,6 @@ namespace UIUCLibrary.EaPdf
 
                 if (!validXmlChars)
                 {
-                    //TODO: In the XML Schema should this be an enum of the different acceptable values?
                     xwriter.WriteElementString("TransferEncoding", XM_NS, "quoted-printable");
                     xwriter.WriteComment("WARNING: Used quoted-printable because the content contains characters that are not valid in XML");
                 }
