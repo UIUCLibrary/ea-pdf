@@ -7,7 +7,7 @@ using CsvHelper.Configuration.Attributes;
 
 namespace UIUCLibrary.EaPdf
 {
-    internal class MessageBrief
+    public class MessageBrief
     {
         [Index(0)]
         public long LocalId { get; set; }

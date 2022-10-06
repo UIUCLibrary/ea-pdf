@@ -9,6 +9,44 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public class PathHelpers
     {
+
+        /// <summary>
+        /// Determine whether the output path is allowed given the input folder path
+        /// The output folder path cannot be the same as or a child folder of the input folder 
+        /// The reason is that this could output files inside child mbox folders when the IncludeSubFolders setting is true
+        /// </summary>
+        /// <param name="absInPath"></param>
+        /// <param name="absOutPath"></param>
+        /// <returns></returns>
+        public static bool IsValidOutputPathForMboxFolder(IAbsoluteDirectoryPath absInPath, IAbsoluteDirectoryPath absOutPath)
+        {
+            return !(absOutPath.Equals(absInPath) || absOutPath.IsChildOf(absInPath));
+        }
+
+        /// <summary>
+        /// Determine whether the output path is allowed given the input folder path
+        /// The output folder path cannot be the same as or a child folder of the input folder 
+        /// The reason is that this could output files inside child mbox folders when the IncludeSubFolders setting is true
+        /// </summary>
+        /// <param name="absInPath"></param>
+        /// <param name="absOutPath"></param>
+        /// <returns></returns>
+        public static bool IsValidOutputPathForMboxFolder(string absInPath, string absOutPath)
+        {
+            if (string.IsNullOrWhiteSpace(absInPath))
+                throw new ArgumentNullException(nameof(absInPath));
+            if (string.IsNullOrWhiteSpace(absOutPath))
+                throw new ArgumentNullException(nameof(absOutPath));
+
+            if (!absInPath.IsValidAbsoluteDirectoryPath(out string reason))
+                throw new ArgumentNullException($"'{absInPath}' is not a valid absolute directory path, {reason}");
+            if (!absOutPath.IsValidAbsoluteDirectoryPath(out reason))
+                throw new ArgumentNullException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
+
+            return IsValidOutputPathForMboxFolder(absInPath.ToAbsoluteDirectoryPath(), absOutPath.ToAbsoluteDirectoryPath());
+        }
+
+
         /// <summary>
         /// Determine whether the output path is allowed given the input path
         /// The output folder path cannot be the same as or a child folder of the input file name path taken as a directory path, ignoring extensions

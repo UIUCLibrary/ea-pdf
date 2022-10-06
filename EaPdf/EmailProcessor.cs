@@ -19,7 +19,6 @@ namespace UIUCLibrary.EaPdf
     {
 
         //NEWFEATURE: Add support for mbx files, see https://uofi.box.com/s/51v7xzfzqod2dv9lxmjgbrrgz5ejjydk 
-        //TODO: Setting to save one message per XML file?
 
         //for LWSP (Linear White Space) detection, compaction, and trimming
         const byte CR = 13;
@@ -127,6 +126,8 @@ namespace UIUCLibrary.EaPdf
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
         public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, string outFolderPath, string globalId, string accntEmails = "")
         {
+            //TODO: May want to modify the XML Schema to allow for references to child folders instead of embedding child folders in the same mbox, see account-ref-type.  Maybe add ParentFolder type
+
             if (string.IsNullOrWhiteSpace(mboxFolderPath))
             {
                 throw new ArgumentNullException(nameof(mboxFolderPath));
@@ -150,20 +151,29 @@ namespace UIUCLibrary.EaPdf
             var fullMboxFolderPath = Path.GetFullPath(mboxFolderPath);
             var fullOutFolderPath = Path.GetFullPath(outFolderPath);
 
-            //The outFolder path cannot be the same as the mboxFolderPath or a child of the mboxFolderPath
-            var fullIn = fullMboxFolderPath.ToAbsoluteDirectoryPath();
-            var fullOut = fullOutFolderPath.ToAbsoluteDirectoryPath();
-            if (fullOut.Equals(fullIn) || fullOut.IsChildOf(fullIn))
+            //Determine whether the output folder path is valid given the input path
+            if (!Helpers.PathHelpers.IsValidOutputPathForMboxFolder(fullMboxFolderPath, fullOutFolderPath))
             {
                 throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the mboxFolderPath, '{fullMboxFolderPath}'");
             }
-
+            
+            var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "csv")));
+            var messageList = new List<MessageBrief>(); //used to create the CSV file
             long localId = 0;
 
-            var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "xml")));
-            var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "csv")));
+            if (Settings.OneFilePerMbox)
+            {
+                
+                foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
+                {
 
-            var messageList = new List<MessageBrief>(); //used to create the CSV file
+                    localId = ConvertMbox2EAXS(mboxFilePath, fullOutFolderPath, globalId, accntEmails, localId, messageList);
+                }
+            }
+            else
+            {
+
+            var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "xml")));
 
             _logger.LogInformation("Convert mbox files in directory: '{fullMboxFolderPath}' into XML file: '{outFilePath}'", fullMboxFolderPath, xmlFilePath);
 
@@ -181,15 +191,10 @@ namespace UIUCLibrary.EaPdf
 
 
             using var xwriter = XmlWriter.Create(xmlFilePath, xset);
+            
             xwriter.WriteStartDocument();
-            xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}");
-            xwriter.WriteStartElement("Account", XM_NS);
-            xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
-            foreach (var addr in accntEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                xwriter.WriteElementString("EmailAddress", XM_NS, addr);
-            }
-            xwriter.WriteElementString("GlobalId", XM_NS, globalId);
+            
+            WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
 
             foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
             {
@@ -201,9 +206,9 @@ namespace UIUCLibrary.EaPdf
                     GlobalId = globalId,
                     OutFilePath = xmlFilePath,
                 };
-                SetHashAlgorithm(xwriter, mboxProps);
+                SetHashAlgorithm(mboxProps, xwriter);
 
-                localId = ProcessMbox(xwriter, localId, messageList, mboxProps);
+                localId = ProcessMbox(mboxProps, xwriter, localId, messageList);
             }
 
 
@@ -211,6 +216,8 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteEndDocument();
 
+            }
+            
             //write the csv file
             using var csvStream = new StreamWriter(csvFilePath);
             using var csvWriter = new CsvWriter(csvStream, CultureInfo.InvariantCulture);
@@ -221,8 +228,6 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-
-
         /// <summary>
         /// Convert one mbox file into an archival email XML file.
         /// </summary>
@@ -231,7 +236,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="globalId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertMbox2EAXS(string mboxFilePath, string outFolderPath, string globalId, string accntEmails = "")
+        public long ConvertMbox2EAXS(string mboxFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null)
         {
 
             if (string.IsNullOrWhiteSpace(mboxFilePath))
@@ -263,12 +268,15 @@ namespace UIUCLibrary.EaPdf
                 throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the mboxFilePath, '{fullMboxFilePath}', ignoring any extensions");
             }
 
-            long localId = 0;
-
             var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFilePath, "xml")));
             var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFilePath, "csv")));
 
-            var messageList = new List<MessageBrief>(); //used to create the CSV file
+            if(messageList == null)
+            {
+                messageList = new List<MessageBrief>(); //used to create the CSV file
+            }
+
+            long localId = startingLocalId;
 
             _logger.LogInformation("Convert mbox file: '{mboxFilePath}' into XML file: '{outFilePath}'", fullMboxFilePath, xmlFilePath);
 
@@ -286,15 +294,12 @@ namespace UIUCLibrary.EaPdf
 
 
             using var xwriter = XmlWriter.Create(xmlFilePath, xset);
+            
             xwriter.WriteStartDocument();
-            xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}");
-            xwriter.WriteStartElement("Account", XM_NS);
-            xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
-            foreach (var addr in accntEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                xwriter.WriteElementString("EmailAddress", XM_NS, addr);
-            }
-            xwriter.WriteElementString("GlobalId", XM_NS, globalId);
+
+            WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
+            
+            WriteInfoMessage(xwriter, $"Processing mbox file: {fullMboxFilePath}");
 
             var mboxProps = new MboxProperties()
             {
@@ -302,25 +307,40 @@ namespace UIUCLibrary.EaPdf
                 GlobalId = globalId,
                 OutFilePath = xmlFilePath,
             };
-            SetHashAlgorithm(xwriter, mboxProps);
+            SetHashAlgorithm(mboxProps, xwriter);
 
-            localId = ProcessMbox(xwriter, localId, messageList, mboxProps);
+            localId = ProcessMbox(mboxProps, xwriter, localId, messageList);
 
             xwriter.WriteEndElement(); //Account
 
             xwriter.WriteEndDocument();
 
+            
             //write the csv file
             using var csvStream = new StreamWriter(csvFilePath);
             using var csvWriter = new CsvWriter(csvStream, CultureInfo.InvariantCulture);
             csvWriter.WriteRecords(messageList);
 
-            _logger.LogInformation("Converted {localId} messages", localId);
+            _logger.LogInformation("Converted {localId} messages", localId - startingLocalId);
 
             return localId;
         }
 
-        private long ProcessMbox(XmlWriter xwriter, long localId, List<MessageBrief> messageList, MboxProperties mboxProps)
+        private void WriteXmlAccountHeaderFields(XmlWriter xwriter, string globalId, string accntEmails = "")
+        {
+            {
+                xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}, OneFilePerMbox: {Settings.OneFilePerMbox}");
+                xwriter.WriteStartElement("Account", XM_NS);
+                xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
+                foreach (var addr in accntEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    xwriter.WriteElementString("EmailAddress", XM_NS, addr);
+                }
+                xwriter.WriteElementString("GlobalId", XM_NS, globalId);
+            }
+        }
+
+        private long ProcessMbox(MboxProperties mboxProps, XmlWriter xwriter, long localId, List<MessageBrief> messageList)
         {
 
             xwriter.WriteStartElement("Folder", XM_NS);
@@ -349,7 +369,7 @@ namespace UIUCLibrary.EaPdf
 
                 var parser = new MimeParser(cryptoStream, MimeFormat.Mbox);
 
-                parser.MimeMessageEnd += (sender, e) => Parser_MimeMessageEnd(sender, e, mboxStream, mboxProps, msgProps);
+                parser.MimeMessageEnd += (sender, e) => MimeMessageEndEventHandler(sender, e, mboxStream, mboxProps, msgProps);
 
                 //Need to record the previous message so we can defer writing it to the XML until the next message can be interogated for error conditions 
                 //and we can add the <Incomplete> tag if needed.
@@ -441,6 +461,9 @@ namespace UIUCLibrary.EaPdf
 
                 if (Settings.IncludeSubFolders)
                 {
+                    //TODO: Add accomodations for OneFilePerMbox and use the ReferencesAccount xml element
+                    //TODO: May want to modify the XML Schema to allow for references to child folders instead of embedding child folders in the same mbox, see account-ref-type.  Maybe add ParentFolder type
+
                     //look for a subfolder named the same as the mbox file ignoring extensions
                     //i.e. Mozilla Thunderbird will append the extension '.sbd' to the folder name
                     string? subfolderName = null;
@@ -486,11 +509,11 @@ namespace UIUCLibrary.EaPdf
                                     GlobalId = mboxProps.GlobalId,
                                     OutFilePath = mboxProps.OutFilePath,
                                 };
-                                SetHashAlgorithm(xwriter, mboxProps);
+                                SetHashAlgorithm(mboxProps, xwriter);
 
                                 //just try to process it, if no errors thrown, its probably an mbox file
                                 WriteInfoMessage(xwriter, $"Processing Child Mbox: {childMbox}");
-                                localId = ProcessMbox(xwriter, localId, messageList, childMboxProps);
+                                localId = ProcessMbox(childMboxProps, xwriter, localId, messageList);
                             }
                         }
 
@@ -526,7 +549,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void SetHashAlgorithm(XmlWriter xwriter, MboxProperties mboxProps)
+        private void SetHashAlgorithm(MboxProperties mboxProps, XmlWriter xwriter)
         {
             var name = mboxProps.TrySetHashAlgorithm(Settings.HashAlgorithmName);
             if (name != Settings.HashAlgorithmName)
@@ -554,7 +577,7 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteStartElement("Message", XM_NS);
 
-            localId = ConvertMessageToEAXS(message, xwriter, localId, false, mboxProps, msgProps);
+            localId = WriteMessage(xwriter, message, localId, false, mboxProps, msgProps);
 
             xwriter.WriteEndElement(); //Message
 
@@ -577,7 +600,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private long ConvertMessageToEAXS(MimeMessage message, XmlWriter xwriter, long localId, bool isChildMessage, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        private long WriteMessage(XmlWriter xwriter, MimeMessage message, long localId, bool isChildMessage, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
 
             _logger.LogInformation("Converting {messageType} {localId} Subject: {subject}", isChildMessage ? "Child Message" : "Message", localId, message.Subject);
@@ -600,7 +623,7 @@ namespace UIUCLibrary.EaPdf
                 WriteMessageStatuses(xwriter, mboxProps.MboxFilePath, message);
             }
 
-            localId = ConvertBody2EAXS(message.Body, xwriter, localId, mboxProps, msgProps);
+            localId = WriteMessageBody(xwriter, message.Body, localId, mboxProps, msgProps);
 
             if (!string.IsNullOrWhiteSpace(msgProps.IncompleteErrorType) || !string.IsNullOrWhiteSpace(msgProps.IncompleteErrorLocation))
             {
@@ -730,7 +753,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private long ConvertBody2EAXS(MimeEntity mimeEntity, XmlWriter xwriter, long localId, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        private long WriteMessageBody(XmlWriter xwriter, MimeEntity mimeEntity, long localId, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
             bool isMultipart = false;
 
@@ -778,7 +801,7 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (var item in multipart)
                 {
-                    localId = ConvertBody2EAXS(item, xwriter, localId, mboxProps, msgProps);
+                    localId = WriteMessageBody(xwriter, item, localId, mboxProps, msgProps);
                 }
             }
             else if (isMultipart && multipart != null && multipart.Count == 0)
@@ -841,7 +864,7 @@ namespace UIUCLibrary.EaPdf
         {
             xwriter.WriteStartElement("ChildMessage", XM_NS);
             localId++;
-            localId = ConvertMessageToEAXS(message.Message, xwriter, localId, true, mboxProps, msgProps);
+            localId = WriteMessage(xwriter, message.Message, localId, true, mboxProps, msgProps);
             xwriter.WriteEndElement(); //ChildMessage
             return localId;
         }
@@ -1418,7 +1441,7 @@ namespace UIUCLibrary.EaPdf
             _logger.LogInformation(message);
         }
 
-        private void Parser_MimeMessageEnd(object? sender, MimeMessageEndEventArgs e, Stream mboxStream, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        private void MimeMessageEndEventHandler(object? sender, MimeMessageEndEventArgs e, Stream mboxStream, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
 
             var parser = sender as MimeParser;
