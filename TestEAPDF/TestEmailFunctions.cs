@@ -55,7 +55,8 @@ namespace UIUCLibrary.TestEaPdf
 
         //pine mbox folder
         [DataRow("Pine", "", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "pine-folder-one-file")]
-        [DataRow("Pine", "", "SHA256", false, false, false, false, true, 0, -1, -1, DisplayName = "pine-folder-one-file-per")]
+        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, true, 0, -1, -1, DisplayName = "pine-folder-one-file-per-in-subfolder")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "pine-folder-one-file-in-subfolder")]
 
         //pine mbox files with special properties
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, 0, 1, -1, DisplayName = "pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
@@ -117,7 +118,7 @@ namespace UIUCLibrary.TestEaPdf
                 long validMessageCount = 0;
                 if (Directory.Exists(sampleFile))
                 {
-                    validMessageCount = eProc.ConvertFolderOfMbox2EAXS(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                    validMessageCount = eProc.ConvertFolderOfMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                     if (expectedCounts == -1)
                         Assert.IsTrue(validMessageCount > 0);
                     else
@@ -125,7 +126,7 @@ namespace UIUCLibrary.TestEaPdf
                 }
                 else if (File.Exists(sampleFile))
                 {
-                    validMessageCount = eProc.ConvertMbox2EAXS(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                    validMessageCount = eProc.ConvertMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                     if (expectedCounts == -1)
                         Assert.IsTrue(validMessageCount > 0);
                     else
@@ -400,7 +401,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 try
                 {
-                    var validMessageCount = eProc.ConvertMbox2EAXS(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                    var validMessageCount = eProc.ConvertMboxToEaxs(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                     if (shouldFail)
                     {
                         Assert.Fail("Expected an ArgumentException");

@@ -12,6 +12,7 @@ using MimeKit.Encodings;
 using System.Text;
 using NDepend.Path;
 using System.ComponentModel;
+using UIUCLibrary.EaPdf.Helpers;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -19,6 +20,7 @@ namespace UIUCLibrary.EaPdf
     {
 
         //NEWFEATURE: Add support for mbx files, see https://uofi.box.com/s/51v7xzfzqod2dv9lxmjgbrrgz5ejjydk 
+        //TODO: Output XML files over 2GB in size are not supported by the XMLWriter class.  Need to split the output into multiple files.
 
         //for LWSP (Linear White Space) detection, compaction, and trimming
         const byte CR = 13;
@@ -26,53 +28,6 @@ namespace UIUCLibrary.EaPdf
         const byte SP = 32;
         const byte TAB = 9;
 
-        //https://github.com/noelmartinon/mboxzilla/blob/master/nsMsgMessageFlags.h
-        [Flags]
-        enum XMozillaStatusFlags : ushort
-        {
-            MSG_FLAG_NULL = 0x0000,
-            MSG_FLAG_READ = 0x0001,
-            MSG_FLAG_REPLIED = 0x0002,
-            MSG_FLAG_MARKED = 0x0004,
-            MSG_FLAG_EXPUNGED = 0x0008,
-            MSG_FLAG_HAS_RE = 0x0010,
-            MSG_FLAG_ELIDED = 0x0020,
-            MSG_FLAG_OFFLINE = 0x0080,
-            MSG_FLAG_WATCHED = 0x0100,
-            MSG_FLAG_SENDER_AUTHED = 0x0200,
-            MSG_FLAG_PARTIAL = 0x0400,
-            MSG_FLAG_QUEUED = 0x0800,
-            MSG_FLAG_FORWARDED = 0x1000,
-            MSG_FLAG_PRIORITIES = 0xE000
-        }
-        [Flags]
-        enum XMozillaStatusFlags2 : uint
-        {
-            MSG_FLAG_NULL = 0x00000000,
-            MSG_FLAG_NEW = 0x00010000,
-            MSG_FLAG_IGNORED = 0x00040000,
-            MSG_FLAG_IMAP_DELETED = 0x00200000,
-            MSG_FLAG_MDN_REPORT_NEEDED = 0x00400000,
-            MSG_FLAG_MDN_REPORT_SENT = 0x00800000,
-            MSG_FLAG_TEMPLATE = 0x01000000,
-            MSG_FLAG_LABELS = 0x0E000000,
-            MSG_FLAG_ATTACHMENT = 0x10000000
-        }
-
-        const string STATUS_SEEN = "Seen";
-        const string STATUS_ANSWERED = "Answered";
-        const string STATUS_FLAGGED = "Flagged";
-        const string STATUS_DELETED = "Deleted";
-        const string STATUS_DRAFT = "Draft";
-        const string STATUS_RECENT = "Recent";
-
-        //Constants for the Status and X-Status header values, see https://docs.python.org/3/library/mailbox.html#mboxmessage
-        const char STATUS_FLAG_READ = 'R';
-        const char STATUS_FLAG_OLD = 'O';
-        const char STATUS_FLAG_DELETED = 'D';
-        const char STATUS_FLAG_FLAGGED = 'F';
-        const char STATUS_FLAG_ANSWERED = 'A';
-        const char STATUS_FLAG_DRAFT = 'T';
 
         public const string XM = "xm";
         public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2";
@@ -115,6 +70,19 @@ namespace UIUCLibrary.EaPdf
 
         }
 
+        //QUESTION: Can an EML file start with a 'From ' line just like an mbox file?
+        public long ConvertEmlToEaxs()
+        {
+            //UNDONE
+            return 0;
+        }
+
+        public long ConvertFolderOfEmlToEaxs()
+        {
+            //UNDONE
+            return 0;
+        }
+
         /// <summary>
         /// Convert a folder of mbox files into an archival email XML file
         /// </summary>
@@ -124,7 +92,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <param name="includeSubFolders">if true subfolders in the directory will also be processed</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertFolderOfMbox2EAXS(string mboxFolderPath, string outFolderPath, string globalId, string accntEmails = "")
+        public long ConvertFolderOfMboxToEaxs(string mboxFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
         {
             //TODO: May want to modify the XML Schema to allow for references to child folders instead of embedding child folders in the same mbox, see account-ref-type.  Maybe add ParentFolder type
 
@@ -156,74 +124,91 @@ namespace UIUCLibrary.EaPdf
             {
                 throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the mboxFolderPath, '{fullMboxFolderPath}'");
             }
-            
-            var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "csv")));
-            var messageList = new List<MessageBrief>(); //used to create the CSV file
-            long localId = 0;
+
+            if (messageList == null)
+            {
+                messageList = new List<MessageBrief>(); //used to create the CSV file
+            }
+
+            long localId = startingLocalId;
 
             if (Settings.OneFilePerMbox)
             {
-                
+                long filesWithMessagesCnt = 0;
+                long filesWithoutMessagesCnt = 0;
+                long prevLocalId = startingLocalId;
+
                 foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
                 {
-
-                    localId = ConvertMbox2EAXS(mboxFilePath, fullOutFolderPath, globalId, accntEmails, localId, messageList);
+                    localId = ConvertMboxToEaxs(mboxFilePath, fullOutFolderPath, globalId, accntEmails, localId, messageList, false);
+                    if (localId > prevLocalId)
+                    {
+                        filesWithMessagesCnt++;
+                    }
+                    else
+                    {
+                        filesWithoutMessagesCnt++;
+                    }
+                    prevLocalId = localId;
                 }
+
+                _logger.LogInformation($"Files with messages: {filesWithMessagesCnt}, Files without messages: {filesWithoutMessagesCnt}, Total messages: {localId - startingLocalId}");
             }
             else
             {
 
-            var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "xml")));
+                var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "xml")));
 
-            _logger.LogInformation("Convert mbox files in directory: '{fullMboxFolderPath}' into XML file: '{outFilePath}'", fullMboxFolderPath, xmlFilePath);
+                _logger.LogInformation("Convert mbox files in directory: '{fullMboxFolderPath}' into XML file: '{outFilePath}'", fullMboxFolderPath, xmlFilePath);
 
-            var xset = new XmlWriterSettings()
-            {
-                CloseOutput = true,
-                Indent = true,
-                Encoding = System.Text.Encoding.UTF8
-            };
-
-            if (!Directory.Exists(Path.GetDirectoryName(xmlFilePath)))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(xmlFilePath) ?? "");
-            }
-
-
-            using var xwriter = XmlWriter.Create(xmlFilePath, xset);
-            
-            xwriter.WriteStartDocument();
-            
-            WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
-
-            foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
-            {
-                WriteInfoMessage(xwriter, $"Processing mbox file: {mboxFilePath}");
-
-                var mboxProps = new MboxProperties()
+                var xset = new XmlWriterSettings()
                 {
-                    MboxFilePath = mboxFilePath,
-                    GlobalId = globalId,
-                    OutFilePath = xmlFilePath,
+                    CloseOutput = true,
+                    Indent = true,
+                    Encoding = System.Text.Encoding.UTF8
                 };
-                SetHashAlgorithm(mboxProps, xwriter);
 
-                localId = ProcessMbox(mboxProps, xwriter, localId, messageList);
+                if (!Directory.Exists(Path.GetDirectoryName(xmlFilePath)))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(xmlFilePath) ?? "");
+                }
+
+
+                using var xwriter = XmlWriter.Create(xmlFilePath, xset);
+
+                xwriter.WriteStartDocument();
+
+                WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
+
+                foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
+                {
+                    WriteInfoMessage(xwriter, $"Processing mbox file: {mboxFilePath}");
+
+                    var mboxProps = new MboxProperties()
+                    {
+                        MboxFilePath = mboxFilePath,
+                        GlobalId = globalId,
+                        OutFilePath = xmlFilePath,
+                    };
+                    SetHashAlgorithm(mboxProps, xwriter);
+
+                    localId = ProcessMbox(mboxProps, xwriter, localId, messageList);
+                }
+
+                xwriter.WriteEndElement(); //Account
+
+                xwriter.WriteEndDocument();
+
+                _logger.LogInformation("Output XML File: {xmlFilePath}, Total messages: {messageCount}", xmlFilePath, localId - startingLocalId);
             }
 
-
-            xwriter.WriteEndElement(); //Account
-
-            xwriter.WriteEndDocument();
-
-            }
-            
             //write the csv file
-            using var csvStream = new StreamWriter(csvFilePath);
-            using var csvWriter = new CsvWriter(csvStream, CultureInfo.InvariantCulture);
-            csvWriter.WriteRecords(messageList);
+            if (saveCsv)
+            {
+                var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFolderPath, "csv")));
+                MessageBrief.SaveMessageBriefsToCsvFile(csvFilePath, messageList);
+            }
 
-            _logger.LogInformation("Converted {localId} messages", localId);
 
             return localId;
         }
@@ -236,7 +221,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="globalId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertMbox2EAXS(string mboxFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null)
+        public long ConvertMboxToEaxs(string mboxFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
         {
 
             if (string.IsNullOrWhiteSpace(mboxFilePath))
@@ -269,16 +254,13 @@ namespace UIUCLibrary.EaPdf
             }
 
             var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFilePath, "xml")));
-            var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFilePath, "csv")));
 
-            if(messageList == null)
+            if (messageList == null)
             {
                 messageList = new List<MessageBrief>(); //used to create the CSV file
             }
 
             long localId = startingLocalId;
-
-            _logger.LogInformation("Convert mbox file: '{mboxFilePath}' into XML file: '{outFilePath}'", fullMboxFilePath, xmlFilePath);
 
             var xset = new XmlWriterSettings()
             {
@@ -294,11 +276,11 @@ namespace UIUCLibrary.EaPdf
 
 
             using var xwriter = XmlWriter.Create(xmlFilePath, xset);
-            
+
             xwriter.WriteStartDocument();
 
             WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
-            
+
             WriteInfoMessage(xwriter, $"Processing mbox file: {fullMboxFilePath}");
 
             var mboxProps = new MboxProperties()
@@ -315,13 +297,14 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteEndDocument();
 
-            
             //write the csv file
-            using var csvStream = new StreamWriter(csvFilePath);
-            using var csvWriter = new CsvWriter(csvStream, CultureInfo.InvariantCulture);
-            csvWriter.WriteRecords(messageList);
+            if (saveCsv)
+            {
+                var csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFilePath, "csv")));
+                MessageBrief.SaveMessageBriefsToCsvFile(csvFilePath, messageList);
+            }
 
-            _logger.LogInformation("Converted {localId} messages", localId - startingLocalId);
+            _logger.LogInformation("Output XML File: {xmlFilePath}", xmlFilePath);
 
             return localId;
         }
@@ -538,7 +521,7 @@ namespace UIUCLibrary.EaPdf
                     WriteWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
                 }
 
-                string cntMsg = $"Processed {mboxProps.MessageCount} messages";
+                string cntMsg = $"File {mboxProps.MboxName} contains {mboxProps.MessageCount} valid messages";
                 WriteInfoMessage(xwriter, cntMsg);
 
                 xwriter.WriteEndElement(); //Mbox
@@ -647,27 +630,27 @@ namespace UIUCLibrary.EaPdf
         {
             //StatusFlags
             string status = "";
-            if (TryGetSeen(message, out status))
+            if (MimeKitHelpers.TryGetSeen(message, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (TryGetAnswered(message, out status))
+            if (MimeKitHelpers.TryGetAnswered(message, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (TryGetFlagged(message, out status))
+            if (MimeKitHelpers.TryGetFlagged(message, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (TryGetDeleted(message, out status))
+            if (MimeKitHelpers.TryGetDeleted(message, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (TryGetDraft(mboxFilepath, message, out status))
+            if (MimeKitHelpers.TryGetDraft(mboxFilepath, message, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (TryGetRecent(message, out status))
+            if (MimeKitHelpers.TryGetRecent(message, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
@@ -814,11 +797,11 @@ namespace UIUCLibrary.EaPdf
             }
             else if (!isMultipart)
             {
-                if (part != null && !IsXMozillaExternalAttachment(part))
+                if (part != null && !MimeKitHelpers.IsXMozillaExternalAttachment(part))
                 {
                     localId = WriteSingleBodyContent(xwriter, part, localId, mboxProps);
                 }
-                else if (part != null && IsXMozillaExternalAttachment(part))
+                else if (part != null && MimeKitHelpers.IsXMozillaExternalAttachment(part))
                 {
                     WriteInfoMessage(xwriter, "The content is an inaccessible external attachment");
                 }
@@ -842,7 +825,7 @@ namespace UIUCLibrary.EaPdf
             //      X-Mozilla-Altered: AttachmentDetached; date = "Fri May 19 09:27:32 2006"
             //NEEDSTEST:  Find or construct a sample message with content-type message/external-body
 
-            if (!isMultipart && part != null && (part.ContentType.IsMimeType("message", "external-body") || IsXMozillaExternalAttachment(part)))
+            if (!isMultipart && part != null && (part.ContentType.IsMimeType("message", "external-body") || MimeKitHelpers.IsXMozillaExternalAttachment(part)))
             {
                 var streamReader = new StreamReader(part.Content.Open(), part.ContentType.CharsetEncoding, true);
                 xwriter.WriteElementString("PhantomBody", XM_NS, streamReader.ReadToEnd());
@@ -1073,7 +1056,7 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteStartElement("Content", XM_NS);
 
-            var encoding = GetContentEncodingString(content.Encoding);
+            var encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
 
             //7bit and 8bit should be text content, so decode it and use the streamreader with the contenttype charset, if any, to get the text and write it to the xml in a cdata section
             if (content.Encoding == ContentEncoding.EightBit || content.Encoding == ContentEncoding.SevenBit)
@@ -1088,7 +1071,7 @@ namespace UIUCLibrary.EaPdf
                 //treat the stream as ASCII because it is already encoded and just write it out using the same encoding
                 StreamReader reader = new StreamReader(content.Stream, System.Text.Encoding.ASCII);
                 xwriter.WriteCData(reader.ReadToEnd());
-                encoding = GetContentEncodingString(content.Encoding);
+                encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
             }
             else //anything is treated as binary content (binary, quoted-printable, uuencode, base64), so copy to a memory stream and write it to the XML as base64
             {
@@ -1196,229 +1179,6 @@ namespace UIUCLibrary.EaPdf
         }
 
 
-        private bool TryGetSeen(MimeMessage message, out string status)
-        {
-            //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
-            //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
-
-            var ret = false;
-            status = "";
-
-            XMozillaStatusFlags xMozillaStatus = GetXMozillaStatus(message);
-
-            var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-
-            if (mimeStatus.Contains(STATUS_FLAG_READ)) //Read
-            {
-                ret = true;
-                status = STATUS_SEEN;
-            }
-
-            if (xMozillaStatus.HasFlag(XMozillaStatusFlags.MSG_FLAG_READ))
-            {
-                ret = true;
-                status = STATUS_SEEN;
-            }
-
-            return ret;
-        }
-
-        private bool TryGetAnswered(MimeMessage message, out string status)
-        {
-            //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
-            //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
-
-            var ret = false;
-            status = "";
-
-            XMozillaStatusFlags xMozillaStatus = GetXMozillaStatus(message);
-
-            var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-
-            if (mimeStatus.Contains(STATUS_FLAG_ANSWERED)) //Answered
-            {
-                ret = true;
-                status = STATUS_ANSWERED;
-            }
-
-            if (xMozillaStatus.HasFlag(XMozillaStatusFlags.MSG_FLAG_REPLIED))
-            {
-                ret = true;
-                status = STATUS_ANSWERED;
-            }
-
-            return ret;
-        }
-
-        private bool TryGetFlagged(MimeMessage message, out string status)
-        {
-            //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
-            //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
-
-            var ret = false;
-            status = "";
-
-            XMozillaStatusFlags xMozillaStatus = GetXMozillaStatus(message);
-
-            var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-
-            if (mimeStatus.Contains(STATUS_FLAG_FLAGGED)) //Flagged
-            {
-                ret = true;
-                status = STATUS_FLAGGED;
-            }
-
-            if (xMozillaStatus.HasFlag(XMozillaStatusFlags.MSG_FLAG_MARKED))
-            {
-                ret = true;
-                status = STATUS_FLAGGED;
-            }
-
-            return ret;
-        }
-
-        private bool TryGetDeleted(MimeMessage message, out string status)
-        {
-            //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
-            //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
-
-            var ret = false;
-            status = "";
-
-            XMozillaStatusFlags xMozillaStatus = GetXMozillaStatus(message);
-            XMozillaStatusFlags2 xMozillaStatus2 = GetXMozillaStatus2(message);
-
-            var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-
-            if (mimeStatus.Contains(STATUS_FLAG_DELETED)) //Deleted
-            {
-                ret = true;
-                status = STATUS_DELETED;
-            }
-
-            //For Mozilla: waiting to be expunged by the client or marked as deleted on the IMAP Server
-            if (xMozillaStatus.HasFlag(XMozillaStatusFlags.MSG_FLAG_EXPUNGED) || xMozillaStatus2.HasFlag(XMozillaStatusFlags2.MSG_FLAG_IMAP_DELETED))
-            {
-                ret = true;
-                status = STATUS_DELETED;
-            }
-
-            return ret;
-        }
-
-        private bool TryGetDraft(string mboxFilePath, MimeMessage message, out string status)
-        {
-            //See https://docs.python.org/3/library/mailbox.html#mailbox.MaildirMessage for more hints -- maybe encoded in the filename of an "info" section?
-            //See https://opensource.apple.com/source/dovecot/dovecot-293/dovecot/doc/wiki/MailboxFormat.mbox.txt.auto.html about the X-Status 'T' flag
-
-            var ret = false;
-            status = "";
-
-
-            var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-
-
-            //If it is a Mozilla message that came from a file called 'Draft' then assume it is a 'draft' message
-            //There is also the X-Mozilla-Draft-Info header which could indicate whether a message is draft
-            if (
-                (Path.GetFileNameWithoutExtension(mboxFilePath ?? "").Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
-                || message.Headers.Contains("X-Mozilla-Draft-Info")  //Mozilla uses this header for draft messages
-                || mimeStatus.Contains(STATUS_FLAG_DRAFT)  //Some clients encode draft as "T" in the X-Status header
-                )
-            {
-                ret = true;
-                status = STATUS_DRAFT;
-            }
-
-            return ret;
-        }
-
-        private bool TryGetRecent(MimeMessage message, out string status)
-        {
-            //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
-            //If the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
-
-            var ret = false;
-            status = "";
-
-            XMozillaStatusFlags xMozillaStatus = GetXMozillaStatus(message);
-            XMozillaStatusFlags2 xMozillaStatus2 = GetXMozillaStatus2(message);
-
-            var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-
-            //if there is a status header but it does not contain the 'O' (Old) flag then it is recent
-            if (message.Headers.Contains(HeaderId.Status) && !mimeStatus.Contains(STATUS_FLAG_OLD)) //Not Old
-            {
-                ret = true;
-                status = STATUS_RECENT;
-            }
-
-            //For Mozilla: If there is a "X-Mozilla-Status" header but there are no XMozillaStatusFlags or the XMozillaStatusFlags2 is set to NEW
-            if ((message.Headers.Contains("X-Mozilla-Status") && xMozillaStatus == XMozillaStatusFlags.MSG_FLAG_NULL) || xMozillaStatus2.HasFlag(XMozillaStatusFlags2.MSG_FLAG_NEW))
-            {
-                ret = true;
-                status = STATUS_RECENT;
-            }
-
-            return ret;
-        }
-
-        private XMozillaStatusFlags GetXMozillaStatus(MimeMessage message)
-        {
-            XMozillaStatusFlags ret = 0;
-
-            var xMozillaStatus = message.Headers["X-Mozilla-Status"];
-            if (!string.IsNullOrWhiteSpace(xMozillaStatus))
-            {
-                ushort xMozillaBitFlag;
-                if (ushort.TryParse(xMozillaStatus, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out xMozillaBitFlag))
-                {
-                    ret = (XMozillaStatusFlags)xMozillaBitFlag;
-                }
-            }
-            return ret;
-        }
-
-        private bool IsXMozillaExternalAttachment(MimePart part)
-        {
-            return part.Headers.Contains("X-Mozilla-External-Attachment-URL") && (part.Headers["X-Mozilla-Altered"] ?? "").Contains("AttachmentDetached");
-        }
-
-        private XMozillaStatusFlags2 GetXMozillaStatus2(MimeMessage message)
-        {
-            XMozillaStatusFlags2 ret = 0;
-
-            var xMozillaStatus2 = message.Headers["X-Mozilla-Status2"];
-            if (!string.IsNullOrWhiteSpace(xMozillaStatus2))
-            {
-                uint xMozillaBitFlag2;
-                if (uint.TryParse(xMozillaStatus2, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out xMozillaBitFlag2))
-                {
-                    ret = (XMozillaStatusFlags2)xMozillaBitFlag2;
-                }
-            }
-            return ret;
-        }
-
-        /// <summary>
-        /// Convert the MimeKit enum into a standard encoding string value
-        /// </summary>
-        /// <param name="enc"></param>
-        /// <returns></returns>
-        private string GetContentEncodingString(ContentEncoding enc)
-        {
-            return enc switch
-            {
-                ContentEncoding.Default => "",
-                ContentEncoding.SevenBit => "7bit",
-                ContentEncoding.EightBit => "8bit",
-                ContentEncoding.Binary => "binary",
-                ContentEncoding.Base64 => "base64",
-                ContentEncoding.QuotedPrintable => "quoted-printable",
-                ContentEncoding.UUEncode => "uuencode",
-                _ => "",
-            };
-        }
 
         /// <summary>
         /// Write a message to both the log and to the XML output file
