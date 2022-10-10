@@ -39,30 +39,33 @@ namespace UIUCLibrary.TestEaPdf
             if (loggerFactory != null) loggerFactory.Dispose();
         }
 
-        //mozilla mbox with child mboxes, different combinations of settings
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, true, false, 0, 9, -1, DisplayName = "dlf-sha256----includeSubs")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, true, false, 0, 9, -1, DisplayName = "dlf-sha256-ext---includeSubs")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, false, 0, 0, -1, DisplayName = "dlf-sha256")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, 0, 0, -1, DisplayName = "dlf-sha1")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, false, 0, 0, -1, DisplayName = "dlf-sha256-ext")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, false, 0, 0, -1, DisplayName = "dlf-sha256-ext-wrap")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEnc", "SHA256", false, false, true, false, false, 0, 0, -1, DisplayName = "dlf-sha256---presvEnc")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEnc", "SHA256", true, true, true, false, false, 0, 0, -1, DisplayName = "dlf-sha256-ext-wrap-presvEnc")]
+        //Mozilla mbox with child mboxes, different combinations of settings
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, true, false, 0, 9, -1, DisplayName = "moz-dlf-sha256----includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, true, false, 0, 9, -1, DisplayName = "moz-dlf-sha256-ext---includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, false, 0, 0, -1, DisplayName = "moz-dlf-sha256")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, 0, 0, -1, DisplayName = "moz-dlf-sha1")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, false, 0, 0, -1, DisplayName = "moz-dlf-sha256-ext")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, false, 0, 0, -1, DisplayName = "moz-dlf-sha256-ext-wrap")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEnc", "SHA256", false, false, true, false, false, 0, 0, -1, DisplayName = "moz-dlf-sha256---presvEnc")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEnc", "SHA256", true, true, true, false, false, 0, 0, -1, DisplayName = "moz-dlf-sha256-ext-wrap-presvEnc")]
 
-        //mozilla special files
-        [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, false, 0, 0, -1, DisplayName = "drafts")]
-        [DataRow("MozillaThunderbird\\Inbox", "", "SHA256", false, false, false, false, false, 0, 0, -1, DisplayName = "inbox")]
+        //Mozilla special files
+        [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, false, 0, 0, -1, DisplayName = "moz-drafts")]
+        [DataRow("MozillaThunderbird\\Inbox", "", "SHA256", false, false, false, false, false, 0, 0, -1, DisplayName = "moz-inbox")]
 
-        //pine mbox folder
+        //Pine mbox folder
         [DataRow("Pine", "", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "pine-folder-one-file")]
         [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, true, 0, -1, -1, DisplayName = "pine-folder-one-file-per-in-subfolder")]
         [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "pine-folder-one-file-in-subfolder")]
 
-        //pine mbox files with special properties
+        //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, 0, 1, -1, DisplayName = "pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
         [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-jul-2006")] //not an mbox file
         [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-aug-2007")] //not an mbox file
         [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-jun-2004")] //not an mbox file
+
+        //Gmail Exports
+        [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "gmail-mbox")] //gmail mbox export file
 
         [DataTestMethod]
         public void TestSampleFiles(string relInPath, string relOutPath, string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, bool includeSub, bool oneFilePerMbox, int expectedErrors, int expectedWarnings, int expectedCounts)

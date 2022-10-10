@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace UIUCLibrary.EaPdf
 {
+    /// <summary>
+    /// Basic mail message properties used for creating a CSV log file
+    /// </summary>
     public class EmailProcessorSettings
     {
         /// <summary>

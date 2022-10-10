@@ -1,5 +1,6 @@
 ﻿using MimeKit;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -44,12 +45,15 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
 
         //Constants for the Status and X-Status header values, see https://docs.python.org/3/library/mailbox.html#mboxmessage
-        const char STATUS_FLAG_READ = 'R';
-        const char STATUS_FLAG_OLD = 'O';
-        const char STATUS_FLAG_DELETED = 'D';
-        const char STATUS_FLAG_FLAGGED = 'F';
-        const char STATUS_FLAG_ANSWERED = 'A';
-        const char STATUS_FLAG_DRAFT = 'T';
+        //Also https://opensource.apple.com/source/dovecot/dovecot-293/dovecot/doc/wiki/MailboxFormat.mbox.txt.auto.html
+        //Status header
+        const char STATUS_FLAG_READ = 'R'; //Seen or Read
+        const char STATUS_FLAG_OLD = 'O'; //Not recent or old
+        //X-Status header
+        const char STATUS_FLAG_DELETED = 'D'; //Deleted
+        const char STATUS_FLAG_FLAGGED = 'F'; //Flagged
+        const char STATUS_FLAG_ANSWERED = 'A';  //Answered
+        const char STATUS_FLAG_DRAFT = 'T';  //Draft
 
         //Constants for EAXS XML Schema
         const string STATUS_SEEN = "Seen";
@@ -58,6 +62,16 @@ namespace UIUCLibrary.EaPdf.Helpers
         const string STATUS_DELETED = "Deleted";
         const string STATUS_DRAFT = "Draft";
         const string STATUS_RECENT = "Recent";
+
+        //Constants for Gmail Labels
+        const string GMAIL_INBOX = "INBOX";
+        const string GMAIL_SPAM = "SPAM";
+        const string GMAIL_TRASH = "TRASH";
+        const string GMAIL_UNREAD = "UNREAD";
+        const string GMAIL_STARRED = "STARRED";
+        const string GMAIL_IMPORTANT = "IMPORTANT";
+        const string GMAIL_SENT = "SENT";
+        const string GMAIL_DRAFT = "DRAFT";
 
 
         /// <summary>
@@ -123,6 +137,26 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
 
         /// <summary>
+        /// Return a list of Gmail labels from the X-Gmail-Labels header, return null if the header is absent
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public static IEnumerable<string>? GetGmailLabels(MimeMessage message)
+        {
+            IEnumerable<string>? ret  = null;
+            
+            var gmailLabels = message.Headers["X-Gmail-Labels"];
+
+            if (!string.IsNullOrWhiteSpace(gmailLabels))
+            {
+                gmailLabels = gmailLabels.ToUpperInvariant();
+                ret = gmailLabels.Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            }
+
+            return ret;
+        }
+
+        /// <summary>
         /// Try to determine whether the message has be 'Seen'
         /// </summary>
         /// <param name="message"></param>
@@ -132,13 +166,16 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
             //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
-
+            //if the X-Gmail-Labels header is present it will be used instead, https://developers.google.com/gmail/api/guides/labels
+            
             var ret = false;
             status = "";
 
             MimeKitHelpers.XMozillaStatusFlags xMozillaStatus = MimeKitHelpers.GetXMozillaStatus(message);
 
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
+
+            var gmailLabels = GetGmailLabels(message);
 
             if (mimeStatus.Contains(STATUS_FLAG_READ)) //Read
             {
@@ -147,6 +184,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
 
             if (xMozillaStatus.HasFlag(MimeKitHelpers.XMozillaStatusFlags.MSG_FLAG_READ))
+            {
+                ret = true;
+                status = STATUS_SEEN;
+            }
+            
+            if(gmailLabels!=null && !gmailLabels.Contains(GMAIL_UNREAD))
             {
                 ret = true;
                 status = STATUS_SEEN;
@@ -165,6 +208,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
             //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
+            //TODO: Need to determine if this is possible using the Gmail mbox export, maybe the X-Gmail-Labels header
 
             var ret = false;
             status = "";
@@ -198,6 +242,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
             //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
+            //if the X-Gmail-Labels header is present it will be used instead, https://developers.google.com/gmail/api/guides/labels
 
             var ret = false;
             status = "";
@@ -206,6 +251,8 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
 
+            var gmailLabels = GetGmailLabels(message);
+
             if (mimeStatus.Contains(STATUS_FLAG_FLAGGED)) //Flagged
             {
                 ret = true;
@@ -213,6 +260,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
 
             if (xMozillaStatus.HasFlag(MimeKitHelpers.XMozillaStatusFlags.MSG_FLAG_MARKED))
+            {
+                ret = true;
+                status = STATUS_FLAGGED;
+            }
+
+            if (gmailLabels != null && gmailLabels.Contains(GMAIL_STARRED)) //QUESTION:  Does GMAIL_IMPORTANT also indicate the message was flagged, probably not because Important can be set automatically by Gmail
             {
                 ret = true;
                 status = STATUS_FLAGGED;
@@ -231,6 +284,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
             //if the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
+            //if the X-Gmail-Labels header is present it will be used instead, https://developers.google.com/gmail/api/guides/labels
 
             var ret = false;
             status = "";
@@ -240,6 +294,8 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
 
+            var gmailLabels = GetGmailLabels(message);
+
             if (mimeStatus.Contains(STATUS_FLAG_DELETED)) //Deleted
             {
                 ret = true;
@@ -248,6 +304,12 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             //For Mozilla: waiting to be expunged by the client or marked as deleted on the IMAP Server
             if (xMozillaStatus.HasFlag(MimeKitHelpers.XMozillaStatusFlags.MSG_FLAG_EXPUNGED) || xMozillaStatus2.HasFlag(MimeKitHelpers.XMozillaStatusFlags2.MSG_FLAG_IMAP_DELETED))
+            {
+                ret = true;
+                status = STATUS_DELETED;
+            }
+
+            if (gmailLabels != null && gmailLabels.Contains(GMAIL_TRASH)) //QUESTION:  There are also Gmail labels like "[Imap]/Trash" and "[Imap]/Archive", should these also be used to indicate deleted?
             {
                 ret = true;
                 status = STATUS_DELETED;
@@ -266,20 +328,24 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             //See https://docs.python.org/3/library/mailbox.html#mailbox.MaildirMessage for more hints -- maybe encoded in the filename of an "info" section?
             //See https://opensource.apple.com/source/dovecot/dovecot-293/dovecot/doc/wiki/MailboxFormat.mbox.txt.auto.html about the X-Status 'T' flag
-
+            //See https://developers.google.com/gmail/api/guides/labels for Gmail Label 'Draft'
+            
             var ret = false;
             status = "";
 
 
             var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
 
+            var gmailLabels = GetGmailLabels(message);
 
             //If it is a Mozilla message that came from a file called 'Draft' then assume it is a 'draft' message
             //There is also the X-Mozilla-Draft-Info header which could indicate whether a message is draft
+            //of there is a Gmail Label header with the value Draft
             if (
                 (Path.GetFileNameWithoutExtension(mboxFilePath ?? "").Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
                 || message.Headers.Contains("X-Mozilla-Draft-Info")  //Mozilla uses this header for draft messages
                 || mimeStatus.Contains(STATUS_FLAG_DRAFT)  //Some clients encode draft as "T" in the X-Status header
+                || (gmailLabels!=null && gmailLabels.Contains(GMAIL_DRAFT))
                 )
             {
                 ret = true;
@@ -299,6 +365,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             //Look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
             //If the x-mozilla-status and x-mozilla-status2 headers are present they will be used instead
+            //TODO: Can the Gmail Label header be used to determine this status?  Maybe INBOX and UNREAD with no other Labels?  Maybe use dates
 
             var ret = false;
             status = "";
