@@ -15,7 +15,7 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestEmailFunctions
     {
-        ILogger<EmailProcessor>? logger;
+        ILogger<EmailToXmlProcessor>? logger;
         ILoggerFactory? loggerFactory;
         bool validXml = true;
         List<string> loggedLines = new List<string>();
@@ -28,7 +28,7 @@ namespace UIUCLibrary.TestEaPdf
             loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             //using StringListLogger for testing purposes https://www.nuget.org/packages/Extensions.Logging.ListOfString https://github.com/chrisfcarroll/TestBase
             loggerFactory.AddStringListLogger(loggedLines);
-            logger = loggerFactory.CreateLogger<EmailProcessor>();
+            logger = loggerFactory.CreateLogger<EmailToXmlProcessor>();
             logger.LogInformation("Starting Test");
         }
 
@@ -76,7 +76,7 @@ namespace UIUCLibrary.TestEaPdf
 
             if (logger != null)
             {
-                var settings = new EmailProcessorSettings()
+                var settings = new EmailToXmlProcessorSettings()
                 {
                     HashAlgorithmName = hashAlg,
                     SaveAttachmentsAndBinaryContentExternally = extContent,
@@ -116,7 +116,7 @@ namespace UIUCLibrary.TestEaPdf
                     Directory.Delete(outFolder, true);
                 }
 
-                var eProc = new EmailProcessor(logger, settings);
+                var eProc = new EmailToXmlProcessor(logger, settings);
 
                 long validMessageCount = 0;
                 if (Directory.Exists(sampleFile))
@@ -177,7 +177,7 @@ namespace UIUCLibrary.TestEaPdf
                     xdoc.Load(xmlFile);
 
                     var xmlns = new XmlNamespaceManager(xdoc.NameTable);
-                    xmlns.AddNamespace(EmailProcessor.XM, EmailProcessor.XM_NS);
+                    xmlns.AddNamespace(EmailToXmlProcessor.XM, EmailToXmlProcessor.XM_NS);
 
                     //make sure the localId values start at 1 and all increase by 1
                     ValidateLocalIds(xdoc, xmlns);
@@ -241,7 +241,7 @@ namespace UIUCLibrary.TestEaPdf
                         Assert.IsTrue(nodes != null && nodes.Count > 0);
 
                         var extdoc = new XmlDocument();
-                        extdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
+                        extdoc.Schemas.Add(EmailToXmlProcessor.XM_NS, EmailToXmlProcessor.XM_XSD);
 
                         foreach (XmlElement node in nodes)
                         {
@@ -269,7 +269,7 @@ namespace UIUCLibrary.TestEaPdf
                                 validXml = true;
                                 extdoc.Load(extFilepath);
                                 Assert.IsTrue(extdoc.DocumentElement?.LocalName == "BodyContent");
-                                Assert.IsTrue(extdoc.DocumentElement?.NamespaceURI == EmailProcessor.XM_NS);
+                                Assert.IsTrue(extdoc.DocumentElement?.NamespaceURI == EmailToXmlProcessor.XM_NS);
                                 extdoc.Validate(XmlValidationEventHandler, extdoc.DocumentElement);
                                 Assert.IsTrue(validXml);
 
@@ -300,7 +300,7 @@ namespace UIUCLibrary.TestEaPdf
                                     extdoc.Load(extFilepath);
                                     //must be well formed XML, so make sure it is not a wrapped email content xml
                                     Assert.IsFalse(extdoc.DocumentElement?.LocalName == "BodyContent");
-                                    Assert.IsFalse(extdoc.DocumentElement?.NamespaceURI == EmailProcessor.XM_NS);
+                                    Assert.IsFalse(extdoc.DocumentElement?.NamespaceURI == EmailToXmlProcessor.XM_NS);
                                     validXml = false;  //if it gets here, it is XML but not a wrapped email content, so it is invalid
                                 }
                                 catch (XmlException)
@@ -396,8 +396,8 @@ namespace UIUCLibrary.TestEaPdf
 
             if (logger != null)
             {
-                var settings = new EmailProcessorSettings();
-                var eProc = new EmailProcessor(logger, settings);
+                var settings = new EmailToXmlProcessorSettings();
+                var eProc = new EmailToXmlProcessor(logger, settings);
 
                 var inFile = Path.Combine(testFilesBaseDirectory, inFilePath);
                 var outFolder = Path.Combine(testFilesBaseDirectory, outFolderPath);
@@ -502,7 +502,7 @@ namespace UIUCLibrary.TestEaPdf
         void ValidateXmlSchema(XmlDocument xdoc)
         {
             validXml = true;
-            xdoc.Schemas.Add(EmailProcessor.XM_NS, EmailProcessor.XM_XSD);
+            xdoc.Schemas.Add(EmailToXmlProcessor.XM_NS, EmailToXmlProcessor.XM_XSD);
             Assert.IsTrue(xdoc.DocumentElement?.LocalName == "Account");
             xdoc.Validate(XmlValidationEventHandler, xdoc.DocumentElement);
             Assert.IsTrue(validXml);

@@ -16,7 +16,7 @@ using UIUCLibrary.EaPdf.Helpers;
 
 namespace UIUCLibrary.EaPdf
 {
-    public class EmailProcessor
+    public class EmailToXmlProcessor
     {
 
         //NEWFEATURE: Add support for mbx files, see https://uofi.box.com/s/51v7xzfzqod2dv9lxmjgbrrgz5ejjydk 
@@ -40,7 +40,7 @@ namespace UIUCLibrary.EaPdf
         const string EX_MBOX_FROM_MARKER = "Failed to find mbox From marker";
         const string EX_MBOX_PARSE_HEADERS = "Failed to parse message headers";
 
-        public EmailProcessorSettings Settings { get; }
+        public EmailToXmlProcessorSettings Settings { get; }
 
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="settings"></param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
-        public EmailProcessor(ILogger<EmailProcessor> logger, EmailProcessorSettings settings)
+        public EmailToXmlProcessor(ILogger<EmailToXmlProcessor> logger, EmailToXmlProcessorSettings settings)
         {
             if (logger == null)
             {
