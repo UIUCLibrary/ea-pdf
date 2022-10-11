@@ -15,6 +15,16 @@ namespace UIUCLibrary.TestEaPdf
     {
 
         [TestMethod]
+        public void TestRootDiscover()
+        {
+            var rootFile = @"C:\test.txt".ToAbsoluteDirectoryPath();
+
+            var rootParent = rootFile.ParentDirectoryPath;
+
+            
+        }
+
+        [TestMethod]
         public void TestIsChildOf()
         {
             var ancestor = @"C:\one\two\three".ToAbsoluteDirectoryPath();
@@ -36,17 +46,34 @@ namespace UIUCLibrary.TestEaPdf
 
         [DataRow(@"C:\one\two\three\file", @"C:\one\two\three\file", false, DisplayName = "path-exact-match")]
         [DataRow(@"C:\one\two\three\file", @"D:\one\two\three\file", true, DisplayName = "path-exact-match-different-drive")]
-        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.out", false, DisplayName = "path-match-except-ext")]
+        [DataRow(@"C:\one\two\three\file.two.mbox", @"C:\one\two\three\file.out", true, DisplayName = "path-match-in-has-2-ext")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.mbox.out", true, DisplayName = "path-match-out-has-2-ext")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.mbox.out", true, DisplayName = "path-match-out-has-2-ext")]
+        [DataRow(@"C:\one\two\three\file.two.mbox", @"C:\one\two\three\file.two.out", false, DisplayName = "path-match-has-2-ext-except-ext")]
         [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\folder.out", true, DisplayName = "path-same-parent-diff-subfolder")]
         [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.out\out", false, DisplayName = "path-match-except-ext-subfolder")]
         [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file\one\two\three", false, DisplayName = "path-match-except-ext-deep-subfolder")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\out\file.out\two\three", true, DisplayName = "path-match-in-subfolder-deep")]
         [DataRow(@"C:\one\two\three\file", @"C:\one\two\file", true, DisplayName = "path-child-less-depth")]
+        [DataRow(@"C:\one\file", @"C:\out", true, DisplayName = "path-close-to-root")]
+        [DataRow(@"C:\one\file", @"C:\one\file.out", false, DisplayName = "path-close-to-root-not-valid")]
+        [DataRow(@"C:\file", @"C:\one", true, DisplayName = "path-in-root-valid")]
+        [DataRow(@"C:\file", @"C:\file.out", false, DisplayName = "path-in-root-not-valid")]
+        [DataRow(@"C:\file", @"C:\", true, DisplayName = "path-out-is-root")]
         [DataTestMethod]
         public void TestIsValidOutputPath(string inFile, string outFolder, bool expected)
         {
 
             var valid = EaPdf.Helpers.PathHelpers.IsValidOutputPathForMboxFile(inFile, outFolder);
             Assert.AreEqual(expected,valid);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void TestInvalidFileName()
+        {
+            var valid = EaPdf.Helpers.PathHelpers.IsValidOutputPathForMboxFile(@"C:\", @"C:\one\file");
 
         }
     }

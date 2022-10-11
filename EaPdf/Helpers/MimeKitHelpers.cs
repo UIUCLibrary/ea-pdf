@@ -55,14 +55,6 @@ namespace UIUCLibrary.EaPdf.Helpers
         const char STATUS_FLAG_ANSWERED = 'A';  //Answered
         const char STATUS_FLAG_DRAFT = 'T';  //Draft
 
-        //Constants for EAXS XML Schema
-        const string STATUS_SEEN = "Seen";
-        const string STATUS_ANSWERED = "Answered";
-        const string STATUS_FLAGGED = "Flagged";
-        const string STATUS_DELETED = "Deleted";
-        const string STATUS_DRAFT = "Draft";
-        const string STATUS_RECENT = "Recent";
-
         //Constants for Gmail Labels
         const string GMAIL_INBOX = "INBOX";
         const string GMAIL_SPAM = "SPAM";
@@ -73,6 +65,13 @@ namespace UIUCLibrary.EaPdf.Helpers
         const string GMAIL_SENT = "SENT";
         const string GMAIL_DRAFT = "DRAFT";
 
+        //Constants for EAXS XML Schema
+        const string STATUS_SEEN = "Seen";
+        const string STATUS_ANSWERED = "Answered";
+        const string STATUS_FLAGGED = "Flagged";
+        const string STATUS_DELETED = "Deleted";
+        const string STATUS_DRAFT = "Draft";
+        const string STATUS_RECENT = "Recent";
 
         /// <summary>
         /// Convert the MimeKit enum into a standard encoding string value for use in the EAXS XML Schema

@@ -39,9 +39,9 @@ namespace UIUCLibrary.EaPdf.Helpers
                 throw new ArgumentNullException(nameof(absOutPath));
 
             if (!absInPath.IsValidAbsoluteDirectoryPath(out string reason))
-                throw new ArgumentNullException($"'{absInPath}' is not a valid absolute directory path, {reason}");
+                throw new ArgumentException($"'{absInPath}' is not a valid absolute directory path, {reason}");
             if (!absOutPath.IsValidAbsoluteDirectoryPath(out reason))
-                throw new ArgumentNullException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
+                throw new ArgumentException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
 
             return IsValidOutputPathForMboxFolder(absInPath.ToAbsoluteDirectoryPath(), absOutPath.ToAbsoluteDirectoryPath());
         }
@@ -65,8 +65,18 @@ namespace UIUCLibrary.EaPdf.Helpers
                 throw new ArgumentNullException(nameof(absOutPath));
 
             //treat the paths as a directory paths, minus any extension
-            var inDirPathNoExt = absInPath.ParentDirectoryPath.GetChildDirectoryWithName(Path.GetFileNameWithoutExtension(absInPath.ToString()));
-            var outDirPathNoExt = absOutPath.ParentDirectoryPath.GetChildDirectoryWithName(Path.GetFileNameWithoutExtension(absOutPath.ToString()));
+            IAbsoluteDirectoryPath inDirPathNoExt = absInPath.ParentDirectoryPath.GetChildDirectoryWithName(Path.GetFileNameWithoutExtension(absInPath.ToString()));
+            IAbsoluteDirectoryPath outDirPathNoExt;
+            if (absOutPath.HasParentDirectory)
+            {
+                outDirPathNoExt = absOutPath.ParentDirectoryPath.GetChildDirectoryWithName(Path.GetFileNameWithoutExtension(absOutPath.ToString()));
+            }
+            else
+            {
+                //path is just the root of the drive
+                outDirPathNoExt = absOutPath;
+            }
+
 
             if (inDirPathNoExt.Equals(outDirPathNoExt))
             {
@@ -77,7 +87,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 int fullOutDepth = FolderDepth(outDirPathNoExt);
 
                 //if the out path is less deep than the parent of the in path, the out folder must be valid
-                if (fullOutDepth < fullInDepth - 1)
+                if (fullOutDepth <= fullInDepth - 1)
                 {
                     ret = true;
                 }
@@ -91,7 +101,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     }
                     else
                     {
-                        ret = IsValidOutputPathForMboxFile(inDirPathNoExt, outDirPathNoExt.ParentDirectoryPath);
+                        ret = IsValidOutputPathForMboxFile(absInPath, outDirPathNoExt.ParentDirectoryPath);
                     }
                 }
             }
@@ -114,11 +124,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (string.IsNullOrWhiteSpace(absOutPath))
                 throw new ArgumentNullException(nameof(absOutPath));
 
-            if (!absInPath.IsValidAbsoluteDirectoryPath(out string reason))
-                throw new ArgumentNullException($"'{absInPath}' is not a valid absolute directory path, {reason}");
+            if (!absInPath.IsValidAbsoluteFilePath(out string reason))
+                throw new ArgumentException($"'{absInPath}' is not a valid file path, {reason}");
+            if (!absInPath.IsValidAbsoluteDirectoryPath(out reason))
+                throw new ArgumentException($"'{absInPath}' is not a valid absolute directory path, {reason}");
             if (!absOutPath.IsValidAbsoluteDirectoryPath(out reason))
-                throw new ArgumentNullException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
-
+                throw new ArgumentException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
 
             return IsValidOutputPathForMboxFile(absInPath.ToAbsoluteDirectoryPath(), absOutPath.ToAbsoluteDirectoryPath());
         }

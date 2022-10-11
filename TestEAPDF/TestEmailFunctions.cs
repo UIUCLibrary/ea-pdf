@@ -66,6 +66,8 @@ namespace UIUCLibrary.TestEaPdf
 
         //Gmail Exports
         [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "gmail-mbox")] //gmail mbox export file
+        [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "gmail-emls")] //gmail mbox export file
+        [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "All.out", "SHA256", true, false, false, false, false, 0, -1, -1, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
 
         [DataTestMethod]
         public void TestSampleFiles(string relInPath, string relOutPath, string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, bool includeSub, bool oneFilePerMbox, int expectedErrors, int expectedWarnings, int expectedCounts)
