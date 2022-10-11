@@ -11,14 +11,21 @@
 			CHANGE LOG
 			=========
 			2022-04-09
-			* Rename element SingleBody/DispositionParams to SingleBody/DispositionParam (not plural) to match the name in MultiBody element
-			* Added SingleBody/Disposition element
-			
+			* Rename element SingleBody/DispositionParams to SingleBody/DispositionParam (not plural) to match the name in MultiBody element; just for consistency
+			* Added SingleBody/Disposition element; I think the MIME specs require this
+
 			2022-05-25
 			* Made BodyContent a valid root-level element for use when wrapping external content in XML
+
+			2022-06-10
+			* Added an IsAttachment boolean attribute to the SingleBody and MultiBody elements to easily indicate whether the body is an attachment or not
+			* Added the value UNKNOWN to the eol-type enumeration; in some error situations this might not be known when I serialize the message, often just a commented error message in the XML
+
+			2022-10-05
+			* Made TransferEncoding an enumeration transfer-encoding-type with values: 7bit, 8bit, binary, base64, quoted-printable, and uuencode; better to get a validation error if an unusual encoding is encountered
 		</documentation>
 		<documentation>
-			TODO:  There are many improvements that could be made to this schema to improve modularity and extensibility
+			TODO:  There are other improvements that could be made to this schema to improve modularity and extensibility
 		</documentation>
 	</annotation>
 
@@ -218,7 +225,6 @@
 				</annotation>
 			</element>
 
-			<!-- TODO: Should this be an enum of the different acceptable values? -->
 			<element name="TransferEncoding" type="xm:transfer-encoding-type" minOccurs="0">
 				<annotation>
 					<documentation>If not present, "7-bit" is assumed.</documentation>

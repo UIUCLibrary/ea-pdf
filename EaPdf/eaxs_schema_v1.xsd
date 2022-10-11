@@ -6,17 +6,18 @@
 	<annotation>
 		<documentation>Schema to define an XML document which can store the information found in a single e-mail account.</documentation>
 		<documentation>Authored jointly by the State Archives of North Carolina and Smithsonian Institution Archives.</documentation>
-		<documentation>Contact: 
-					State Archives of North Carolina
-					Phone: (919) 807-7310
-					Email: archives@ncdcr.gov
-					Website: https://archives.ncdcr.gov
+		<documentation>
+			Contact:
+			State Archives of North Carolina
+			Phone: (919) 807-7310
+			Email: archives@ncdcr.gov
+			Website: https://archives.ncdcr.gov
 		</documentation>
 		<!-- <documentation>Contact: -->
-					<!-- Kelly Eubank [kelly.eubank@ncdcr.gov] (NC State Archives Electronic Records Archivist); -->
-					<!-- Riccardo Ferrante [FerranteR@si.edu] (IT Archivist &amp; Electronic Records Program Director Smithsonian Institution Archives); -->
-					<!-- David R. Minor [david.minor@ncdcr.gov] (NC State Archives technical contact); -->
-					<!-- Steve Burbeck [sburbeck@mindspring.com] (technical contact) -->
+		<!-- Kelly Eubank [kelly.eubank@ncdcr.gov] (NC State Archives Electronic Records Archivist); -->
+		<!-- Riccardo Ferrante [FerranteR@si.edu] (IT Archivist &amp; Electronic Records Program Director Smithsonian Institution Archives); -->
+		<!-- David R. Minor [david.minor@ncdcr.gov] (NC State Archives technical contact); -->
+		<!-- Steve Burbeck [sburbeck@mindspring.com] (technical contact) -->
 		<!-- </documentation> DEPRECATED July 2018 -->
 
 	</annotation>
@@ -26,12 +27,12 @@
 			<sequence>
 				<element name="EmailAddress" type="string" minOccurs="0" maxOccurs="unbounded"/>
 				<element name="GlobalId" type="anyURI">
-				    <annotation>
+					<annotation>
 						<documentation>Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732. This value once assigned must never be changed.</documentation>
 						<documentation>Handles from the Handle System could be used but they must not contain the # character.</documentation>
 						<documentation>Handles should be expressed as an URI with the syntax hdl:&lt;handle&gt; or urn:&lt;handle&gt;. This form simply specifies the raw handle and does not make any reference to a handle resolver.</documentation>
-				        <documentation>All messages and their child messages contained in this account can be identified globally using this GlobalId and appending the LocalId as a fragment(GlobalId#LocalId).</documentation>
-				    </annotation>
+						<documentation>All messages and their child messages contained in this account can be identified globally using this GlobalId and appending the LocalId as a fragment(GlobalId#LocalId).</documentation>
+					</annotation>
 				</element>
 				<element name="ReferencesAccount" type="xm:ref-account-type" minOccurs="0" maxOccurs="unbounded"/>
 				<element name="Folder" type="xm:folder-type" minOccurs="0" maxOccurs="unbounded"/>
@@ -40,61 +41,86 @@
 	</element>
 
 	<complexType name="ref-account-type">
-	<sequence>
-		<element name="Href" type="anyURI">
-			<annotation><documentation>
-			This should be identical to the GlobalId of the XML file for the target account.
-			</documentation></annotation>
-		</element>
-		<element name="EmailAddress" type="string" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="RefType" type="xm:account-ref-type"/>
-	</sequence>
+		<sequence>
+			<element name="Href" type="anyURI">
+				<annotation>
+					<documentation>
+						This should be identical to the GlobalId of the XML file for the target account.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="EmailAddress" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="RefType" type="xm:account-ref-type"/>
+		</sequence>
 	</complexType>
 
 	<simpleType name="account-ref-type">
-      <restriction base="string">
-        <enumeration value="PreviousContent"><annotation><documentation>
-			The target contains previously archived messages from the same logical account as messages found here."</documentation></annotation>
-		</enumeration>
-        <enumeration value="SubsequentContent"><annotation><documentation>
-			The target contains messages subsequently archived from the same logical account as messages found here.</documentation></annotation>
-		</enumeration>
-		<enumeration value="Supplemental"><annotation><documentation>
-			The target contains messages that should be logically included with the messages found here.</documentation></annotation>
-		</enumeration>
-        <enumeration value="SeeAlso"><annotation><documentation>
-			The target contains messages from some other account that may be of interest.</documentation></annotation>
-		</enumeration>
-        <enumeration value="SeeInstead"><annotation><documentation>
-			Content found here is superseded entirely by the messages found in the target.</documentation></annotation>
-		</enumeration>
-      </restriction>
+		<restriction base="string">
+			<enumeration value="PreviousContent">
+				<annotation>
+					<documentation>
+						The target contains previously archived messages from the same logical account as messages found here."
+					</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="SubsequentContent">
+				<annotation>
+					<documentation>
+						The target contains messages subsequently archived from the same logical account as messages found here.
+					</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="Supplemental">
+				<annotation>
+					<documentation>
+						The target contains messages that should be logically included with the messages found here.
+					</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="SeeAlso">
+				<annotation>
+					<documentation>
+						The target contains messages from some other account that may be of interest.
+					</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="SeeInstead">
+				<annotation>
+					<documentation>
+						Content found here is superseded entirely by the messages found in the target.
+					</documentation>
+				</annotation>
+			</enumeration>
+		</restriction>
 	</simpleType>
 
 	<complexType name="folder-type">
-	<sequence>
-		<element name="Name" type="string"/>
-		<element name="Message" type="xm:message-type" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="Folder" type="xm:folder-type" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="Mbox" type="xm:mbox-type" minOccurs="0">
-			<annotation><documentation>
-			All of the messages in the archive that belong to this folder of this account are 
-			stored in an mbox file. This mbox file must use the mboxrd format and must use
-			the end-of-line markers specified in the Eol child element of this Mbox element.
-			Each message contained here must be use the RFC 2822 format as it would exist as 
-			it was sent over the wire.</documentation>
-			<documentation>
-			Individual messages may be retrieved from an mbox file
-			by searching for the desired message using the message-id. For messages 
-			that do not have a message-id, the referrer must create an index to the mbox file by
-			creating a hash for each message. Once this index has been created, the
-			hash stored along with the message in this file can be used to locate the
-			original message.
-			</documentation></annotation>
-		</element>
-	</sequence>
+		<sequence>
+			<element name="Name" type="string"/>
+			<element name="Message" type="xm:message-type" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="Folder" type="xm:folder-type" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="Mbox" type="xm:mbox-type" minOccurs="0">
+				<annotation>
+					<documentation>
+						All of the messages in the archive that belong to this folder of this account are
+						stored in an mbox file. This mbox file must use the mboxrd format and must use
+						the end-of-line markers specified in the Eol child element of this Mbox element.
+						Each message contained here must be use the RFC 2822 format as it would exist as
+						it was sent over the wire.
+					</documentation>
+					<documentation>
+						Individual messages may be retrieved from an mbox file
+						by searching for the desired message using the message-id. For messages
+						that do not have a message-id, the referrer must create an index to the mbox file by
+						creating a hash for each message. Once this index has been created, the
+						hash stored along with the message in this file can be used to locate the
+						original message.
+					</documentation>
+				</annotation>
+			</element>
+		</sequence>
 	</complexType>
-  
+
 	<complexType name="message-type">
 		<annotation>
 			<documentation>This serves to define a single RFC2822 Message.</documentation>
@@ -108,41 +134,44 @@
 			<element name="LocalId" type="long"/>
 			<element name="MessageId" type="xm:message-id-type"/>
 			<element name="MimeVersion" type="string" minOccurs="0">
-			    <annotation>
-			        <documentation>If not present then it is assumed that this message did not use any mime extensions.</documentation>
-			    </annotation>
+				<annotation>
+					<documentation>If not present then it is assumed that this message did not use any mime extensions.</documentation>
+				</annotation>
 			</element>
 			<group ref="xm:message-headers"/>
-	        <element name="Header" type="xm:header-type" minOccurs="0" maxOccurs="unbounded">
-	            <annotation>
-	                <documentation>All header values found in the message should be placed here.
-					Even those used to populate the contents of the standard messages headers.
-					The minimum amount of transformation should be preformed on the original values.
-					Any encoded words (as per RFC 2047) should be left as-is and not converted to Unicode.
+			<element name="Header" type="xm:header-type" minOccurs="0" maxOccurs="unbounded">
+				<annotation>
+					<documentation>
+						All header values found in the message should be placed here.
+						Even those used to populate the contents of the standard messages headers.
+						The minimum amount of transformation should be preformed on the original values.
+						Any encoded words (as per RFC 2047) should be left as-is and not converted to Unicode.
 					</documentation>
-	            </annotation>
-	        </element>
+				</annotation>
+			</element>
 			<element name="StatusFlag" type="xm:message-status-flag" minOccurs="0" maxOccurs="unbounded"/>
 
-	        <choice minOccurs="0">
+			<choice minOccurs="0">
 				<element name="SingleBody" type="xm:single-body-type"/>
-	        	<element name="MultiBody" type="xm:multi-body-type"/>
+				<element name="MultiBody" type="xm:multi-body-type"/>
 			</choice>
 
 			<element name="Incomplete" type="xm:incomplete-parse-type" minOccurs="0" maxOccurs="unbounded"/>
 			<element name="Eol" type="xm:eol-type"/>
 			<element name="Hash" type="xm:hash-type" minOccurs="0">
-				<annotation><documentation>
-				This is the result of calculating the hash on the text string
-				that begins with the F of the From_ line and includes the 
-				last eol character of the message. All messages end with a 
-				single eol marker. Before creating the hash, if the message
-				ends with two or more eol markers, all but the first must 
-				be removed. If the message does not end with an eol marker, 
-				one must be added. 
-				</documentation></annotation>
+				<annotation>
+					<documentation>
+						This is the result of calculating the hash on the text string
+						that begins with the F of the From_ line and includes the
+						last eol character of the message. All messages end with a
+						single eol marker. Before creating the hash, if the message
+						ends with two or more eol markers, all but the first must
+						be removed. If the message does not end with an eol marker,
+						one must be added.
+					</documentation>
+				</annotation>
 			</element>
-	    </sequence>
+		</sequence>
 	</complexType>
 
 	<complexType name="message-id-type">
@@ -150,37 +179,37 @@
 			<extension base="string">
 				<attribute name="Supplied" type="boolean" use="optional" default="false"/>
 			</extension>
-		</simpleContent>	
+		</simpleContent>
 	</complexType>
 
 	<complexType name="single-body-type">
-	    <sequence>
-	        <annotation>
-	            <documentation>The CharSet, ContentName, ContentTypeComments, and ContentTypeParams are all part of the Content-Type header, and none should be present if the Content-Type header is not present.</documentation>
-	        </annotation>
-	        <element name="ContentType" type="string" minOccurs="0">
-	            <annotation>
-	                <documentation>This is just the MIME type / MIME sub type. If not present then text/plain is assumed.</documentation>
-	            </annotation>
-	        </element>
+		<sequence>
+			<annotation>
+				<documentation>The CharSet, ContentName, ContentTypeComments, and ContentTypeParams are all part of the Content-Type header, and none should be present if the Content-Type header is not present.</documentation>
+			</annotation>
+			<element name="ContentType" type="string" minOccurs="0">
+				<annotation>
+					<documentation>This is just the MIME type / MIME sub type. If not present then text/plain is assumed.</documentation>
+				</annotation>
+			</element>
 			<element name="Charset" type="string" minOccurs="0">
-	            <annotation>
-	                <documentation>If not present, then US-ASCII is assumed.</documentation>
-	                <documentation>This is the character set originally used to encode the content of this multi-part body.</documentation>
-	            </annotation>
+				<annotation>
+					<documentation>If not present, then US-ASCII is assumed.</documentation>
+					<documentation>This is the character set originally used to encode the content of this multi-part body.</documentation>
+				</annotation>
 			</element>
 			<element name="ContentName" type="string" minOccurs="0"/>
 			<element name="ContentTypeComments" type="string" minOccurs="0"/>
 			<element name="ContentTypeParam" type="xm:parameter-type" minOccurs="0" maxOccurs="unbounded">
-			    <annotation>
-	        		<documentation>Any other parameter found in the Content-Type header field except for id and name.</documentation>
-	    		</annotation>
+				<annotation>
+					<documentation>Any other parameter found in the Content-Type header field except for id and name.</documentation>
+				</annotation>
 			</element>
 
 			<element name="TransferEncoding" type="string" minOccurs="0">
-			    <annotation>
-			        <documentation>If not present, "7-bit" is assumed.</documentation>
-			    </annotation>
+				<annotation>
+					<documentation>If not present, "7-bit" is assumed.</documentation>
+				</annotation>
 			</element>
 			<element name="TransferEncodingComments" type="string" minOccurs="0"/>
 
@@ -190,35 +219,35 @@
 			<element name="Description" type="string" minOccurs="0"/>
 			<element name="DescriptionComments" type="string" minOccurs="0"/>
 
-			 
+
 			<element name="DispositionFileName" type="string" minOccurs="0"/>
 			<element name="DispositionComments" type="string" minOccurs="0"/>
 			<element name="DispositionParams" type="xm:parameter-type" minOccurs="0" maxOccurs="unbounded">
-			    <annotation>
-	        		<documentation>Any other parameter found in the Content-Disposition header field except for filename.</documentation>
-	    		</annotation>
+				<annotation>
+					<documentation>Any other parameter found in the Content-Disposition header field except for filename.</documentation>
+				</annotation>
 			</element>
 
 			<element name="OtherMimeHeader" type="xm:header-type" minOccurs="0" maxOccurs="unbounded"/>
-			
+
 			<choice minOccurs="0" maxOccurs="1">
-			    <element name="BodyContent" type="xm:int-body-content-type">
-			        <annotation>
-			            <documentation>
-						This is textual or binary data that is stored in-line in this XML document
-						that makes up the body of this entity.
-						Along with the character set and transfer encoding used.
+				<element name="BodyContent" type="xm:int-body-content-type">
+					<annotation>
+						<documentation>
+							This is textual or binary data that is stored in-line in this XML document
+							that makes up the body of this entity.
+							Along with the character set and transfer encoding used.
 						</documentation>
-			        </annotation>
-			    </element>
+					</annotation>
+				</element>
 				<element name="ExtBodyContent" type="xm:ext-body-content-type">
-				    <annotation>
-				        <documentation>
-						This is a pointer to a file that contains the text or binary data
-						that makes up the body of this entity.
-						Along with the character set and transfer encoding used.
+					<annotation>
+						<documentation>
+							This is a pointer to a file that contains the text or binary data
+							that makes up the body of this entity.
+							Along with the character set and transfer encoding used.
 						</documentation>
-				    </annotation>
+					</annotation>
 				</element>
 				<element name="ChildMessage" type="xm:child-message-type"/>
 			</choice>
@@ -228,38 +257,38 @@
 					<documentation>Used for Content-Type message/external-body. US-ASCII character set is assumed.</documentation>
 				</annotation>
 			</element>
-	    </sequence>
+		</sequence>
 	</complexType>
- 
+
 	<complexType name="multi-body-type">
-	    <sequence>
-	        <annotation>
-	            <documentation>The Charset, ContentName, ContentTypeComments, and ContentTypeParams are all part of the Content-Type header, and none should be present if the Content-Type header is not present.</documentation>
-	        </annotation>
-        	<element name="ContentType" type="string" minOccurs="0">
-	            <annotation>
-	                <documentation>This is just the MIME type / MIME sub type. If not present then text/plain is assumed.</documentation>
-	            </annotation>
-	        </element>
+		<sequence>
+			<annotation>
+				<documentation>The Charset, ContentName, ContentTypeComments, and ContentTypeParams are all part of the Content-Type header, and none should be present if the Content-Type header is not present.</documentation>
+			</annotation>
+			<element name="ContentType" type="string" minOccurs="0">
+				<annotation>
+					<documentation>This is just the MIME type / MIME sub type. If not present then text/plain is assumed.</documentation>
+				</annotation>
+			</element>
 			<element name="Charset" type="string" minOccurs="0">
-	            <annotation>
-	                <documentation>If not present, then US-ASCII is assumed.</documentation>
-	                <documentation>This is the character set originally used to encode the content of this multi-part body.</documentation>
-	            </annotation>
+				<annotation>
+					<documentation>If not present, then US-ASCII is assumed.</documentation>
+					<documentation>This is the character set originally used to encode the content of this multi-part body.</documentation>
+				</annotation>
 			</element>
 			<element name="ContentName" type="string" minOccurs="0"/>
 			<element name="BoundaryString" type="string"/>
 			<element name="ContentTypeComments" type="string" minOccurs="0"/>
 			<element name="ContentTypeParam" type="xm:parameter-type" minOccurs="0" maxOccurs="unbounded">
-			    <annotation>
-	        		<documentation>Any other parameter found in the Content-Type header field except for id, name, and boundary string.</documentation>
-	    		</annotation>
+				<annotation>
+					<documentation>Any other parameter found in the Content-Type header field except for id, name, and boundary string.</documentation>
+				</annotation>
 			</element>
 
 			<element name="TransferEncoding" type="string" minOccurs="0">
-			    <annotation>
-			        <documentation>If not present, "7-bit" is assumed.</documentation>
-			    </annotation>
+				<annotation>
+					<documentation>If not present, "7-bit" is assumed.</documentation>
+				</annotation>
 			</element>
 			<element name="TransferEncodingComments" type="string" minOccurs="0"/>
 
@@ -273,37 +302,37 @@
 			<element name="DispositionFileName" type="string" minOccurs="0"/>
 			<element name="DispositionComments" type="string" minOccurs="0"/>
 			<element name="DispositionParam" type="xm:parameter-type" minOccurs="0" maxOccurs="unbounded">
-			    <annotation>
-	        		<documentation>Any other parameters found in the Content-Disposition header field except for filename.</documentation>
-	    		</annotation>
+				<annotation>
+					<documentation>Any other parameters found in the Content-Disposition header field except for filename.</documentation>
+				</annotation>
 			</element>
 
 			<element name="OtherMimeHeader" type="xm:header-type" minOccurs="0" maxOccurs="unbounded"/>
 
 			<element name="Preamble" type="string" minOccurs="0"/>
-	        <choice maxOccurs="unbounded">
+			<choice maxOccurs="unbounded">
 				<element name="SingleBody" type="xm:single-body-type"/>
-	        	<element name="MultiBody" type="xm:multi-body-type"/>
+				<element name="MultiBody" type="xm:multi-body-type"/>
 			</choice>
 			<element name="Epilogue" type="string" minOccurs="0"/>
-	    </sequence>
+		</sequence>
 	</complexType>
- 
+
 	<complexType name="child-message-type">
 		<sequence>
 			<element name="LocalId" type="long"/>
 			<element name="MessageId" type="xm:message-id-type"/>
 			<element name="MimeVersion" type="string" minOccurs="0">
-			    <annotation>
-			        <documentation>If not present then it is assumed that this message did not use any mime extensions.</documentation>
-			    </annotation>
+				<annotation>
+					<documentation>If not present then it is assumed that this message did not use any mime extensions.</documentation>
+				</annotation>
 			</element>
 			<group ref="xm:message-headers"/>
-	        <element name="Header" type="xm:header-type" minOccurs="1" maxOccurs="unbounded"/>
+			<element name="Header" type="xm:header-type" minOccurs="1" maxOccurs="unbounded"/>
 
-	        <choice minOccurs="0">
+			<choice minOccurs="0">
 				<element name="SingleBody" type="xm:single-body-type"/>
-	        	<element name="MultiBody" type="xm:multi-body-type"/>
+				<element name="MultiBody" type="xm:multi-body-type"/>
 			</choice>
 
 			<element name="Incomplete" type="xm:incomplete-parse-type" minOccurs="0"/>
@@ -313,98 +342,112 @@
 	<complexType name="int-body-content-type">
 		<sequence>
 			<element name="Content" type="string">
-			    <annotation>
-			        <documentation>
-					Content here is either wrapped in a CDATA section where all occurrences of ]]&gt; have been escaped as "]]&amp;gt;
-					or without being wrapped in a CDATA section where all occurrences of &lt; and &amp; have been escaped as &amp;lt; and &amp;amp; 
-					respectively as well as all occurrences of ]]&gt; have been escaped as "]]&amp;gt.
+				<annotation>
+					<documentation>
+						Content here is either wrapped in a CDATA section where all occurrences of ]]&gt; have been escaped as "]]&amp;gt;
+						or without being wrapped in a CDATA section where all occurrences of &lt; and &amp; have been escaped as &amp;lt; and &amp;amp;
+						respectively as well as all occurrences of ]]&gt; have been escaped as "]]&amp;gt.
 					</documentation>
-			    </annotation>
+				</annotation>
 			</element>
 			<element name="CharSet" type="string" minOccurs="0">
-			    <annotation>
-			        <documentation>
-					The character encoding that was used when preparing 
-					the contents of this internal body part.
-					If not present then the character encoding
-					specified by the "encoding" element in the prologue of this XML document is assumed.
+				<annotation>
+					<documentation>
+						The character encoding that was used when preparing
+						the contents of this internal body part.
+						If not present then the character encoding
+						specified by the "encoding" element in the prologue of this XML document is assumed.
 					</documentation>
-			    </annotation>
+				</annotation>
 			</element>
 			<element name="TransferEncoding" type="string" minOccurs="0">
-			    <annotation>
-			        <documentation>If not present, then it is assumed that this is not necessary
-					since it is implied by the "encoding" element in the prologue of this XML document.</documentation>
-			    </annotation>
+				<annotation>
+					<documentation>
+						If not present, then it is assumed that this is not necessary
+						since it is implied by the "encoding" element in the prologue of this XML document.
+					</documentation>
+				</annotation>
 			</element>
-		</sequence>	
+		</sequence>
 	</complexType>
 
 	<complexType name="ext-body-content-type">
 		<sequence>
 			<element name="RelPath" type="anyURI">
-			    <annotation><documentation>
-					Path component that when added to the result obtained from adding the RelPath
-					for this message to the absolute path from which this XML file was accessed
-					gives the path to the externally stored body part.
-				</documentation></annotation></element>
+				<annotation>
+					<documentation>
+						Path component that when added to the result obtained from adding the RelPath
+						for this message to the absolute path from which this XML file was accessed
+						gives the path to the externally stored body part.
+					</documentation>
+				</annotation>
+			</element>
 			<element name="CharSet" type="string" minOccurs="0">
-			    <annotation><documentation>
-					The character encoding that was used when preparing 
-					the contents of this external body part.
-					If not present then the original character encoding
-					specified by the "Charset" element of the containing SingleBody
-					element is assumed.
-				</documentation></annotation>
+				<annotation>
+					<documentation>
+						The character encoding that was used when preparing
+						the contents of this external body part.
+						If not present then the original character encoding
+						specified by the "Charset" element of the containing SingleBody
+						element is assumed.
+					</documentation>
+				</annotation>
 			</element>
 			<element name="TransferEncoding" type="string" minOccurs="0">
-			    <annotation><documentation>
-					The transfer encoding that was used when preparing 
-					the contents of this external body part.
-					If not present then the original character encoding
-					specified by the "TransferEncoding" element of the containing SingleBody
-					element is assumed.
-				</documentation></annotation>
+				<annotation>
+					<documentation>
+						The transfer encoding that was used when preparing
+						the contents of this external body part.
+						If not present then the original character encoding
+						specified by the "TransferEncoding" element of the containing SingleBody
+						element is assumed.
+					</documentation>
+				</annotation>
 			</element>
 			<element name="LocalId" type="integer"/>
 			<element name="XMLWrapped" type="boolean" minOccurs="0">
-				<annotation><documentation>
-					If this externally stored body part is wrapped in an XML envelope then this element must be present and have a value of true.
-					If the externally stored body part is stored as a "native" file without any XML wrapper then either this element will
-					not be present or will be present and have a value of false.
-				</documentation></annotation>
+				<annotation>
+					<documentation>
+						If this externally stored body part is wrapped in an XML envelope then this element must be present and have a value of true.
+						If the externally stored body part is stored as a "native" file without any XML wrapper then either this element will
+						not be present or will be present and have a value of false.
+					</documentation>
+				</annotation>
 			</element>
 			<element name="Eol" type="xm:eol-type" minOccurs="0"/>
 			<element name="Hash" type="xm:hash-type" minOccurs="0">
-				<annotation><documentation>
-				The results of some hash function computed on the entire contents of the 
-				external file.
-				</documentation></annotation>
+				<annotation>
+					<documentation>
+						The results of some hash function computed on the entire contents of the
+						external file.
+					</documentation>
+				</annotation>
 			</element>
 
-		</sequence>	
+		</sequence>
 	</complexType>
 
 	<group name="message-headers">
 		<annotation>
-			<documentation>These are the headers that can be used for a top-level message or for a child message. 
-			Top-level messages should have the "From", "Date", and at least one destination header ("To" "Cc", or "Bcc");
-			child messages should have at least one of "From", "Subject", or "Date".
+			<documentation>
+				These are the headers that can be used for a top-level message or for a child message.
+				Top-level messages should have the "From", "Date", and at least one destination header ("To" "Cc", or "Bcc");
+				child messages should have at least one of "From", "Subject", or "Date".
 			</documentation>
 		</annotation>
-	<sequence>
-		<element name="OrigDate" type="dateTime" minOccurs="0"/>
-		<element name="From" type="string" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="Sender" type="string" minOccurs="0"/>
-		<element name="To" type="string" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="Cc" type="string" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="Bcc" type="string" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="InReplyTo" type="string" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="References" type="string" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="Subject" type="string" minOccurs="0"/>
-		<element name="Comments" type="string" minOccurs="0" maxOccurs="unbounded"/>
-		<element name="Keywords" type="string" minOccurs="0" maxOccurs="unbounded"/>
-	</sequence>
+		<sequence>
+			<element name="OrigDate" type="dateTime" minOccurs="0"/>
+			<element name="From" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="Sender" type="string" minOccurs="0"/>
+			<element name="To" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="Cc" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="Bcc" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="InReplyTo" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="References" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="Subject" type="string" minOccurs="0"/>
+			<element name="Comments" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="Keywords" type="string" minOccurs="0" maxOccurs="unbounded"/>
+		</sequence>
 	</group>
 
 	<simpleType name="message-status-flag">
@@ -417,7 +460,7 @@
 			<enumeration value="Recent"/>
 		</restriction>
 	</simpleType>
- 
+
 	<complexType name="header-type">
 		<annotation>
 			<documentation>
@@ -450,10 +493,12 @@
 	<complexType name="mbox-type">
 		<sequence>
 			<element name="RelPath" type="string">
-			<annotation><documentation>
-			URI component that when added to the path from which this XML file
-			was accessed will give the URI from which the mbox full of original messages may be retrieved.
-			</documentation></annotation>
+				<annotation>
+					<documentation>
+						URI component that when added to the path from which this XML file
+						was accessed will give the URI from which the mbox full of original messages may be retrieved.
+					</documentation>
+				</annotation>
 			</element>
 			<element name="Eol" type="xm:eol-type"/>
 			<element name="Hash" type="xm:hash-type" minOccurs="0"/>
@@ -471,9 +516,11 @@
 	<complexType name="hash-type">
 		<sequence>
 			<element name="Value" type="hexBinary">
-				<annotation><documentation>
-				Values of hash-type must be computed by the hash algorithm specified. Please use the canonical form: only upper case letters should be used.)
-				</documentation></annotation>
+				<annotation>
+					<documentation>
+						Values of hash-type must be computed by the hash algorithm specified. Please use the canonical form: only upper case letters should be used.)
+					</documentation>
+				</annotation>
 			</element>
 			<element name="Function" type="xm:hash-function-type"/>
 		</sequence>
@@ -481,44 +528,68 @@
 
 	<simpleType name="hash-function-type">
 		<restriction base="string">
-			<enumeration value="MD5"><annotation><documentation>
-			As defined by RFC 1321
-			</documentation></annotation>
+			<enumeration value="MD5">
+				<annotation>
+					<documentation>
+						As defined by RFC 1321
+					</documentation>
+				</annotation>
 			</enumeration>
 
-			<enumeration value="WHIRLPOOL"><annotation><documentation>
-			As adopted by ISO/IEC 10118-3:2004	
-			</documentation></annotation>
+			<enumeration value="WHIRLPOOL">
+				<annotation>
+					<documentation>
+						As adopted by ISO/IEC 10118-3:2004
+					</documentation>
+				</annotation>
 			</enumeration>
 
-			<enumeration value="SHA1"><annotation><documentation>
-			As defined by NIST FIPS PUB 180-2
-			</documentation></annotation>
+			<enumeration value="SHA1">
+				<annotation>
+					<documentation>
+						As defined by NIST FIPS PUB 180-2
+					</documentation>
+				</annotation>
 			</enumeration>
 
-			<enumeration value="SHA224"><annotation><documentation>
-			As defined by NIST FIPS PUB 180-2
-			</documentation></annotation>
+			<enumeration value="SHA224">
+				<annotation>
+					<documentation>
+						As defined by NIST FIPS PUB 180-2
+					</documentation>
+				</annotation>
 			</enumeration>
 
-			<enumeration value="SHA256"><annotation><documentation>
-			As defined by NIST FIPS PUB 180-2
-			</documentation></annotation>
+			<enumeration value="SHA256">
+				<annotation>
+					<documentation>
+						As defined by NIST FIPS PUB 180-2
+					</documentation>
+				</annotation>
 			</enumeration>
 
-			<enumeration value="SHA384"><annotation><documentation>
-			As defined by NIST FIPS PUB 180-2
-			</documentation></annotation>
+			<enumeration value="SHA384">
+				<annotation>
+					<documentation>
+						As defined by NIST FIPS PUB 180-2
+					</documentation>
+				</annotation>
 			</enumeration>
 
-			<enumeration value="SHA512"><annotation><documentation>
-			As defined by NIST FIPS PUB 180-2
-			</documentation></annotation>
+			<enumeration value="SHA512">
+				<annotation>
+					<documentation>
+						As defined by NIST FIPS PUB 180-2
+					</documentation>
+				</annotation>
 			</enumeration>
 
-			<enumeration value="RIPEMD160"><annotation><documentation>
-			As defined by ISO/IEC 10118-3:2003
-			</documentation></annotation>
+			<enumeration value="RIPEMD160">
+				<annotation>
+					<documentation>
+						As defined by ISO/IEC 10118-3:2003
+					</documentation>
+				</annotation>
 			</enumeration>
 
 		</restriction>
