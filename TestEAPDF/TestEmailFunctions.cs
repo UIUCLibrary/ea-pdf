@@ -77,7 +77,7 @@ namespace UIUCLibrary.TestEaPdf
         //Gmail Exports
         [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "gmail-mbox")] //gmail mbox export file
         [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "gmail-emls")] //gmail mbox export file
-        [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "All.out", "SHA256", true, false, false, false, false, 0, -1, -1, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
+        [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "All.out", "SHA256", true, false, false, false, false, 0, -1, -1, true, DisplayName = "gmail-ext-big-mbox-quick")] //very large gmail mbox export file, save external content
 
         //Weird Emails
         [DataRow("Weird\\spam_hexa.mbox", "", "SHA256", false, false, false, false, false, 0, -1, 1, DisplayName = "weird-spam-hexa-mbox")] //weird spam email with 'hexa' encoded content
@@ -89,7 +89,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Weird\\rfc822headers2.mbox", "out_rfc822headers2", "SHA256", true, false, false, false, false, 0, 0, -1, DisplayName = "weird-rfc822headers2-mbox")] //message from very large mbox which contains txt/rfc822-headers
 
         [DataTestMethod]
-        public void TestSampleFiles(string relInPath, string relOutPath, string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, bool includeSub, bool oneFilePerMbox, int expectedErrors, int expectedWarnings, int expectedCounts)
+        public void TestSampleFiles(string relInPath, string relOutPath, string hashAlg, bool extContent, bool wrapExtInXml, bool preserveEnc, bool includeSub, bool oneFilePerMbox, int expectedErrors, int expectedWarnings, int expectedCounts, bool quick = false)
         {
 
             testFilesBaseDirectory = Path.GetDirectoryName(Path.Combine(testFilesBaseDirectory, relInPath)) ?? testFilesBaseDirectory;
@@ -190,6 +190,8 @@ namespace UIUCLibrary.TestEaPdf
                     }
 
                 }
+
+                if (quick) return;
 
                 //make sure the xml files are valid
                 foreach (var xmlFile in expectedXmlFiles)

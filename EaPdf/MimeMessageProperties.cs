@@ -56,7 +56,7 @@ namespace UIUCLibrary.EaPdf
             IncompleteErrorLocation = errorLocation;
         }
 
-        //TODO: The XML schema allows multiple <Incomplete> tags per message, currently the properties allow only one
+        //FUTURE: The XML schema allows multiple <Incomplete> tags per message, currently the properties allow only one
 
     }
 }

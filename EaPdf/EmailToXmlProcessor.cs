@@ -49,7 +49,10 @@ namespace UIUCLibrary.EaPdf
 
         public EmailToXmlProcessorSettings Settings { get; }
 
-        private Dictionary<string, int> contentTypeCounts = new Dictionary<string, int>();
+        //stats used for development and debuging
+        private Dictionary<string, int> contentTypeCounts = new();
+        private Dictionary<string, int> xGmailLabelCounts = new();
+        private Dictionary<string, int> xGmailLabelComboCounts = new();
 
 
         /// <summary>
@@ -324,11 +327,31 @@ namespace UIUCLibrary.EaPdf
 
         private void SaveStatsToCsv(string csvFilepath)
         {
+            //FUTURE: Save to Excel https://learn.microsoft.com/en-us/previous-versions/technet-magazine/cc161037(v=msdn.10)?redirectedfrom=MSDN
             using (var writer = new StreamWriter(csvFilepath))
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
-                csv.WriteRecords(contentTypeCounts);
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    csv.WriteRecords(contentTypeCounts);
+                }
             }
+            
+            using (var writer = new StreamWriter(csvFilepath, true))
+            {
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    csv.WriteRecords(xGmailLabelCounts);
+                }
+            }
+
+            using (var writer = new StreamWriter(csvFilepath, true))
+            {
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    csv.WriteRecords(xGmailLabelComboCounts);
+                }
+            }
+
         }
 
         private void WriteXmlAccountHeaderFields(XmlWriter xwriter, string globalId, string accntEmails = "")
@@ -579,7 +602,7 @@ namespace UIUCLibrary.EaPdf
 
             localId++;
             var messageId = localId;
-            
+
             xwriter.WriteStartElement("Message", XM_NS);
 
             localId = WriteMessage(xwriter, message, localId, false, true, mboxProps, msgProps);
@@ -643,7 +666,20 @@ namespace UIUCLibrary.EaPdf
                 }
             }
 
-
+            //collect stats on X-GMAIL_LABELS header
+            var lbl = message.Headers["X-Gmail-Labels"];
+            if (!string.IsNullOrEmpty(lbl))
+            {
+                xGmailLabelComboCounts.TryGetValue(lbl, out int combocount);
+                xGmailLabelComboCounts[lbl] = combocount + 1;
+                
+                var lbls = lbl.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (var l in lbls)
+                {
+                    xGmailLabelCounts.TryGetValue(l, out int count);
+                    xGmailLabelCounts[l] = count + 1;
+                }
+            }
 
             WriteStandardMessageHeaders(xwriter, message);
 
@@ -932,7 +968,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             xwriter.WriteStartElement("DeliveryStatus", XM_NS);
-            
+
             xwriter.WriteStartElement("MessageFields", XM_NS);
             foreach (var grp in deliveryStatus.StatusGroups[0])
             {
@@ -972,7 +1008,7 @@ namespace UIUCLibrary.EaPdf
             //If it is TextRfc822Headers it will not have a MessageBody.  This is handle correctly in the WriteMessageBody function 
             xwriter.WriteStartElement("ChildMessage", XM_NS);
             localId++;
-            
+
             localId = WriteMessage(xwriter, message.Message, localId, true, expectingBodyContent, mboxProps, msgProps);
             xwriter.WriteEndElement(); //ChildMessage
             return localId;
@@ -984,23 +1020,23 @@ namespace UIUCLibrary.EaPdf
             //if it is text and not an attachment, save embedded in the XML
             if (part.ContentType.IsMimeType("text", "*") && !part.IsAttachment)
             {
-                var (text,encoding) = GetContentText(part);
+                var (text, encoding) = GetContentText(part);
 
                 if (!string.IsNullOrWhiteSpace(text) || expectingBodyContent)
                 {
                     xwriter.WriteStartElement("BodyContent", XM_NS);
-                    
-                    if(!string.IsNullOrWhiteSpace(text) && !expectingBodyContent)
+
+                    if (!string.IsNullOrWhiteSpace(text) && !expectingBodyContent)
                     {
                         WriteWarningMessage(xwriter, $"Not expecting body content for '{part.ContentType.MimeType}'.");
                     }
 
                     xwriter.WriteStartElement("Content", XM_NS);
-                    
+
                     xwriter.WriteCData(text);
-                    
+
                     xwriter.WriteEndElement(); //Content
-                    
+
                     if (!string.IsNullOrWhiteSpace(encoding))
                     {
                         xwriter.WriteElementString("TransferEncoding", XM_NS, encoding);
@@ -1029,7 +1065,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private (string,string) GetContentText(MimePart part)
+        private (string, string) GetContentText(MimePart part)
         {
             string contentStr = "";
             string encoding = "";
