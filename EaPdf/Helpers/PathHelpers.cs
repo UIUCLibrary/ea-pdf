@@ -1,9 +1,11 @@
-﻿using NDepend.Path;
+﻿using MimeKit;
+using NDepend.Path;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Wiry.Base32;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
@@ -147,5 +149,65 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             return ret;
         }
+
+        /// <summary>
+        /// Get a random file name that does not exist in the given directory
+        /// </summary>
+        /// <param name="folderPath"></param>
+        /// <returns></returns>
+        public static string GetRandomFilePath(string folderPath)
+        {
+            //get random file name that doesn't already exist
+            string randomFilePath = "";
+            do
+            {
+                randomFilePath = Path.Combine(folderPath, Path.GetRandomFileName());
+            } while (File.Exists(randomFilePath));
+
+            return randomFilePath;
+        }
+
+        /// <summary>
+        /// Get a file path based on a hash with the appropriate filename extension
+        /// </summary>
+        /// <param name="hash"></param>
+        /// <param name="part"></param>
+        /// <param name="folderPath"></param>
+        /// <param name="wrapInXml"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static string GetOutputFilePathBasedOnHash(byte[] hash, MimePart part, string folderPath, bool wrapInXml)
+        {
+            string hashStr = "";
+            if (hash != null)
+                hashStr = Base32Encoding.ZBase32.GetString(hash, 0, hash.Length); // uses z-base-32 encoding for file names, https://en.wikipedia.org/wiki/Base32
+            else
+                throw new ArgumentNullException(nameof(hash));
+
+            //for convenience get an extension to use with the derived filename
+            var ext = ".bin"; //default extension
+            if (wrapInXml)
+            {
+                ext = ".xml";
+            }
+            else
+            {
+                ext = Path.GetExtension(part.FileName); //try to use the extension of the mime header file name
+                if (string.IsNullOrWhiteSpace(ext) || ext.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                {
+                    //if file doesn't have an extension, or if the extension is not valid, should try to use the content type to get the extension
+                    if (!MimeTypes.TryGetExtension(part.ContentType.MimeType, out ext))
+                    {
+                        ext = ".bin"; //if no extension found, use .bin
+                    }
+                }
+            }
+
+            var hashFilePath = Path.Combine(folderPath, hashStr[..2], Path.ChangeExtension(hashStr, ext));
+
+            return hashFilePath;
+        }
+
+
     }
 }

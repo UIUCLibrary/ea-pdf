@@ -438,6 +438,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Inbox", "Inbox", "{875C3A9E
 		SampleFiles\Testing\Gmail\eml\Inbox\2016-11-10 202703 2fc6c34852.eml = SampleFiles\Testing\Gmail\eml\Inbox\2016-11-10 202703 2fc6c34852.eml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Weird", "Weird", "{9BF31E2B-D115-4748-A2E3-BD77EF33F3F3}"
+	ProjectSection(SolutionItems) = preProject
+		SampleFiles\Testing\Weird\spam_hexa.mbox = SampleFiles\Testing\Weird\spam_hexa.mbox
+		SampleFiles\Testing\Weird\virus_notif.mbox = SampleFiles\Testing\Weird\virus_notif.mbox
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -465,6 +471,7 @@ Global
 		{D032670D-8F79-4A35-A910-2242D0A1A430} = {0C7BCAA5-D029-4DC8-9134-1C215F4E471E}
 		{8FB491B3-25AD-4030-841E-DDD0C013ECF2} = {D032670D-8F79-4A35-A910-2242D0A1A430}
 		{875C3A9E-A15D-4BF2-92E6-3C8560AB70B6} = {8FB491B3-25AD-4030-841E-DDD0C013ECF2}
+		{9BF31E2B-D115-4748-A2E3-BD77EF33F3F3} = {0C7BCAA5-D029-4DC8-9134-1C215F4E471E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CFFF8FA0-BCE8-4554-AC69-D9397B85F72B}

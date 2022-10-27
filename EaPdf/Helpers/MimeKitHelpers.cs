@@ -76,11 +76,12 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <summary>
         /// Convert the MimeKit enum into a standard encoding string value for use in the EAXS XML Schema
         /// </summary>
-        /// <param name="enc"></param>
+        /// <param name="enc">The ContentEncoding enum value</param>
+        /// <param name="def">The string to return for the ContentEncoding.Default value</param>
         /// <returns></returns>
-        public static string GetContentEncodingString(ContentEncoding enc)
+        public static string GetContentEncodingString(ContentEncoding enc, string def="")
         {
-            return enc switch
+            var ret= enc switch
             {
                 ContentEncoding.Default => "",
                 ContentEncoding.SevenBit => "7bit",
@@ -91,7 +92,14 @@ namespace UIUCLibrary.EaPdf.Helpers
                 ContentEncoding.UUEncode => "uuencode",
                 _ => "",
             };
+
+            if (ret == "" && def != "")
+                ret = def;
+
+            return ret;
         }
+        
+        public static string[] ContentEncodings = new string[] { "", "7bit", "8bit", "binary", "base64", "quoted-printable", "uuencode" };
 
         /// <summary>
         /// Return the X-Mozilla-Status header value, converted to a enum flag

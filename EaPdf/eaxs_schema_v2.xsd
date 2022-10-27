@@ -21,8 +21,11 @@
 			* Added an IsAttachment boolean attribute to the SingleBody and MultiBody elements to easily indicate whether the body is an attachment or not
 			* Added the value UNKNOWN to the eol-type enumeration; in some error situations this might not be known when I serialize the message, often just a commented error message in the XML
 
-			2022-10-05
-			* Made TransferEncoding an enumeration transfer-encoding-type with values: 7bit, 8bit, binary, base64, quoted-printable, and uuencode; better to get a validation error if an unusual encoding is encountered
+			2022-10-17
+			* Some child messages might indicate they are multipart, but the parts are deliberately empty, such as 'text/rfc822-headers', so added a new element 'MissingBody' to the schema
+			* A DeliveryStatus element was added to support the message/delivery-status content-type that contains a delivery status message, see RFC 3464.
+			  DeliveryStatus segregates the per-message and per-recipient parts, but the specific fields are just serialized as generic name/value pairs using the header-type
+			  
 		</documentation>
 		<documentation>
 			TODO:  There are other improvements that could be made to this schema to improve modularity and extensibility
@@ -225,7 +228,7 @@
 				</annotation>
 			</element>
 
-			<element name="TransferEncoding" type="xm:transfer-encoding-type" minOccurs="0">
+			<element name="TransferEncoding" type="string" minOccurs="0">
 				<annotation>
 					<documentation>If not present, "7-bit" is assumed.</documentation>
 				</annotation>
@@ -270,6 +273,13 @@
 					</annotation>
 				</element>
 				<element name="ChildMessage" type="xm:child-message-type"/>
+				<element name="DeliveryStatus" type="xm:delivery-status-message-type">
+					<annotation>
+						<documentation>
+							TGH 2022-10-17 This represents a message/delivery-status part that contains a delivery status message, see RFC 3464.
+						</documentation>
+					</annotation>
+				</element>
 			</choice>
 
 			<element name="PhantomBody" type="string" minOccurs="0">
@@ -283,6 +293,25 @@
 				<documentation>TGH_2022-06-10: A quick way to determine whether the content should be treated as an attachment or not</documentation>
 			</annotation>
 		</attribute>
+	</complexType>
+
+	<complexType name="delivery-status-message-type">
+		<sequence>
+			<element name="MessageFields" minOccurs="1" maxOccurs="1">
+				<complexType>
+					<sequence>
+						<element name="Field" type="xm:header-type" minOccurs="1" maxOccurs="unbounded"/>
+					</sequence>
+				</complexType>
+			</element>
+			<element name="RecipientFields" minOccurs="1" maxOccurs="unbounded">
+				<complexType>
+					<sequence>
+						<element name="Field" type="xm:header-type" minOccurs="1" maxOccurs="unbounded"/>
+					</sequence>
+				</complexType>
+			</element>
+		</sequence>
 	</complexType>
 
 	<complexType name="multi-body-type">
@@ -310,7 +339,7 @@
 				</annotation>
 			</element>
 
-			<element name="TransferEncoding" type="xm:transfer-encoding-type" minOccurs="0">
+			<element name="TransferEncoding" type="string" minOccurs="0">
 				<annotation>
 					<documentation>If not present, "7-bit" is assumed.</documentation>
 				</annotation>
@@ -338,6 +367,11 @@
 			<choice maxOccurs="unbounded">
 				<element name="SingleBody" type="xm:single-body-type"/>
 				<element name="MultiBody" type="xm:multi-body-type"/>
+				<element name="MissingBody">
+					<annotation>
+						<documentation>TGH 2022-10-17 Some messages might indicate they are multipart, but the parts are deliberately empty, such as 'text/rfc822-headers', so added a new element 'MissingBody' to the schema</documentation>
+					</annotation>
+				</element>
 			</choice>
 			<element name="Epilogue" type="string" minOccurs="0"/>
 		</sequence>
@@ -390,7 +424,7 @@
 					</documentation>
 				</annotation>
 			</element>
-			<element name="TransferEncoding" type="xm:transfer-encoding-type" minOccurs="0">
+			<element name="TransferEncoding" type="string" minOccurs="0">
 				<annotation>
 					<documentation>
 						If not present, then it is assumed that this is not necessary
@@ -423,7 +457,7 @@
 					</documentation>
 				</annotation>
 			</element>
-			<element name="TransferEncoding" type="xm:transfer-encoding-type" minOccurs="0">
+			<element name="TransferEncoding" type="string" minOccurs="0">
 				<annotation>
 					<documentation>
 						The transfer encoding that was used when preparing
@@ -547,22 +581,6 @@
 					</documentation>
 				</annotation>
 			</enumeration>
-		</restriction>
-	</simpleType>
-
-	<simpleType name="transfer-encoding-type">
-		<annotation>
-			<documentation>
-				TGH_2022-10-05: Added this type to allow for validation of allowable TransferEncoding values.
-			</documentation>
-		</annotation>
-		<restriction base="string">
-			<enumeration value="7bit"/>
-			<enumeration value="8bit"/>
-			<enumeration value="binary"/>
-			<enumeration value="quoted-printable"/>
-			<enumeration value="base64"/>
-			<enumeration value="uuencode"/>
 		</restriction>
 	</simpleType>
 
