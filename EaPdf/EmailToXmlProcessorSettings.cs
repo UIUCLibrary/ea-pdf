@@ -50,7 +50,23 @@ namespace UIUCLibrary.EaPdf
         /// <summary>
         /// If true, each mbox will have its own output file
         /// </summary>
-        public bool OneFilePerMbox { get; set; } = false;   
+        public bool OneFilePerMbox { get; set; } = false;
+
+        /// <summary>
+        /// Approximate maximum allowable size for the output XML files, in bytes.  If the size of the XML file exceeds this value, it will be split into multiple files.
+        /// Actual file sizes will be within 5% of this value, so plan accordingly.
+        /// A value less than or equal to zero means no limit.
+        /// </summary>
+        public long MaximumXmlFileSize { get; set; } = 1024 * 1024 * 1024; // 1GB
+
+        
+        public long MaximumXmlFileSizeThreshold
+        {
+            get
+            {
+                return (long)(MaximumXmlFileSize * 0.95);
+            }
+        }
 
     }
 }

@@ -26,7 +26,6 @@ namespace UIUCLibrary.EaPdf
     {
 
         //FUTURE: Add support for mbx files, see https://uofi.box.com/s/51v7xzfzqod2dv9lxmjgbrrgz5ejjydk 
-        //TODO: Output XML files over 2GB in size may not be supported in some situations.  Need to split the output into multiple files based on configurable max size.
         //TODO: Need to check for XML invalid characters almost anyplace I write XML string content, see the WriteElementStringReplacingInvalidChars function
 
         //for LWSP (Linear White Space) detection, compaction, and trimming
@@ -54,6 +53,8 @@ namespace UIUCLibrary.EaPdf
         private Dictionary<string, int> xGmailLabelCounts = new();
         private Dictionary<string, int> xGmailLabelComboCounts = new();
 
+        //need to keep track of folders in case output file is split into multiple files and the split happens while processing a subfolder
+        private Stack<string> _folders = new();
 
         /// <summary>
         /// Create a processor for email files, initializing the logger and settings
@@ -153,6 +154,7 @@ namespace UIUCLibrary.EaPdf
                 foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
                 {
                     localId = ConvertMboxToEaxs(mboxFilePath, fullOutFolderPath, globalId, accntEmails, localId, messageList, false);
+                    
                     if (localId > prevLocalId)
                     {
                         filesWithMessagesCnt++;
@@ -184,32 +186,40 @@ namespace UIUCLibrary.EaPdf
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(xmlFilePath) ?? "");
                 }
-
-
-                using var xwriter = XmlWriter.Create(xmlFilePath, xset);
-
-                xwriter.WriteStartDocument();
+                
+                var xstream = new FileStream(xmlFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                var xwriter = XmlWriter.Create(xstream, xset);
+                
+                
+                xwriter.WriteStartDocument();  
 
                 WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
+
+                var mboxProps = new MboxProperties()
+                {
+                    GlobalId = globalId,
+                    AccountEmails = accntEmails,
+                    OutFilePath = xmlFilePath,
+                };
+                SetHashAlgorithm(mboxProps, xwriter);
 
                 foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
                 {
                     WriteInfoMessage(xwriter, $"Processing mbox file: {mboxFilePath}");
+                    mboxProps.MboxFilePath = mboxFilePath;
+                    mboxProps.MessageCount = 0;
 
-                    var mboxProps = new MboxProperties()
-                    {
-                        MboxFilePath = mboxFilePath,
-                        GlobalId = globalId,
-                        OutFilePath = xmlFilePath,
-                    };
-                    SetHashAlgorithm(mboxProps, xwriter);
-
-                    localId = ProcessMbox(mboxProps, xwriter, localId, messageList);
+                    localId = ProcessMbox(mboxProps, ref xwriter, ref xstream, localId, messageList);
                 }
 
                 xwriter.WriteEndElement(); //Account
 
                 xwriter.WriteEndDocument();
+                
+                xwriter.Flush();
+                xwriter.Close(); //this should close the underlying stream
+                xwriter.Dispose();
+                xstream.Dispose();
 
                 _logger.LogInformation("Output XML File: {xmlFilePath}, Total messages: {messageCount}", xmlFilePath, localId - startingLocalId);
             }
@@ -222,8 +232,7 @@ namespace UIUCLibrary.EaPdf
                 csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileNameWithoutExtension(fullMboxFolderPath) + "_stats.csv");
                 SaveStatsToCsv(csvFilePath);
             }
-
-
+            
             return localId;
         }
 
@@ -289,7 +298,8 @@ namespace UIUCLibrary.EaPdf
             }
 
 
-            using var xwriter = XmlWriter.Create(xmlFilePath, xset);
+            var xstream = new FileStream(xmlFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            var xwriter = XmlWriter.Create(xstream, xset);
 
             xwriter.WriteStartDocument();
 
@@ -305,11 +315,16 @@ namespace UIUCLibrary.EaPdf
             };
             SetHashAlgorithm(mboxProps, xwriter);
 
-            localId = ProcessMbox(mboxProps, xwriter, localId, messageList);
+            localId = ProcessMbox(mboxProps, ref xwriter, ref xstream, localId, messageList);
 
-            xwriter.WriteEndElement(); //Account
+            xwriter.WriteEndElement(); //WriteXmlAccountHeaderFields
 
             xwriter.WriteEndDocument();
+            
+            xwriter.Flush();
+            xwriter.Close(); //this should close the underlying stream
+            xwriter.Dispose();
+            xstream.Dispose();
 
             //write the csv file
             if (saveCsv)
@@ -360,7 +375,7 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}, OneFilePerMbox: {Settings.OneFilePerMbox}");
                 xwriter.WriteStartElement("Account", XM_NS);
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
-                foreach (var addr in accntEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                foreach (var addr in accntEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     xwriter.WriteElementString("EmailAddress", XM_NS, addr);
                 }
@@ -368,9 +383,23 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private long ProcessMbox(MboxProperties mboxProps, XmlWriter xwriter, long localId, List<MessageBrief> messageList)
+        /// <summary>
+        /// Write nested folders as needed according the _folders stack
+        /// </summary>
+        /// <param name="xwriter"></param>
+        private void WriteFolders(XmlWriter xwriter)
+        {
+            foreach(var fld in _folders.Reverse())
+            {
+                xwriter.WriteStartElement("Folder", XM_NS);
+                xwriter.WriteElementString("Name", XM_NS, fld);
+            }
+        }
+
+        private long ProcessMbox(MboxProperties mboxProps, ref XmlWriter xwriter, ref FileStream xstream, long localId, List<MessageBrief> messageList)
         {
 
+            _folders.Push(mboxProps.MboxName);
             xwriter.WriteStartElement("Folder", XM_NS);
             xwriter.WriteElementString("Name", XM_NS, mboxProps.MboxName);
 
@@ -406,6 +435,45 @@ namespace UIUCLibrary.EaPdf
 
                 while (!parser.IsEndOfStream)
                 {
+                    if (Settings.MaximumXmlFileSizeThreshold > 0 && xstream.Position >= Settings.MaximumXmlFileSizeThreshold)
+                    {
+                        var origXmlFilePath = mboxProps.OutFilePath;
+
+                        //increment the file number; this also updates the OutFilePath
+                        var fileNum = mboxProps.IncrementOutFileNumber();
+                        
+                        var newXmlFilePath = mboxProps.OutFilePath;
+                        
+                        //close any opened folder elements
+                        for (int c = 0; c < _folders.Count; c++)
+                        {
+                            xwriter.WriteEndElement(); //Folder
+                        }
+                        
+                        xwriter.WriteProcessingInstruction("ContinuedIn",$"'{Path.GetFileName(newXmlFilePath)}'");
+
+                        //close the current xml file and start a new one
+                        xwriter.WriteEndDocument(); //should write out any unclosed elements
+                        xwriter.Flush();
+                        xwriter.Close(); //this should close the underlying stream
+                        xwriter.Dispose();
+                        xstream.Dispose();
+                        
+                        xstream = new FileStream(newXmlFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                        var xset = new XmlWriterSettings()
+                        {
+                            CloseOutput = true,
+                            Indent = true,
+                            Encoding = System.Text.Encoding.UTF8
+                        };
+                        xwriter = XmlWriter.Create(xstream, xset);
+                        xwriter.WriteStartDocument();
+                        xwriter.WriteProcessingInstruction("ContinuedFrom", $"'{Path.GetFileName(origXmlFilePath)}'");
+                        WriteXmlAccountHeaderFields(xwriter, mboxProps.GlobalId, mboxProps.AccountEmails);
+                        WriteInfoMessage(xwriter, $"Processing mbox file: {mboxProps.MboxFilePath}");
+                        WriteFolders(xwriter);
+                    }
+
                     try
                     {
 
@@ -457,7 +525,6 @@ namespace UIUCLibrary.EaPdf
                         WriteErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message}");
                         break; //some error we probably can't recover from, so just bail
                     }
-
 
                     if (prevMessage != null)
                     {
@@ -530,18 +597,16 @@ namespace UIUCLibrary.EaPdf
                             //this is all the files, so need to determine which ones are mbox files or not
                             foreach (var childMbox in childMboxes)
                             {
-                                //create new MboxProperties which is copy of parent MboxProperties except for the MboxFilePath
-                                MboxProperties childMboxProps = new MboxProperties()
+                                //create new MboxProperties which is copy of parent MboxProperties except for the MboxFilePath and the checksum hash
+                                MboxProperties childMboxProps = new MboxProperties(mboxProps)
                                 {
-                                    MboxFilePath = childMbox,
-                                    GlobalId = mboxProps.GlobalId,
-                                    OutFilePath = mboxProps.OutFilePath,
+                                    MboxFilePath = childMbox
                                 };
-                                SetHashAlgorithm(mboxProps, xwriter);
+                                SetHashAlgorithm(childMboxProps, xwriter);
 
                                 //just try to process it, if no errors thrown, its probably an mbox file
                                 WriteInfoMessage(xwriter, $"Processing Child Mbox: {childMbox}");
-                                localId = ProcessMbox(childMboxProps, xwriter, localId, messageList);
+                                localId = ProcessMbox(childMboxProps, ref xwriter, ref xstream, localId, messageList);
                             }
                         }
 
@@ -555,7 +620,10 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteElementString("Eol", XM_NS, mboxProps.MostCommonEol);
                 if (mboxProps.UsesDifferentEols)
                 {
-                    WriteWarningMessage(xwriter, $"Mbox file contains multiple different EOLs: CR: {mboxProps.EolCounts["CR"]}, LF: {mboxProps.EolCounts["LF"]}, CRLF: {mboxProps.EolCounts["CRLF"]}");
+                    mboxProps.EolCounts.TryGetValue("CR", out int crCount);
+                    mboxProps.EolCounts.TryGetValue("LF", out int lfCount);
+                    mboxProps.EolCounts.TryGetValue("CRLF", out int crlfCount);
+                    WriteWarningMessage(xwriter, $"Mbox file contains multiple different EOLs: CR: {crCount}, LF: {lfCount}, CRLF: {crlfCount}");
                 }
                 if (mboxProps.HashAlgorithm.Hash != null)
                 {
@@ -573,6 +641,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             xwriter.WriteEndElement(); //Folder
+            _folders.Pop();
 
             return localId;
         }
@@ -1358,7 +1427,9 @@ namespace UIUCLibrary.EaPdf
             //create folder if needed
             Directory.CreateDirectory(Path.GetDirectoryName(hashFileName) ?? "");
 
-            //TODO: It would be good for performance to do this check prior to actually saving the temporary files
+            //FUTURE: It might be good for performance to do this check prior to actually saving the temporary files
+            //        Right now the hash is created by saving the temporary file, so this would require multiple passes through the stream, one to generate the hash and another to actually save it if needed
+            
             //Deal with duplicate attachments, which should only be stored once, make sure the randomFilePath file is deleted
             if (File.Exists(hashFileName))
             {

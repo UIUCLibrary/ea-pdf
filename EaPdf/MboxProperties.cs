@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace UIUCLibrary.EaPdf
@@ -21,6 +22,19 @@ namespace UIUCLibrary.EaPdf
             //init the hash algorithm
             HashAlgorithm = SHA256.Create();
             HashAlgorithmName = "SHA256";
+        }
+
+        /// <summary>
+        /// Create new MboxProperties from an existing MBoxProperties 
+        /// </summary>
+        /// <param name="source"></param>
+        public MboxProperties(MboxProperties source) : this()
+        {
+            this.MboxFilePath = source.MboxFilePath;
+            this.OutFilePath = source.OutFilePath;
+            this.OutFileNumber = source.OutFileNumber;
+            this.AccountEmails = source.AccountEmails;
+            this.GlobalId = source.GlobalId;
         }
 
         /// <summary>
@@ -76,19 +90,80 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
-        /// The path to the the output output XML file
+        /// Comma-separated list email addresses associated with the account
+        /// </summary>
+        public string AccountEmails { get; set; } = "";
+
+        /// <summary>
+        /// Return the AccountEmails as a enumerable of strings
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<string> GetAccountEmails()
+        {
+            return AccountEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        public int OutFileNumber { get; private set; } = 0;
+        public int IncrementOutFileNumber()
+        {
+            var origOutFilePath = OriginalOutFilePath;
+
+            OutFileNumber++;
+
+            if (OutFileNumber > 9999)
+                throw new Exception("No more than 9999 file are supported.");
+            
+            //Update the OutFilePath to add the file number
+            var ext = Path.GetExtension(OutFilePath);
+            OutFilePath = Path.Combine(OutDirectoryName, Path.GetFileNameWithoutExtension(origOutFilePath) + "_" + OutFileNumber.ToString("0000") + ext);
+            
+            return OutFileNumber;
+        }
+
+
+        /// <summary>
+        /// The path to the output XML file.
         /// Note that the other output files, such as the CSV or external attachments, will be in the same directory
         /// </summary>
         public string OutFilePath { get; set; } = "";
 
         /// <summary>
-        /// The name of the directory containing the output output XML file
+        /// The name of the directory containing the output XML file
         /// </summary>
         public string OutDirectoryName
         {
             get
             {
                 return System.IO.Path.GetDirectoryName(OutFilePath) ?? "";
+            }
+        }
+
+        /// <summary>
+        /// Return the original OutFilePath prior to any FileNumber increments
+        /// </summary>
+        public string OriginalOutFilePath 
+        {
+            get
+            {
+                var ret = OutFilePath;
+
+                if (OutFileNumber > 0)
+                {
+                    //strip off the file number from the end
+                    var ext = Path.GetExtension(OutFilePath);
+                    var name = Path.GetFileNameWithoutExtension(OutFilePath);
+                    if (Regex.IsMatch(name,"_\\d\\d\\d\\d$"))
+                    {
+                        name = name[..^5];
+                    }
+                    else
+                    {
+                        throw new Exception($"Unexpected filename format '{name}'.  It should end like '*_nnnn'.");
+                    }
+                    ret = Path.Combine(OutDirectoryName, name + ext);
+                }
+
+                return ret;
             }
         }
 
@@ -178,5 +253,6 @@ namespace UIUCLibrary.EaPdf
         /// The number of valid messages found in the mbox
         /// </summary>
         public int MessageCount { get; set; } = 0;
+
     }
 }
