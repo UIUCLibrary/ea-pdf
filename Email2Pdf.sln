@@ -444,6 +444,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Weird", "Weird", "{9BF31E2B
 		SampleFiles\Testing\Weird\virus_notif.mbox = SampleFiles\Testing\Weird\virus_notif.mbox
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EaPdfCmd", "EaPdfCmd\EaPdfCmd.csproj", "{ECF4C91E-C503-457F-99E2-BC16B91801A3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -460,6 +462,10 @@ Global
 		{78295937-D598-42E5-B896-7948EBE30972}.Release|Any CPU.Build.0 = Release|Any CPU
 		{27A815E6-00A3-4B5C-863A-946EC0012B68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{27A815E6-00A3-4B5C-863A-946EC0012B68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECF4C91E-C503-457F-99E2-BC16B91801A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECF4C91E-C503-457F-99E2-BC16B91801A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECF4C91E-C503-457F-99E2-BC16B91801A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECF4C91E-C503-457F-99E2-BC16B91801A3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
