@@ -54,12 +54,15 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// Approximate maximum allowable size for the output XML files, in bytes.  If the size of the XML file exceeds this value, it will be split into multiple files.
-        /// Actual file sizes will be within 5% of this value, so plan accordingly.
-        /// A value less than or equal to zero means no limit.
+        /// A value less than or equal to zero means no limit. The actual threshold for splitting will be with 5% of this value, <see cref="MaximumXmlFileSizeThreshold"/>
         /// </summary>
         public long MaximumXmlFileSize { get; set; } = 1024 * 1024 * 1024; // 1GB
 
-        
+
+        /// <summary>
+        /// When this output file size threshold is reached, the file will be split into multiple files
+        /// It is within 5% of the <see cref="MaximumXmlFileSize"/>
+        /// </summary>
         public long MaximumXmlFileSizeThreshold
         {
             get
