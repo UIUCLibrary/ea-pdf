@@ -46,6 +46,8 @@ namespace UIUCLibrary.EaPdf
         const string EX_MBOX_FROM_MARKER = "Failed to find mbox From marker";
         const string EX_MBOX_PARSE_HEADERS = "Failed to parse message headers";
 
+        const string MBX_PARSE_EOS = "End of stream reached";
+
         public EmailToXmlProcessorSettings Settings { get; }
 
         //stats used for development and debuging
@@ -154,7 +156,7 @@ namespace UIUCLibrary.EaPdf
                 foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
                 {
                     localId = ConvertMboxToEaxs(mboxFilePath, fullOutFolderPath, globalId, accntEmails, localId, messageList, false);
-                    
+
                     if (localId > prevLocalId)
                     {
                         filesWithMessagesCnt++;
@@ -186,12 +188,12 @@ namespace UIUCLibrary.EaPdf
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(xmlFilePath) ?? "");
                 }
-                
+
                 var xstream = new FileStream(xmlFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
                 var xwriter = XmlWriter.Create(xstream, xset);
-                
-                
-                xwriter.WriteStartDocument();  
+
+
+                xwriter.WriteStartDocument();
 
                 WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
 
@@ -215,7 +217,7 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteEndElement(); //Account
 
                 xwriter.WriteEndDocument();
-                
+
                 xwriter.Flush();
                 xwriter.Close(); //this should close the underlying stream
                 xwriter.Dispose();
@@ -232,7 +234,7 @@ namespace UIUCLibrary.EaPdf
                 csvFilePath = Path.Combine(fullOutFolderPath, Path.GetFileNameWithoutExtension(fullMboxFolderPath) + "_stats.csv");
                 SaveStatsToCsv(csvFilePath);
             }
-            
+
             return localId;
         }
 
@@ -320,7 +322,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteEndElement(); //WriteXmlAccountHeaderFields
 
             xwriter.WriteEndDocument();
-            
+
             xwriter.Flush();
             xwriter.Close(); //this should close the underlying stream
             xwriter.Dispose();
@@ -350,7 +352,7 @@ namespace UIUCLibrary.EaPdf
                     csv.WriteRecords(contentTypeCounts);
                 }
             }
-            
+
             using (var writer = new StreamWriter(csvFilepath, true))
             {
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
@@ -389,11 +391,100 @@ namespace UIUCLibrary.EaPdf
         /// <param name="xwriter"></param>
         private void WriteFolders(XmlWriter xwriter)
         {
-            foreach(var fld in _folders.Reverse())
+            foreach (var fld in _folders.Reverse())
             {
                 xwriter.WriteStartElement("Folder", XM_NS);
                 xwriter.WriteElementString("Name", XM_NS, fld);
             }
+        }
+
+        /// <summary>
+        /// Return values from the Pine mbx message header
+        /// The stream is assumed to be positioned at the start of the header
+        /// </summary>
+        /// <param name="strm">the stream positioned at the start of the header</param>
+        /// <param name="date">header date</param>
+        /// <param name="size">header message size</param>
+        /// <param name="keywords">header keywords</param>
+        /// <param name="flags">header flags</param>
+        /// <param name="uid">header UID</param>
+        /// <param name="reason">the reason the parse failed</param>
+        /// <returns>True if the header was successfully parsed</returns>
+        private bool TryParseMbxMessageHeader(Stream strm, out DateTime? date, out int? size, out uint? keywords, out ushort? flags, out uint? uid, out string reason)
+        {
+            bool ret = false;
+
+            date = null;
+            size = null;
+            keywords = null;
+            flags = null;
+            uid = null;
+            reason = "OK";
+
+            //read the message header from the stream, encoded as ASCII so no fancy parsing is needed
+            int i = -1;
+            var headerBldr = new StringBuilder();
+            while (i != '\n') //lines should end in \r\n
+            {
+                i = strm.ReadByte();
+                if (i == -1) break;
+                headerBldr.Append((char)i);
+            }
+
+            var msgHeader = headerBldr.ToString();
+
+            if (i == -1 && !string.IsNullOrWhiteSpace(msgHeader))
+            {
+                reason = $"End of stream reached before message header '{msgHeader}' was parsed";
+                return false;
+            }
+
+            if (i == -1 && string.IsNullOrWhiteSpace(msgHeader))
+            {
+                reason = "End of stream reached";
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(msgHeader))
+            {
+                reason = "Empty message header";
+                return false;
+            }
+
+
+            if (msgHeader[^2..^0] != "\r\n") {
+                reason = "Message header does not end in \\r\\n";
+                ret= false;
+            }
+            else
+            {
+                msgHeader = msgHeader[0..^2]; //remove the \r\n
+
+                var msgParts = msgHeader.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (msgParts.Length == 3)
+                {
+                    try
+                    {
+                        date = DateTime.Parse(msgParts[0]);
+                        size = int.Parse(msgParts[1]);
+                        keywords = uint.Parse(msgParts[2][0..8], NumberStyles.AllowHexSpecifier);
+                        flags = ushort.Parse(msgParts[2][8..12], NumberStyles.AllowHexSpecifier);
+                        uid = uint.Parse(msgParts[2][13..21], NumberStyles.AllowHexSpecifier);
+                        ret = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        reason = ex.Message;
+                        ret = false;
+                    }
+                }
+                else
+                {
+                    reason = $"Message header '{msgHeader}' does not have 3 parts";
+                    ret = false;
+                }
+            }
+            
+            return ret;
         }
 
         private long ProcessMbox(MboxProperties mboxProps, ref XmlWriter xwriter, ref FileStream xstream, long localId, List<MessageBrief> messageList)
@@ -415,8 +506,47 @@ namespace UIUCLibrary.EaPdf
             mboxStream.Read(magic, 0, magic.Length);
             if (magic.SequenceEqual(mbx))
             {
-                //This is a Pine *mbx* file, so we can just skip it
-                WriteWarningMessage(xwriter, $"File '{mboxProps.MboxFilePath}' is a Pine *mbx* file which cannot be parsed as an mbox file");
+                //This is a Pine *mbx* file, so it requires special parsing
+                WriteInfoMessage(xwriter, $"File '{mboxProps.MboxFilePath}' is a Pine *mbx* file; using an alternate parsing strategy");
+
+                mboxStream.Position = 0; //reset file stream position to the start
+                using CryptoStream cryptoStream = new CryptoStream(mboxStream, mboxProps.HashAlgorithm, CryptoStreamMode.Read);
+
+                //skip the first 2048 bytes, which is the mbx header
+                var mbxHeader = new byte[2048];
+                cryptoStream.Read(mbxHeader, 0, mbxHeader.Length);
+
+                DateTime? msgDate;
+                int? msgSize;
+                uint? msgKeywords;
+                ushort? msgSystemFlags;
+                uint? msgUid;
+                string reason;
+
+                while (TryParseMbxMessageHeader(cryptoStream, out msgDate, out msgSize, out msgKeywords, out msgSystemFlags, out msgUid, out reason))
+                {
+                    long startPos = mboxStream.Position;
+                    long endPos = startPos + msgSize ?? 0;
+
+                    var boundStream = new MimeKit.IO.BoundStream(cryptoStream, startPos, endPos, true);
+
+                    var parser = new MimeParser(boundStream, MimeFormat.Entity);
+
+                    parser.MimeMessageEnd += (sender, e) => MimeMessageEndEventHandler(sender, e, mboxStream, mboxProps, msgProps);
+
+                    var message = parser.ParseMessage();
+
+                    localId = ProcessCurrentMessage(message, xwriter, localId, messageList, mboxProps, msgProps);
+                    mboxProps.MessageCount++;
+
+                }
+
+                if (reason != MBX_PARSE_EOS)
+                {
+                    WriteWarningMessage(xwriter, $"Failed to completely parse the *mbx* file: '{reason}'  Offset: {mboxStream.Position}");
+                }
+
+                //TODO: Needs refactoring so I can do all the other processesing needed for a normal mbox file, like subfolders, mbox element with checksums, splitting files, etc.
             }
             else
             {
@@ -441,16 +571,16 @@ namespace UIUCLibrary.EaPdf
 
                         //increment the file number; this also updates the OutFilePath
                         var fileNum = mboxProps.IncrementOutFileNumber();
-                        
+
                         var newXmlFilePath = mboxProps.OutFilePath;
-                        
+
                         //close any opened folder elements
                         for (int c = 0; c < _folders.Count; c++)
                         {
                             xwriter.WriteEndElement(); //Folder
                         }
-                        
-                        xwriter.WriteProcessingInstruction("ContinuedIn",$"'{Path.GetFileName(newXmlFilePath)}'");
+
+                        xwriter.WriteProcessingInstruction("ContinuedIn", $"'{Path.GetFileName(newXmlFilePath)}'");
 
                         //close the current xml file and start a new one
                         xwriter.WriteEndDocument(); //should write out any unclosed elements
@@ -458,7 +588,7 @@ namespace UIUCLibrary.EaPdf
                         xwriter.Close(); //this should close the underlying stream
                         xwriter.Dispose();
                         xstream.Dispose();
-                        
+
                         xstream = new FileStream(newXmlFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
                         var xset = new XmlWriterSettings()
                         {
@@ -741,7 +871,7 @@ namespace UIUCLibrary.EaPdf
             {
                 xGmailLabelComboCounts.TryGetValue(lbl, out int combocount);
                 xGmailLabelComboCounts[lbl] = combocount + 1;
-                
+
                 var lbls = lbl.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 foreach (var l in lbls)
                 {
@@ -924,9 +1054,22 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteStartElement("SingleBody", XM_NS);
             }
 
+
             xwriter.WriteStartAttribute("IsAttachment");
             xwriter.WriteValue(mimeEntity.IsAttachment);
             xwriter.WriteEndAttribute();
+
+            //check for invalid content-type and content-transfer-encoding combinations
+            ContentEncoding[] allowedEnc = { ContentEncoding.SevenBit, ContentEncoding.EightBit, ContentEncoding.Binary };
+            if (mimeEntity.ContentType.IsMimeType("message", "rfc822") && part != null && message == null && !allowedEnc.Contains(part.ContentTransferEncoding))
+            {
+                //FROM THE MIMEKIT DOCUMENTATION
+                // Note: message/rfc822 and message/partial are not allowed to be encoded according to rfc2046
+                // (sections 5.2.1 and 5.2.2, respectively). Since some broken clients will encode them anyway,
+                // it is necessary for us to treat those as opaque blobs instead, and thus the parser should
+                // parse them as normal MimeParts instead of MessageParts.
+                WriteWarningMessage(xwriter, $"A 'message/rfc822' part was found with an unallowable content-transfer-encoding of '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding)}'.  The part will be treated as normal content instead of as a child message.");
+            }
 
             WriteMimeContentType(xwriter, mimeEntity, isMultipart);
 
@@ -1429,7 +1572,7 @@ namespace UIUCLibrary.EaPdf
 
             //FUTURE: It might be good for performance to do this check prior to actually saving the temporary files
             //        Right now the hash is created by saving the temporary file, so this would require multiple passes through the stream, one to generate the hash and another to actually save it if needed
-            
+
             //Deal with duplicate attachments, which should only be stored once, make sure the randomFilePath file is deleted
             if (File.Exists(hashFileName))
             {

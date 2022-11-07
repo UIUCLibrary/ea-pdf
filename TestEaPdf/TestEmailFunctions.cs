@@ -46,9 +46,17 @@ namespace UIUCLibrary.TestEaPdf
         [TestCleanup]
         public void EndTest()
         {
-            if (logger != null) logger.LogDebug("Ending Test");
+            if (logger != null) 
+            {
+                logger.LogDebug($"Information: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count()}");
+                logger.LogDebug($"Warnings: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count()}");
+                logger.LogDebug($"Errors: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count()}");
+                logger.LogDebug("Ending Test"); 
+            }
             if (loggerFactory != null) loggerFactory.Dispose();
         }
+
+        //TODO:  Determine the current number of errors and warnings for each test so that we can determine if any changes are legit in the future.
 
         //Mozilla mbox with child mboxes, different combinations of settings
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, true, false, 0, 9, -1, DisplayName = "moz-dlf-sha256----includeSubs")]
@@ -71,9 +79,9 @@ namespace UIUCLibrary.TestEaPdf
 
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, 0, 1, -1, DisplayName = "pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
-        [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-jul-2006")] //not an mbox file
-        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-aug-2007")] //not an mbox file
-        [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, 0, 1, 0, DisplayName = "pine-sent-mail-jun-2004")] //not an mbox file
+        [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, 0, 0, 466, DisplayName = "pine-sent-mail-jul-2006")] //not an mbox file
+        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, 0, 5, 929, DisplayName = "pine-sent-mail-aug-2007")] //not an mbox file
+        [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, 0, 1, 418, DisplayName = "pine-sent-mail-jun-2004")] //not an mbox file
 
         //Gmail Exports
         [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, 0, -1, -1, DisplayName = "gmail-mbox")] //gmail mbox export file
@@ -445,9 +453,23 @@ namespace UIUCLibrary.TestEaPdf
                         Assert.IsTrue(nodes != null && nodes.Count > 0);
                         foreach (XmlElement node in nodes)
                         {
+
+                            var id = node.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
+                            
+                            logger.LogDebug($"RFC822 Message Id: {id}");
+
                             Assert.IsNull(node.SelectSingleNode("xm:ExtBodyContent", xmlns));
 
-                            Assert.IsNotNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage | xm:DeliveryStatus | xm:PhantomBody", xmlns));
+                            //unless this is a 'text/rfc822-headers', make sure there is a body
+                            if (node.SelectSingleNode($"ancestor::xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'text/rfc822-headers']", xmlns) == null)
+                            {
+                                Assert.IsNotNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage | xm:DeliveryStatus | xm:PhantomBody", xmlns));
+                            }
+                            else
+                            {
+                                Assert.IsNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage | xm:DeliveryStatus | xm:PhantomBody", xmlns));
+                            }
+
 
                             //Test the preserve transfer encoding setting
                             var enc = node.SelectSingleNode("xm:BodyContent/xm:TransferEncoding", xmlns)?.InnerText;
@@ -479,12 +501,20 @@ namespace UIUCLibrary.TestEaPdf
                         foreach (XmlElement nd in rfc822Nds)
                         {
                             var id = nd.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
-
+                            
                             logger.LogDebug($"RFC822 Message Id: {id}");
+                            
+                            var encoding = nd.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText ?? "";
+                            if (!new[]{"7bit", "8bit", "binary", ""}.Contains(encoding))
+                            {
+                                //if the encoding is anything other than 7bit, 8bit, or binary, it is treated as normal BodyContent
+                                Assert.IsNotNull(nd.SelectSingleNode("xm:BodyContent", xmlns));
+                                continue;
+                            }
 
                             var childNds = nd.SelectNodes("xm:ChildMessage", xmlns);
                             Assert.IsNotNull(childNds);
-                            Assert.IsTrue(childNds.Count == 1);
+                            Assert.AreEqual(1,childNds.Count);
 
                             //if the mime type is text/rfc822-headers, make sure the ChildMessage has no content, it might have a body but it should be empty
                             if (nd.SelectSingleNode("xm:ContentType", xmlns)?.InnerText.ToLower() == "text/rfc822-headers")

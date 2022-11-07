@@ -1,0 +1,57 @@
+<Playlist Version="2.0">
+  <Rule Name="Includes" Match="Any">
+    <Rule Match="All">
+      <Property Name="Solution" />
+      <Rule Match="Any">
+        <Rule Match="All">
+          <Property Name="Project" Value="TestEaPdf" />
+          <Rule Match="Any">
+            <Rule Match="All">
+              <Property Name="Namespace" Value="UIUCLibrary.TestEaPdf" />
+              <Rule Match="Any">
+                <Rule Match="All">
+                  <Property Name="Class" Value="TestEmailToXmlFunctions" />
+                  <Rule Match="Any">
+                    <Rule Match="All">
+                      <Property Name="TestWithNormalizedFullyQualifiedName" Value="UIUCLibrary.TestEaPdf.TestEmailToXmlFunctions.TestSampleFiles" />
+                      <Rule Match="Any">
+                        <Property Name="DisplayName" Value="moz-dlf-sha256----includeSubs" />
+                        <Property Name="DisplayName" Value="moz-dlf-sha256-ext---includeSubs" />
+                        <Property Name="DisplayName" Value="moz-dlf-sha256" />
+                        <Property Name="DisplayName" Value="moz-dlf-sha1" />
+                        <Property Name="DisplayName" Value="moz-dlf-sha256-ext" />
+                        <Property Name="DisplayName" Value="moz-dlf-sha256-ext-wrap" />
+                        <Property Name="DisplayName" Value="moz-dlf-sha256---presvEnc" />
+                        <Property Name="DisplayName" Value="moz-dlf-sha256-ext-wrap-presvEnc" />
+                        <Property Name="DisplayName" Value="moz-drafts" />
+                        <Property Name="DisplayName" Value="moz-inbox" />
+                        <Property Name="DisplayName" Value="pine-folder-one-file" />
+                        <Property Name="DisplayName" Value="pine-folder-one-file-per-in-subfolder" />
+                        <Property Name="DisplayName" Value="pine-folder-one-file-in-subfolder" />
+                        <Property Name="DisplayName" Value="pine-sent-mail-mar-2000" />
+                        <Property Name="DisplayName" Value="pine-sent-mail-jul-2006" />
+                        <Property Name="DisplayName" Value="pine-sent-mail-aug-2007" />
+                        <Property Name="DisplayName" Value="pine-sent-mail-jun-2004" />
+                        <Property Name="DisplayName" Value="gmail-mbox" />
+                        <Property Name="DisplayName" Value="gmail-emls" />
+                        <Property Name="DisplayName" Value="gmail-emls-2016-06-23-143920-d3eb274969" />
+                        <Property Name="DisplayName" Value="weird-spam-hexa-mbox" />
+                        <Property Name="DisplayName" Value="weird-virus-notif-mbox" />
+                        <Property Name="DisplayName" Value="weird-missing-ext-mbox" />
+                        <Property Name="DisplayName" Value="weird-missing-ext2-mbox" />
+                        <Property Name="DisplayName" Value="weird-virus_payload-mbox" />
+                        <Property Name="DisplayName" Value="weird-rfc822headers-mbox" />
+                        <Property Name="DisplayName" Value="weird-rfc822headers2-mbox" />
+                        <Property Name="DisplayName" Value="moz-dlf-sha256----includeSubs-10000000" />
+                      </Rule>
+                    </Rule>
+                  </Rule>
+                </Rule>
+              </Rule>
+            </Rule>
+          </Rule>
+        </Rule>
+      </Rule>
+    </Rule>
+  </Rule>
+</Playlist>
