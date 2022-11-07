@@ -6,12 +6,6 @@ using System;
 using System.CommandLine;
 using UIUCLibrary.EaPdf;
 
-//init the host
-var host = Host.CreateDefaultBuilder(args)
-    .Build();
-
-//get the logger
-var logger = host.Services.GetRequiredService<ILogger<EmailToXmlProcessor>>();
 
 
 //set up command line options
@@ -23,7 +17,7 @@ var outFolder = new Option<DirectoryInfo>("--out", "The output folder to write t
 {
     IsRequired = true
 };
-var globalId = new Option<Uri>("--globalId", "The global URI that identifies the email account")
+var globalId = new Option<Uri>("--global-id", "The global URI that identifies the email account")
 {
     IsRequired = true
 };
@@ -31,9 +25,15 @@ var addresses = new Option<IEnumerable<string>>("--address", "The email address(
 {
     IsRequired = false
 };
-var startAt = new Option<long>("--startAt", () => 0, "The starting integer to use for local message ids in the output")
+var startAt = new Option<long>("--start-at", () => 0, "The starting integer to use for local message ids in the output")
 {
-    IsRequired = false,
+    IsRequired = false
+};
+
+//TODO: Refine how loglevel is used, maybe use the more standard verbosity param https://learn.microsoft.com/en-us/dotnet/standard/commandline/syntax#the---verbosity-option  
+var logLevel = new Option<LogLevel>("--log-level", () => LogLevel.Information, "The logging level to use")
+{
+    IsRequired=false
 };
 
 //create the root command
@@ -43,6 +43,13 @@ rootCommand.Add(outFolder);
 rootCommand.Add(globalId);
 rootCommand.Add(addresses);
 rootCommand.Add(startAt);
+
+//init the host
+var host = Host.CreateDefaultBuilder(args)
+    .Build();
+
+//get the logger
+var logger = host.Services.GetRequiredService<ILogger<EmailToXmlProcessor>>();
 
 rootCommand.SetHandler((mboxFilePath, outFolderPath, globalId, accntEmails, startingLocalId) => 
 {
