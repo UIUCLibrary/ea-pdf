@@ -90,6 +90,43 @@ namespace UIUCLibrary.EaPdf.Helpers
         const string MAILER_UNKNOWN = "Unknown";
 
         /// <summary>
+        /// Return true if the stream contains a Pine *mbx* file
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static bool IsStreamAnMbx(Stream stream)
+        {
+            bool ret = false;
+            
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            if (stream.CanSeek == false)
+            {
+                throw new ArgumentException("Stream must be seekable", nameof(stream));
+            }
+
+            //see if the stream contains an *mbx* header at the beginning
+            var origPos = stream.Position;
+            stream.Position = 0;
+            byte[] magic = new byte[5];
+            byte[] mbx = { 0x2a, 0x6d, 0x62, 0x78, 0x2a }; // *mbx* - Pine email format
+            stream.Read(magic, 0, magic.Length);
+            if (magic.SequenceEqual(mbx))
+            {
+                ret= true;
+            }
+
+            //reset the stream to its origional position and return
+            stream.Position = origPos;
+            return ret;
+        }
+
+        /// <summary>
         /// Based on message headers try to determine which email system or email client generated the MIME message or mbox file
         /// </summary>
         /// <param name="message"></param>

@@ -80,7 +80,7 @@ namespace UIUCLibrary.TestEaPdf
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, 0, 1, -1, DisplayName = "pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
         [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, 0, 0, 466, DisplayName = "pine-sent-mail-jul-2006")] //not an mbox file
-        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, 0, 5, 929, DisplayName = "pine-sent-mail-aug-2007")] //not an mbox file
+        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, 0, 6, 1300, DisplayName = "pine-sent-mail-aug-2007")] //not an mbox file
         [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, 0, 1, 418, DisplayName = "pine-sent-mail-jun-2004")] //not an mbox file
 
         //Gmail Exports
@@ -174,9 +174,9 @@ namespace UIUCLibrary.TestEaPdf
                 {
                     validMessageCount = eProc.ConvertFolderOfMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                     if (expectedCounts == -1)
-                        Assert.IsTrue(validMessageCount > 0);
+                        Assert.IsTrue(validMessageCount > 0, "Expected some valid messages");
                     else
-                        Assert.AreEqual(expectedCounts, validMessageCount);
+                        Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
                 }
                 else if (File.Exists(sampleFile))
                 {
@@ -292,12 +292,12 @@ namespace UIUCLibrary.TestEaPdf
                     if (expectedErrors <= -1)
                         Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count() >= -expectedErrors, "Expected some errors");
                     else
-                        Assert.AreEqual(expectedErrors, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count());
+                        Assert.AreEqual(expectedErrors, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count(), "Expected error count does not match");
 
                     if (expectedWarnings <= -1)
                         Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count() >= -expectedWarnings, "Expected some warnings");
                     else
-                        Assert.AreEqual(expectedWarnings, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count());
+                        Assert.AreEqual(expectedWarnings, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count(), "Expected warning count does not match");
 
                     //if there are no messages in the file, we can skip the rest of the tests
                     if (validMessageCount == 0)
