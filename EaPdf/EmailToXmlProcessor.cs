@@ -47,8 +47,6 @@ namespace UIUCLibrary.EaPdf
         const string EX_MBOX_FROM_MARKER = "Failed to find mbox From marker";
         const string EX_MBOX_PARSE_HEADERS = "Failed to parse message headers";
 
-        const string MBX_PARSE_EOS = "End of stream reached";
-
         public EmailToXmlProcessorSettings Settings { get; }
 
         //stats used for development and debuging
@@ -418,7 +416,7 @@ namespace UIUCLibrary.EaPdf
                 //This is a Pine *mbx* file, so it requires special parsing
                 WriteInfoMessage(xwriter, $"File '{mboxProps.MboxFilePath}' is a Pine *mbx* file; using an alternate parsing strategy");
 
-                var mbxParser = new MbxParser(mboxStream, mboxProps.HashAlgorithm);
+                using var mbxParser = new MbxParser(mboxStream, mboxProps.HashAlgorithm);
 
                 mbxParser.MimeMessageEnd += (sender, e) => MimeMessageEndEventHandler(sender, e, mboxStream, mboxProps, msgProps, true);
 

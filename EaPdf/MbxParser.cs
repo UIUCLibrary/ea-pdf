@@ -12,11 +12,17 @@ using System.Diagnostics;
 namespace UIUCLibrary.EaPdf
 {
 
-    internal class MbxParser
+    internal class MbxParser : IDisposable
     {
         private Stream _baseStream;
         private CryptoStream _cryptoStream;
         private MbxMessageHeader? _currentHeader;
+
+        private MbxParserState _prevMessageState = MbxParserState.Normal;
+
+        public event EventHandler<MimeMessageEndEventArgs>? MimeMessageEnd;
+
+        private bool disposedValue;
 
         private enum MbxParserState
         {
@@ -32,8 +38,6 @@ namespace UIUCLibrary.EaPdf
             InvalidFormat
         }
 
-        private MbxParserState _prevMessageState = MbxParserState.Normal;
-
         public MbxParser(Stream baseStream, HashAlgorithm hashAlgo)
         {
             if (baseStream == null)
@@ -46,7 +50,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             _baseStream = baseStream;
-            _cryptoStream = new CryptoStream(baseStream, hashAlgo, CryptoStreamMode.Read);
+            _cryptoStream = new CryptoStream(baseStream, hashAlgo, CryptoStreamMode.Read, true);
 
             //skip the first 2048 bytes, which is the mbx file header
             var mbxHeader = new byte[2048];
@@ -79,10 +83,8 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        public event EventHandler<MimeMessageEndEventArgs>? MimeMessageEnd;
 
         private string _overflowText = "";
-
         public string OverflowText
         {
             get
@@ -260,7 +262,37 @@ namespace UIUCLibrary.EaPdf
             return ret;
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // dispose managed state (managed objects)
+                    if (_cryptoStream != null)
+                    {
+                        _cryptoStream.Dispose();
+                    }
+                }
 
-        
+                // If needed, free unmanaged resources (unmanaged objects) and override finalizer
+                // If needed, set large fields to null
+                disposedValue = true;
+            }
+        }
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~MbxParser()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }
