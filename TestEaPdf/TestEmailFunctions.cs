@@ -623,7 +623,9 @@ namespace UIUCLibrary.TestEaPdf
                 foreach (XmlElement message in messages)
                 {
                     var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
-                    Assert.IsNotNull(draft);
+                    var deleted = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Deleted']", xmlns);
+                    //if it is deleted, it may not be marked as draft even if it is in the draft folder
+                    Assert.IsTrue(draft != null || deleted != null);
                 }
             }
         }

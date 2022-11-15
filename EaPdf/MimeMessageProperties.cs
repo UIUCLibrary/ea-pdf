@@ -9,12 +9,15 @@ namespace UIUCLibrary.EaPdf
     /// <summary>
     /// Properties that need to be persisted while processing an email message
     /// </summary>
-    internal class MimeMessageProperties
+    public class MimeMessageProperties
     {        
         public const string EOL_TYPE_CR = "CR";
         public const string EOL_TYPE_LF = "LF";
         public const string EOL_TYPE_CRLF = "CRLF";
         public const string EOL_TYPE_UNK = "UNKNOWN";
+
+        //Include the mbx message header so it can be used for other purposes if needed, like message statuses
+        public MbxMessageHeader? MbxMessageHeader { get; set; } 
 
         /// <summary>
         /// The type of line ending used in a MIME message 

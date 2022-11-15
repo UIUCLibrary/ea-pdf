@@ -14,8 +14,9 @@ namespace UIUCLibrary.EaPdf.Helpers
         public static string[] ContentEncodings = new string[] { "", "7bit", "8bit", "binary", "base64", "quoted-printable", "uuencode" };
 
         //https://github.com/noelmartinon/mboxzilla/blob/master/nsMsgMessageFlags.h
+        //https://vincent.bernat.ch/en/x-mozilla-status
         [Flags]
-        public enum XMozillaStatusFlags : ushort
+        public enum XMozillaStatusFlags
         {
             MSG_FLAG_NULL = 0x0000,
             MSG_FLAG_READ = 0x0001,
@@ -24,16 +25,20 @@ namespace UIUCLibrary.EaPdf.Helpers
             MSG_FLAG_EXPUNGED = 0x0008,
             MSG_FLAG_HAS_RE = 0x0010,
             MSG_FLAG_ELIDED = 0x0020,
+            MSG_FLAG_FEED_MSG = 0x0040,
             MSG_FLAG_OFFLINE = 0x0080,
             MSG_FLAG_WATCHED = 0x0100,
             MSG_FLAG_SENDER_AUTHED = 0x0200,
             MSG_FLAG_PARTIAL = 0x0400,
             MSG_FLAG_QUEUED = 0x0800,
             MSG_FLAG_FORWARDED = 0x1000,
-            MSG_FLAG_PRIORITIES = 0xE000
+            MSG_FLAG_REDIRECTED = 0x2000,
+            //MSG_FLAG_PRIORITIES =  0xE000 //Not sure what this is since the bits overlap with the previous flag, instead turning into the next two flags
+            MSG_FLAG_PRIORITIES_1 = 0x4000,
+            MSG_FLAG_PRIORITIES_2 = 0x8000
         }
         [Flags]
-        public enum XMozillaStatusFlags2 : uint
+        public enum XMozillaStatusFlags2
         {
             MSG_FLAG_NULL = 0x00000000,
             MSG_FLAG_NEW = 0x00010000,
@@ -42,7 +47,10 @@ namespace UIUCLibrary.EaPdf.Helpers
             MSG_FLAG_MDN_REPORT_NEEDED = 0x00400000,
             MSG_FLAG_MDN_REPORT_SENT = 0x00800000,
             MSG_FLAG_TEMPLATE = 0x01000000,
-            MSG_FLAG_LABELS = 0x0E000000,
+            //MSG_FLAG_LABELS =          0x0E000000, //really three flags, so turning into the next three flags
+            MSG_FLAG_LABELS_1 = 0x02000000,
+            MSG_FLAG_LABELS_2 = 0x04000000,
+            MSG_FLAG_LABELS_3 = 0x08000000,
             MSG_FLAG_ATTACHMENT = 0x10000000
         }
 
@@ -99,7 +107,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         public static bool IsStreamAnMbx(Stream stream)
         {
             bool ret = false;
-            
+
             if (stream == null)
             {
                 throw new ArgumentNullException(nameof(stream));
@@ -118,7 +126,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             stream.Read(magic, 0, magic.Length);
             if (magic.SequenceEqual(mbx))
             {
-                ret= true;
+                ret = true;
             }
 
             //reset the stream to its origional position and return
@@ -194,6 +202,13 @@ namespace UIUCLibrary.EaPdf.Helpers
                 ushort xMozillaBitFlag;
                 if (ushort.TryParse(xMozillaStatus, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out xMozillaBitFlag))
                 {
+                    //test that the value is a valid combination of flags
+                    var allFlags = (XMozillaStatusFlags)Enum.GetValues<XMozillaStatusFlags>().Cast<int>().Sum();
+                    if (!allFlags.HasFlag((XMozillaStatusFlags)xMozillaBitFlag))
+                    {
+                        throw new ArgumentException("Invalid XMozillaStatusFlags value");
+                    }
+
                     ret = (XMozillaStatusFlags)xMozillaBitFlag;
                 }
             }
@@ -215,6 +230,13 @@ namespace UIUCLibrary.EaPdf.Helpers
                 uint xMozillaBitFlag2;
                 if (uint.TryParse(xMozillaStatus2, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out xMozillaBitFlag2))
                 {
+                    //test that the value is a valid combination of flags
+                    var allFlags = (XMozillaStatusFlags2)Enum.GetValues<XMozillaStatusFlags2>().Cast<int>().Sum();
+                    if (!allFlags.HasFlag((XMozillaStatusFlags2)xMozillaBitFlag2))
+                    {
+                        throw new ArgumentException("Invalid XMozillaStatusFlags2 value");
+                    }
+
                     ret = (XMozillaStatusFlags2)xMozillaBitFlag2;
                 }
             }
@@ -244,18 +266,18 @@ namespace UIUCLibrary.EaPdf.Helpers
         //NEEDSTEST: Develop some specific tests for the different TryGetStatus functions
 
         /// <summary>
-        /// Try to determine whether the message has be 'Seen'
+        /// Try to determine whether the message has been 'Seen'
         /// </summary>
         /// <param name="message"></param>
         /// <param name="status"></param>
         /// <returns></returns>
-        public static bool TryGetSeen(MimeMessage message, out string status)
+        public static bool TryGetSeen(MimeMessage message, MimeMessageProperties msgProps, out string status)
         {
             //If the x-mozilla-status and x-mozilla-status2 headers are present they will be used 
             //If the X-Gmail-Labels header is present it will be used instead, https://developers.google.com/gmail/api/guides/labels, https://www.metaspike.com/message-read-status-gmail-google-workspace/
             //Finally, look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
 
-            var ret = false;
+            const string ret = STATUS_SEEN;
             status = "";
 
             switch (GetEmailSystem(message))
@@ -264,8 +286,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     MimeKitHelpers.XMozillaStatusFlags xMozillaStatus = MimeKitHelpers.GetXMozillaStatus(message);
                     if (xMozillaStatus.HasFlag(MimeKitHelpers.XMozillaStatusFlags.MSG_FLAG_READ))
                     {
-                        ret = true;
-                        status = STATUS_SEEN;
+                        status = ret;
                     }
                     break;
 
@@ -273,24 +294,26 @@ namespace UIUCLibrary.EaPdf.Helpers
                     var gmailLabels = GetGmailLabels(message);
                     if (gmailLabels != null && gmailLabels.Contains(GMAIL_OPENED)) //Using the 'Opened' label instead of the abscence of the 'Unread' label because a user can mark emails as read or unread w/o opening them
                     {
-                        ret = true;
-                        status = STATUS_SEEN;
+                        status = ret;
                     }
                     break;
-
+                    
                 case MAILER_PINE:
                 default:
                     var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-                    if (mimeStatus.Contains(STATUS_FLAG_READ)) //Read
+                    if (msgProps.MbxMessageHeader != null && msgProps.MbxMessageHeader.Seen)
                     {
-                        ret = true;
-                        status = STATUS_SEEN;
+                        status = ret;
+                    }
+                    else if (mimeStatus.Contains(STATUS_FLAG_READ)) //Read
+                    {
+                        status = ret;
                     }
                     break;
 
             }
 
-            return ret;
+            return ret == status;
         }
 
         /// <summary>
@@ -299,7 +322,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="message"></param>
         /// <param name="status"></param>
         /// <returns></returns>
-        public static bool TryGetAnswered(MimeMessage message, out string status)
+        public static bool TryGetAnswered(MimeMessage message, MimeMessageProperties msgProps, out string status)
         {
             //If the x-mozilla-status and x-mozilla-status2 headers are present they will be used 
             //otherwise, look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
@@ -308,7 +331,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             //        May be able to use the Message-ID and In-Reply-To headers to determine if the message has been answered, but only works if processing the whole corpus of emails, https://cr.yp.to/immhf/thread.html
             //        Easiest if the messages are processed in ascending order of date, then the first message with a matching In-Reply-To header is the answer
 
-            var ret = false;
+            const string ret = STATUS_ANSWERED;
             status = "";
 
             switch (GetEmailSystem(message))
@@ -317,8 +340,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     MimeKitHelpers.XMozillaStatusFlags xMozillaStatus = MimeKitHelpers.GetXMozillaStatus(message);
                     if (xMozillaStatus.HasFlag(MimeKitHelpers.XMozillaStatusFlags.MSG_FLAG_REPLIED))
                     {
-                        ret = true;
-                        status = STATUS_ANSWERED;
+                        status = ret;
                     }
                     break;
 
@@ -326,16 +348,19 @@ namespace UIUCLibrary.EaPdf.Helpers
                 case MAILER_PINE:
                 default:
                     var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-                    if (mimeStatus.Contains(STATUS_FLAG_ANSWERED)) //Answered
+                    if (msgProps.MbxMessageHeader != null && msgProps.MbxMessageHeader.Answered)
                     {
-                        ret = true;
-                        status = STATUS_ANSWERED;
+                        status = ret;
+                    }
+                    else if (mimeStatus.Contains(STATUS_FLAG_ANSWERED)) //Answered
+                    {
+                        status = ret;
                     }
                     break;
 
             }
 
-            return ret;
+            return status == ret;
         }
 
         /// <summary>
@@ -344,13 +369,13 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="message"></param>
         /// <param name="status"></param>
         /// <returns></returns>
-        public static bool TryGetFlagged(MimeMessage message, out string status)
+        public static bool TryGetFlagged(MimeMessage message, MimeMessageProperties msgProps, out string status)
         {
             //If the x-mozilla-status and x-mozilla-status2 headers are present they will be used
             //If the X-Gmail-Labels header is present it will be used instead, https://developers.google.com/gmail/api/guides/labels
             //Finallt, look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
 
-            var ret = false;
+            const string ret = STATUS_FLAGGED;
             status = "";
 
             switch (GetEmailSystem(message))
@@ -359,8 +384,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     MimeKitHelpers.XMozillaStatusFlags xMozillaStatus = MimeKitHelpers.GetXMozillaStatus(message);
                     if (xMozillaStatus.HasFlag(MimeKitHelpers.XMozillaStatusFlags.MSG_FLAG_MARKED))
                     {
-                        ret = true;
-                        status = STATUS_FLAGGED;
+                        status = ret;
                     }
                     break;
 
@@ -368,24 +392,26 @@ namespace UIUCLibrary.EaPdf.Helpers
                     var gmailLabels = GetGmailLabels(message);
                     if (gmailLabels != null && gmailLabels.Contains(GMAIL_STARRED)) //QUESTION:  Does GMAIL_IMPORTANT also indicate the message was flagged, probably not because Important can be set automatically by Gmail
                     {
-                        ret = true;
-                        status = STATUS_FLAGGED;
+                        status = ret;
                     }
                     break;
 
                 case MAILER_PINE:
                 default:
                     var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-                    if (mimeStatus.Contains(STATUS_FLAG_FLAGGED)) //Flagged
+                    if (msgProps.MbxMessageHeader != null && msgProps.MbxMessageHeader.Flagged)
                     {
-                        ret = true;
-                        status = STATUS_FLAGGED;
+                        status = ret;
+                    }
+                    else if (mimeStatus.Contains(STATUS_FLAG_FLAGGED)) //Flagged
+                    {
+                        status = ret;
                     }
                     break;
 
             }
 
-            return ret;
+            return ret == status;
         }
 
         /// <summary>
@@ -394,13 +420,13 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="message"></param>
         /// <param name="status"></param>
         /// <returns></returns>
-        public static bool TryGetDeleted(MimeMessage message, out string status)
+        public static bool TryGetDeleted(MimeMessage message, MimeMessageProperties msgProps, out string status)
         {
             //If the x-mozilla-status and x-mozilla-status2 headers are present they will be used
             //If the X-Gmail-Labels header is present it will be used instead, https://developers.google.com/gmail/api/guides/labels
             //otherwise, look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
 
-            var ret = false;
+            const string ret = STATUS_DELETED;
             status = "";
 
             switch (GetEmailSystem(message))
@@ -411,8 +437,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     //For Mozilla: waiting to be expunged by the client or marked as deleted on the IMAP Server
                     if (xMozillaStatus.HasFlag(MimeKitHelpers.XMozillaStatusFlags.MSG_FLAG_EXPUNGED) || xMozillaStatus2.HasFlag(MimeKitHelpers.XMozillaStatusFlags2.MSG_FLAG_IMAP_DELETED))
                     {
-                        ret = true;
-                        status = STATUS_DELETED;
+                        status = ret;
                     }
                     break;
 
@@ -420,24 +445,26 @@ namespace UIUCLibrary.EaPdf.Helpers
                     var gmailLabels = GetGmailLabels(message);
                     if (gmailLabels != null && gmailLabels.Contains(GMAIL_TRASH)) //QUESTION:  There are also Gmail labels like "[Imap]/Trash" and "[Imap]/Archive", should these also be used to indicate deleted?
                     {
-                        ret = true;
-                        status = STATUS_DELETED;
+                        status = ret;
                     }
                     break;
 
                 case MAILER_PINE:
                 default:
                     var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
-                    if (mimeStatus.Contains(STATUS_FLAG_DELETED)) //Deleted
+                    if (msgProps.MbxMessageHeader != null && (msgProps.MbxMessageHeader.Deleted || msgProps.MbxMessageHeader.Expunged))
                     {
-                        ret = true;
-                        status = STATUS_DELETED;
+                        status = ret;
+                    }
+                    else if (mimeStatus.Contains(STATUS_FLAG_DELETED)) //Deleted
+                    {
+                        status = ret;
                     }
                     break;
 
             }
 
-            return ret;
+            return ret == status;
         }
 
         /// <summary>
@@ -446,9 +473,9 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="message"></param>
         /// <param name="status"></param>
         /// <returns></returns>
-        public static bool TryGetDraft(string mboxFilePath, MimeMessage message, out string status)
+        public static bool TryGetDraft(MimeMessage message, MimeMessageProperties msgProps, out string status)
         {
-            //If the message come from Mozilla, look at the folder or at some specific X-Mozilla-... headers
+            //If the message come from Mozilla, look at some specific X-Mozilla-... headers
             //Or if it is a gmail message look for the Draft label
             //Finally look at the X-Status header
 
@@ -456,18 +483,16 @@ namespace UIUCLibrary.EaPdf.Helpers
             //See https://opensource.apple.com/source/dovecot/dovecot-293/dovecot/doc/wiki/MailboxFormat.mbox.txt.auto.html about the X-Status 'T' flag
             //See https://developers.google.com/gmail/api/guides/labels for Gmail Label 'Draft'
 
-            var ret = false;
+            const string ret = STATUS_DRAFT;
             status = "";
 
             switch (GetEmailSystem(message))
             {
                 case MAILER_MOZILLA:
                     //use the Mozilla headers to determine if the message is a draft
-                    if ((Path.GetFileNameWithoutExtension(mboxFilePath ?? "").Equals("Drafts", StringComparison.OrdinalIgnoreCase) && message.Headers.Contains("X-Mozilla-Status")) //if it is a Mozilla message and the filename is Drafts
-                        || message.Headers.Contains("X-Mozilla-Draft-Info")) //Mozilla uses this header for draft messages)
+                    if (message.Headers.Contains("X-Mozilla-Draft-Info")) //Mozilla uses this header for draft messages)
                     {
-                        ret = true;
-                        status = STATUS_DRAFT;
+                        status = ret;
                     }
                     break;
 
@@ -476,8 +501,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     //use the Gmail labels to determine if the message is a draft
                     if (gmailLabels != null && gmailLabels.Contains(GMAIL_DRAFT))
                     {
-                        ret = true;
-                        status = STATUS_DRAFT;
+                        status = ret;
                     }
                     break;
 
@@ -485,15 +509,18 @@ namespace UIUCLibrary.EaPdf.Helpers
                 default:
                     var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
                     //Use the X-Status header to determine if the message is a draft
-                    if (mimeStatus.Contains(STATUS_FLAG_DRAFT)) //Some clients encode draft as "T" in the X-Status header)
+                    if (msgProps.MbxMessageHeader != null && msgProps.MbxMessageHeader.Draft)
                     {
-                        ret = true;
-                        status = STATUS_DRAFT;
+                        status = ret;
+                    }
+                    else if (mimeStatus.Contains(STATUS_FLAG_DRAFT)) //Some clients encode draft as "T" in the X-Status header)
+                    {
+                        status = ret;
                     }
                     break;
             }
 
-            return ret;
+            return ret == status;
         }
 
         /// <summary>
@@ -502,14 +529,14 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="message"></param>
         /// <param name="status"></param>
         /// <returns></returns>
-        public static bool TryGetRecent(MimeMessage message, out string status)
+        public static bool TryGetRecent(MimeMessage message, MimeMessageProperties msgProps, out string status)
         {
             //If the x-mozilla-status and x-mozilla-status2 headers are present they will be used 
             //or the Gmail Label header be used to determine this status.   https://www.metaspike.com/message-read-status-gmail-google-workspace/
             //      UNREAD and not (OPENED, ARCHIVED, TRASH, or SPAM)
             //Finally, look at the Status and X-Status headers, https://docs.python.org/3/library/mailbox.html#mboxmessage
 
-            var ret = false;
+            const string ret = STATUS_RECENT;
             status = "";
 
             switch (GetEmailSystem(message))
@@ -520,8 +547,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     //For Mozilla: If there is a "X-Mozilla-Status" header but there are no XMozillaStatusFlags or the XMozillaStatusFlags2 is set to NEW
                     if ((message.Headers.Contains("X-Mozilla-Status") && xMozillaStatus == MimeKitHelpers.XMozillaStatusFlags.MSG_FLAG_NULL) || xMozillaStatus2.HasFlag(MimeKitHelpers.XMozillaStatusFlags2.MSG_FLAG_NEW))
                     {
-                        ret = true;
-                        status = STATUS_RECENT;
+                        status = ret;
                     }
                     break;
 
@@ -530,8 +556,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     //For GMAIL: UNREAD and not (OPENED, ARCHIVED, TRASH, or SPAM)
                     if (gmailLabels != null && gmailLabels.Contains(GMAIL_UNREAD) && !gmailLabels.Contains(GMAIL_OPENED) && !gmailLabels.Contains(GMAIL_ARCHIVED) && !gmailLabels.Contains(GMAIL_TRASH) && !gmailLabels.Contains(GMAIL_SPAM))
                     {
-                        ret = true;
-                        status = STATUS_RECENT;
+                        status = ret;
                     }
                     break;
 
@@ -539,16 +564,19 @@ namespace UIUCLibrary.EaPdf.Helpers
                 default:
                     var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
                     //if there is a status header but it does not contain the 'O' (Old) flag then it is recent
-                    if (message.Headers.Contains(HeaderId.Status) && !mimeStatus.Contains(STATUS_FLAG_OLD)) //Not Old
+                    if (msgProps.MbxMessageHeader != null && !msgProps.MbxMessageHeader.Old)
                     {
-                        ret = true;
-                        status = STATUS_RECENT;
+                        status = ret;
+                    }
+                    else if (message.Headers.Contains(HeaderId.Status) && !mimeStatus.Contains(STATUS_FLAG_OLD)) //Not Old
+                    {
+                        status = ret;
                     }
                     break;
 
             }
 
-            return ret;
+            return ret == status;
         }
 
         /// <summary>

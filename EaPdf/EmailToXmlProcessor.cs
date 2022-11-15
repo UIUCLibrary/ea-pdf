@@ -436,7 +436,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     catch (FormatException)
                     {
-                        WriteWarningMessage(xwriter, $"The mbx file was improperly formatted. The previous message might be prematurely truncated or it might include parts of two messages.");
+                        WriteWarningMessage(xwriter, $"The mbx file was improperly formatted. The previous message might be prematurely truncated or it might include parts of two or more messages.");
                         continue;
                     }
                     catch (Exception ex)
@@ -453,6 +453,9 @@ namespace UIUCLibrary.EaPdf
                             WriteWarningMessage(xwriter, "Because of the previous issue there is unprocessed overflow text.  See the comment below:");
                             xwriter.WriteComment(mbxParser.OverflowText);
                         }
+                        
+                        //Need to include the mbxParser.CurrentHeader in the MimeMessageProperties, so we can use it later to determine the message statuses
+                        msgProps.MbxMessageHeader = mbxParser.CurrentHeader;
                         localId = ProcessCurrentMessage(message, xwriter, localId, messageList, mboxProps, msgProps);
                         mboxProps.MessageCount++;
                     }
@@ -792,7 +795,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteEndElement();
 
             //check for minimum required headers as per the XML schema, unless the message is a draft
-            if (!isChildMessage && !MimeKitHelpers.TryGetDraft(mboxProps.MboxFilePath, message, out _))
+            if (!isChildMessage && !MimeKitHelpers.TryGetDraft(message, msgProps, out _))
             {
                 if (message.Headers[HeaderId.From] == null)
                 {
@@ -836,7 +839,7 @@ namespace UIUCLibrary.EaPdf
 
             if (!isChildMessage)
             {
-                WriteMessageStatuses(xwriter, mboxProps.MboxFilePath, message);
+                WriteMessageStatuses(xwriter, message, msgProps);
             }
 
             localId = WriteMessageBody(xwriter, message.Body, localId, expectingBodyContent, mboxProps, msgProps);
@@ -858,32 +861,32 @@ namespace UIUCLibrary.EaPdf
 
             return localId;
         }
-
-        private void WriteMessageStatuses(XmlWriter xwriter, string mboxFilepath, MimeMessage message)
+        
+        private void WriteMessageStatuses(XmlWriter xwriter, MimeMessage message, MimeMessageProperties msgProps)
         {
             //StatusFlags
             string status = "";
-            if (MimeKitHelpers.TryGetSeen(message, out status))
+            if (MimeKitHelpers.TryGetSeen(message, msgProps, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (MimeKitHelpers.TryGetAnswered(message, out status))
+            if (MimeKitHelpers.TryGetAnswered(message, msgProps, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (MimeKitHelpers.TryGetFlagged(message, out status))
+            if (MimeKitHelpers.TryGetFlagged(message, msgProps, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (MimeKitHelpers.TryGetDeleted(message, out status))
+            if (MimeKitHelpers.TryGetDeleted(message, msgProps, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (MimeKitHelpers.TryGetDraft(mboxFilepath, message, out status))
+            if (MimeKitHelpers.TryGetDraft(message, msgProps, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
-            if (MimeKitHelpers.TryGetRecent(message, out status))
+            if (MimeKitHelpers.TryGetRecent(message, msgProps, out status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }

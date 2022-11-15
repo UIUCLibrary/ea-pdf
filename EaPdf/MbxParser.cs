@@ -12,7 +12,7 @@ using System.Diagnostics;
 namespace UIUCLibrary.EaPdf
 {
 
-    internal class MbxParser : IDisposable
+    public class MbxParser : IDisposable
     {
         private Stream _baseStream;
         private CryptoStream _cryptoStream;
@@ -31,7 +31,7 @@ namespace UIUCLibrary.EaPdf
             Fatal  //cannot continue parsing
         }
 
-        public enum ParseHeaderResult
+        public enum ParseHeaderResult 
         {
             OK,
             EndOfStream,
@@ -92,7 +92,7 @@ namespace UIUCLibrary.EaPdf
                 return _overflowText;
             }
         }
-        
+
         public MimeMessage ParseMessage()
         {
             if (_prevMessageState == MbxParserState.Fatal)
@@ -141,13 +141,12 @@ namespace UIUCLibrary.EaPdf
             }
 
             long startPos = _baseStream.Position;
-            long endPos = startPos + _currentHeader.Size;
+            long endPos = startPos + (long)_currentHeader.Size;
 
             using var boundStream = new MimeKit.IO.BoundStream(_cryptoStream, startPos, endPos, true);
 
             var mimeParser = new MimeParser(boundStream, MimeFormat.Entity);
 
-            //TODO: This won't work because the original MimeMessageEnd handler is tied to the base stream and not to the bound stream
             if (MimeMessageEnd != null)
             {
                 mimeParser.MimeMessageEnd += MimeMessageEnd;
@@ -235,7 +234,7 @@ namespace UIUCLibrary.EaPdf
                     try
                     {
                         headerOut.Date = DateTime.Parse(msgParts[0]);
-                        headerOut.Size = long.Parse(msgParts[1]);
+                        headerOut.Size = ulong.Parse(msgParts[1]);
                         headerOut.Keywords = uint.Parse(msgParts[2][0..8], NumberStyles.AllowHexSpecifier);
                         headerOut.Flags = ushort.Parse(msgParts[2][8..12], NumberStyles.AllowHexSpecifier);
                         headerOut.Uid = uint.Parse(msgParts[2][13..21], NumberStyles.AllowHexSpecifier);
@@ -280,13 +279,6 @@ namespace UIUCLibrary.EaPdf
                 disposedValue = true;
             }
         }
-
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~MbxParser()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
 
         public void Dispose()
         {
