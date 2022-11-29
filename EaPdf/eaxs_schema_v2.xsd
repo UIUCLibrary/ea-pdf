@@ -24,8 +24,15 @@
 			2022-10-17
 			* Some child messages might indicate they are multipart, but the parts are deliberately empty, such as 'text/rfc822-headers', so added a new element 'MissingBody' to the schema
 			* A DeliveryStatus element was added to support the message/delivery-status content-type that contains a delivery status message, see RFC 3464.
-			  DeliveryStatus segregates the per-message and per-recipient parts, but the specific fields are just serialized as generic name/value pairs using the header-type
-			  
+			DeliveryStatus segregates the per-message and per-recipient parts, but the specific fields are just serialized as generic name/value pairs using the header-type
+
+			2022-11-28
+			* Modified the From, Sender, To, Cc, and Bcc so that the name and address are separate attributes, rather than a single string; the string content is the same as before
+			
+			2022-11-29
+			* Made changes to accomodate situations where the From, To, Cc, and Bcc elements are used to represent a group of recipients, rather than a single recipient
+			See https://www.rfc-editor.org/rfc/rfc5322#section-3.4, group-list
+
 		</documentation>
 		<documentation>
 			TODO:  There are other improvements that could be made to this schema to improve modularity and extensibility
@@ -501,11 +508,11 @@
 		</annotation>
 		<sequence>
 			<element name="OrigDate" type="dateTime" minOccurs="0"/>
-			<element name="From" type="string" minOccurs="0" maxOccurs="unbounded"/>
-			<element name="Sender" type="string" minOccurs="0"/>
-			<element name="To" type="string" minOccurs="0" maxOccurs="unbounded"/>
-			<element name="Cc" type="string" minOccurs="0" maxOccurs="unbounded"/>
-			<element name="Bcc" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="From" type="xm:address" minOccurs="0" />
+			<element name="Sender" type="xm:name-address" minOccurs="0"/>
+			<element name="To" type="xm:address" minOccurs="0" />
+			<element name="Cc" type="xm:address" minOccurs="0" />
+			<element name="Bcc" type="xm:address" minOccurs="0" />
 			<element name="InReplyTo" type="string" minOccurs="0" maxOccurs="unbounded"/>
 			<element name="References" type="string" minOccurs="0" maxOccurs="unbounded"/>
 			<element name="Subject" type="string" minOccurs="0"/>
@@ -514,6 +521,59 @@
 		</sequence>
 	</group>
 
+	<complexType name="address">
+		<annotation>
+			<documentation>
+				TGH 2022-11-29 An address may be a simple mailbox address or a group of mailbox addresses, see https://www.rfc-editor.org/rfc/rfc5322#section-3.4
+			</documentation>
+		</annotation>
+		<choice maxOccurs="unbounded">
+			<element name="Mailbox" type="xm:name-address"/>
+			<element name="Group" type="xm:group"/>
+		</choice>
+	</complexType>
+
+	<complexType name="name-address">
+		<annotation>
+			<documentation>
+				TGH 2022-11-28 An email address may contain a name and an address, like ["Name" &lt;address@sample.org&gt;].
+				These are separated into attributes to make it easier to access each when needed for formatting or display.  The original combined value is also preserved in the text of the element.
+			</documentation>
+		</annotation>
+		<simpleContent>
+			<extension base="string">
+				<attribute name="name" type="string" use="optional"/>
+				<attribute name="address" type="string" use="optional"/>
+			</extension>
+		</simpleContent>
+	</complexType>
+
+	<complexType name="group">
+		<annotation>
+			<documentation>
+				TGH 2022-11-29 A group of addresses, see https://www.rfc-editor.org/rfc/rfc5322#section-3.4
+			</documentation>
+		</annotation>
+		<sequence>
+			<element name="Name" type="string"/>
+			<choice minOccurs="0" maxOccurs="unbounded">
+				<annotation>
+					<documentation>
+						A group may not contain any addresses
+					</documentation>
+				</annotation>
+				<element name="Mailbox" type="xm:name-address"/>
+				<element name="Group" type="xm:group">
+					<annotation>
+						<documentation>
+							Groups should not be nested acording to the RFC, but this is reported to happen in the wild.
+						</documentation>
+					</annotation>
+				</element>
+			</choice>
+		</sequence>
+	</complexType>
+	
 	<simpleType name="message-status-flag">
 		<restriction base="string">
 			<enumeration value="Seen"/>

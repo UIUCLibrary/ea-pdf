@@ -26,7 +26,6 @@ namespace UIUCLibrary.EaPdf
     public class EmailToXmlProcessor
     {
 
-        //FUTURE: Add support for mbx files, see https://uofi.box.com/s/51v7xzfzqod2dv9lxmjgbrrgz5ejjydk 
         //TODO: Need to check for XML invalid characters almost anyplace I write XML string content, see the WriteElementStringReplacingInvalidChars function
 
         //for LWSP (Linear White Space) detection, compaction, and trimming
@@ -453,7 +452,7 @@ namespace UIUCLibrary.EaPdf
                             WriteWarningMessage(xwriter, "Because of the previous issue there is unprocessed overflow text.  See the comment below:");
                             xwriter.WriteComment(mbxParser.OverflowText);
                         }
-                        
+
                         //Need to include the mbxParser.CurrentHeader in the MimeMessageProperties, so we can use it later to determine the message statuses
                         msgProps.MbxMessageHeader = mbxParser.CurrentHeader;
                         localId = ProcessCurrentMessage(message, xwriter, localId, messageList, mboxProps, msgProps);
@@ -861,7 +860,7 @@ namespace UIUCLibrary.EaPdf
 
             return localId;
         }
-        
+
         private void WriteMessageStatuses(XmlWriter xwriter, MimeMessage message, MimeMessageProperties msgProps)
         {
             //StatusFlags
@@ -924,30 +923,18 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteValue(message.Date);
             xwriter.WriteEndElement();
 
-            foreach (var addr in message.From)
-            {
-                WriteElementStringReplacingInvalidChars(xwriter, "From", XM_NS, addr.ToString());
-            }
+            WriteInternetAddressList(xwriter, message.From, "From");
 
             if (message.Sender != null)
             {
-                xwriter.WriteElementString("Sender", XM_NS, message.Sender.ToString());
+                WriteMailboxAddress(xwriter, message.Sender, "Sender");
             }
 
-            foreach (var addr in message.To)
-            {
-                WriteElementStringReplacingInvalidChars(xwriter, "To", XM_NS, addr.ToString());
-            }
+            WriteInternetAddressList(xwriter, message.To, "To");
 
-            foreach (var addr in message.Cc)
-            {
-                WriteElementStringReplacingInvalidChars(xwriter, "Cc", XM_NS, addr.ToString());
-            }
+            WriteInternetAddressList(xwriter, message.Cc, "Cc");
 
-            foreach (var addr in message.Bcc)
-            {
-                xwriter.WriteElementString("Bcc", XM_NS, addr.ToString());
-            }
+            WriteInternetAddressList(xwriter, message.Bcc, "Bcc");
 
             if (!string.IsNullOrWhiteSpace(message.InReplyTo))
             {
@@ -976,6 +963,72 @@ namespace UIUCLibrary.EaPdf
             foreach (var kwds in message.Headers.Where(h => kwHdrs.Contains(h.Field, StringComparer.InvariantCultureIgnoreCase)))
             {
                 xwriter.WriteElementString("Keywords", XM_NS, kwds.Value);
+            }
+        }
+
+        private void WriteInternetAddressList(XmlWriter xwriter, InternetAddressList addrList, string localName)
+        {
+            if (addrList != null && addrList.Count > 0)
+            {
+                if (!string.IsNullOrWhiteSpace(localName))
+                    xwriter.WriteStartElement(localName, XM_NS);
+
+                foreach (var addr in addrList)
+                {
+                    WriteAddress(xwriter, addr);
+                }
+
+                if (!string.IsNullOrWhiteSpace(localName))
+                    xwriter.WriteEndElement(); //localname
+            }
+        }
+
+        private void WriteInternetAddressList(XmlWriter xwriter, InternetAddressList addrList)
+        {
+            WriteInternetAddressList(xwriter, addrList, null);
+        }
+
+
+
+        private void WriteMailboxAddress(XmlWriter xwriter, MailboxAddress addr, string localName)
+        {
+
+            var addrStr = addr.ToString();
+            string msg;
+            if (XmlHelpers.TryReplaceInvalidXMLChars(ref addrStr, out msg))
+            {
+                var warn = $"{localName} contains characters which are not allowed in XML; they have been replaced with \uFFFD.  {msg}";
+                WriteWarningMessage(xwriter, warn);
+            }
+            xwriter.WriteStartElement(localName, XM_NS);
+            if (!string.IsNullOrWhiteSpace(addr.Name))
+            {
+                xwriter.WriteAttributeString("name", XmlHelpers.ReplaceInvalidXMLChars(addr.Name));
+            }
+            if (!string.IsNullOrWhiteSpace(addr.Address))
+            {
+                xwriter.WriteAttributeString("address", XmlHelpers.ReplaceInvalidXMLChars(addr.Address));
+            }
+            xwriter.WriteString(addrStr);
+            xwriter.WriteEndElement(); //localName
+        }
+
+        private void WriteAddress(XmlWriter xwriter, InternetAddress addr)
+        {
+            if (addr is GroupAddress ga)
+            {
+                xwriter.WriteStartElement("Group", XM_NS);
+                xwriter.WriteElementString("Name", XM_NS, ga.Name);
+                WriteInternetAddressList(xwriter, ga.Members);
+                xwriter.WriteEndElement(); //Group
+            }
+            else if (addr is MailboxAddress ma)
+            {
+                WriteMailboxAddress(xwriter, ma, "Mailbox");
+            }
+            else
+            {
+                throw new ArgumentException($"Unexpected address type: {addr.GetType().Name}");
             }
         }
 
@@ -1652,15 +1705,12 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteElementString(localName, ns, value);
                 return;
             }
-            try
+
+            string msg;
+            if (XmlHelpers.TryReplaceInvalidXMLChars(ref value, out msg))
             {
-                value = XmlConvert.VerifyXmlChars(value);
-            }
-            catch (XmlException xex)
-            {
-                value = XmlHelpers.ReplaceInvalidXMLChars(value);
-                var msg = $"{localName} contains characters which are not allowed in XML; they have been replaced with \uFFFD.  Line {xex.LineNumber}: {xex.Message}";
-                WriteWarningMessage(xwriter, msg);
+                var warn = $"{localName} contains characters which are not allowed in XML; they have been replaced with \uFFFD.  {msg}";
+                WriteWarningMessage(xwriter, warn);
             }
 
             xwriter.WriteElementString(localName, ns, value);

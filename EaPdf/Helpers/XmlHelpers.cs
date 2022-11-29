@@ -36,5 +36,64 @@ namespace UIUCLibrary.EaPdf.Helpers
             return _invalidXMLChars.Replace(text, "");
         }
 
+        /// <summary>
+        /// Try replacing XML-invalid characters from the string
+        /// </summary>
+        /// <param name="value">the string that will have its invalid characters replaced</param>
+        /// <param name="msg">if characters were replaced this will provide an explanation</param>
+        /// <returns>true if characters were replaced; otherwise false</returns>
+        public static bool TryReplaceInvalidXMLChars(ref string? value, out string msg)
+        {
+            bool ret = false; //Return true if any characters were replaced
+            msg = "";
+
+            if (string.IsNullOrEmpty(value))
+            {
+                return ret;
+            }
+            try
+            {
+                value = XmlConvert.VerifyXmlChars(value);
+            }
+            catch (XmlException xex)
+            {
+                msg = xex.Message;
+                value = XmlHelpers.ReplaceInvalidXMLChars(value);
+                ret = true;
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Try removing XML-invalid characters from the string
+        /// </summary>
+        /// <param name="value">the string that will have its invalid characters removed</param>
+        /// <param name="msg">if characters were removed this will provide an explanation</param>
+        /// <returns>true if characters were removed; otherwsie false</returns>
+        public static bool TryRemoveInvalidXMLChars(ref string? value, out string msg)
+        {
+            bool ret = false; //Return true if any characters were removed
+            msg = "";
+
+            if (string.IsNullOrEmpty(value))
+            {
+                return ret;
+            }
+            try
+            {
+                value = XmlConvert.VerifyXmlChars(value);
+            }
+            catch (XmlException xex)
+            {
+                msg = xex.Message;
+                value = XmlHelpers.RemoveInvalidXMLChars(value);
+                ret = true;
+            }
+
+            return ret;
+        }
+
+
     }
 }
