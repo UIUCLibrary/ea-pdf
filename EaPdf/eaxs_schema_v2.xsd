@@ -200,6 +200,13 @@
 					</documentation>
 				</annotation>
 			</element>
+			<element name="Size" type="long" minOccurs="0">
+				<annotation>
+					<documentation>
+						This is the size of the message, counting the same bytes that were used to calculate the Hash.
+					</documentation>
+				</annotation>
+			</element>
 		</sequence>
 	</complexType>
 
@@ -494,6 +501,13 @@
 					</documentation>
 				</annotation>
 			</element>
+			<element name="Size" type="long" minOccurs="0">
+				<annotation>
+					<documentation>
+						This is the size of the external file, counting the same bytes that were used to calculate the Hash.
+					</documentation>
+				</annotation>
+			</element>
 
 		</sequence>
 	</complexType>
@@ -626,6 +640,13 @@
 			</element>
 			<element name="Eol" type="xm:eol-type"/>
 			<element name="Hash" type="xm:hash-type" minOccurs="0"/>
+			<element name="Size" type="long" minOccurs="0">
+				<annotation>
+					<documentation>
+						This is the size of the mbox file, counting the same bytes that were used to calculate the Hash,
+					</documentation>
+				</annotation>
+			</element>
 		</sequence>
 	</complexType>
 
