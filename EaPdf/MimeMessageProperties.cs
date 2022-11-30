@@ -30,6 +30,11 @@ namespace UIUCLibrary.EaPdf
         public byte[] MessageHash { get; set; } = Array.Empty<byte>();
 
         /// <summary>
+        /// The size of the message, counting the same bytes used to calculate the Hash
+        /// </summary>
+        public long MessageSize { get; set; } = -1;
+
+        /// <summary>
         /// If the message was incomplete because of some error, this be the name of the error
         /// </summary>
         public string? IncompleteErrorType { get; set; } = null;

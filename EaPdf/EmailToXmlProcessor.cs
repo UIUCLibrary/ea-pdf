@@ -468,7 +468,7 @@ namespace UIUCLibrary.EaPdf
                     localId = ProcessChildMboxes(mboxProps, ref xwriter, ref xstream, localId, messageList);
                 }
 
-                WriteMbox(xwriter, mboxProps);
+                WriteMbox(xwriter, mboxProps, mboxStream.Length);
 
             }
             else
@@ -573,7 +573,7 @@ namespace UIUCLibrary.EaPdf
                     localId = ProcessChildMboxes(mboxProps, ref xwriter, ref xstream, localId, messageList);
                 }
 
-                WriteMbox(xwriter, mboxProps);
+                WriteMbox(xwriter, mboxProps, mboxStream.Length);
             }
 
             xwriter.WriteEndElement(); //Folder
@@ -582,7 +582,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void WriteMbox(XmlWriter xwriter, MboxProperties mboxProps)
+        private void WriteMbox(XmlWriter xwriter, MboxProperties mboxProps, long size)
         {
             xwriter.WriteStartElement("Mbox", XM_NS);
 
@@ -603,6 +603,15 @@ namespace UIUCLibrary.EaPdf
             else
             {
                 WriteWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
+            }
+
+            if (size >= 0)
+            {
+                xwriter.WriteElementString("Size", XM_NS, size.ToString());
+            }
+            else
+            {
+                WriteWarningMessage(xwriter, $"Unable to determine the size of the Mbox");
             }
 
             string cntMsg = $"File {mboxProps.MboxName} contains {mboxProps.MessageCount} valid messages";
@@ -856,6 +865,15 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteElementString("Eol", XM_NS, msgProps.Eol);
 
                 WriteHash(xwriter, msgProps.MessageHash, Settings.HashAlgorithmName);
+
+                if (msgProps.MessageSize >= 0)
+                {
+                    xwriter.WriteElementString("Size", XM_NS, msgProps.MessageSize.ToString());
+                }
+                else
+                {
+                    WriteWarningMessage(xwriter, $"Unable to determine the size of the Message");
+                }
             }
 
             return localId;
@@ -925,6 +943,11 @@ namespace UIUCLibrary.EaPdf
 
             WriteInternetAddressList(xwriter, message.From, "From");
 
+            if (message.From != null && message.From.Count > 1 && message.Sender == null)
+            {
+                WriteWarningMessage(xwriter, "The message has multiple From addresses but no Sender.");
+            }
+
             if (message.Sender != null)
             {
                 WriteMailboxAddress(xwriter, message.Sender, "Sender");
@@ -966,7 +989,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private void WriteInternetAddressList(XmlWriter xwriter, InternetAddressList addrList, string localName)
+        private void WriteInternetAddressList(XmlWriter xwriter, InternetAddressList addrList, string? localName)
         {
             if (addrList != null && addrList.Count > 0)
             {
@@ -1544,10 +1567,11 @@ namespace UIUCLibrary.EaPdf
             string randomFilePath = PathHelpers.GetRandomFilePath(mboxProps.OutDirectoryName);
 
             byte[] hash;
+            long size;
 
             if (!wrapInXml)
             {
-                hash = SaveContentAsRaw(randomFilePath, part);
+                hash = SaveContentAsRaw(randomFilePath, part, out size);
 
                 //Try to open the file to see if it has a virus or there was some other IO problem
                 try
@@ -1562,12 +1586,12 @@ namespace UIUCLibrary.EaPdf
                     WriteWarningMessage(xwriter, msg);
                     wrapInXml = true;
                     File.Delete(randomFilePath); //so we can try saving a new stream there
-                    hash = SaveContentAsXml(randomFilePath, part, localId, msg);
+                    hash = SaveContentAsXml(randomFilePath, part, localId, msg, out size);
                 }
             }
             else
             {
-                hash = SaveContentAsXml(randomFilePath, part, localId, "");
+                hash = SaveContentAsXml(randomFilePath, part, localId, "", out size);
             }
 
             _logger.LogTrace($"Created temporary file: '{randomFilePath}'");
@@ -1609,6 +1633,15 @@ namespace UIUCLibrary.EaPdf
             //Eol is not applicable since we are not wrapping the content in XML
             WriteHash(xwriter, hash, Settings.HashAlgorithmName);
 
+            if (size >= 0)
+            {
+                xwriter.WriteElementString("Size", XM_NS, size.ToString());
+            }
+            else
+            {
+                WriteWarningMessage(xwriter, $"Unable to determine the size of the external file");
+            }
+
             xwriter.WriteEndElement(); //ExtBodyContent
 
             return localId;
@@ -1621,7 +1654,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="part"></param>
         /// <returns>the hash of the saved file</returns>
         /// <exception cref="Exception"></exception>
-        private byte[] SaveContentAsRaw(string filePath, MimePart part)
+        private byte[] SaveContentAsRaw(string filePath, MimePart part, out long size)
         {
             var content = part.Content;
 
@@ -1631,6 +1664,7 @@ namespace UIUCLibrary.EaPdf
 
             content.DecodeTo(cryptoStream);
 
+            size = contentStream.Length;
             cryptoStream.Close();
             contentStream.Close();
 
@@ -1648,7 +1682,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="localId"></param>
         /// <returns>the hash of the saved file</returns>
         /// <exception cref="Exception"></exception>
-        private byte[] SaveContentAsXml(string filePath, MimePart part, long localId, string comment)
+        private byte[] SaveContentAsXml(string filePath, MimePart part, long localId, string comment, out long size)
         {
             using var contentStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write);
             using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
@@ -1668,6 +1702,7 @@ namespace UIUCLibrary.EaPdf
             extXmlWriter.WriteEndDocument();
             extXmlWriter.Close();
 
+            size = contentStream.Length;
             cryptoStream.Close();
             contentStream.Close();
 
@@ -1719,7 +1754,6 @@ namespace UIUCLibrary.EaPdf
 
         private void MimeMessageEndEventHandler(object? sender, MimeMessageEndEventArgs e, Stream mboxStream, MboxProperties mboxProps, MimeMessageProperties msgProps, bool isMbxFile)
         {
-
             var parser = sender as MimeParser;
 
             var beginOffset = e.BeginOffset;
@@ -1821,6 +1855,8 @@ namespace UIUCLibrary.EaPdf
 
             //just for debugging
             //var str = System.Text.Encoding.ASCII.GetString(newBuffer);
+
+            msgProps.MessageSize = newBuffer.Length;
 
             var hashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create(); //Fallback to known hash algorithm
             msgProps.MessageHash = hashAlg.ComputeHash(newBuffer);

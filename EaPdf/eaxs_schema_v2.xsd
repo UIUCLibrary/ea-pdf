@@ -32,10 +32,10 @@
 			2022-11-29
 			* Made changes to accomodate situations where the From, To, Cc, and Bcc elements are used to represent a group of recipients, rather than a single recipient
 			See https://www.rfc-editor.org/rfc/rfc5322#section-3.4, group-list
+			
+			2022-11-30
+			* Everyplace where the Hash element is used, added a new element Size, to record the count of bytes of the hashed file or stream
 
-		</documentation>
-		<documentation>
-			TODO:  There are other improvements that could be made to this schema to improve modularity and extensibility
 		</documentation>
 	</annotation>
 
@@ -203,7 +203,7 @@
 			<element name="Size" type="long" minOccurs="0">
 				<annotation>
 					<documentation>
-						This is the size of the message, counting the same bytes that were used to calculate the Hash.
+						TGH 2022-11-30 This is the size of the message, counting the same bytes that were used to calculate the Hash.
 					</documentation>
 				</annotation>
 			</element>
@@ -504,7 +504,7 @@
 			<element name="Size" type="long" minOccurs="0">
 				<annotation>
 					<documentation>
-						This is the size of the external file, counting the same bytes that were used to calculate the Hash.
+						TGH 2022-11-30 This is the size of the external file, counting the same bytes that were used to calculate the Hash.
 					</documentation>
 				</annotation>
 			</element>
@@ -643,7 +643,7 @@
 			<element name="Size" type="long" minOccurs="0">
 				<annotation>
 					<documentation>
-						This is the size of the mbox file, counting the same bytes that were used to calculate the Hash,
+						TGH 2022-11-30 This is the size of the mbox file, counting the same bytes that were used to calculate the Hash
 					</documentation>
 				</annotation>
 			</element>

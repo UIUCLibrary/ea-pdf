@@ -264,7 +264,7 @@ namespace UIUCLibrary.TestEaPdf
                     //make sure the localId values in a each xml file all increase by 1
                     ValidateLocalIds(xDoc, xmlns);
 
-                    //make sure hash values are correct for root-level mbox files
+                    //make sure hash values and sizes are correct for root-level mbox files
 
                     XmlNodeList? mboxNodes = xDoc.SelectNodes("/xm:Account/xm:Folder/xm:Mbox", xmlns);
                     if (mboxNodes != null)
@@ -274,6 +274,7 @@ namespace UIUCLibrary.TestEaPdf
                             //get the hash values from the xml
                             XmlNode? hashValueNd = mboxElem.SelectSingleNode("xm:Hash/xm:Value", xmlns);
                             XmlNode? hashFuncNd = mboxElem.SelectSingleNode("xm:Hash/xm:Function", xmlns);
+                            XmlNode? sizeNd = mboxElem.SelectSingleNode("xm:Size", xmlns);
                             XmlNode? relPath = mboxElem.SelectSingleNode("xm:RelPath", xmlns);
                             string absPath = Path.Combine(outFolder, relPath?.InnerText ?? "");
 
@@ -283,6 +284,13 @@ namespace UIUCLibrary.TestEaPdf
 
                             var expectedHash = CalculateHash(hashAlg, absPath);
                             Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
+
+                            //make sure size match
+                            FileInfo fi = new FileInfo(absPath);
+                            long expectedSize = fi.Length;
+                            long actualSize = long.Parse(sizeNd?.InnerText ?? "-1");
+                            Assert.AreEqual(expectedSize, actualSize);
+
                         }
                     }
 
@@ -362,6 +370,12 @@ namespace UIUCLibrary.TestEaPdf
                                 }
                                 string? calcHashAlg = extNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText;
                                 Assert.AreEqual(hashAlg, calcHashAlg);
+
+                                //make sure the size values match
+                                FileInfo fi = new FileInfo(extFilepath);
+                                long expectedSize = fi.Length;
+                                long actualSize = long.Parse(extNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
+                                Assert.AreEqual(expectedSize, actualSize);
 
                                 //get the actual wrapped in xml indicator
                                 var xmlWrappedStr = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
