@@ -1106,6 +1106,14 @@ namespace UIUCLibrary.EaPdf
 
             WriteMimeContentDisposition(xwriter, mimeEntity);
 
+            if (mimeEntity.Headers[HeaderId.ContentLanguage] != null)
+            {
+                foreach( var hdr in mimeEntity.Headers.Where(h => h.Id == HeaderId.ContentLanguage))
+                {
+                    WriteElementStringReplacingInvalidChars(xwriter, "ContentLanguage", XM_NS, hdr.Value);
+                }
+            }
+
             WriteMimeOtherHeaders(xwriter, mimeEntity);
 
             if (isMultipart && multipart != null && !string.IsNullOrWhiteSpace(multipart.Preamble))

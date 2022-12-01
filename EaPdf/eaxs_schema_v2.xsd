@@ -28,13 +28,16 @@
 
 			2022-11-28
 			* Modified the From, Sender, To, Cc, and Bcc so that the name and address are separate attributes, rather than a single string; the string content is the same as before
-			
+
 			2022-11-29
 			* Made changes to accomodate situations where the From, To, Cc, and Bcc elements are used to represent a group of recipients, rather than a single recipient
 			See https://www.rfc-editor.org/rfc/rfc5322#section-3.4, group-list
-			
+
 			2022-11-30
 			* Everyplace where the Hash element is used, added a new element Size, to record the count of bytes of the hashed file or stream
+
+			2022-12-01
+			* Added a new element, 'ContentLanguage', to make it easier to access this value for PDF creation
 
 		</documentation>
 	</annotation>
@@ -265,6 +268,12 @@
 				</annotation>
 			</element>
 
+			<element name="ContentLanguage" type="string" minOccurs="0" maxOccurs="unbounded">
+				<annotation>
+					<documentation>TGH 2022-12-01 Content-Language header field.</documentation>
+				</annotation>
+			</element>
+
 			<element name="OtherMimeHeader" type="xm:header-type" minOccurs="0" maxOccurs="unbounded"/>
 
 			<choice minOccurs="0" maxOccurs="1">
@@ -372,6 +381,12 @@
 			<element name="DispositionParam" type="xm:parameter-type" minOccurs="0" maxOccurs="unbounded">
 				<annotation>
 					<documentation>Any other parameters found in the Content-Disposition header field except for filename.</documentation>
+				</annotation>
+			</element>
+
+			<element name="ContentLanguage" type="string" minOccurs="0" maxOccurs="unbounded">
+				<annotation>
+					<documentation>TGH 2022-12-01 Content-Language header field.</documentation>
 				</annotation>
 			</element>
 
