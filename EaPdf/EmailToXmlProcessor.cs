@@ -1401,9 +1401,15 @@ namespace UIUCLibrary.EaPdf
             foreach (var hdr in mimeEntity.Headers.Where(h => !except.Contains(h.Field, StringComparer.InvariantCultureIgnoreCase)))
             {
                 xwriter.WriteStartElement("OtherMimeHeader", XM_NS);
+                
                 xwriter.WriteElementString("Name", XM_NS, hdr.Field);
-                xwriter.WriteElementString("Value", XM_NS, hdr.Value);
+                
+                //According to the XML schema, header values should be the raw headers, not converted to Unicode
+                var rawValue = System.Text.Encoding.ASCII.GetString(hdr.RawValue);
+                WriteElementStringReplacingInvalidChars(xwriter, "Value", XM_NS, rawValue.Trim());
+
                 //UNSUPPORTED: OtherMimeHeader/Comments, not currently supported by MimeKit
+                
                 xwriter.WriteEndElement(); //OtherMimeHeaders
             }
         }
