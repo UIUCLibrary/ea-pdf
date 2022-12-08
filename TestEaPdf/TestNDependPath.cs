@@ -64,7 +64,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestIsValidOutputPath(string inFile, string outFolder, bool expected)
         {
 
-            var valid = EaPdf.Helpers.PathHelpers.IsValidOutputPathForMboxFile(inFile, outFolder);
+            var valid = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(inFile, outFolder);
             Assert.AreEqual(expected,valid);
 
         }
@@ -73,7 +73,7 @@ namespace UIUCLibrary.TestEaPdf
         [ExpectedException(typeof(ArgumentException))]
         public void TestInvalidFileName()
         {
-            var valid = EaPdf.Helpers.PathHelpers.IsValidOutputPathForMboxFile(@"C:\", @"C:\one\file");
+            var valid = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(@"C:\", @"C:\one\file");
 
         }
     }

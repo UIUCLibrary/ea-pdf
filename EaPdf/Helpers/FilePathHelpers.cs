@@ -9,7 +9,7 @@ using Wiry.Base32;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    public class PathHelpers
+    public class FilePathHelpers
     {
 
         /// <summary>
