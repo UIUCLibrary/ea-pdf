@@ -39,6 +39,9 @@
 			2022-12-01
 			* Added a new element, 'ContentLanguage', to make it easier to access this value for PDF creation
 
+			2022-12-08
+			* SingleBody BodyContent may now contain a choice of either Content or ContentAsXhtml.  ContentAsXhtml is a new element that contains the XHTML content of the body, which is useful for PDF creation
+
 		</documentation>
 	</annotation>
 
@@ -434,15 +437,35 @@
 
 	<complexType name="int-body-content-type">
 		<sequence>
-			<element name="Content" type="string">
+			<choice>
 				<annotation>
 					<documentation>
-						Content here is either wrapped in a CDATA section where all occurrences of ]]&gt; have been escaped as "]]&amp;gt;
-						or without being wrapped in a CDATA section where all occurrences of &lt; and &amp; have been escaped as &amp;lt; and &amp;amp;
-						respectively as well as all occurrences of ]]&gt; have been escaped as "]]&amp;gt.
+						TGH 2022-12-08 The content may be saved as either a string or an xhtml document.  
+						The xhtml would be created during processing to make it easier to the message rendering during later processing.
 					</documentation>
 				</annotation>
-			</element>
+				<element name="Content" type="string">
+					<annotation>
+						<documentation>
+							Content here is either wrapped in a CDATA section where all occurrences of ]]&gt; have been escaped as "]]&amp;gt;
+							or without being wrapped in a CDATA section where all occurrences of &lt; and &amp; have been escaped as &amp;lt; and &amp;amp;
+							respectively as well as all occurrences of ]]&gt; have been escaped as "]]&amp;gt.
+						</documentation>
+					</annotation>
+				</element>
+				<element name="ContentAsXhtml">
+					<annotation>
+						<documentation>
+							This must be well-formed xhtml and it should start with an html root element
+						</documentation>
+					</annotation>
+					<complexType>
+						<sequence>
+							<any namespace="http://www.w3.org/1999/xhtml" processContents="skip"/>
+						</sequence> 
+					</complexType>
+				</element>
+			</choice>
 			<element name="CharSet" type="string" minOccurs="0">
 				<annotation>
 					<documentation>

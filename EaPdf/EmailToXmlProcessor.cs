@@ -18,13 +18,17 @@ using Microsoft.VisualBasic;
 using System.Diagnostics;
 using System.Net.Mime;
 using CsvHelper.Configuration;
-using PathHelpers = UIUCLibrary.EaPdf.Helpers.PathHelpers;
+using FilePathHelpers = UIUCLibrary.EaPdf.Helpers.FilePathHelpers;
 using System.Collections.Generic;
+using static System.Net.Mime.MediaTypeNames;
+using MimeKit.Text;
+using HtmlAgilityPack;
 
 namespace UIUCLibrary.EaPdf
 {
     public class EmailToXmlProcessor
     {
+        //TODO: Need to add support for TNEF format, especially if will be processing Microsoft PST files
 
         //TODO: Need to check for XML invalid characters almost anyplace I write XML string content, see the WriteElementStringReplacingInvalidChars function
 
@@ -133,7 +137,7 @@ namespace UIUCLibrary.EaPdf
             var fullOutFolderPath = Path.GetFullPath(outFolderPath);
 
             //Determine whether the output folder path is valid given the input path
-            if (!Helpers.PathHelpers.IsValidOutputPathForMboxFolder(fullMboxFolderPath, fullOutFolderPath))
+            if (!Helpers.FilePathHelpers.IsValidOutputPathForMboxFolder(fullMboxFolderPath, fullOutFolderPath))
             {
                 throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the mboxFolderPath, '{fullMboxFolderPath}'");
             }
@@ -192,8 +196,8 @@ namespace UIUCLibrary.EaPdf
 
 
                 xwriter.WriteStartDocument();
-
-                WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
+                WriteDocType(xwriter);
+                WriteAccountHeaderFields(xwriter, globalId, accntEmails);
 
                 var mboxProps = new MboxProperties()
                 {
@@ -271,7 +275,7 @@ namespace UIUCLibrary.EaPdf
             string fullOutFolderPath = Path.GetFullPath(outFolderPath);
 
             //Determine whether the output folder path is valid given the input path
-            if (!Helpers.PathHelpers.IsValidOutputPathForMboxFile(fullMboxFilePath, fullOutFolderPath))
+            if (!Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(fullMboxFilePath, fullOutFolderPath))
             {
                 throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the mboxFilePath, '{fullMboxFilePath}', ignoring any extensions");
             }
@@ -302,8 +306,8 @@ namespace UIUCLibrary.EaPdf
             var xwriter = XmlWriter.Create(xstream, xset);
 
             xwriter.WriteStartDocument();
-
-            WriteXmlAccountHeaderFields(xwriter, globalId, accntEmails);
+            WriteDocType(xwriter);
+            WriteAccountHeaderFields(xwriter, globalId, accntEmails);
 
             WriteInfoMessage(xwriter, $"Processing mbox file: {fullMboxFilePath}");
 
@@ -369,7 +373,7 @@ namespace UIUCLibrary.EaPdf
 
         }
 
-        private void WriteXmlAccountHeaderFields(XmlWriter xwriter, string globalId, string accntEmails = "")
+        private void WriteAccountHeaderFields(XmlWriter xwriter, string globalId, string accntEmails = "")
         {
             {
                 xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}, OneFilePerMbox: {Settings.OneFilePerMbox}");
@@ -730,11 +734,24 @@ namespace UIUCLibrary.EaPdf
                 Encoding = System.Text.Encoding.UTF8
             };
             xwriter = XmlWriter.Create(xstream, xset);
+
             xwriter.WriteStartDocument();
+            WriteDocType(xwriter);
             xwriter.WriteProcessingInstruction("ContinuedFrom", $"'{Path.GetFileName(origXmlFilePath)}'");
-            WriteXmlAccountHeaderFields(xwriter, mboxProps.GlobalId, mboxProps.AccountEmails);
+
+            WriteAccountHeaderFields(xwriter, mboxProps.GlobalId, mboxProps.AccountEmails);
             WriteInfoMessage(xwriter, $"Processing mbox file: {mboxProps.MboxFilePath}");
             WriteFolders(xwriter);
+        }
+
+        /// <summary>
+        /// Write a DocType declaration with entity definitions
+        /// </summary>
+        /// <param name="xwriter"></param>
+        private void WriteDocType(XmlWriter xwriter)
+        {
+            //This is only needed if we use named entities in the XML
+            //xwriter.WriteDocType("Account", null, null, "<!ENTITY % xhtml-lat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \"xhtml-lat1.ent\" > %xhtml-lat1;");
         }
 
         private void SetHashAlgorithm(MboxProperties mboxProps, XmlWriter xwriter)
@@ -1108,7 +1125,7 @@ namespace UIUCLibrary.EaPdf
 
             if (mimeEntity.Headers[HeaderId.ContentLanguage] != null)
             {
-                foreach( var hdr in mimeEntity.Headers.Where(h => h.Id == HeaderId.ContentLanguage))
+                foreach (var hdr in mimeEntity.Headers.Where(h => h.Id == HeaderId.ContentLanguage))
                 {
                     WriteElementStringReplacingInvalidChars(xwriter, "ContentLanguage", XM_NS, hdr.Value);
                 }
@@ -1279,12 +1296,25 @@ namespace UIUCLibrary.EaPdf
                     {
                         WriteWarningMessage(xwriter, $"Not expecting body content for '{part.ContentType.MimeType}'.");
                     }
-
-                    xwriter.WriteStartElement("Content", XM_NS);
-
-                    xwriter.WriteCData(text);
-
-                    xwriter.WriteEndElement(); //Content
+                    
+                    if (Settings.SaveTextAsXhtml)
+                    {
+                        string msg;
+                        var xhtml = GetTextAsXhtml(part, out msg);
+                        if (!string.IsNullOrWhiteSpace(msg))
+                        {
+                            WriteWarningMessage(xwriter, $"Unable to convert content to XHTML: {msg}");
+                            WriteContentCData(xwriter, text);
+                        }
+                        else
+                        {
+                            WriteContentAsXhtmlRaw(xwriter, xhtml);
+                        }
+                    }
+                    else
+                    {
+                        WriteContentCData(xwriter, text);
+                    }
 
                     if (!string.IsNullOrWhiteSpace(encoding))
                     {
@@ -1312,6 +1342,81 @@ namespace UIUCLibrary.EaPdf
                 }
             }
             return localId;
+        }
+
+        private void WriteContentCData(XmlWriter xwriter, string text)
+        {
+            xwriter.WriteStartElement("Content", XM_NS);
+            xwriter.WriteCData(text);
+            xwriter.WriteEndElement(); //Content
+        }
+
+        private void WriteContentAsXhtmlRaw(XmlWriter xwriter, string text)
+        {
+            xwriter.WriteStartElement("ContentAsXhtml", XM_NS);
+            xwriter.WriteRaw(text);
+            xwriter.WriteEndElement(); //ContentAsXhtml
+        }
+
+        private string GetTextAsXhtml(MimePart part, out string msg)
+        {
+            var txtPart = part as TextPart;
+            if (txtPart == null)
+            {
+                throw new Exception($"Unexpected part type '{part.GetType().Name}'");
+            }
+
+            //Use the MimeKit converters to convert the text to html
+            string htmlText = txtPart.Text;
+
+            if (string.IsNullOrWhiteSpace(htmlText))
+            {
+                msg = $"The '{part.ContentType.MimeType}' content is empty.";
+                return htmlText;
+            }
+            
+            bool converted = false;
+            if (txtPart.ContentType.IsMimeType("text", "html") || txtPart.ContentType.IsMimeType("text", "plain"))
+            {
+                if (txtPart.IsFlowed)
+                {
+                    var converter = new FlowedToHtml();
+                    string delsp;
+                    if (txtPart.ContentType.Parameters.TryGetValue("delsp", out delsp))
+                        converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
+
+                    htmlText = converter.Convert(htmlText);
+                    converted = true;
+                }
+                else if (txtPart.IsHtml)
+                {
+                    var converter = new HtmlToHtml();
+                    converter.FilterHtml = true; //remove any scripts
+                    converter.FilterComments = true;  //remove comments
+
+                    htmlText = converter.Convert(htmlText);
+                    converted = true;
+                }
+                else
+                {
+                    var converter = new TextToHtml();
+
+                    htmlText = converter.Convert(htmlText);
+                    converted = true;
+                }
+            }
+
+
+            if (converted)
+            {
+                var xhtmlText = HtmlHelpers.ConvertHtmltoXhtml(htmlText, out msg);
+                return xhtmlText;
+            }
+            else
+            {
+                msg = "";
+                return htmlText;
+            }
         }
 
         private (string, string) GetContentText(MimePart part)
@@ -1409,15 +1514,15 @@ namespace UIUCLibrary.EaPdf
             foreach (var hdr in mimeEntity.Headers.Where(h => !except.Contains(h.Field, StringComparer.InvariantCultureIgnoreCase)))
             {
                 xwriter.WriteStartElement("OtherMimeHeader", XM_NS);
-                
+
                 xwriter.WriteElementString("Name", XM_NS, hdr.Field);
-                
+
                 //According to the XML schema, header values should be the raw headers, not converted to Unicode
                 var rawValue = System.Text.Encoding.ASCII.GetString(hdr.RawValue);
                 WriteElementStringReplacingInvalidChars(xwriter, "Value", XM_NS, rawValue.Trim());
 
                 //UNSUPPORTED: OtherMimeHeader/Comments, not currently supported by MimeKit
-                
+
                 xwriter.WriteEndElement(); //OtherMimeHeaders
             }
         }
@@ -1555,6 +1660,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             xwriter.WriteEndElement(); //Content
+
             if (!string.IsNullOrWhiteSpace(encoding))
             {
                 xwriter.WriteElementString("TransferEncoding", XM_NS, encoding);
@@ -1578,7 +1684,7 @@ namespace UIUCLibrary.EaPdf
 
             bool wrapInXml = Settings.WrapExternalContentInXml;
 
-            string randomFilePath = PathHelpers.GetRandomFilePath(mboxProps.OutDirectoryName);
+            string randomFilePath = FilePathHelpers.GetRandomFilePath(mboxProps.OutDirectoryName);
 
             byte[] hash;
             long size;
@@ -1610,7 +1716,7 @@ namespace UIUCLibrary.EaPdf
 
             _logger.LogTrace($"Created temporary file: '{randomFilePath}'");
 
-            var hashFileName = PathHelpers.GetOutputFilePathBasedOnHash(hash, part, Path.Combine(mboxProps.OutDirectoryName, Settings.ExternalContentFolder), wrapInXml);
+            var hashFileName = FilePathHelpers.GetOutputFilePathBasedOnHash(hash, part, Path.Combine(mboxProps.OutDirectoryName, Settings.ExternalContentFolder), wrapInXml);
             //create folder if needed
             Directory.CreateDirectory(Path.GetDirectoryName(hashFileName) ?? "");
 

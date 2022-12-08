@@ -71,5 +71,11 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
+        /// <summary>
+        /// If true, all plain and html text will be converted to Xhtml when serialized into the XML
+        /// This is to improve rendering when converting to PDF or other display formats
+        /// </summary>
+        public bool SaveTextAsXhtml { get; set; } = false;
+
     }
 }
