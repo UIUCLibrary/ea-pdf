@@ -58,7 +58,6 @@ namespace UIUCLibrary.EaPdf.Helpers
         public static void ParseError(object sender, Event evt)
         {
             //TODO: What do I even want to do with these events
-            var x = evt.Type;
         }
 
         public static void Created(IElement element, TextPosition pos)
@@ -93,13 +92,15 @@ namespace UIUCLibrary.EaPdf.Helpers
             ret = HtmlEntity.DeEntitize(ret);
 
 
-            var hdoc = new HtmlDocument();
-            hdoc.OptionFixNestedTags = true;
-            hdoc.OptionOutputAsXml = true;
-            hdoc.OptionReadEncoding = false;
-            hdoc.OptionXmlForceOriginalComment = false;
-            hdoc.BackwardCompatibility = false;
-            hdoc.OptionPreserveXmlNamespaces = true;
+            var hdoc = new HtmlDocument
+            {
+                OptionFixNestedTags = true,
+                OptionOutputAsXml = true,
+                OptionReadEncoding = false,
+                OptionXmlForceOriginalComment = false,
+                BackwardCompatibility = false,
+                OptionPreserveXmlNamespaces = true
+            };
             hdoc.LoadHtml(ret);
 
             if (removeComments) //this seems to get rid of DOCTYPE declarations too
@@ -142,7 +143,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 //recursively check each element for namespace declarations and make sure the element and attribute names and prefixes are valid 
                 Stack<List<string>> namespacePrefixes = new();
                 FixNames(htmlNode, ref namespacePrefixes, ref messages);
-                if (namespacePrefixes.Count() > 0)
+                if (namespacePrefixes.Count > 0)
                 {
                     messages.Add((LogLevel.Warning, $"There are unclosed tags"));
                 }
@@ -153,8 +154,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
 
 
-            string msg;
-            if (XmlHelpers.TryReplaceInvalidXMLChars(ref ret, out msg))
+            if (XmlHelpers.TryReplaceInvalidXMLChars(ref ret, out string msg))
             {
                 messages.Add((LogLevel.Warning, msg));
             }

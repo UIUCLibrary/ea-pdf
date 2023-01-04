@@ -52,12 +52,12 @@ namespace UIUCLibrary.EaPdf
         public EmailToXmlProcessorSettings Settings { get; }
 
         //stats used for development and debuging
-        private Dictionary<string, int> contentTypeCounts = new();
-        private Dictionary<string, int> xGmailLabelCounts = new();
-        private Dictionary<string, int> xGmailLabelComboCounts = new();
+        private readonly Dictionary<string, int> contentTypeCounts = new();
+        private readonly Dictionary<string, int> xGmailLabelCounts = new();
+        private readonly Dictionary<string, int> xGmailLabelComboCounts = new();
 
         //need to keep track of folders in case output file is split into multiple files and the split happens while processing a subfolder
-        private Stack<string> _folders = new();
+        private readonly Stack<string> _folders = new();
 
         /// <summary>
         /// Create a processor for email files, initializing the logger and settings
@@ -68,20 +68,9 @@ namespace UIUCLibrary.EaPdf
         /// <exception cref="FileNotFoundException"></exception>
         public EmailToXmlProcessor(ILogger<EmailToXmlProcessor> logger, EmailToXmlProcessorSettings settings)
         {
-            if (logger == null)
-            {
-                throw new ArgumentNullException(nameof(logger));
-            }
+            Settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
-
-            if (settings == null)
-            {
-                throw new ArgumentNullException(nameof(settings));
-            }
-
-            Settings = settings;
-
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _logger.LogTrace("MboxProcessor Created");
 
         }
@@ -141,10 +130,7 @@ namespace UIUCLibrary.EaPdf
                 throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the mboxFolderPath, '{fullMboxFolderPath}'");
             }
 
-            if (messageList == null)
-            {
-                messageList = new List<MessageBrief>(); //used to create the CSV file
-            }
+            messageList ??= new List<MessageBrief>(); //used to create the CSV file
 
             long localId = startingLocalId;
 
@@ -169,7 +155,7 @@ namespace UIUCLibrary.EaPdf
                     prevLocalId = localId;
                 }
 
-                _logger.LogInformation($"Files with messages: {filesWithMessagesCnt}, Files without messages: {filesWithoutMessagesCnt}, Total messages: {localId - startingLocalId}");
+                _logger.LogInformation("Files with messages: {filesWithMessagesCnt}, Files without messages: {filesWithoutMessagesCnt}, Total messages: {localId - startingLocalId}", filesWithMessagesCnt, filesWithoutMessagesCnt, localId - startingLocalId);
             }
             else
             {
@@ -281,10 +267,7 @@ namespace UIUCLibrary.EaPdf
 
             var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullMboxFilePath, "xml")));
 
-            if (messageList == null)
-            {
-                messageList = new List<MessageBrief>(); //used to create the CSV file
-            }
+            messageList ??= new List<MessageBrief>(); //used to create the CSV file
 
             long localId = startingLocalId;
 
@@ -348,26 +331,20 @@ namespace UIUCLibrary.EaPdf
             //FUTURE: Save to Excel https://learn.microsoft.com/en-us/previous-versions/technet-magazine/cc161037(v=msdn.10)?redirectedfrom=MSDN
             using (var writer = new StreamWriter(csvFilepath))
             {
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                {
-                    csv.WriteRecords(contentTypeCounts);
-                }
+                using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+                csv.WriteRecords(contentTypeCounts);
             }
 
             using (var writer = new StreamWriter(csvFilepath, true))
             {
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                {
-                    csv.WriteRecords(xGmailLabelCounts);
-                }
+                using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+                csv.WriteRecords(xGmailLabelCounts);
             }
 
             using (var writer = new StreamWriter(csvFilepath, true))
             {
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                {
-                    csv.WriteRecords(xGmailLabelComboCounts);
-                }
+                using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+                csv.WriteRecords(xGmailLabelComboCounts);
             }
 
         }
@@ -407,10 +384,10 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteElementString("Name", XM_NS, mboxProps.MboxName);
 
             //Keep track of properties for an individual messager, such as Eol and Hash
-            MimeMessageProperties msgProps = new MimeMessageProperties();
+            MimeMessageProperties msgProps = new();
 
             //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
-            using FileStream mboxStream = new FileStream(mboxProps.MboxFilePath, FileMode.Open, FileAccess.Read);
+            using FileStream mboxStream = new(mboxProps.MboxFilePath, FileMode.Open, FileAccess.Read);
 
 
             if (Helpers.MimeKitHelpers.IsStreamAnMbx(mboxStream))
@@ -476,7 +453,7 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
-                using CryptoStream cryptoStream = new CryptoStream(mboxStream, mboxProps.HashAlgorithm, CryptoStreamMode.Read);
+                using CryptoStream cryptoStream = new(mboxStream, mboxProps.HashAlgorithm, CryptoStreamMode.Read);
 
                 var mboxParser = new MimeParser(cryptoStream, MimeFormat.Mbox);
 
@@ -630,7 +607,7 @@ namespace UIUCLibrary.EaPdf
 
             //look for a subfolder named the same as the mbox file ignoring extensions
             //i.e. Mozilla Thunderbird will append the extension '.sbd' to the folder name
-            string? subfolderName = null;
+            string? subfolderName;
             try
             {
                 subfolderName = Directory.GetDirectories(mboxProps.MboxDirectoryName, $"{mboxProps.MboxName}.*").SingleOrDefault();
@@ -648,7 +625,7 @@ namespace UIUCLibrary.EaPdf
 
             if (!string.IsNullOrWhiteSpace(subfolderName))
             {
-                _logger.LogInformation($"Processing Subfolder: {subfolderName}");
+                _logger.LogInformation("Processing Subfolder: {subfolderName}", subfolderName);
                 //look for mbox files in this subdirectory
                 string[]? childMboxes = null;
                 try
@@ -658,16 +635,15 @@ namespace UIUCLibrary.EaPdf
                 catch (Exception ex)
                 {
                     WriteToLogErrorMessage(xwriter, $"Skipping this subfolder. {ex.GetType().Name}: {ex.Message}");
-                    subfolderName = null;
                 }
 
-                if (childMboxes != null && childMboxes.Count() > 0)
+                if (childMboxes != null && childMboxes.Length > 0)
                 {
                     //this is all the files, so need to determine which ones are mbox files or not
                     foreach (var childMbox in childMboxes)
                     {
                         //create new MboxProperties which is copy of parent MboxProperties except for the MboxFilePath and the checksum hash
-                        MboxProperties childMboxProps = new MboxProperties(mboxProps)
+                        MboxProperties childMboxProps = new(mboxProps)
                         {
                             MboxFilePath = childMbox
                         };
@@ -694,7 +670,7 @@ namespace UIUCLibrary.EaPdf
                 throw new ArgumentNullException(nameof(stream));
             }
 
-            int i = -1;
+            int i;
             do
             {
                 i = stream.ReadByte();
@@ -706,7 +682,7 @@ namespace UIUCLibrary.EaPdf
             var origXmlFilePath = mboxProps.OutFilePath;
 
             //increment the file number; this also updates the OutFilePath
-            var fileNum = mboxProps.IncrementOutFileNumber();
+            _ = mboxProps.IncrementOutFileNumber();
 
             var newXmlFilePath = mboxProps.OutFilePath;
 
@@ -898,8 +874,7 @@ namespace UIUCLibrary.EaPdf
         private void WriteMessageStatuses(XmlWriter xwriter, MimeMessage message, MimeMessageProperties msgProps)
         {
             //StatusFlags
-            string status = "";
-            if (MimeKitHelpers.TryGetSeen(message, msgProps, out status))
+            if (MimeKitHelpers.TryGetSeen(message, msgProps, out string status))
             {
                 xwriter.WriteElementString("StatusFlag", XM_NS, status);
             }
@@ -1077,7 +1052,6 @@ namespace UIUCLibrary.EaPdf
             MimePart? part = mimeEntity as MimePart;
             Multipart? multipart = mimeEntity as Multipart;
             MessagePart? message = mimeEntity as MessagePart;
-            MessageDeliveryStatus? deliveryStatus = mimeEntity as MessageDeliveryStatus;
 
             if (mimeEntity is Multipart)
             {
@@ -1159,7 +1133,7 @@ namespace UIUCLibrary.EaPdf
             }
             else if (!isMultipart)
             {
-                if (deliveryStatus != null)
+                if (mimeEntity is MessageDeliveryStatus deliveryStatus)
                 {
                     localId = WriteDeliveryStatus(xwriter, deliveryStatus, localId, mboxProps);
                 }
@@ -1296,8 +1270,7 @@ namespace UIUCLibrary.EaPdf
                     
                     if (Settings.SaveTextAsXhtml)
                     {
-                        List<(LogLevel level, string message)> messages;
-                        var xhtml = GetTextAsXhtml(part, out messages);
+                        var xhtml = GetTextAsXhtml(part, out List<(LogLevel level, string message)> messages);
                         WriteToLogMessages(xwriter, messages);
                         
                         if (string.IsNullOrWhiteSpace(xhtml) || messages.Any(m => m.level == LogLevel.Error || m.level == LogLevel.Critical))
@@ -1345,8 +1318,7 @@ namespace UIUCLibrary.EaPdf
 
             messages = new List<(LogLevel level, string message)>();
 
-            var txtPart = part as TextPart;
-            if (txtPart == null)
+            if (part is not TextPart txtPart)
             {
                 throw new Exception($"Unexpected part type '{part.GetType().Name}'");
             }
@@ -1369,8 +1341,7 @@ namespace UIUCLibrary.EaPdf
                 {
                     //Use the MimeKit converters to convert plain/text, flowed to html,
                     var converter = new FlowedToHtml();
-                    string delsp;
-                    if (txtPart.ContentType.Parameters.TryGetValue("delsp", out delsp))
+                    if (txtPart.ContentType.Parameters.TryGetValue("delsp", out string delsp))
                         converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
 
                     htmlText = converter.Convert(htmlText);
@@ -1420,15 +1391,13 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteContentAsXhtmlRaw(XmlWriter xwriter, string text)
         {
-            var x = text;
             xwriter.WriteStartElement("ContentAsXhtml", XM_NS);
             try
             {
                 xwriter.WriteRaw(text);
             }
-            catch (Exception xex)
+            catch (Exception)
             {
-                var msg = xex.Message;
                 throw;
             }
             xwriter.WriteEndElement(); //ContentAsXhtml
@@ -1454,7 +1423,7 @@ namespace UIUCLibrary.EaPdf
             if (part != null && part.Content != null)
             {
                 //Decode the stream and treat it as whatever the charset advertised in the content-type header
-                using StreamReader reader = new StreamReader(part.Content.Open(), part.ContentType.CharsetEncoding, true);
+                using StreamReader reader = new(part.Content.Open(), part.ContentType.CharsetEncoding, true);
                 string xmlStr = reader.ReadToEnd();
 
                 //The content stream may contain characters that are not allowed in XML, i.e. ASCII control characters
@@ -1635,7 +1604,6 @@ namespace UIUCLibrary.EaPdf
                 WriteToLogInfoMessage(xwriter, $"LocalId {localId} written to external file");
             }
 
-            var encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
             var actualEncoding = "";
             if (part.Headers.Contains(HeaderId.ContentTransferEncoding))
             {
@@ -1648,11 +1616,12 @@ namespace UIUCLibrary.EaPdf
             }
 
             xwriter.WriteStartElement("Content", XM_NS);
-
+            
+            string? encoding;
             //7bit and 8bit should be text content, so decode it and use the streamreader with the contenttype charset, if any, to get the text and write it to the xml in a cdata section.  Default is the same as 7bit.
             if (content.Encoding == ContentEncoding.EightBit || content.Encoding == ContentEncoding.SevenBit || content.Encoding == ContentEncoding.Default)
             {
-                StreamReader reader = new StreamReader(content.Open(), part.ContentType.CharsetEncoding, true);
+                StreamReader reader = new(content.Open(), part.ContentType.CharsetEncoding, true);
                 xwriter.WriteCData(reader.ReadToEnd());
                 encoding = String.Empty;
                 if (content.Encoding == ContentEncoding.Default && !string.IsNullOrWhiteSpace(actualEncoding))
@@ -1665,14 +1634,14 @@ namespace UIUCLibrary.EaPdf
             //use the original content encoding in the XML
             {
                 //treat the stream as ASCII because it is already encoded and just write it out using the same encoding
-                StreamReader reader = new StreamReader(content.Stream, System.Text.Encoding.ASCII);
+                StreamReader reader = new(content.Stream, System.Text.Encoding.ASCII);
                 xwriter.WriteCData(reader.ReadToEnd());
                 encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
             }
             else //anything is treated as binary content (binary, quoted-printable, uuencode, base64), so copy to a memory stream and write it to the XML as base64
             {
                 byte[] byts;
-                using (MemoryStream ms = new MemoryStream())
+                using (MemoryStream ms = new())
                 {
                     content.Open().CopyTo(ms);
                     byts = ms.ToArray();
@@ -1736,7 +1705,7 @@ namespace UIUCLibrary.EaPdf
                 hash = SaveContentAsXml(randomFilePath, part, localId, "", out size);
             }
 
-            _logger.LogTrace($"Created temporary file: '{randomFilePath}'");
+            _logger.LogTrace("Created temporary file: '{randomFilePath}'", randomFilePath);
 
             var hashFileName = FilePathHelpers.GetOutputFilePathBasedOnHash(hash, part, Path.Combine(mboxProps.OutDirectoryName, Settings.ExternalContentFolder), wrapInXml);
             //create folder if needed
@@ -1756,7 +1725,7 @@ namespace UIUCLibrary.EaPdf
                 try
                 {
                     File.Move(randomFilePath, hashFileName);
-                    _logger.LogTrace($"File moved: '{randomFilePath}' -> '{hashFileName}'");
+                    _logger.LogTrace("File moved: '{randomFilePath}' -> '{hashFileName}'", randomFilePath, hashFileName);
                 }
                 catch (IOException ioex)
                 {
@@ -1898,9 +1867,9 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteToLogMessages(XmlWriter xwriter, List<(LogLevel level, string message)> messages)
         {
-            foreach (var msg in messages)
+            foreach (var (level, message) in messages)
             {
-                WriteToLogMessage(xwriter, msg.message, msg.level);
+                WriteToLogMessage(xwriter, message, level);
             }
         }
 
@@ -1924,13 +1893,10 @@ namespace UIUCLibrary.EaPdf
 
         private void MimeMessageEndEventHandler(object? sender, MimeMessageEndEventArgs e, Stream mboxStream, MboxProperties mboxProps, MimeMessageProperties msgProps, bool isMbxFile)
         {
-            var parser = sender as MimeParser;
-
             var beginOffset = e.BeginOffset;
             var endOffset = e.EndOffset;
-            long mboxMarkerOffset = 0;
-
-            if (parser != null)
+            long mboxMarkerOffset;
+            if (sender is MimeParser parser)
             {
                 mboxMarkerOffset = parser.MboxMarkerOffset;
             }
@@ -2006,16 +1972,16 @@ namespace UIUCLibrary.EaPdf
             Array.Copy(buffer, 0, newBuffer, 0, i + 1);
             if (msgProps.Eol == MimeMessageProperties.EOL_TYPE_CRLF)
             {
-                newBuffer[newBuffer.Length - 1] = LF;
-                newBuffer[newBuffer.Length - 2] = CR;
+                newBuffer[^1] = LF;
+                newBuffer[^2] = CR;
             }
             else if (msgProps.Eol == MimeMessageProperties.EOL_TYPE_LF)
             {
-                newBuffer[newBuffer.Length - 1] = LF;
+                newBuffer[^1] = LF;
             }
             else if (msgProps.Eol == MimeMessageProperties.EOL_TYPE_CR)
             {
-                newBuffer[newBuffer.Length - 1] = CR;
+                newBuffer[^1] = CR;
             }
             else
             {
