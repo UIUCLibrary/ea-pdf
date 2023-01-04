@@ -606,38 +606,40 @@ namespace UIUCLibrary.TestEaPdf
         //The expected error, warning, and message counts were set by running the test scripts as of 2022-12-08
 
         //Gmail Exports
-        [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, 0, 1, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
-        [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, 0, 0, 1, DisplayName = "xhtml-gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness
-        [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, 0, 0, 1, DisplayName = "xhtml-gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
+        [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, 0, 67, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
+        [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness
+        [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, 0, 2, 1, DisplayName = "xhtml-gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
+        
         [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, 0, 99796, 245734, false, DisplayName = "xhtml-gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
         [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, 0, 99796, 245734, false, 10000000, DisplayName = "xhtml-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
-        [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, 0, 1, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
+        
+        [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, 0, 67, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
 
         //Mozilla mbox with child mboxes, different combinations of settings
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, 0, 0, 384, DisplayName = "xhtml-moz-dlf-sha1")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, false, 0, 0, 384, DisplayName = "xhtml-moz-dlf-sha256")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, false, 0, 0, 475, DisplayName = "xhtml-moz-dlf-sha256-ext")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, true, false, 0, 9, 848, DisplayName = "xhtml-moz-dlf-sha256-ext---includeSubs")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, false, 0, 0, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEnc", "SHA256", true, true, true, false, false, 0, 0, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap-presvEnc")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, true, false, 0, 9, 701, DisplayName = "xhtml-moz-dlf-sha256----includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, 0, 31, 384, DisplayName = "xhtml-moz-dlf-sha1")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, false, 0, 31, 384, DisplayName = "xhtml-moz-dlf-sha256")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, false, 0, 31, 475, DisplayName = "xhtml-moz-dlf-sha256-ext")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, true, false, 0, 66, 848, DisplayName = "xhtml-moz-dlf-sha256-ext---includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, false, 0, 31, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEnc", "SHA256", true, true, true, false, false, 0, 31, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap-presvEnc")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, true, false, 0, 66, 701, DisplayName = "xhtml-moz-dlf-sha256----includeSubs")]
         //Test maximum output file size
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000", "SHA256", false, false, false, true, false, 0, 9, 701, false, 10000000, DisplayName = "xhtml-moz-dlf-sha256----includeSubs-10000000")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEnc", "SHA256", false, false, true, false, false, 0, 0, 384, DisplayName = "xhtml-moz-dlf-sha256---presvEnc")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000", "SHA256", false, false, false, true, false, 0, 66, 701, false, 10000000, DisplayName = "xhtml-moz-dlf-sha256----includeSubs-10000000")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEnc", "SHA256", false, false, true, false, false, 0, 31, 384, DisplayName = "xhtml-moz-dlf-sha256---presvEnc")]
         //Mozilla special files
         [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, false, 0, 0, 26, DisplayName = "xhtml-moz-drafts")]
         [DataRow("MozillaThunderbird\\Inbox", "", "SHA256", false, false, false, false, false, 0, 0, 21, DisplayName = "xhtml-moz-inbox")]
 
 
         //Pine mbox folder
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, 0, 114, 20795, DisplayName = "xhtml-pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, 0, 114, 20795, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
-        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, true, 0, 59, 20795, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, 2, 1637, 20795, DisplayName = "xhtml-pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, 2, 1637, 20795, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, true, 2, 1582, 20795, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
-        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, 0, 6, 1300, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
-        [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, 0, 1, 100, DisplayName = "xhtml-pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
-        [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, 0, 0, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
+        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, 2, 449, 1300, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
+        [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, 0, 1, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
         [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, 0, 1, 418, DisplayName = "xhtml-pine-sent-mail-jun-2004")] //not an mbox file
+        [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, 0, 1, 100, DisplayName = "xhtml-pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
 
 
         //Weird Emails
@@ -645,7 +647,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Weird\\missing_ext.mbox", "out_missing_ext", "SHA256", true, false, false, false, false, 0, 0, 3, DisplayName = "xhtml-weird-missing-ext-mbox")] //message from very large mbox seems to be missing external files
         [DataRow("Weird\\rfc822headers2.mbox", "out_rfc822headers2", "SHA256", true, false, false, false, false, 0, 0, 2, DisplayName = "xhtml-weird-rfc822headers2-mbox")] //message from very large mbox which contains txt/rfc822-headers
         [DataRow("Weird\\rfc822headers.mbox", "out_rfc822headers", "SHA256", true, false, false, false, false, 0, 0, 2, DisplayName = "xhtml-weird-rfc822headers-mbox")] //message from very large mbox which contains txt/rfc822-headers
-        [DataRow("Weird\\spam_hexa.mbox", "", "SHA256", false, false, false, false, false, 0, 2, 1, DisplayName = "xhtml-weird-spam-hexa-mbox")] //weird spam email with 'hexa' encoded content
+        [DataRow("Weird\\spam_hexa.mbox", "", "SHA256", false, false, false, false, false, 0, 4, 1, DisplayName = "xhtml-weird-spam-hexa-mbox")] //weird spam email with 'hexa' encoded content
         [DataRow("Weird\\virus_notif.mbox", "", "SHA256", false, false, false, false, false, 0, 1, 2, DisplayName = "xhtml-weird-virus-notif-mbox")] //weird virus notification with multipart/report, message/delivery-report. and text/rfc822-headers content types
         [DataRow("Weird\\virus_payload.mbox", "out_virus_payload", "SHA256", true, false, false, false, false, 0, 1, 2, DisplayName = "xhtml-weird-virus-payload-mbox")] //message from very large mbox which contains a virus payload
 

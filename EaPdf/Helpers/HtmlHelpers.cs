@@ -35,11 +35,11 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 IsAcceptingCustomElementsEverywhere = true,
                 IsEmbedded = true,
-                OnCreated = Created
+                OnCreated = CreatedAngleSharp
             };
 
             var parser = new HtmlParser(opts);
-            parser.Error += ParseError;
+            parser.Error += ParseErrorAngleSharp;
 
 
             //NOTE: AngleSharp conforms strictly to the HTML5 spec, meaning that custom tags occuring in the head section (common in old html emails) can get moved to the body
@@ -55,12 +55,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             return ret.Trim();
         }
 
-        public static void ParseError(object sender, Event evt)
+        public static void ParseErrorAngleSharp(object sender, Event evt)
         {
             //TODO: What do I even want to do with these events
         }
 
-        public static void Created(IElement element, TextPosition pos)
+        public static void CreatedAngleSharp(IElement element, TextPosition pos)
         {
             //TODO:  Not sure what to do with this
         }
@@ -104,52 +104,23 @@ namespace UIUCLibrary.EaPdf.Helpers
             hdoc.LoadHtml(ret);
 
             if (removeComments) //this seems to get rid of DOCTYPE declarations too
-            {
-                var nodes = hdoc.DocumentNode.SelectNodes("//comment()");
-                if (nodes != null)
-                {
-                    foreach (HtmlNode comment in nodes)
-                    {
-                        comment.ParentNode.RemoveChild(comment);
-                    }
-                }
-            }
+                RemoveCommentsHap(hdoc, ref messages);
 
-            //find the root html tag
-            var htmlNode = hdoc.DocumentNode.Descendants().FirstOrDefault(x => x.Name == "html");
-
-            if (htmlNode == null)
-            {
-                //TODO: Make sure the html node is added after any leadings PIs or comments in the original html
-                var el = hdoc.CreateElement("html");
-                el.Attributes.Add("xmlns", "http://www.w3.org/1999/xhtml");
-                var nodes = hdoc.DocumentNode.ChildNodes;
-                el.AppendChildren(nodes);
-                hdoc.DocumentNode.RemoveAllChildren();
-                hdoc.DocumentNode.AppendChild(el);
-                htmlNode = hdoc.DocumentNode.Descendants().FirstOrDefault(x => x.Name == "html");
-                messages.Add((LogLevel.Warning, "There was no top-level html tag, so one was added"));
-            }
+            var htmlNode = AddXHtmlHeadBodyHap(hdoc, ref messages);
 
             if (htmlNode != null)
             {
-                if (htmlNode.Attributes.Contains("xmlns"))
-                {
-                    //remove existing xmlns attribute so a new xmlns can be added for xhtml
-                    htmlNode.Attributes.Remove("xmlns");
-                }
-                htmlNode.Attributes.Add("xmlns", "http://www.w3.org/1999/xhtml");
 
                 //recursively check each element for namespace declarations and make sure the element and attribute names and prefixes are valid 
                 Stack<List<string>> namespacePrefixes = new();
-                FixNames(htmlNode, ref namespacePrefixes, ref messages);
+                FixNamesHap(htmlNode, ref namespacePrefixes, ref messages);
                 if (namespacePrefixes.Count > 0)
                 {
                     messages.Add((LogLevel.Warning, $"There are unclosed tags"));
                 }
 
                 //TODO: Make sure the html has a head and a body, and also make sure the elements that are only allowed in the head are moved there if needed
-                
+
                 ret = htmlNode.OuterHtml;
             }
 
@@ -162,12 +133,51 @@ namespace UIUCLibrary.EaPdf.Helpers
             return ret;
         }
 
+        private static void RemoveCommentsHap(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages)
+        {
+            var nodes = hdoc.DocumentNode.SelectNodes("//comment()");
+            if (nodes != null)
+            {
+                foreach (HtmlNode comment in nodes)
+                {
+                    comment.ParentNode.RemoveChild(comment);
+                }
+            }
+        }
+
+        private static HtmlNode? AddXHtmlHeadBodyHap(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages)
+        {
+            //find the root html tag
+            var htmlNode = hdoc.DocumentNode.Descendants().FirstOrDefault(x => x.Name == "html");
+
+            if (htmlNode == null)
+            {
+                //Add an html element
+                var el = hdoc.CreateElement("html");
+                el.Attributes.Add("xmlns", "http://www.w3.org/1999/xhtml");
+                var nodes = hdoc.DocumentNode.ChildNodes; //TODO: DOCTYPE decl must be removed before this
+                el.AppendChildren(nodes);
+                hdoc.DocumentNode.RemoveAllChildren();
+                hdoc.DocumentNode.AppendChild(el);
+                htmlNode = el;
+                messages.Add((LogLevel.Warning, "There was no top-level html tag, so one was added"));
+            }
+            else
+            {
+                //remove existing xmlns attribute so a new xmlns can be added for xhtml
+                htmlNode.Attributes.Remove("xmlns");
+                htmlNode.Attributes.Add("xmlns", "http://www.w3.org/1999/xhtml");
+            }
+
+            return htmlNode;
+        }
+
         /// <summary>
         /// Check that namespace prefixes have been previously declared using xmlns, if not escape the name to make it valid 
         /// </summary>
         /// <param name="elem"></param>
         /// <param name="namespacePrefixes"></param>
-        private static void FixNames(HtmlNode elem, ref Stack<List<string>> namespacePrefixes, ref List<(LogLevel level, string message)> messages)
+        private static void FixNamesHap(HtmlNode elem, ref Stack<List<string>> namespacePrefixes, ref List<(LogLevel level, string message)> messages)
         {
             //collect the namespace prefixes on the stack
             namespacePrefixes.Push(new List<string>());
@@ -208,7 +218,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
 
             //check the attribute names
-            foreach (var attr in elem.Attributes.Where(a => !a.Name.StartsWith("xml",StringComparison.OrdinalIgnoreCase)))
+            foreach (var attr in elem.Attributes.Where(a => !a.Name.StartsWith("xml", StringComparison.OrdinalIgnoreCase)))
             {
                 var origAttrName = attr.Name;
                 if (origAttrName.Contains(':'))
@@ -242,10 +252,10 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 if (child.NodeType == HtmlNodeType.Element)
                 {
-                    FixNames(child, ref namespacePrefixes, ref messages);
+                    FixNamesHap(child, ref namespacePrefixes, ref messages);
                 }
             }
-            
+
             namespacePrefixes.Pop();
         }
 
