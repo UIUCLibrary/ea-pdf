@@ -42,7 +42,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="value">the string that will have its invalid characters replaced</param>
         /// <param name="msg">if characters were replaced this will provide an explanation</param>
         /// <returns>true if characters were replaced; otherwise false</returns>
-        public static bool TryReplaceInvalidXMLChars(ref string? value, out string msg)
+        public static bool TryReplaceInvalidXMLChars(ref string value, out string msg)
         {
             bool ret = false; //Return true if any characters were replaced
             msg = "";
@@ -71,7 +71,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="value">the string that will have its invalid characters removed</param>
         /// <param name="msg">if characters were removed this will provide an explanation</param>
         /// <returns>true if characters were removed; otherwsie false</returns>
-        public static bool TryRemoveInvalidXMLChars(ref string? value, out string msg)
+        public static bool TryRemoveInvalidXMLChars(ref string value, out string msg)
         {
             bool ret = false; //Return true if any characters were removed
             msg = "";

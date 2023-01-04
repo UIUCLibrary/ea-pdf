@@ -38,7 +38,7 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
-        /// The full path to the mbox filebeing processed
+        /// The full path to the mbox file being processed
         /// </summary>
         public string MboxFilePath { get; set; } = "";
 

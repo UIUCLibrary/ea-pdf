@@ -22,7 +22,6 @@ using FilePathHelpers = UIUCLibrary.EaPdf.Helpers.FilePathHelpers;
 using System.Collections.Generic;
 using static System.Net.Mime.MediaTypeNames;
 using MimeKit.Text;
-using HtmlAgilityPack;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -90,13 +89,13 @@ namespace UIUCLibrary.EaPdf
         //QUESTION: Can an EML file start with a 'From ' line just like an mbox file?
         public long ConvertEmlToEaxs()
         {
-            //UNDONE
+            //UNDONE: Convert just a single EML file
             return 0;
         }
 
         public long ConvertFolderOfEmlToEaxs()
         {
-            //UNDONE
+            //UNDONE: Convert a folder of EML files
             return 0;
         }
 
@@ -209,7 +208,7 @@ namespace UIUCLibrary.EaPdf
 
                 foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
                 {
-                    WriteInfoMessage(xwriter, $"Processing mbox file: {mboxFilePath}");
+                    WriteToLogInfoMessage(xwriter, $"Processing mbox file: {mboxFilePath}");
                     mboxProps.MboxFilePath = mboxFilePath;
                     mboxProps.MessageCount = 0;
 
@@ -309,7 +308,7 @@ namespace UIUCLibrary.EaPdf
             WriteDocType(xwriter);
             WriteAccountHeaderFields(xwriter, globalId, accntEmails);
 
-            WriteInfoMessage(xwriter, $"Processing mbox file: {fullMboxFilePath}");
+            WriteToLogInfoMessage(xwriter, $"Processing mbox file: {fullMboxFilePath}");
 
             var mboxProps = new MboxProperties()
             {
@@ -417,7 +416,7 @@ namespace UIUCLibrary.EaPdf
             if (Helpers.MimeKitHelpers.IsStreamAnMbx(mboxStream))
             {
                 //This is a Pine *mbx* file, so it requires special parsing
-                WriteInfoMessage(xwriter, $"File '{mboxProps.MboxFilePath}' is a Pine *mbx* file; using an alternate parsing strategy");
+                WriteToLogInfoMessage(xwriter, $"File '{mboxProps.MboxFilePath}' is a Pine *mbx* file; using an alternate parsing strategy");
 
                 using var mbxParser = new MbxParser(mboxStream, mboxProps.HashAlgorithm);
 
@@ -439,12 +438,12 @@ namespace UIUCLibrary.EaPdf
                     }
                     catch (FormatException)
                     {
-                        WriteWarningMessage(xwriter, $"The mbx file was improperly formatted. The previous message might be prematurely truncated or it might include parts of two or more messages.");
+                        WriteToLogWarningMessage(xwriter, $"The mbx file was improperly formatted. The previous message might be prematurely truncated or it might include parts of two or more messages.");
                         continue;
                     }
                     catch (Exception ex)
                     {
-                        WriteErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message}");
+                        WriteToLogErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message}");
                         break; //some error we probably can't recover from, so just bail
                     }
 
@@ -453,7 +452,7 @@ namespace UIUCLibrary.EaPdf
                         _logger.LogTrace("Mbx Message Header: {header}", mbxParser.CurrentHeader?.Header);
                         if (!string.IsNullOrWhiteSpace(mbxParser.OverflowText))
                         {
-                            WriteWarningMessage(xwriter, "Because of the previous issue there is unprocessed overflow text.  See the comment below:");
+                            WriteToLogWarningMessage(xwriter, "Because of the previous issue there is unprocessed overflow text.  See the comment below:");
                             xwriter.WriteComment(mbxParser.OverflowText);
                         }
 
@@ -513,13 +512,13 @@ namespace UIUCLibrary.EaPdf
                     {
                         if (mboxProps.MessageCount == 0)
                         {
-                            WriteWarningMessage(xwriter, $"{fex1.Message} -- skipping file, probably not an mbox file");
+                            WriteToLogWarningMessage(xwriter, $"{fex1.Message} -- skipping file, probably not an mbox file");
                             //return localId; //the file probably isn't an mbox file, so just bail on the whole file
                             break;
                         }
                         else
                         {
-                            WriteErrorMessage(xwriter, $"{fex1.Message} -- this is unexpected");
+                            WriteToLogErrorMessage(xwriter, $"{fex1.Message} -- this is unexpected");
                             mboxParser.SetStream(cryptoStream, MimeFormat.Mbox); //reset the parser and try to continue
                             continue; //skip the message, but keep going
                         }
@@ -544,7 +543,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     catch (Exception ex)
                     {
-                        WriteErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message}");
+                        WriteToLogErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message}");
                         break; //some error we probably can't recover from, so just bail
                     }
 
@@ -556,7 +555,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     else if (mboxProps.MessageCount > 0 && prevMessage == null)
                     {
-                        WriteErrorMessage(xwriter, "Message is null");
+                        WriteToLogErrorMessage(xwriter, "Message is null");
                     }
                     prevMessage = message;
 
@@ -598,7 +597,7 @@ namespace UIUCLibrary.EaPdf
                 mboxProps.EolCounts.TryGetValue("CR", out int crCount);
                 mboxProps.EolCounts.TryGetValue("LF", out int lfCount);
                 mboxProps.EolCounts.TryGetValue("CRLF", out int crlfCount);
-                WriteWarningMessage(xwriter, $"Mbox file contains multiple different EOLs: CR: {crCount}, LF: {lfCount}, CRLF: {crlfCount}");
+                WriteToLogWarningMessage(xwriter, $"Mbox file contains multiple different EOLs: CR: {crCount}, LF: {lfCount}, CRLF: {crlfCount}");
             }
             if (mboxProps.HashAlgorithm.Hash != null)
             {
@@ -606,7 +605,7 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
-                WriteWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
+                WriteToLogWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
             }
 
             if (size >= 0)
@@ -615,11 +614,11 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
-                WriteWarningMessage(xwriter, $"Unable to determine the size of the Mbox");
+                WriteToLogWarningMessage(xwriter, $"Unable to determine the size of the Mbox");
             }
 
             string cntMsg = $"File {mboxProps.MboxName} contains {mboxProps.MessageCount} valid messages";
-            WriteInfoMessage(xwriter, cntMsg);
+            WriteToLogInfoMessage(xwriter, cntMsg);
 
             xwriter.WriteEndElement(); //Mbox
         }
@@ -638,12 +637,12 @@ namespace UIUCLibrary.EaPdf
             }
             catch (InvalidOperationException)
             {
-                WriteErrorMessage(xwriter, $"There is more than one folder that matches '{mboxProps.MboxName}.*'; skipping all subfolders");
+                WriteToLogErrorMessage(xwriter, $"There is more than one folder that matches '{mboxProps.MboxName}.*'; skipping all subfolders");
                 subfolderName = null;
             }
             catch (Exception ex)
             {
-                WriteErrorMessage(xwriter, $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}");
+                WriteToLogErrorMessage(xwriter, $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}");
                 subfolderName = null;
             }
 
@@ -658,7 +657,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 catch (Exception ex)
                 {
-                    WriteErrorMessage(xwriter, $"Skipping this subfolder. {ex.GetType().Name}: {ex.Message}");
+                    WriteToLogErrorMessage(xwriter, $"Skipping this subfolder. {ex.GetType().Name}: {ex.Message}");
                     subfolderName = null;
                 }
 
@@ -675,7 +674,7 @@ namespace UIUCLibrary.EaPdf
                         SetHashAlgorithm(childMboxProps, xwriter);
 
                         //just try to process it, if no errors thrown, its probably an mbox file
-                        WriteInfoMessage(xwriter, $"Processing Child Mbox: {childMbox}");
+                        WriteToLogInfoMessage(xwriter, $"Processing Child Mbox: {childMbox}");
                         localId = ProcessMbox(childMboxProps, ref xwriter, ref xstream, localId, messageList);
                     }
                 }
@@ -740,7 +739,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteProcessingInstruction("ContinuedFrom", $"'{Path.GetFileName(origXmlFilePath)}'");
 
             WriteAccountHeaderFields(xwriter, mboxProps.GlobalId, mboxProps.AccountEmails);
-            WriteInfoMessage(xwriter, $"Processing mbox file: {mboxProps.MboxFilePath}");
+            WriteToLogInfoMessage(xwriter, $"Processing mbox file: {mboxProps.MboxFilePath}");
             WriteFolders(xwriter);
         }
 
@@ -759,7 +758,7 @@ namespace UIUCLibrary.EaPdf
             var name = mboxProps.TrySetHashAlgorithm(Settings.HashAlgorithmName);
             if (name != Settings.HashAlgorithmName)
             {
-                WriteWarningMessage(xwriter, $"The hash algorithm '{Settings.HashAlgorithmName}' is not supported.  Using '{name}' instead.");
+                WriteToLogWarningMessage(xwriter, $"The hash algorithm '{Settings.HashAlgorithmName}' is not supported.  Using '{name}' instead.");
                 Settings.HashAlgorithmName = name;
             }
         }
@@ -824,22 +823,22 @@ namespace UIUCLibrary.EaPdf
             {
                 if (message.Headers[HeaderId.From] == null)
                 {
-                    WriteWarningMessage(xwriter, "The message does not have a From header.");
+                    WriteToLogWarningMessage(xwriter, "The message does not have a From header.");
                 }
                 if (message.Headers[HeaderId.Date] == null)
                 {
-                    WriteWarningMessage(xwriter, "The message does not have a Date header.");
+                    WriteToLogWarningMessage(xwriter, "The message does not have a Date header.");
                 }
                 if (message.Headers[HeaderId.To] == null && message.Headers[HeaderId.Cc] == null && message.Headers[HeaderId.Bcc] == null)
                 {
-                    WriteWarningMessage(xwriter, "The message does not have a To, Cc, or Bcc.");
+                    WriteToLogWarningMessage(xwriter, "The message does not have a To, Cc, or Bcc.");
                 }
             }
             else
             {
                 if (message.Headers[HeaderId.From] == null && message.Headers[HeaderId.Subject] == null && message.Headers[HeaderId.Date] == null)
                 {
-                    WriteWarningMessage(xwriter, "The child message does not have a From, Subject, or Date.");
+                    WriteToLogWarningMessage(xwriter, "The child message does not have a From, Subject, or Date.");
                 }
             }
 
@@ -889,7 +888,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 else
                 {
-                    WriteWarningMessage(xwriter, $"Unable to determine the size of the Message");
+                    WriteToLogWarningMessage(xwriter, $"Unable to determine the size of the Message");
                 }
             }
 
@@ -962,7 +961,7 @@ namespace UIUCLibrary.EaPdf
 
             if (message.From != null && message.From.Count > 1 && message.Sender == null)
             {
-                WriteWarningMessage(xwriter, "The message has multiple From addresses but no Sender.");
+                WriteToLogWarningMessage(xwriter, "The message has multiple From addresses but no Sender.");
             }
 
             if (message.Sender != null)
@@ -1034,11 +1033,10 @@ namespace UIUCLibrary.EaPdf
         {
 
             var addrStr = addr.ToString();
-            string msg;
-            if (XmlHelpers.TryReplaceInvalidXMLChars(ref addrStr, out msg))
+            if (XmlHelpers.TryReplaceInvalidXMLChars(ref addrStr, out string msg))
             {
                 var warn = $"{localName} contains characters which are not allowed in XML; they have been replaced with \uFFFD.  {msg}";
-                WriteWarningMessage(xwriter, warn);
+                WriteToLogWarningMessage(xwriter, warn);
             }
             xwriter.WriteStartElement(localName, XM_NS);
             if (!string.IsNullOrWhiteSpace(addr.Name))
@@ -1096,7 +1094,7 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
-                WriteWarningMessage(xwriter, $"Unexpected MIME Entity Type: '{mimeEntity.GetType().FullName}' -- '{mimeEntity.ContentType.MimeType}'");
+                WriteToLogWarningMessage(xwriter, $"Unexpected MIME Entity Type: '{mimeEntity.GetType().FullName}' -- '{mimeEntity.ContentType.MimeType}'");
                 xwriter.WriteStartElement("SingleBody", XM_NS);
             }
 
@@ -1114,7 +1112,7 @@ namespace UIUCLibrary.EaPdf
                 // (sections 5.2.1 and 5.2.2, respectively). Since some broken clients will encode them anyway,
                 // it is necessary for us to treat those as opaque blobs instead, and thus the parser should
                 // parse them as normal MimeParts instead of MessageParts.
-                WriteWarningMessage(xwriter, $"A 'message/rfc822' part was found with an unallowable content-transfer-encoding of '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding)}'.  The part will be treated as normal content instead of as a child message.");
+                WriteToLogWarningMessage(xwriter, $"A 'message/rfc822' part was found with an unallowable content-transfer-encoding of '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding)}'.  The part will be treated as normal content instead of as a child message.");
             }
 
             WriteMimeContentType(xwriter, mimeEntity, isMultipart);
@@ -1147,14 +1145,14 @@ namespace UIUCLibrary.EaPdf
             }
             else if (isMultipart && multipart != null && multipart.Count == 0)
             {
-                WriteWarningMessage(xwriter, $"Item is multipart, but there are no parts");
+                WriteToLogWarningMessage(xwriter, $"Item is multipart, but there are no parts");
                 //need to write an empty part so that XML is schema valid
                 xwriter.WriteStartElement("MissingBody", XM_NS);
                 xwriter.WriteEndElement(); //MissingBody
             }
             else if (isMultipart && multipart == null)
             {
-                WriteWarningMessage(xwriter, $"Item is erroneously flagged as multipart");
+                WriteToLogWarningMessage(xwriter, $"Item is erroneously flagged as multipart");
                 //need to write an empty part so that XML is schema valid
                 xwriter.WriteStartElement("MissingBody", XM_NS);
                 xwriter.WriteEndElement(); //MissingBody
@@ -1171,7 +1169,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 else if (part != null && MimeKitHelpers.IsXMozillaExternalAttachment(part))
                 {
-                    WriteInfoMessage(xwriter, "The content is an inaccessible external attachment");
+                    WriteToLogInfoMessage(xwriter, "The content is an inaccessible external attachment");
                 }
                 else if (message != null)
                 {
@@ -1184,12 +1182,12 @@ namespace UIUCLibrary.EaPdf
                 }
                 else
                 {
-                    WriteWarningMessage(xwriter, $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}");
+                    WriteToLogWarningMessage(xwriter, $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}");
                 }
             }
             else
             {
-                WriteWarningMessage(xwriter, $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}");
+                WriteToLogWarningMessage(xwriter, $"Unexpected MimeEntity: {mimeEntity.GetType().FullName}");
             }
 
             //PhantomBody; Content-Type message/external-body
@@ -1229,7 +1227,7 @@ namespace UIUCLibrary.EaPdf
             //Deal with malformed delivery status messages, instead just write a warning and then WriteSingleBodyContent
             if (deliveryStatus.StatusGroups.Count < 2)
             {
-                WriteWarningMessage(xwriter, $"Delivery status message is malformed. It should have at least 2 status groups; it has only {deliveryStatus.StatusGroups.Count}. Writing message as a single body content instead.");
+                WriteToLogWarningMessage(xwriter, $"Delivery status message is malformed. It should have at least 2 status groups; it has only {deliveryStatus.StatusGroups.Count}. Writing message as a single body content instead.");
                 return WriteSingleBodyContent(xwriter, deliveryStatus, localId, true, mboxProps);
             }
 
@@ -1282,11 +1280,10 @@ namespace UIUCLibrary.EaPdf
 
         private long WriteSingleBodyContent(XmlWriter xwriter, MimePart part, long localId, bool expectingBodyContent, MboxProperties mboxProps)
         {
-
             //if it is text and not an attachment, save embedded in the XML
             if (part.ContentType.IsMimeType("text", "*") && !part.IsAttachment)
             {
-                var (text, encoding) = GetContentText(part);
+                var (text, encoding, warning) = GetContentText(part);
 
                 if (!string.IsNullOrWhiteSpace(text) || expectingBodyContent)
                 {
@@ -1294,17 +1291,19 @@ namespace UIUCLibrary.EaPdf
 
                     if (!string.IsNullOrWhiteSpace(text) && !expectingBodyContent)
                     {
-                        WriteWarningMessage(xwriter, $"Not expecting body content for '{part.ContentType.MimeType}'.");
+                        WriteToLogWarningMessage(xwriter, $"Not expecting body content for '{part.ContentType.MimeType}'.");
                     }
                     
                     if (Settings.SaveTextAsXhtml)
                     {
-                        string msg;
-                        var xhtml = GetTextAsXhtml(part, out msg);
-                        if (!string.IsNullOrWhiteSpace(msg))
+                        List<(LogLevel level, string message)> messages;
+                        var xhtml = GetTextAsXhtml(part, out messages);
+                        WriteToLogMessages(xwriter, messages);
+                        
+                        if (string.IsNullOrWhiteSpace(xhtml) || messages.Any(m => m.level == LogLevel.Error || m.level == LogLevel.Critical))
                         {
-                            WriteWarningMessage(xwriter, $"Unable to convert content to XHTML: {msg}");
-                            WriteContentCData(xwriter, text);
+                            //if the html is blank or if there were serious errors converting to xhtml, we cannot save the content as xhtml
+                            WriteContentCData(xwriter, text, encoding, warning);
                         }
                         else
                         {
@@ -1313,14 +1312,10 @@ namespace UIUCLibrary.EaPdf
                     }
                     else
                     {
-                        WriteContentCData(xwriter, text);
+                        WriteContentCData(xwriter, text, encoding, warning);
                     }
 
-                    if (!string.IsNullOrWhiteSpace(encoding))
-                    {
-                        xwriter.WriteElementString("TransferEncoding", XM_NS, encoding);
-                        xwriter.WriteComment($"WARNING: Used {encoding} because the content contains characters that are not valid in XML");
-                    }
+
                     xwriter.WriteEndElement(); //BodyContent
                 }
             }
@@ -1344,85 +1339,112 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void WriteContentCData(XmlWriter xwriter, string text)
+        private string GetTextAsXhtml(MimePart part, out List<(LogLevel level, string message)> messages)
         {
-            xwriter.WriteStartElement("Content", XM_NS);
-            xwriter.WriteCData(text);
-            xwriter.WriteEndElement(); //Content
-        }
+            HtmlHelpers.WhichParser whichParser = HtmlHelpers.WhichParser.HtmlAgilityPack;
 
-        private void WriteContentAsXhtmlRaw(XmlWriter xwriter, string text)
-        {
-            xwriter.WriteStartElement("ContentAsXhtml", XM_NS);
-            xwriter.WriteRaw(text);
-            xwriter.WriteEndElement(); //ContentAsXhtml
-        }
+            messages = new List<(LogLevel level, string message)>();
 
-        private string GetTextAsXhtml(MimePart part, out string msg)
-        {
             var txtPart = part as TextPart;
             if (txtPart == null)
             {
                 throw new Exception($"Unexpected part type '{part.GetType().Name}'");
             }
 
-            //Use the MimeKit converters to convert the text to html
             string htmlText = txtPart.Text;
 
             if (string.IsNullOrWhiteSpace(htmlText))
             {
-                msg = $"The '{part.ContentType.MimeType}' content is empty.";
                 return htmlText;
             }
-            
-            bool converted = false;
+
+
             if (txtPart.ContentType.IsMimeType("text", "html") || txtPart.ContentType.IsMimeType("text", "plain"))
             {
-                if (txtPart.IsFlowed)
+                if (txtPart.IsHtml)
                 {
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, true, ref messages, whichParser);
+                }
+                else if (txtPart.IsFlowed)
+                {
+                    //Use the MimeKit converters to convert plain/text, flowed to html,
                     var converter = new FlowedToHtml();
                     string delsp;
                     if (txtPart.ContentType.Parameters.TryGetValue("delsp", out delsp))
                         converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
 
                     htmlText = converter.Convert(htmlText);
-                    converted = true;
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, true, ref messages, whichParser);
                 }
-                else if (txtPart.IsHtml)
+                else //plain text not flowed
                 {
-                    var converter = new HtmlToHtml();
-                    converter.FilterHtml = true; //remove any scripts
-                    converter.FilterComments = true;  //remove comments
-
-                    htmlText = converter.Convert(htmlText);
-                    converted = true;
-                }
-                else
-                {
+                    //Use the MimeKit converters to convert plain/text, fixed to html,
                     var converter = new TextToHtml();
-
                     htmlText = converter.Convert(htmlText);
-                    converted = true;
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, true, ref messages, whichParser);
                 }
-            }
 
-
-            if (converted)
-            {
-                var xhtmlText = HtmlHelpers.ConvertHtmltoXhtml(htmlText, out msg);
-                return xhtmlText;
             }
             else
             {
-                msg = "";
-                return htmlText;
+                //TODO: Need to make accomodations for text/enriched (and text/richtext? -- not Microsoft RTF), see Pine sent-mail-aug-2007, message id: 4d2cbdd341d0e87da57ba2245562265f@uiuc.edu                 
+
+
+                
+                messages.Add((LogLevel.Error, $"The '{part.ContentType.MimeType}' content is not plain text or html."));
             }
+
+
+            return htmlText;
         }
 
-        private (string, string) GetContentText(MimePart part)
+        private void WriteContentCData(XmlWriter xwriter, string text, string encoding, string warning)
+        {
+            if (!string.IsNullOrWhiteSpace(warning))
+            {
+                WriteToLogWarningMessage(xwriter, warning);
+            }
+
+            xwriter.WriteStartElement("Content", XM_NS);
+            xwriter.WriteCData(text);
+            xwriter.WriteEndElement(); //Content
+
+            if (!string.IsNullOrWhiteSpace(encoding))
+            {
+                xwriter.WriteElementString("TransferEncoding", XM_NS, encoding);
+                //just write this to the xml since there is already a warning in the log about invalid characters
+                xwriter.WriteComment($"WARNING: Used '{encoding}' because the content contains characters that are not valid in XML");
+            }
+
+        }
+
+        private void WriteContentAsXhtmlRaw(XmlWriter xwriter, string text)
+        {
+            var x = text;
+            xwriter.WriteStartElement("ContentAsXhtml", XM_NS);
+            try
+            {
+                xwriter.WriteRaw(text);
+            }
+            catch (Exception xex)
+            {
+                var msg = xex.Message;
+                throw;
+            }
+            xwriter.WriteEndElement(); //ContentAsXhtml
+        }
+
+        /// <summary>
+        /// Get the text content from a MimePart.  If the text contains characters not valid in XML, the output will be encoded as quoted-printable, and a warning will be returned
+        /// </summary>
+        /// <param name="part"></param>
+        /// <returns>A tuple containing the output text, output text encoding, and any warning message</returns>
+        /// <exception cref="ArgumentException"></exception>
+        private (string text, string encoding, string warning) GetContentText(MimePart part)
         {
             string contentStr = "";
             string encoding = "";
+            string warning = "";
 
             if (!part.ContentType.IsMimeType("text", "*"))
             {
@@ -1444,7 +1466,7 @@ namespace UIUCLibrary.EaPdf
                 }
                 catch (XmlException xex)
                 {
-                    _logger.LogWarning($"Characters not valid in XML.  Line {xex.LinePosition}: {xex.Message}", xex.LinePosition, xex.Message);
+                    warning = $"Characters not valid in XML.  Line {xex.LinePosition}: {xex.Message}";
                     validXmlChars = false;
                 }
 
@@ -1470,7 +1492,7 @@ namespace UIUCLibrary.EaPdf
                 }
             }
 
-            return (contentStr, encoding);
+            return (contentStr, encoding, warning);
         }
 
         private void WriteMimeOtherStandardHeaders(XmlWriter xwriter, MimeEntity mimeEntity, bool isMultipart)
@@ -1486,11 +1508,11 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteElementString("TransferEncoding", XM_NS, transferEncoding);
                 if (part != null && !MimeKitHelpers.ContentEncodings.Contains(transferEncoding, StringComparer.OrdinalIgnoreCase))
                 {
-                    WriteWarningMessage(xwriter, $"The TransferEncoding '{transferEncoding}' is not a recognized standard; treating it as '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding, "default")}'.");
+                    WriteToLogWarningMessage(xwriter, $"The TransferEncoding '{transferEncoding}' is not a recognized standard; treating it as '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding, "default")}'.");
                 }
                 if (isMultipart && !transferEncoding.Equals("7bit", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    WriteWarningMessage(xwriter, $"A multipart entity has a Content-Transfer-Encoding of '{transferEncoding}'; normally this should only be 7bit for multipart entities.");
+                    WriteToLogWarningMessage(xwriter, $"A multipart entity has a Content-Transfer-Encoding of '{transferEncoding}'; normally this should only be 7bit for multipart entities.");
                 }
             }
             //UNSUPPORTED: TransferEncodingComments, not currently supported by MimeKit
@@ -1580,7 +1602,7 @@ namespace UIUCLibrary.EaPdf
             }
             else if (isMultipart && string.IsNullOrWhiteSpace(mimeEntity.ContentType.Boundary))
             {
-                WriteWarningMessage(xwriter, "MIME type boundary parameter is missing for a multipart mime type");
+                WriteToLogWarningMessage(xwriter, "MIME type boundary parameter is missing for a multipart mime type");
             }
 
             //UNSUPPORTED: ContentTypeComments, not currently supported by MimeKit
@@ -1610,7 +1632,7 @@ namespace UIUCLibrary.EaPdf
             if (extContent)
             {
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
-                WriteInfoMessage(xwriter, $"LocalId {localId} written to external file");
+                WriteToLogInfoMessage(xwriter, $"LocalId {localId} written to external file");
             }
 
             var encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
@@ -1622,7 +1644,7 @@ namespace UIUCLibrary.EaPdf
 
             if (!MimeKitHelpers.ContentEncodings.Contains(actualEncoding, StringComparer.OrdinalIgnoreCase))
             {
-                WriteWarningMessage(xwriter, $"The TransferEncoding '{actualEncoding}' is not a recognized standard; treating it as '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding, "default")}'.");
+                WriteToLogWarningMessage(xwriter, $"The TransferEncoding '{actualEncoding}' is not a recognized standard; treating it as '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding, "default")}'.");
             }
 
             xwriter.WriteStartElement("Content", XM_NS);
@@ -1635,7 +1657,7 @@ namespace UIUCLibrary.EaPdf
                 encoding = String.Empty;
                 if (content.Encoding == ContentEncoding.Default && !string.IsNullOrWhiteSpace(actualEncoding))
                 {
-                    WriteWarningMessage(xwriter, $"Using the default transfer encoding.  The actual transfer encoding is '{actualEncoding}' and charset encoding '{part.ContentType.CharsetEncoding}'.");
+                    WriteToLogWarningMessage(xwriter, $"Using the default transfer encoding.  The actual transfer encoding is '{actualEncoding}' and charset encoding '{part.ContentType.CharsetEncoding}'.");
                     encoding = actualEncoding;
                 }
             }
@@ -1703,7 +1725,7 @@ namespace UIUCLibrary.EaPdf
                 catch (IOException ioex)
                 {
                     var msg = $"Raw content was not saved to external file.  {ioex.Message}  Will save it wrapped in XML instead.";
-                    WriteWarningMessage(xwriter, msg);
+                    WriteToLogWarningMessage(xwriter, msg);
                     wrapInXml = true;
                     File.Delete(randomFilePath); //so we can try saving a new stream there
                     hash = SaveContentAsXml(randomFilePath, part, localId, msg, out size);
@@ -1726,7 +1748,7 @@ namespace UIUCLibrary.EaPdf
             //Deal with duplicate attachments, which should only be stored once, make sure the randomFilePath file is deleted
             if (File.Exists(hashFileName))
             {
-                WriteInfoMessage(xwriter, "Duplicate attachment has already been saved");
+                WriteToLogInfoMessage(xwriter, "Duplicate attachment has already been saved");
                 File.Delete(randomFilePath);
             }
             else
@@ -1739,7 +1761,7 @@ namespace UIUCLibrary.EaPdf
                 catch (IOException ioex)
                 {
                     var msg = $"Content was not saved to external file.  {ioex.Message}";
-                    WriteErrorMessage(xwriter, msg);
+                    WriteToLogErrorMessage(xwriter, msg);
                 }
             }
 
@@ -1759,7 +1781,7 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
-                WriteWarningMessage(xwriter, $"Unable to determine the size of the external file");
+                WriteToLogWarningMessage(xwriter, $"Unable to determine the size of the external file");
             }
 
             xwriter.WriteEndElement(); //ExtBodyContent
@@ -1837,20 +1859,49 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         /// <param name="xwriter"></param>
         /// <param name="message"></param>
-        private void WriteErrorMessage(XmlWriter xwriter, string message)
+        private void WriteToLogErrorMessage(XmlWriter xwriter, string message)
         {
             xwriter.WriteComment($"ERROR: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
             _logger.LogError(message);
         }
-        private void WriteWarningMessage(XmlWriter xwriter, string message)
+        private void WriteToLogWarningMessage(XmlWriter xwriter, string message)
         {
             xwriter.WriteComment($"WARNING: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
             _logger.LogWarning(message);
         }
-        private void WriteInfoMessage(XmlWriter xwriter, string message)
+        private void WriteToLogInfoMessage(XmlWriter xwriter, string message)
         {
             xwriter.WriteComment($"INFO: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
             _logger.LogInformation(message);
+        }
+
+        private void WriteToLogMessage(XmlWriter xwriter, string message, LogLevel lvl)
+        {
+            switch (lvl)
+            {
+                case LogLevel.Information:
+                    WriteToLogInfoMessage(xwriter, message);
+                    break;
+                case LogLevel.Warning:
+                    WriteToLogWarningMessage(xwriter, message);
+                    break;
+                case LogLevel.Error:
+                    WriteToLogErrorMessage(xwriter, message);
+                    break;
+                default:
+                    var msg = $"{lvl.ToString().ToUpperInvariant()}: {XmlHelpers.ReplaceInvalidXMLChars(message)}";
+                    xwriter.WriteComment(msg);
+                    _logger.LogInformation(msg);
+                    break;
+            }
+        }
+
+        private void WriteToLogMessages(XmlWriter xwriter, List<(LogLevel level, string message)> messages)
+        {
+            foreach (var msg in messages)
+            {
+                WriteToLogMessage(xwriter, msg.message, msg.level);
+            }
         }
 
         public void WriteElementStringReplacingInvalidChars(XmlWriter xwriter, string localName, string? ns, string? value)
@@ -1861,11 +1912,10 @@ namespace UIUCLibrary.EaPdf
                 return;
             }
 
-            string msg;
-            if (XmlHelpers.TryReplaceInvalidXMLChars(ref value, out msg))
+            if (XmlHelpers.TryReplaceInvalidXMLChars(ref value, out string msg))
             {
                 var warn = $"{localName} contains characters which are not allowed in XML; they have been replaced with \uFFFD.  {msg}";
-                WriteWarningMessage(xwriter, warn);
+                WriteToLogWarningMessage(xwriter, warn);
             }
 
             xwriter.WriteElementString(localName, ns, value);
