@@ -348,6 +348,7 @@ namespace UIUCLibrary.TestEaPdf
                         {
                             var extdoc = new XmlDocument();
                             extdoc.Schemas.Add(EmailToXmlProcessor.XM_NS, EmailToXmlProcessor.XM_XSD);
+                            extdoc.Schemas.Add(EmailToXmlProcessor.XHTML_NS, EmailToXmlProcessor.XHTML_XSD);
 
                             foreach (XmlElement singleBodyNd in extNodes)
                             {
