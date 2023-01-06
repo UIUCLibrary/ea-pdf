@@ -251,6 +251,8 @@ namespace UIUCLibrary.TestEaPdf
                     XmlReaderSettings rdrSettings = new XmlReaderSettings();
                     rdrSettings.Schemas = new XmlSchemaSet();
                     rdrSettings.Schemas.Add(EmailToXmlProcessor.XM_NS, EmailToXmlProcessor.XM_XSD);
+                    rdrSettings.Schemas.Add(EmailToXmlProcessor.XHTML_NS, EmailToXmlProcessor.XHTML_XSD);
+
                     rdrSettings.ValidationType = ValidationType.Schema;
                     rdrSettings.ValidationEventHandler += XmlValidationEventHandler;
                     rdrSettings.ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings;
@@ -271,7 +273,7 @@ namespace UIUCLibrary.TestEaPdf
                     {
                         Assert.Fail(ex.Message);
                     }
-                    Assert.IsTrue(validXml);
+                    Assert.IsTrue(validXml,"XML Schema Validation");
 
                     var xmlns = new XmlNamespaceManager(xDoc.NameTable);
                     xmlns.AddNamespace(EmailToXmlProcessor.XM, EmailToXmlProcessor.XM_NS);

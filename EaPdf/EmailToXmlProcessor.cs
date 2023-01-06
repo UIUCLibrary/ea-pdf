@@ -42,6 +42,9 @@ namespace UIUCLibrary.EaPdf
         public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2";
         public const string XM_XSD = "eaxs_schema_v2.xsd";
 
+        public const string XHTML_NS = "http://www.w3.org/1999/xhtml";
+        public const string XHTML_XSD = "eaxs_xhtml_mini.xsd";
+
         private readonly ILogger _logger;
 
         public const string HASH_DEFAULT = "SHA256";
@@ -1335,7 +1338,7 @@ namespace UIUCLibrary.EaPdf
             {
                 if (txtPart.IsHtml)
                 {
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, true, ref messages, whichParser);
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, whichParser);
                 }
                 else if (txtPart.IsFlowed)
                 {
@@ -1345,14 +1348,14 @@ namespace UIUCLibrary.EaPdf
                         converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
 
                     htmlText = converter.Convert(htmlText);
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, true, ref messages, whichParser);
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, whichParser);
                 }
                 else //plain text not flowed
                 {
                     //Use the MimeKit converters to convert plain/text, fixed to html,
                     var converter = new TextToHtml();
                     htmlText = converter.Convert(htmlText);
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, true, ref messages, whichParser);
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, whichParser);
                 }
 
             }
@@ -1867,9 +1870,15 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteToLogMessages(XmlWriter xwriter, List<(LogLevel level, string message)> messages)
         {
-            foreach (var (level, message) in messages)
+            // Get rid of duplicate messages and add a count
+            var uniqueMessages = from m in messages
+                                 group m by m into g
+                                 let count = g.Count()
+                                 select new { Message = g.Key, Count = count };
+            
+            foreach (var msg in uniqueMessages)
             {
-                WriteToLogMessage(xwriter, message, level);
+                WriteToLogMessage(xwriter, $"{msg.Message.message}{(msg.Count > 1 ? $" [Occurrences: {msg.Count}]" : "")}", msg.Message.level);
             }
         }
 

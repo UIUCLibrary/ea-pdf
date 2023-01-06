@@ -3,6 +3,7 @@
 <schema xmlns="http://www.w3.org/2001/XMLSchema"
         xmlns:xm="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
         targetNamespace="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
+		xmlns:xhtml="http://www.w3.org/1999/xhtml"
         elementFormDefault="qualified">
 	<annotation>
 		<documentation>This is a modification of the original XML Schema located here:  https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs</documentation>
@@ -44,6 +45,8 @@
 
 		</documentation>
 	</annotation>
+
+	<import namespace="http://www.w3.org/1999/xhtml" schemaLocation="eaxs_xhtml_mini.xsd" /><!-- minimal xhtml schema only requires html, head, and body elements -->
 
 	<element name="BodyContent" type="xm:int-body-content-type">
 		<annotation>
@@ -460,8 +463,8 @@
 						</documentation>
 					</annotation>
 					<complexType>
-						<sequence>
-							<any namespace="http://www.w3.org/1999/xhtml" processContents="skip"/>
+						<sequence minOccurs="1" maxOccurs="1">
+							<element ref="xhtml:html" minOccurs="1" maxOccurs="1"/>
 						</sequence> 
 					</complexType>
 				</element>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema version="1.0" xml:lang="en"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://www.w3.org/1999/xhtml"
+    xmlns="http://www.w3.org/1999/xhtml"
+     elementFormDefault="qualified">
+
+<xs:annotation>
+  <xs:documentation>
+	  Mimimal xhtml schema that only requires the html, head, and body elements.
+	  Body can contain any children or any attributes, or none.
+	  Head must contain at least one child element and any attributes.
+	  The conversion script adds a meta element to the head to make sure there is at least one element.
+  </xs:documentation>
+</xs:annotation>
+
+  <xs:element name="html">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="head">
+          <xs:complexType>
+            <xs:sequence minOccurs="1" maxOccurs="unbounded">
+				<xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" namespace="##any"/>
+		    </xs:sequence>
+            <xs:anyAttribute processContents="skip" namespace="##any" />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="body">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:any minOccurs="0" maxOccurs="unbounded" processContents="skip" namespace="##any"/>
+            </xs:sequence>
+            <xs:anyAttribute processContents="skip" namespace="##any" />
+          </xs:complexType>          
+        </xs:element>
+      </xs:sequence>
+      <xs:anyAttribute processContents="skip" namespace="##any" />
+	</xs:complexType>
+  </xs:element>
+
+	
+</xs:schema>

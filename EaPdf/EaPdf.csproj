@@ -25,7 +25,7 @@
     <None Update="eaxs_schema_v2.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="eaxs_schema_v1.xsd">
+    <None Update="eaxs_xhtml_mini.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
