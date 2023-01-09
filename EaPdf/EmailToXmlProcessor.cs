@@ -42,6 +42,7 @@ namespace UIUCLibrary.EaPdf
         public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2";
         public const string XM_XSD = "eaxs_schema_v2.xsd";
 
+        public const string XHTML = "xhtml";
         public const string XHTML_NS = "http://www.w3.org/1999/xhtml";
         public const string XHTML_XSD = "eaxs_xhtml_mini.xsd";
 
@@ -1317,7 +1318,6 @@ namespace UIUCLibrary.EaPdf
 
         private string GetTextAsXhtml(MimePart part, out List<(LogLevel level, string message)> messages)
         {
-            HtmlHelpers.WhichParser whichParser = HtmlHelpers.WhichParser.HtmlAgilityPack;
 
             messages = new List<(LogLevel level, string message)>();
 
@@ -1338,7 +1338,8 @@ namespace UIUCLibrary.EaPdf
             {
                 if (txtPart.IsHtml)
                 {
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, whichParser);
+                    //clean up the html so it is valid-ish xhtml, log any issues to the messages list
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, false);
                 }
                 else if (txtPart.IsFlowed)
                 {
@@ -1348,22 +1349,22 @@ namespace UIUCLibrary.EaPdf
                         converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
 
                     htmlText = converter.Convert(htmlText);
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, whichParser);
+                    //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
                 }
                 else //plain text not flowed
                 {
                     //Use the MimeKit converters to convert plain/text, fixed to html,
                     var converter = new TextToHtml();
                     htmlText = converter.Convert(htmlText);
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, whichParser);
+                    //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages,  true);
                 }
 
             }
             else
             {
                 //TODO: Need to make accomodations for text/enriched (and text/richtext? -- not Microsoft RTF), see Pine sent-mail-aug-2007, message id: 4d2cbdd341d0e87da57ba2245562265f@uiuc.edu                 
-
-
                 
                 messages.Add((LogLevel.Error, $"The '{part.ContentType.MimeType}' content is not plain text or html."));
             }

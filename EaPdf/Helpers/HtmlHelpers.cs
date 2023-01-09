@@ -1,24 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
-using AngleSharp;
-using AngleSharp.Dom;
-using AngleSharp.Dom.Events;
-using AngleSharp.Html.Dom;
-using AngleSharp.Html.Dom.Events;
-using AngleSharp.Html.Parser;
-using AngleSharp.Text;
-using AngleSharp.Xhtml;
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
-using Org.BouncyCastle.Crypto.Generators;
-using Org.BouncyCastle.Security;
+using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
@@ -26,55 +9,13 @@ namespace UIUCLibrary.EaPdf.Helpers
     {
 
         /// <summary>
-        /// Use AngleSharp to parse html and return it as <em>well-formed</em> xhtml
-        /// Note that it may not be valid xhtml if the source html document is not valid
-        /// </summary>
-        /// <param name="html">the input html string</param>
-        /// <returns></returns>
-        public static string ConvertHtmlToXhtmlUsingAngleSharp(string html, ref List<(LogLevel level, string message)> messages)
-        {
-
-            var opts = new HtmlParserOptions()
-            {
-                IsAcceptingCustomElementsEverywhere = true,
-                IsEmbedded = true,
-                OnCreated = CreatedAngleSharp
-            };
-
-            var parser = new HtmlParser(opts);
-            parser.Error += ParseErrorAngleSharp;
-
-
-            //NOTE: AngleSharp conforms strictly to the HTML5 spec, meaning that custom tags occuring in the head section (common in old html emails) can get moved to the body
-            //      If the custom tags are empty, it can cause  even worse problems because AngleSharp interprets them as having content which can cause things which should be
-            //      kept in the head to be moved to the body with all the body content nested inside these custom tags
-            var doc = parser.ParseDocument(html);
-
-            var formatter = new EaPdfXhtmlMarkupFormatter(true, true);
-            doc.DocumentElement.SetAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-            var ret = doc.DocumentElement.ToHtml(formatter);
-            messages.AddRange(formatter.ConversionLog);
-
-            return ret.Trim();
-        }
-
-        public static void ParseErrorAngleSharp(object sender, Event evt)
-        {
-            //TODO: What do I even want to do with these events
-        }
-
-        public static void CreatedAngleSharp(IElement element, TextPosition pos)
-        {
-            //TODO:  Not sure what to do with this
-        }
-
-        /// <summary>
         /// Use the HTML Agility Pack to parse the HTML and return it as valid XHTML
         /// </summary>
         /// <param name="html"></param>
-        /// <param name="msg"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
         /// <returns></returns>
-        public static string ConvertHtmlToXhtmlUsingHap(string html, ref List<(LogLevel level, string message)> messages)
+        public static string ConvertHtmlToXhtml(string html, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
 
             var flags = HtmlNode.ElementsFlags;
@@ -87,17 +28,10 @@ namespace UIUCLibrary.EaPdf.Helpers
                 return ret;
             }
 
-            //replace named character entities with the characters
+            //replace named character entities with the characters they represent
+            ret = FixCharacterEntities(ret);
 
-            //DeEntitize also replaces standard xml entities, so I need to double-encode them to prevent this
-            ret = ret.Replace("&amp;", "&amp;amp;");
-            ret = ret.Replace("&lt;", "&amp;lt;");
-            ret = ret.Replace("&gt;", "&amp;gt;");
-            ret = ret.Replace("&quot;", "&amp;quot;");
-            ret = ret.Replace("&apos;", "&amp;apos;");
-            ret = HtmlEntity.DeEntitize(ret);
-
-
+            //load the html string into the HtmlAgilityPack parser
             var hdoc = new HtmlDocument
             {
                 OptionFixNestedTags = true,
@@ -109,37 +43,44 @@ namespace UIUCLibrary.EaPdf.Helpers
             };
             hdoc.LoadHtml(ret);
 
-            RemoveCommentsHap(hdoc);
+            //rebalance the xhtml so it contains a single root html just one head and one body child
+            //with the appropriate elements created and moved as needed
+            var htmlNode = MakeHtmlMinimallyValid(hdoc, ref messages, ignoreHtmlIssues);
 
-            var htmlNode = AddHtmlHeadBodyHap(hdoc, ref messages);
-
-            if (htmlNode != null)
-            {
-
-                //recursively check each element for namespace declarations and make sure the element and attribute names and prefixes are valid 
-                Stack<List<string>> namespacePrefixes = new();
-                FixNamesHap(htmlNode, ref namespacePrefixes, ref messages);
-                if (namespacePrefixes.Count > 0)
-                {
-                    messages.Add((LogLevel.Warning, $"There are unclosed tags"));
-                }
-
-                ret = htmlNode.OuterHtml;
-            }
-
+            ret = htmlNode.OuterHtml;
 
             if (XmlHelpers.TryReplaceInvalidXMLChars(ref ret, out string msg))
             {
                 messages.Add((LogLevel.Warning, msg));
             }
 
-
-            ret = FixCDataHap(ret);
+            //HAP does not correctly encode the CDATA sections, so we need to do clean up their mess
+            ret = FixCData(ret);
 
             return ret;
         }
 
+
+        private static string FixCharacterEntities(string htmlStr)
+        {
+            //TODO: probably need to be a bit selective to avoid decoding CDATA sections
+
+            //replace named character entities with the characters
+
+            //DeEntitize also replaces standard xml entities, so I need to double-encode them to prevent this
+            htmlStr = htmlStr.Replace("&amp;", "&amp;amp;");
+            htmlStr = htmlStr.Replace("&lt;", "&amp;lt;");
+            htmlStr = htmlStr.Replace("&gt;", "&amp;gt;");
+            htmlStr = htmlStr.Replace("&quot;", "&amp;quot;");
+            htmlStr = htmlStr.Replace("&apos;", "&amp;apos;");
+
+            htmlStr = HtmlEntity.DeEntitize(htmlStr);
+
+            return htmlStr;
+        }
+
         /// <summary>
+        /// The HAP seems to over encode CDATA sections
         ///Correct the CDATA sections so that they are valid
         ///     i.e. <title>
         ///           //<![CDATA[
@@ -147,11 +88,11 @@ namespace UIUCLibrary.EaPdf.Helpers
         ///            //]]>//
         ///          </title >
         ///       this should just be <title><![CDATA[...]]></title>
-        ///       The // comments are just useful for the <script> element
+        ///       The // comments are only useful for the <script> element
         /// </summary>
         /// <param name="html"></param>
         /// <returns></returns>
-        private static string FixCDataHap(string html)
+        private static string FixCData(string html)
         {
             var ret = html;
             foreach (var ef in HtmlNode.ElementsFlags.Where(ef => ef.Value.HasFlag(HtmlElementFlag.CData)))
@@ -168,7 +109,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             return ret;
         }
 
-        private static void RemoveCommentsHap(HtmlDocument hdoc)
+        /// <summary>
+        /// Remove any comments <!-- ... --> from the HTML
+        /// They are not needed for rendering
+        /// </summary>
+        /// <param name="hdoc"></param>
+        private static void RemoveComments(HtmlDocument hdoc)
         {
             var nodes = hdoc.DocumentNode.SelectNodes("//comment()");
             if (nodes != null)
@@ -181,16 +127,16 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
 
         /// <summary>
-        /// Add missing elements if needed, html, head, and/or body
+        /// Return the root html element, if it is missing create it and return it
+        /// The xhtml xmlns declaration is also added
         /// </summary>
         /// <param name="hdoc"></param>
         /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
         /// <returns></returns>
-        private static HtmlNode? AddHtmlHeadBodyHap(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages)
+        private static HtmlNode GetOrCreateHtml(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
-            int msgCount = messages.Count;
-
-            //find the root html tag
+            //find, or if missing create, the root html tag
             var htmlNode = hdoc.DocumentNode.Descendants().FirstOrDefault(x => x.Name == "html");
 
             if (htmlNode == null)
@@ -202,188 +148,288 @@ namespace UIUCLibrary.EaPdf.Helpers
                 hdoc.DocumentNode.RemoveAllChildren();
                 hdoc.DocumentNode.AppendChild(newHtml);
                 htmlNode = newHtml;
-                messages.Add((LogLevel.Information, "There was no top-level html tag, so one was added"));
+                if (!ignoreHtmlIssues)
+                    messages.Add((LogLevel.Information, "There was no top-level html tag, so one was added"));
             }
 
-            if (htmlNode != null)
+            //remove existing xmlns attribute so a new xmlns can be added for xhtml
+            htmlNode.Attributes.Remove("xmlns");
+            htmlNode.Attributes.Add("xmlns", "http://www.w3.org/1999/xhtml");
+
+            return htmlNode;
+        }
+
+        /// <summary>
+        /// Return the html body element, if it is missing create it and return it
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="htmlNode"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        /// <returns></returns>
+        private static HtmlNode GetOrCreateBody(HtmlDocument hdoc, HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var body = htmlNode.Element("body");
+            if (body == null)
             {
-                //remove existing xmlns attribute so a new xmlns can be added for xhtml
-                htmlNode.Attributes.Remove("xmlns");
-                htmlNode.Attributes.Add("xmlns", "http://www.w3.org/1999/xhtml");
-
-                var body = htmlNode.Element("body");
-                if (body == null)
-                {
-                    //Add a body element
-                    var newBody = hdoc.CreateElement("body");
-                    var nodes = htmlNode.ChildNodes;
-                    newBody.AppendChildren(nodes);
-                    htmlNode.RemoveAllChildren();
-                    htmlNode.AppendChild(newBody);
+                //Add a body element
+                var newBody = hdoc.CreateElement("body");
+                var nodes = htmlNode.ChildNodes;
+                newBody.AppendChildren(nodes);
+                htmlNode.RemoveAllChildren();
+                htmlNode.AppendChild(newBody);
+                if (!ignoreHtmlIssues)
                     messages.Add((LogLevel.Information, "There was no body tag, so one was added"));
-                    body = newBody;
+                body = newBody;
+            }
+
+            return body;
+        }
+
+        /// <summary>
+        /// Return the html head element, if it is missing create it and return it
+        /// This will also make sure that the head element is the first child of the html element
+        /// and that it contains all the appropriate child elements
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="htmlNode"></param>
+        /// <param name="body"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        /// <returns></returns>
+        private static HtmlNode GetOrCreateHead(HtmlDocument hdoc, HtmlNode htmlNode, HtmlNode body, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var head = htmlNode.Element("head");
+            if (head == null)
+            {
+                //Add a head element
+                var newHead = hdoc.CreateElement("head");
+
+                //Gather up all the elements that are only allowed in the head and move them there: title, base, meta, link, style
+                //We assume that if there was already a head that it contained the appropriate elements
+
+                //move title
+                var titles = body.SelectNodes("title");
+                if (titles != null)
+                {
+                    foreach (var title in titles)
+                    {
+                        newHead.AppendChild(title);
+                        body.RemoveChild(title);
+                    }
                 }
 
-                var head = htmlNode.Element("head");
-                if (head == null)
+                //move base
+                var bases = body.SelectNodes("base");
+                if (bases != null)
                 {
-                    //Add a head element
-                    var newHead = hdoc.CreateElement("head");
-
-                    //Gather up all the elements that are only allowed in the head and move them there: title, base, meta, link, style
-                    //We assume that if there was already a head that it contained the appropriate elements
-
-                    //move title
-                    var titles = body.SelectNodes("title");
-                    if (titles != null)
+                    foreach (var bse in bases)
                     {
-                        foreach (var title in titles)
-                        {
-                            newHead.AppendChild(title);
-                            body.RemoveChild(title);
-                        }
+                        newHead.AppendChild(bse);
+                        body.RemoveChild(bse);
                     }
+                }
 
-                    //move base
-                    var bases = body.SelectNodes("base");
-                    if (bases != null)
+                //move style
+                var styles = body.SelectNodes("style");
+                if (styles != null)
+                {
+                    foreach (var style in styles)
                     {
-                        foreach (var bse in bases)
-                        {
-                            newHead.AppendChild(bse);
-                            body.RemoveChild(bse);
-                        }
+                        newHead.AppendChild(style);
+                        body.RemoveChild(style);
                     }
+                }
 
-                    //move style
-                    var styles = body.SelectNodes("style");
-                    if (styles != null)
+                //move meta
+                var metas = body.SelectNodes("meta");
+                if (metas != null)
+                {
+                    foreach (var meta in metas)
                     {
-                        foreach (var style in styles)
-                        {
-                            newHead.AppendChild(style);
-                            body.RemoveChild(style);
-                        }
+                        newHead.AppendChild(meta);
+                        body.RemoveChild(meta);
                     }
+                }
 
-                    //move meta
-                    var metas = body.SelectNodes("meta");
-                    if (metas != null)
+                //move link
+                var links = body.SelectNodes("link");
+                if (links != null)
+                {
+                    foreach (var link in links)
                     {
-                        foreach (var meta in metas)
-                        {
-                            newHead.AppendChild(meta);
-                            body.RemoveChild(meta);
-                        }
+                        newHead.AppendChild(link);
+                        body.RemoveChild(link);
                     }
+                }
 
-                    //move link
-                    var links = body.SelectNodes("link");
-                    if (links != null)
-                    {
-                        foreach (var link in links)
-                        {
-                            newHead.AppendChild(link);
-                            body.RemoveChild(link);
-                        }
-                    }
-
-                    htmlNode.PrependChild(newHead);
+                htmlNode.PrependChild(newHead);
+                if (!ignoreHtmlIssues)
                     messages.Add((LogLevel.Information, "There was no head tag, so one was added"));
-                    head = newHead;
+                head = newHead;
 
-                }
 
-                //Add a valid root element to the body if needed, body does not allow mixed content, so it needs an element
-                var breakText = body.OuterHtml;
-                var bodyTextNodes = body.ChildNodes.Where(n => n.NodeType==HtmlNodeType.Text);
-                if (bodyTextNodes != null)
+            }
+
+            return head;
+
+        }
+        /// <summary>
+        /// The xhtml body element does not allow mixed content, if the are non-whitespace text nodes in the body
+        /// a new div element will be added to enclose the whole body
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="body"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        private static void AddRootDivToBodyIfNeeded(HtmlDocument hdoc, HtmlNode body, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            //Add a valid root element to the body if needed, body does not allow mixed content, so it needs an element
+            var breakText = body.OuterHtml;
+            var bodyTextNodes = body.ChildNodes.Where(n => n.NodeType == HtmlNodeType.Text);
+            if (bodyTextNodes != null)
+            {
+                if (bodyTextNodes.Any(n => !string.IsNullOrWhiteSpace(((HtmlTextNode)n).Text)))
                 {
-                    if (bodyTextNodes.Any(n => !string.IsNullOrWhiteSpace(((HtmlTextNode)n).Text)))
-                    {
-                        var newDiv = hdoc.CreateElement("div");
-                        newDiv.AppendChildren(body.ChildNodes);
-                        body.RemoveAllChildren();
-                        body.AppendChild(newDiv);
+                    var newDiv = hdoc.CreateElement("div");
+                    newDiv.AppendChildren(body.ChildNodes);
+                    body.RemoveAllChildren();
+                    body.AppendChild(newDiv);
+                    if (!ignoreHtmlIssues)
                         messages.Add((LogLevel.Information, "The body element does not allow mixed content, so all content was wrapped in new div element"));
-                    }
                 }
+            }
+        }
 
-                //add a meta tag to indicate how the xhtml was generated
-                //this also ensures at least one child in the head
-                var newMeta = hdoc.CreateElement("meta");
-                newMeta.Attributes.Add("name", "generator");
-                newMeta.Attributes.Add("content", $"Conversion to XHTML performed by {typeof(HtmlHelpers).Namespace}");
-                head.PrependChild(newMeta);
+        /// <summary>
+        /// This will add a <meta name='generator' content='Conversion to XHTML performed by UIUCLibrary.EaPdf.Helpers' /> element to the head 
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="head"></param>
+        private static void AddGeneratorMetaToHead(HtmlDocument hdoc, HtmlNode head)
+        {
+            //add a meta tag to indicate how the xhtml was generated
+            //this also ensures at least one child in the head
+            var newMeta = hdoc.CreateElement("meta");
+            newMeta.Attributes.Add("name", "generator");
+            newMeta.Attributes.Add("content", $"Conversion to XHTML performed by {typeof(HtmlHelpers).Namespace}");
+            head.PrependChild(newMeta);
+        }
 
+        /// <summary>
+        /// Any left-over or dangling nodes or non-whitespace text which are outside of the head or body will be moved into the head or body as appropriate
+        /// This includes dealing with multiple body elements
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="htmlNode"></param>
+        /// <param name="head"></param>
+        /// <param name="body"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        private static void MoveDanglingNodesToHeadOrBody(HtmlDocument hdoc, HtmlNode htmlNode, HtmlNode head, HtmlNode body, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            //see if the htmlNode contains anything besides just a head and body
+            //if it does move it to the correct place in the head or to the start or end of the body
+            var kids = htmlNode.ChildNodes;
 
-                //see if the htmlNode contains anything besides just a head and body
-                //if it does move it to the correct place
-                var kids = htmlNode.ChildNodes;
-                
-                if (kids != null)
+            if (kids != null)
+            {
+                bool beforeBody = true;
+
+                List<HtmlNode> toBeRemoved = new();
+
+                foreach (var kid in kids)
                 {
-                    bool beforeBody = true;
-
-                    List<HtmlNode> toBeRemoved = new();
-
-                    foreach(var kid in kids)
+                    var name = kid.Name;
+                    if (name != "head" && name != "body" && kid.NodeType == HtmlNodeType.Element)
                     {
-                        var name = kid.Name;
-                        if (name != "head" && name != "body" && kid.NodeType == HtmlNodeType.Element)
+                        if (new string[] { "title", "base", "meta", "link", "style" }.Contains(name))
                         {
-                            if (new string[] { "title", "base", "meta", "link", "style" }.Contains(name))
-                            {
-                                //Move it to the head
-                                head.AppendChild(kid);
-                                toBeRemoved.Add(kid);
-                                messages.Add((LogLevel.Information, $"Moving {name} to the head"));
-                            }
-                            else 
-                            {
-                                //Move it to the Body
-                                if (beforeBody)
-                                    body.PrependChild(kid);
-                                else
-                                    body.AppendChild(kid);
-
-                                toBeRemoved.Add(kid);
-                                messages.Add((LogLevel.Information, $"Moving {name} to the body"));
-                            }
-                        }
-                        else if (name == "body" && beforeBody)
-                        {
-                            beforeBody = false;
-                        }
-                        else if(name == "body" && !beforeBody)
-                        {
-                            // looks like there are multiple bodies. Rename the second body to div and move it to the bottom of the previous body
-                            kid.Name = "div";
-                            body.AppendChild(kid);
+                            //Move it to the head
+                            head.AppendChild(kid);
                             toBeRemoved.Add(kid);
+                            if (!ignoreHtmlIssues)
+                                messages.Add((LogLevel.Information, $"Moving {name} to the head"));
+                        }
+                        else
+                        {
+                            //Move it to the Body
+                            if (beforeBody)
+                                body.PrependChild(kid);
+                            else
+                                body.AppendChild(kid);
+
+                            toBeRemoved.Add(kid);
+                            if (!ignoreHtmlIssues)
+                                messages.Add((LogLevel.Information, $"Moving {name} to the body"));
+                        }
+                    }
+                    else if (name == "body" && beforeBody)
+                    {
+                        beforeBody = false;
+                    }
+                    else if (name == "body" && !beforeBody)
+                    {
+                        // looks like there are multiple bodies. Rename the second body to div and move it to the bottom of the previous body
+                        kid.Name = "div";
+                        body.AppendChild(kid);
+                        toBeRemoved.Add(kid);
+                        if (!ignoreHtmlIssues)
                             messages.Add((LogLevel.Information, $"The html had another body; it was renamed to div and moved to the bottom of the first body."));
 
-                        }
-                        else if (kid.NodeType == HtmlNodeType.Text && !beforeBody && !string.IsNullOrWhiteSpace(((HtmlTextNode)kid).Text))
-                        {
-                            // looks like some straggling text after the body, put it into a div and append it to the body
-                            var newDiv = hdoc.CreateElement("div");
-                            newDiv.AppendChild(kid);
-                            body.AppendChild(newDiv);
-                            toBeRemoved.Add(kid);
-                            messages.Add((LogLevel.Information, $"Moving trailing text into the body"));
-                        }
                     }
-
-                    foreach (var removeMe in toBeRemoved)
-                        htmlNode.RemoveChild(removeMe);
+                    else if (kid.NodeType == HtmlNodeType.Text && !beforeBody && !string.IsNullOrWhiteSpace(((HtmlTextNode)kid).Text))
+                    {
+                        // looks like some straggling text after the body, put it into a div and append it to the body
+                        var newDiv = hdoc.CreateElement("div");
+                        newDiv.AppendChild(kid);
+                        body.AppendChild(newDiv);
+                        toBeRemoved.Add(kid);
+                        if (!ignoreHtmlIssues)
+                            messages.Add((LogLevel.Information, $"Moving trailing text into the body"));
+                    }
                 }
 
+                foreach (var removeMe in toBeRemoved)
+                    htmlNode.RemoveChild(removeMe);
+            }
+        }
 
-                
+        /// <summary>
+        /// Add missing elements if needed, html, head, and/or body
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="messages"></param>
+        /// <returns></returns>
+        private static HtmlNode MakeHtmlMinimallyValid(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            int msgCount = messages.Count;
+
+            //remove comments, this will include any DOCTYPE declaration
+            RemoveComments(hdoc);
+
+            var htmlNode = GetOrCreateHtml(hdoc, ref messages, ignoreHtmlIssues);
+
+            var body = GetOrCreateBody(hdoc, htmlNode, ref messages, ignoreHtmlIssues);
+
+            var head = GetOrCreateHead(hdoc, htmlNode, body, ref messages, ignoreHtmlIssues);
+
+            AddRootDivToBodyIfNeeded(hdoc, body, ref messages, ignoreHtmlIssues);
+
+            AddGeneratorMetaToHead(hdoc, head);
+
+            MoveDanglingNodesToHeadOrBody(hdoc, htmlNode, head, body, ref messages, ignoreHtmlIssues);
+
+            //recursively check each element for namespace declarations and make sure the element and attribute names and prefixes are valid 
+            Stack<List<string>> namespacePrefixes = new();
+            FixElementAndAttributeNames(htmlNode, ref namespacePrefixes, ref messages, ignoreHtmlIssues);
+            if (namespacePrefixes.Count > 0 && !ignoreHtmlIssues)
+            {
+                messages.Add((LogLevel.Warning, $"There are unclosed tags"));
             }
 
-            if (messages.Count > msgCount)
+
+            if (!ignoreHtmlIssues && messages.Count > msgCount)
                 messages.Insert(msgCount, (LogLevel.Warning, "Html was not valid; see the following info messages for details"));
 
             return htmlNode;
@@ -394,7 +440,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// </summary>
         /// <param name="elem"></param>
         /// <param name="namespacePrefixes"></param>
-        private static void FixNamesHap(HtmlNode elem, ref Stack<List<string>> namespacePrefixes, ref List<(LogLevel level, string message)> messages)
+        private static void FixElementAndAttributeNames(HtmlNode elem, ref Stack<List<string>> namespacePrefixes, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
             //collect the namespace prefixes on the stack
             namespacePrefixes.Push(new List<string>());
@@ -469,50 +515,11 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 if (child.NodeType == HtmlNodeType.Element)
                 {
-                    FixNamesHap(child, ref namespacePrefixes, ref messages);
+                    FixElementAndAttributeNames(child, ref namespacePrefixes, ref messages, ignoreHtmlIssues);
                 }
             }
 
             namespacePrefixes.Pop();
-        }
-
-        public static string ConvertHtmlToXhtml(string html, ref List<(LogLevel level, string message)> messages, WhichParser whichParser)
-        {
-            if (whichParser == WhichParser.HtmlAgilityPack)
-            {
-                return ConvertHtmlToXhtmlUsingHap(html, ref messages);
-            }
-            else if (whichParser == WhichParser.AngleSharp)
-            {
-                return ConvertHtmlToXhtmlUsingAngleSharp(html, ref messages);
-            }
-            else if (whichParser == WhichParser.TidyHtml5)
-            {
-                return ConvertHtmlToXhtmlUsingTidy(html, ref messages);
-            }
-            else
-            {
-                throw new Exception($"Unexpected Html Parser {whichParser}");
-            }
-        }
-
-        /// <summary>
-        /// Use the Tidy HTML5 Managed to parse the HTML and return it as valid XHTML
-        /// </summary>
-        /// <param name="html"></param>
-        /// <param name="msg"></param>
-        /// <returns></returns>
-        public static string ConvertHtmlToXhtmlUsingTidy(string html, ref List<(LogLevel level, string message)> messages)
-        {
-            throw new NotImplementedException("Tidy is not yet supported");
-        }
-
-
-        public enum WhichParser
-        {
-            HtmlAgilityPack,
-            AngleSharp,
-            TidyHtml5
         }
     }
 }
