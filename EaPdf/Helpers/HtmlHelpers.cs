@@ -18,6 +18,9 @@ namespace UIUCLibrary.EaPdf.Helpers
         public static string ConvertHtmlToXhtml(string html, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
 
+            //TODO: There are html files in the wild that have multiple <html> nested tags.  Might get a better result if we could combine them somehow
+            //      For example see C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles\Testing\MozillaThunderbird\Inbox ID: 000001c8c9bf$e47a3590$04000100@KLINE
+
             var flags = HtmlNode.ElementsFlags;
 
             string ret = html;
