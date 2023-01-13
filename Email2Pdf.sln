@@ -444,7 +444,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Weird", "Weird", "{9BF31E2B
 		SampleFiles\Testing\Weird\virus_notif.mbox = SampleFiles\Testing\Weird\virus_notif.mbox
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EaPdfCmd", "EaPdfCmd\EaPdfCmd.csproj", "{ECF4C91E-C503-457F-99E2-BC16B91801A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EaPdfCmd", "EaPdfCmd\EaPdfCmd.csproj", "{ECF4C91E-C503-457F-99E2-BC16B91801A3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

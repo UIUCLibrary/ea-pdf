@@ -11,6 +11,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 -->
 
+<!-- Modified by Tom Habing, 2023-01-12 for EMAIL to PDF conversion project -->
+
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:fo="http://www.w3.org/1999/XSL/Format"
@@ -628,6 +630,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <xsl:template name="process-style">
     <xsl:param name="style"/>
+    <!-- TODO:  The style might have a leading ; which should be removed -->
     <!-- e.g., style="text-align: center; color: red"
          converted to text-align="center" color="red" -->
     <xsl:variable name="name"
@@ -675,6 +678,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           </xsl:choose>
         </xsl:when>
         <xsl:otherwise>
+          <!-- TODO: make sure that invalid attribute names do not appear -->
           <xsl:attribute name="{$name}">
             <xsl:value-of select="$value"/>
           </xsl:attribute>

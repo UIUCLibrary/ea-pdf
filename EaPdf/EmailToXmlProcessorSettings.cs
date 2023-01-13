@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -77,5 +78,9 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public bool SaveTextAsXhtml { get; set; } = false;
 
+        /// <summary>
+        /// LogLevels equal to or above this threshold will also be written to the output XML file as comments
+        /// </summary>
+        public LogLevel LogToXmlThreshold { get; set; } = LogLevel.Debug;
     }
 }

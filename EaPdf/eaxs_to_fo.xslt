@@ -9,10 +9,13 @@
 	xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:fo="http://www.w3.org/1999/XSL/Format"
 	xmlns:fox="http://xmlgraphics.apache.org/fop/extensions"
 	xmlns:eaxs="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
+	xmlns:html="http://www.w3.org/1999/xhtml"
 	exclude-result-prefixes="msxsl">
 
-	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no"/>
+	<xsl:import href="eaxs_xhtml2fo.xsl"/>
 
+	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no"/>
+	
 	<xsl:param name="SerifFont" select="'Times-Roman'"/>
 	<xsl:param name="SansSerifFont" select="'Helvetica'"/>
 	<xsl:param name="MonospaceFont" select="'Courier'"/>
@@ -68,7 +71,22 @@
 				<fo:leader leader-pattern="rule" leader-length="100%" rule-style="solid"
 					rule-thickness="1.5pt"/>
 			</fo:block>
+			<xsl:apply-templates select=".//eaxs:SingleBody[@IsAttachment='false' and starts-with(eaxs:ContentType,'text/')]/eaxs:BodyContent"/>
 		</fo:block>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:BodyContent">
+		<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
+		<xsl:if test="position() != last()">
+			<fo:block>
+				<fo:leader leader-pattern="rule" leader-length="100%" rule-style="solid"
+					rule-thickness="1.5pt"/>
+			</fo:block>			
+		</xsl:if>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:ContentAsXhtml">
+		<xsl:apply-templates select="html:html/html:body/html:*"/>
 	</xsl:template>
 
 	<xsl:template match="eaxs:MessageId">
@@ -85,8 +103,18 @@
 			<fo:inline-container xsl:use-attribute-sets="width-header1">
 				<fo:block keep-together="always">Date:</fo:block>
 			</fo:inline-container>
-			<xsl:value-of select="msxsl:format-date(., 'dddd, MMM dd, yyyy, ')"/>
-			<xsl:value-of select="msxsl:format-time(., ' h:m:s tt')"/>
+			<xsl:choose>
+				<xsl:when test="function-available('msxsl:format-date')">
+					<xsl:value-of select="msxsl:format-date(., 'dddd, MMM dd, yyyy, ')"/>
+					<xsl:value-of select="msxsl:format-time(., ' h:m:s tt')"/>					
+				</xsl:when>
+				<xsl:when test="function-available('format-dateTime')">
+					<xsl:value-of select="format-dateTime(., '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
+				</xsl:when>
+				<xsl:otherwise>
+					<xsl:value-of select="."/>
+				</xsl:otherwise>
+			</xsl:choose> 
 		</fo:block>
 	</xsl:template>
 

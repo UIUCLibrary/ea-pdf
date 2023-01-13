@@ -60,7 +60,7 @@ namespace UIUCLibrary.TestEaPdf
 
         //Gmail Exports
         [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, 0, 1, 330, DisplayName = "gmail-emls")] //gmail mbox export file
-        [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, 0, 0, 1, DisplayName = "gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness
+        [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, 0, 0, 1, DisplayName = "gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness 
         [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, 0, 0, 1, DisplayName = "gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
         [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, 0, 99796, 245734, false, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
         [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, 0, 99796, 245734, false, 10000000, DisplayName = "gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB

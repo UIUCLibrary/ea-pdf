@@ -1,5 +1,9 @@
-﻿using HtmlAgilityPack;
+﻿using ExCSS;
+using Fizzler.Systems.HtmlAgilityPack;
+using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
+using PdfTemplating.SystemCustomExtensions;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using System.Xml;
 
@@ -7,6 +11,8 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     internal class HtmlHelpers
     {
+
+        const string PREMAILER_NET_PSEUDO = "PreMailer.Net is unable to process the pseudo class/element";
 
         /// <summary>
         /// Use the HTML Agility Pack to parse the HTML and return it as valid XHTML
@@ -21,8 +27,6 @@ namespace UIUCLibrary.EaPdf.Helpers
             //TODO: There are html files in the wild that have multiple <html> nested tags.  Might get a better result if we could combine them somehow
             //      For example see C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles\Testing\MozillaThunderbird\Inbox ID: 000001c8c9bf$e47a3590$04000100@KLINE
 
-            var flags = HtmlNode.ElementsFlags;
-
             string ret = html;
 
             if (string.IsNullOrWhiteSpace(html))
@@ -30,6 +34,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 messages.Add((LogLevel.Warning, "The html content is empty"));
                 return ret;
             }
+
 
             //replace named character entities with the characters they represent
             ret = FixCharacterEntities(ret);
@@ -50,18 +55,64 @@ namespace UIUCLibrary.EaPdf.Helpers
             //with the appropriate elements created and moved as needed
             var htmlNode = MakeHtmlMinimallyValid(hdoc, ref messages, ignoreHtmlIssues);
 
+            //move styles to inline with the elements
+            htmlNode = ConvertToInlineCss(htmlNode, ref messages, ignoreHtmlIssues);
+
+            //TODO: Remove any inline style properties that are not supported by the HTML
+
+            htmlNode = NormalizeStyleProperties(htmlNode, ref messages, ignoreHtmlIssues);
+
+
             ret = htmlNode.OuterHtml;
 
             if (XmlHelpers.TryReplaceInvalidXMLChars(ref ret, out string msg))
             {
                 messages.Add((LogLevel.Warning, msg));
             }
-
+            
             //HAP does not correctly encode the CDATA sections, so we need to do clean up their mess
             ret = FixCData(ret);
 
             return ret;
         }
+
+        /// <summary>
+        /// Normalize all style attribute property values, and also remove unsupported properties
+        /// </summary>
+        /// <param name="htmlNode"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        /// <returns></returns>
+        private static HtmlNode NormalizeStyleProperties(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var ret = htmlNode;
+
+            var allElements = htmlNode.SelectNodes("//*");
+            if (allElements != null)
+            {
+                var cssParser = new StylesheetParser();
+
+                //loop through all the elements, use ExCSS to parse all the style attributes, and replace the style value with a new one normalized by the ExCSS parser
+                foreach (var elem in allElements)
+                {
+                    var style = elem.Attributes["style"];
+                    if (style != null)
+                    {
+                        var sSheet = cssParser.Parse($"{elem.Name} {{{style.Value}}}");
+
+                        var newStyle = sSheet.StyleRules.Single().Style.ToCss();
+
+                        if (!string.IsNullOrWhiteSpace(newStyle))
+                            style.Value = newStyle;
+                        else
+                            style.Remove();
+                    }
+                }
+            }
+
+            return ret;
+        }
+
 
 
         private static string FixCharacterEntities(string htmlStr)
@@ -524,5 +575,114 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             namespacePrefixes.Pop();
         }
+
+        /// <summary>
+        /// Convert any embedded stylesheets into inline styles
+        /// </summary>
+        /// <param name="htmlNode"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        /// <returns></returns>
+        private static HtmlNode ConvertToInlineCss(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var ret = htmlNode;
+            //get all the style elements
+            var styles = htmlNode.SelectNodes("//style");
+
+            string allStyles = "";
+            if (styles != null)
+            {
+                foreach (var style in styles)
+                {
+                    allStyles += style.InnerText + " ;\r\n/* NEXT STYLE */\r\n";
+                }
+
+                var cssParser = new StylesheetParser();
+                var sSheet = cssParser.Parse(allStyles);
+
+                foreach (var rule in sSheet.StyleRules.OrderByDescending(sr => sr.Selector.Specificity))
+                {
+                    //TODO: Add support for ListSelectors, so that the separate specificity of its selectors can be determined.
+                    //      The ExCss library doesn't seem to allow access to the individual selectors of a SelectorList
+                    //TODO: Add support for the shorthand property "all"
+                    //TODO: Add support for the !important modifier.
+
+                    var selectorText = rule.Selector.Text;
+                    var styleText = rule.Style.CssText;
+                    var specificity = rule.Selector.Specificity;
+
+                    IEnumerable<HtmlNode>? nodes = null;
+                    try
+                    {
+                        nodes = htmlNode.QuerySelectorAll(selectorText);
+                    }
+                    catch (Exception ex)
+                    {
+                        messages.Add((LogLevel.Debug, $"Parsing selector '{selectorText}'; {ex.Message}"));
+                        nodes = null;
+                    }
+
+                    if (nodes != null)
+                    {
+                        foreach (var node in nodes)
+                        {
+                            var styleAttr = node.Attributes["style"];
+                            if (styleAttr == null)
+                            {
+                                node.Attributes.Add("style", styleText);
+                                messages.Add((LogLevel.Debug, $"Node: {node.XPath}, Inlining style:  {selectorText} {{{styleText}}}, new style attribute"));
+                            }
+                            else
+                            {
+                                var currentStyle = cssParser.Parse($"dummy {{{styleAttr.Value}}}").StyleRules.Single().Style;
+
+                                var currentStyleText = string.Join("; ", currentStyle.Select(p => p.Name + ":" + p.Value)) + "; ";
+
+                                foreach (var newProperty in rule.Style)
+                                {
+                                    //since we are iterating rules from most specific to the least specific, we can't overwrite an existing property because it originated from a more specific rule
+                                    if (!currentStyle.Contains(newProperty, new PropertyComparer()))
+                                    {
+                                        currentStyleText += newProperty.Name + ":" + newProperty.Value + "; ";
+                                        messages.Add((LogLevel.Debug, $"Node: {node.XPath}, Inlining style: {selectorText} {{{styleText}}}, modify style attribute"));
+                                    }
+                                }
+
+                                styleAttr.Value = currentStyleText.Trim().Trim(';').Trim(); //get rid of any leading or trainling semi-colons and whitespace
+
+                            }
+                        }
+                    }
+                }
+            }
+
+            return ret;
+        }
     }
+
+    class PropertyComparer : IEqualityComparer<IProperty>
+    {
+        public bool Equals(IProperty? x, IProperty? y)
+        {
+            //Check whether the compared objects reference the same data.
+            if (Object.ReferenceEquals(x, y)) return true;
+
+            //Check whether any of the compared objects is null.
+            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+                return false;
+
+            return x.Name == y.Name;
+        }
+
+        public int GetHashCode([DisallowNull] IProperty obj)
+        {
+            //Check whether the object is null
+            if (Object.ReferenceEquals(obj, null)) return 0;
+
+
+            //Calculate the hash code for the product.
+            return obj.Name.GetHashCode();
+        }
+    }
+
 }

@@ -1271,12 +1271,12 @@ namespace UIUCLibrary.EaPdf
                     {
                         WriteToLogWarningMessage(xwriter, $"Not expecting body content for '{part.ContentType.MimeType}'.");
                     }
-                    
+
                     if (Settings.SaveTextAsXhtml)
                     {
                         var xhtml = GetTextAsXhtml(part, out List<(LogLevel level, string message)> messages);
                         WriteToLogMessages(xwriter, messages);
-                        
+
                         if (string.IsNullOrWhiteSpace(xhtml) || messages.Any(m => m.level == LogLevel.Error || m.level == LogLevel.Critical))
                         {
                             //if the html is blank or if there were serious errors converting to xhtml, we cannot save the content as xhtml
@@ -1358,14 +1358,14 @@ namespace UIUCLibrary.EaPdf
                     var converter = new TextToHtml();
                     htmlText = converter.Convert(htmlText);
                     //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages,  true);
+                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
                 }
 
             }
             else
             {
                 //TODO: Need to make accomodations for text/enriched (and text/richtext? -- not Microsoft RTF), see Pine sent-mail-aug-2007, message id: 4d2cbdd341d0e87da57ba2245562265f@uiuc.edu                 
-                
+
                 messages.Add((LogLevel.Error, $"The '{part.ContentType.MimeType}' content is not plain text or html."));
             }
 
@@ -1620,7 +1620,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             xwriter.WriteStartElement("Content", XM_NS);
-            
+
             string? encoding;
             //7bit and 8bit should be text content, so decode it and use the streamreader with the contenttype charset, if any, to get the text and write it to the xml in a cdata section.  Default is the same as 7bit.
             if (content.Encoding == ContentEncoding.EightBit || content.Encoding == ContentEncoding.SevenBit || content.Encoding == ContentEncoding.Default)
@@ -1834,17 +1834,20 @@ namespace UIUCLibrary.EaPdf
         /// <param name="message"></param>
         private void WriteToLogErrorMessage(XmlWriter xwriter, string message)
         {
-            xwriter.WriteComment($"ERROR: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
+            if (Settings.LogToXmlThreshold <= LogLevel.Error)
+                xwriter.WriteComment($"ERROR: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
             _logger.LogError(message);
         }
         private void WriteToLogWarningMessage(XmlWriter xwriter, string message)
         {
-            xwriter.WriteComment($"WARNING: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
+            if (Settings.LogToXmlThreshold <= LogLevel.Warning)
+                xwriter.WriteComment($"WARNING: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
             _logger.LogWarning(message);
         }
         private void WriteToLogInfoMessage(XmlWriter xwriter, string message)
         {
-            xwriter.WriteComment($"INFO: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
+            if (Settings.LogToXmlThreshold <= LogLevel.Information)
+                xwriter.WriteComment($"INFO: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
             _logger.LogInformation(message);
         }
 
@@ -1863,7 +1866,8 @@ namespace UIUCLibrary.EaPdf
                     break;
                 default:
                     var msg = $"{lvl.ToString().ToUpperInvariant()}: {XmlHelpers.ReplaceInvalidXMLChars(message)}";
-                    xwriter.WriteComment(msg);
+                    if (lvl >= Settings.LogToXmlThreshold)
+                        xwriter.WriteComment(msg);
                     _logger.LogInformation(msg);
                     break;
             }
@@ -1876,7 +1880,7 @@ namespace UIUCLibrary.EaPdf
                                  group m by m into g
                                  let count = g.Count()
                                  select new { Message = g.Key, Count = count };
-            
+
             foreach (var msg in uniqueMessages)
             {
                 WriteToLogMessage(xwriter, $"{msg.Message.message}{(msg.Count > 1 ? $" [Occurrences: {msg.Count}]" : "")}", msg.Message.level);
