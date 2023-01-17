@@ -68,15 +68,16 @@
 				<fo:leader leader-pattern="rule" leader-length="100%" rule-style="solid"
 					rule-thickness="1.5pt"/>
 			</fo:block>
-			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody"/>
+			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>
 			<fo:block>
 				<fo:leader leader-pattern="rule" leader-length="100%" rule-style="solid"
 					rule-thickness="1.5pt"/>
 			</fo:block>
-			<xsl:apply-templates select=".//eaxs:SingleBody[@IsAttachment='false' and starts-with(eaxs:ContentType,'text/')]/eaxs:BodyContent"/>
+			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent"/>
 		</fo:block>
 	</xsl:template>
 	
+	<!--
 	<xsl:template match="eaxs:BodyContent">
 		<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
 		<xsl:if test="position() != last()">
@@ -90,7 +91,8 @@
 	<xsl:template match="eaxs:ContentAsXhtml">
 		<xsl:apply-templates select="html:html/html:body/html:*"/>
 	</xsl:template>
-
+-->
+	
 	<xsl:template match="eaxs:MessageId">
 		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
 			<fo:inline-container xsl:use-attribute-sets="width-header1">
@@ -221,7 +223,7 @@
 		<xsl:value-of select="@address"/>
 	</xsl:template>
 
-	<xsl:template match="eaxs:SingleBody">
+	<xsl:template match="eaxs:SingleBody" mode="RenderToc">
 		<xsl:param name="depth" select="0"/>
 		<fo:block-container border-left="1px solid black" margin-top="5px">
 			<xsl:attribute name="margin-left"><xsl:value-of select="$depth"/>em</xsl:attribute>
@@ -231,7 +233,7 @@
 		</fo:block-container>
 	</xsl:template>
 
-	<xsl:template match="eaxs:MultiBody">
+	<xsl:template match="eaxs:MultiBody" mode="RenderToc">
 		<xsl:param name="depth" select="0"/>
 		<fo:block-container border-left="1px solid black" margin-top="5px">
 			<xsl:attribute name="margin-left"><xsl:value-of select="$depth"/>em</xsl:attribute>
@@ -239,7 +241,7 @@
 			<xsl:apply-templates select="eaxs:Disposition"/>
 			<xsl:apply-templates select="eaxs:ContentLanguage"/>
 
-			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody">
+			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc">
 				<xsl:with-param name="depth" select="1"/>
 			</xsl:apply-templates>
 		</fo:block-container>
@@ -306,6 +308,51 @@
 			<xsl:apply-templates/>
 		</fo:block>
 	</xsl:template>
+	
+	<xsl:template match="eaxs:SingleBody" mode="RenderContent">
+		<xsl:apply-templates select="eaxs:BodyContent">
+			<xsl:with-param name="IsAttachment" select="translate(normalize-space(@IsAttachment),'&UPPER;','&lower;')"/>
+			<xsl:with-param name="ContentType" select="translate(normalize-space(eaxs:ContentType),'&UPPER;','&lower;')"/>
+		</xsl:apply-templates>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:BodyContent">
+		<xsl:param name="IsAttachment">false</xsl:param>
+		<xsl:param name="ContentType" >text/plain</xsl:param>
+		<xsl:choose>
+			<xsl:when test="$IsAttachment='true'">
+				<fo:block>THIS IS AN ATTACHMENT</fo:block>
+			</xsl:when>
+			<xsl:when test="not(starts-with($ContentType,'text/'))">
+				<fo:block>THIS IS AN NOT TEXT</fo:block>
+			</xsl:when>
+			<xsl:otherwise>
+				<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
+			</xsl:otherwise>
+		</xsl:choose>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Content">
+		<fo:block>Content</fo:block>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:ContentAsXhtml">
+		<xsl:apply-templates select="html:html/html:body/html:*"/>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:MultiBody" mode="RenderContent">
+		<xsl:choose>
+			<xsl:when test="translate(normalize-space(eaxs:ContentType),'&UPPER;','&lower;') = 'multipart/alternative'">
+				<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent">
+					<xsl:sort select="position()" data-type="number" order="descending"/> <!-- alternatives have priority in descending order -->
+				</xsl:apply-templates>
+			</xsl:when>
+			<xsl:otherwise>
+				<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent"/>				
+			</xsl:otherwise>
+		</xsl:choose>
+	</xsl:template>
+	
 
 	<!-- ========================================================================
 		Attribute Sets 

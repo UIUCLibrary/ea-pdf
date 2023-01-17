@@ -166,8 +166,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:attribute-set>
 
   <xsl:attribute-set name="p">
-    <xsl:attribute name="space-before">1em</xsl:attribute>
-    <xsl:attribute name="space-after">1em</xsl:attribute>
+    <xsl:attribute name="space-before">0.25em</xsl:attribute>
+    <xsl:attribute name="space-after">0.25em</xsl:attribute>
     <!-- e.g.,
     <xsl:attribute name="text-indent">1em</xsl:attribute>
     -->
@@ -616,23 +616,35 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         <xsl:when test="self::html:caption">
         </xsl:when>
         <xsl:when test="self::html:img or self::html:object">
-          <xsl:if test="@align = 'bottom' or @align = 'middle' or @align = 'top'">
+          <xsl:if test="translate(@align,'&UPPER;','&lower;') = 'bottom' or translate(@align,'&UPPER;','&lower;') = 'middle' or translate(@align,'&UPPER;','&lower;') = 'top'">
             <xsl:attribute name="vertical-align">
-              <xsl:value-of select="@align"/>
+              <xsl:value-of select="translate(@align,'&UPPER;','&lower;')"/>
             </xsl:attribute>
           </xsl:if>
         </xsl:when>
         <xsl:otherwise>
           <xsl:call-template name="process-cell-align">
-            <xsl:with-param name="align" select="@align"/>
+            <xsl:with-param name="align" select="translate(@align,'&UPPER;','&lower;')"/>
           </xsl:call-template>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
     <xsl:if test="@valign">
       <xsl:call-template name="process-cell-valign">
-        <xsl:with-param name="valign" select="@valign"/>
+        <xsl:with-param name="valign" select="translate(@valign,'&UPPER;','&lower;')"/>
       </xsl:call-template>
+    </xsl:if>
+    
+    <xsl:if test="@color">
+      <xsl:attribute name="color">
+        <xsl:value-of select="translate(@color,'&UPPER;','&lower;')"/>
+      </xsl:attribute>      
+    </xsl:if>
+
+    <xsl:if test="@bgcolor">
+      <xsl:attribute name="background-color">
+        <xsl:value-of select="translate(@bgcolor,'&UPPER;','&lower;')"/>
+      </xsl:attribute>      
     </xsl:if>
 
     <xsl:if test="@style">
@@ -1279,6 +1291,23 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <xsl:attribute name="display-align">from-table-column()</xsl:attribute>
       <xsl:attribute name="relative-align">from-table-column()</xsl:attribute>
     </xsl:if>
+    <!-- TGH Add the width and height attribute -->
+    <xsl:choose>
+      <xsl:when test="string(number(@width)) != 'NaN'">
+        <xsl:attribute name="width"><xsl:value-of select="@width"/>px</xsl:attribute>
+      </xsl:when>
+      <xsl:when test="@width">
+        <xsl:attribute name="width"><xsl:value-of select="@width"/></xsl:attribute>
+      </xsl:when>
+    </xsl:choose>
+    <xsl:choose>
+      <xsl:when test="string(number(@height)) != 'NaN'">
+        <xsl:attribute name="height"><xsl:value-of select="@height"/>px</xsl:attribute>
+      </xsl:when>
+      <xsl:when test="@height">
+        <xsl:attribute name="height"><xsl:value-of select="@height"/></xsl:attribute>
+      </xsl:when>
+    </xsl:choose>
     <xsl:call-template name="process-common-attributes"/>
     <fo:block>
       <xsl:apply-templates/>
@@ -1335,13 +1364,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <xsl:if test="$valign">
       <xsl:attribute name="display-align">
         <xsl:choose>
-          <xsl:when test="$valign = 'middle'">center</xsl:when>
-          <xsl:when test="$valign = 'bottom'">after</xsl:when>
-          <xsl:when test="$valign = 'baseline'">auto</xsl:when>
+          <xsl:when test="translate($valign,'&UPPER;','&lower;') = 'middle'">center</xsl:when>
+          <xsl:when test="translate($valign,'&UPPER;','&lower;') = 'bottom'">after</xsl:when>
+          <xsl:when test="translate($valign,'&UPPER;','&lower;') = 'baseline'">auto</xsl:when>
           <xsl:otherwise>before</xsl:otherwise>
         </xsl:choose>
       </xsl:attribute>
-      <xsl:if test="$valign = 'baseline'">
+      <xsl:if test="translate($valign,'&UPPER;','&lower;') = 'baseline'">
         <xsl:attribute name="relative-align">baseline</xsl:attribute>
       </xsl:if>
     </xsl:if>
@@ -1350,7 +1379,51 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   <!--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
        Inline-level
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
-
+  
+  <!-- TGH Add support for <font> element -->
+  <xsl:template match="html:font">
+    <fo:inline>
+      <xsl:call-template name="process-font-attributes"/>
+      <xsl:call-template name="process-common-attributes-and-children"/>
+    </fo:inline>
+  </xsl:template>
+  
+  <xsl:template name="process-font-attributes">
+    <xsl:choose>
+      <xsl:when test="normalize-space(@size)='1'">
+        <xsl:attribute name="font-size">xx-small</xsl:attribute>
+      </xsl:when>
+      <xsl:when test="normalize-space(@size)='2'">
+        <xsl:attribute name="font-size">small</xsl:attribute>
+      </xsl:when>
+      <xsl:when test="normalize-space(@size)='3'">
+        <xsl:attribute name="font-size">medium</xsl:attribute>
+      </xsl:when>
+      <xsl:when test="normalize-space(@size)='4'">
+        <xsl:attribute name="font-size">large</xsl:attribute>
+      </xsl:when>
+      <xsl:when test="normalize-space(@size)='5'">
+        <xsl:attribute name="font-size">x-large</xsl:attribute>
+      </xsl:when>
+      <xsl:when test="normalize-space(@size)='6'">
+        <xsl:attribute name="font-size">xx-large</xsl:attribute>
+      </xsl:when>
+      <xsl:when test="normalize-space(@size)='7'">
+        <xsl:attribute name="font-size">xx-large</xsl:attribute>
+      </xsl:when>
+      <!-- relative sizes, just increases or decreases, doesn't support a numeric value -->
+      <xsl:when test="starts-with(normalize-space(@size),'+')">
+        <xsl:attribute name="font-size">larger</xsl:attribute>        
+      </xsl:when>
+      <xsl:when test="starts-with(normalize-space(@size),'-')">
+        <xsl:attribute name="font-size">smaller</xsl:attribute>        
+      </xsl:when>
+    </xsl:choose>
+    <xsl:if test="@face">
+      <xsl:attribute name="font-family"><xsl:value-of select="@face"/></xsl:attribute>
+    </xsl:if>
+  </xsl:template>
+  
   <xsl:template match="html:b">
     <fo:inline xsl:use-attribute-sets="b">
       <xsl:call-template name="process-common-attributes-and-children"/>
@@ -1359,6 +1432,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <xsl:template match="html:strong">
     <fo:inline xsl:use-attribute-sets="strong">
+      <xsl:choose>
+        <xsl:when test="@size='1'"></xsl:when>
+      </xsl:choose>
       <xsl:call-template name="process-common-attributes-and-children"/>
     </fo:inline>
   </xsl:template>
