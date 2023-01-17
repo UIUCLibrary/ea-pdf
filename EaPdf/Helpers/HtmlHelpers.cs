@@ -2,6 +2,7 @@
 using Fizzler.Systems.HtmlAgilityPack;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Asn1;
 using PdfTemplating.SystemCustomExtensions;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
@@ -56,12 +57,25 @@ namespace UIUCLibrary.EaPdf.Helpers
             var htmlNode = MakeHtmlMinimallyValid(hdoc, ref messages, ignoreHtmlIssues);
 
             //move styles to inline with the elements
-            htmlNode = ConvertToInlineCss(htmlNode, ref messages, ignoreHtmlIssues);
+            ConvertToInlineCss(htmlNode, ref messages, ignoreHtmlIssues);
 
-            //TODO: Remove any inline style properties that are not supported by the HTML
+            //Normalize style properties and remove any inline style properties that are not supported by the HTML
+            NormalizeStyleProperties(htmlNode, ref messages, ignoreHtmlIssues);
 
-            htmlNode = NormalizeStyleProperties(htmlNode, ref messages, ignoreHtmlIssues);
+            //Fix improperly nested lists
+            FixImproprerlyNestedLists(htmlNode, ref messages, ignoreHtmlIssues);
 
+            //Fix non-unique id attributes -- make sure to do this after inlining the styles, because the inlining will require the ids to match
+            //The XSL-FO processor will complain if ids are not unique
+            FixNonUniqueIdValues(hdoc, ref messages, ignoreHtmlIssues);
+
+            ConvertRelativeUrlsToAbsolute(hdoc, ref messages, ignoreHtmlIssues);
+
+            //If an element has the "display: none" style set, delete it from the xhtml.  make sure this is after the inlining process
+            RemoveDisplayNone(hdoc, ref messages, ignoreHtmlIssues);
+
+            //Remove empty (whitespace-only) table elements 
+            //RemoveEmptyTables(hdoc, ref messages, ignoreHtmlIssues); //This logic was moved to the eaxs_xhtml2fo.xsl
 
             ret = htmlNode.OuterHtml;
 
@@ -69,11 +83,170 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 messages.Add((LogLevel.Warning, msg));
             }
-            
+
             //HAP does not correctly encode the CDATA sections, so we need to do clean up their mess
             ret = FixCData(ret);
 
             return ret;
+        }
+
+        /// <summary>
+        /// IF an element has a style of 'display:none' remove it it from the html altogether
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        private static void RemoveDisplayNone(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var displayNoneNodes = hdoc.DocumentNode.QuerySelectorAll("*[style*='display:none']");
+
+            List<HtmlNode> toRemove = new();
+            foreach (var node in displayNoneNodes)
+            {
+                toRemove.Add(node);
+            }
+
+            toRemove.ForEach(h => h.Remove());
+
+        }
+
+        private static void RemoveEmptyTables(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var emptyTableNodes = hdoc.DocumentNode.QuerySelectorAll("table");
+
+            List<HtmlNode> toRemove = new();
+            foreach (var node in emptyTableNodes)
+            {
+                if (string.IsNullOrWhiteSpace(node.InnerHtml))
+                {
+                    toRemove.Add(node);
+                }
+            }
+
+            toRemove.ForEach(h => h.Remove());
+
+        }
+
+        private static void ConvertRelativeUrlsToAbsolute(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var baseNode = hdoc.DocumentNode.SelectSingleNode("/html/head/base");
+
+            if (baseNode == null)
+                return;
+
+            var baseHref = baseNode.Attributes["href"];
+
+            if (baseNode == null)
+                return;
+
+            var href = baseHref.Value;
+
+            if (string.IsNullOrWhiteSpace(href))
+                return;
+
+            var baseUri = new Uri(href);
+
+            //get all the img src attributes
+            var imgNodes = hdoc.DocumentNode.QuerySelectorAll("img");
+            if (imgNodes != null)
+            {
+                foreach (var imgNode in imgNodes)
+                {
+                    var src = imgNode.Attributes["src"];
+                    if (src != null)
+                    {
+                        var uriSrc = new Uri(src.Value,UriKind.RelativeOrAbsolute);
+                        if (!uriSrc.IsAbsoluteUri)
+                        {
+                            //combine with base to create an absolute uri
+                            if (Uri.TryCreate(baseUri, uriSrc, out Uri? newUri))
+                            {
+                                src.Value = newUri.ToString();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// look at all id attributes and make sure they are unique within the xhtml
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        private static void FixNonUniqueIdValues(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+
+            var nodes = hdoc.DocumentNode.QuerySelectorAll("*[id]"); //Note: the Xpath equivalent "//*[@id]" doesn't seem to work for some reason
+            Dictionary<string, int> idCnts = new();
+
+            if (nodes != null)
+            {
+                foreach (var nodeWithId in nodes)
+                {
+                    var currId = nodeWithId.Id;
+                    if (!string.IsNullOrWhiteSpace(currId))
+                    {
+                        var newId = MakeIdUnique(currId, idCnts);
+                        if (newId != currId)
+                        {
+                            if (!ignoreHtmlIssues)
+                                messages.Add((LogLevel.Information, $"Non-unique id value '{currId}' was changed to '{newId}'"));
+                            nodeWithId.Id = newId;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// if the given id value has already been used, add a counter to make it unique 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="idCnts"></param>
+        /// <returns></returns>
+        private static string MakeIdUnique(string id, Dictionary<string, int> idCnts)
+        {
+            if (idCnts.TryGetValue(id, out var cnt))
+            {
+                //this is a duplicate
+                idCnts[id] = cnt + 1;
+                id = $"{id}_{cnt + 1}";
+                return MakeIdUnique(id, idCnts); //recursion to ensure that a renamed id hasn't also already been used
+            }
+            else
+            {
+                idCnts[id] = cnt + 1;
+                return id;
+            }
+        }
+
+        /// <summary>
+        /// Look for lists which are not properly nested and correct them
+        /// </summary>
+        /// <param name="htmlNode"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        private static void FixImproprerlyNestedLists(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var nodes = htmlNode.SelectNodes(".//ul/* | .//ol/*");
+            if (nodes != null)
+            {
+                foreach (var li in nodes)
+                {
+                    if (li.Name != "li")
+                    {
+                        // this is an improperly nested list item, so wrap it in an li
+                        var newLi = htmlNode.OwnerDocument.CreateElement("li");
+                        li.ParentNode.InsertBefore(newLi, li);
+                        li.Remove();
+                        newLi.AppendChild(li);
+                        if (!ignoreHtmlIssues)
+                            messages.Add((LogLevel.Information, $"List Node '{newLi.ParentNode.XPath}' had improperly nested elements; these were wrapped in <li> elements"));
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -83,10 +256,8 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="messages"></param>
         /// <param name="ignoreHtmlIssues"></param>
         /// <returns></returns>
-        private static HtmlNode NormalizeStyleProperties(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void NormalizeStyleProperties(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
-            var ret = htmlNode;
-
             var allElements = htmlNode.SelectNodes("//*");
             if (allElements != null)
             {
@@ -105,12 +276,12 @@ namespace UIUCLibrary.EaPdf.Helpers
                         if (!string.IsNullOrWhiteSpace(newStyle))
                             style.Value = newStyle;
                         else
-                            style.Remove();
+                            if (!ignoreHtmlIssues)
+                            messages.Add((LogLevel.Information, $"Invalid style attribute was removed from node '{elem.XPath}'"));
+                        style.Remove();
                     }
                 }
             }
-
-            return ret;
         }
 
 
@@ -583,9 +754,8 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="messages"></param>
         /// <param name="ignoreHtmlIssues"></param>
         /// <returns></returns>
-        private static HtmlNode ConvertToInlineCss(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void ConvertToInlineCss(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
-            var ret = htmlNode;
             //get all the style elements
             var styles = htmlNode.SelectNodes("//style");
 
@@ -655,8 +825,6 @@ namespace UIUCLibrary.EaPdf.Helpers
                     }
                 }
             }
-
-            return ret;
         }
     }
 
