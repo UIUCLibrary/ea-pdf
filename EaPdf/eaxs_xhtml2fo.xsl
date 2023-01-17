@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE stylesheet
+[
+<!ENTITY UPPER "ABCDEFGHIJKLMNOPQRSTUVWXYZ" >
+<!ENTITY lower "abcdefghijklmnopqrstuvwxyz" >
+]>
+
 <!--
 
 Copyright Antenna House, Inc. (http://www.antennahouse.com) 2001, 2002.
@@ -53,7 +59,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <!-- hyphenate: true | false -->
   <xsl:param name="hyphenate">false</xsl:param>
-
+  
+  <!-- TGH backlist css properties -->
+  <xsl:param name="css-blacklist">
+    <list>
+      <item>list-style-type</item>
+    </list>
+  </xsl:param>
+  
+  <!-- TGH Which FO Processor -->
+  <xsl:param name="fo-processor">apache</xsl:param>
 
   <!--======================================================================
       Attribute Sets
@@ -678,10 +693,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           </xsl:choose>
         </xsl:when>
         <xsl:otherwise>
-          <!-- TODO: make sure that invalid attribute names do not appear -->
-          <xsl:attribute name="{$name}">
-            <xsl:value-of select="$value"/>
-          </xsl:attribute>
+          <xsl:if test="$name != 'list-style-type'"><!-- TGH  Need to find way to paramterize this so that arbitrary style properties can be blacklisted -->
+            <xsl:attribute name="{$name}">
+              <xsl:value-of select="$value"/>
+            </xsl:attribute>            
+          </xsl:if>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
@@ -1005,13 +1021,23 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
        Table
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
 
-  <xsl:template match="html:table">
-    <fo:table-and-caption xsl:use-attribute-sets="table-and-caption">
-      <xsl:call-template name="make-table-caption"/>
-      <fo:table xsl:use-attribute-sets="table">
-        <xsl:call-template name="process-table"/>
-      </fo:table>
-    </fo:table-and-caption>
+  <xsl:template match="html:table[*]"><!-- TGH only process tables which have child elements  -->
+    <xsl:choose>
+      <xsl:when test="$fo-processor = 'apache'"> <!-- apache fop does no support table-and-caption -->
+          <fo:table xsl:use-attribute-sets="table">
+            <!-- TODO: Process table caption -->
+            <xsl:call-template name="process-table"/>
+          </fo:table>
+      </xsl:when>  
+      <xsl:otherwise>
+        <fo:table-and-caption xsl:use-attribute-sets="table-and-caption">
+          <xsl:call-template name="make-table-caption"/>
+          <fo:table xsl:use-attribute-sets="table">
+            <xsl:call-template name="process-table"/>
+          </fo:table>
+        </fo:table-and-caption>        
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template name="make-table-caption">
@@ -1296,7 +1322,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             </xsl:choose>
           </xsl:when>
           <xsl:otherwise>
-            <xsl:value-of select="$align"/>
+			<!-- TGH convert alignment values to lower-case -->
+            <xsl:value-of select="translate($align,'&UPPER;','&lower;')"/>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:attribute>

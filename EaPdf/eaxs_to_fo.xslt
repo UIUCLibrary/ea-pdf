@@ -3,6 +3,8 @@
 [
 <!ENTITY mdash "&#8212;" >
 <!ENTITY nbsp "&#160;" >
+<!ENTITY UPPER "ABCDEFGHIJKLMNOPQRSTUVWXYZ" >
+<!ENTITY lower "abcdefghijklmnopqrstuvwxyz" >
 ]>
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -113,6 +115,7 @@
 				</xsl:when>
 				<xsl:otherwise>
 					<xsl:value-of select="."/>
+					<xsl:comment>Datetime formatting function not available</xsl:comment>
 				</xsl:otherwise>
 			</xsl:choose> 
 		</fo:block>
