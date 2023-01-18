@@ -166,8 +166,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:attribute-set>
 
   <xsl:attribute-set name="p">
-    <xsl:attribute name="space-before">0.25em</xsl:attribute>
-    <xsl:attribute name="space-after">0.25em</xsl:attribute>
+    <xsl:attribute name="space-before">0</xsl:attribute>
+    <xsl:attribute name="space-after">0.125em</xsl:attribute>
     <!-- e.g.,
     <xsl:attribute name="text-indent">1em</xsl:attribute>
     -->
@@ -1599,9 +1599,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:template>
 
   <xsl:template match="html:br">
-    <fo:block>
-      <xsl:call-template name="process-common-attributes"/>
-    </fo:block>
+    <fo:block><xsl:call-template name="process-common-attributes"/></fo:block>
   </xsl:template>
 
   <xsl:template match="html:q">
