@@ -155,7 +155,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     var src = imgNode.Attributes["src"];
                     if (src != null)
                     {
-                        var uriSrc = new Uri(src.Value,UriKind.RelativeOrAbsolute);
+                        var uriSrc = new Uri(src.Value, UriKind.RelativeOrAbsolute);
                         if (!uriSrc.IsAbsoluteUri)
                         {
                             //combine with base to create an absolute uri
@@ -266,19 +266,23 @@ namespace UIUCLibrary.EaPdf.Helpers
                 //loop through all the elements, use ExCSS to parse all the style attributes, and replace the style value with a new one normalized by the ExCSS parser
                 foreach (var elem in allElements)
                 {
-                    var style = elem.Attributes["style"];
-                    if (style != null)
+                    var style = elem.GetAttributes("style").SingleOrDefault();
+                    if (style != null && !string.IsNullOrWhiteSpace(style.Value))
                     {
                         var sSheet = cssParser.Parse($"{elem.Name} {{{style.Value}}}");
 
                         var newStyle = sSheet.StyleRules.Single().Style.ToCss();
 
                         if (!string.IsNullOrWhiteSpace(newStyle))
+                        {
                             style.Value = newStyle;
+                        }
                         else
+                        {
                             if (!ignoreHtmlIssues)
-                            messages.Add((LogLevel.Information, $"Invalid style attribute was removed from node '{elem.XPath}'"));
-                        style.Remove();
+                                messages.Add((LogLevel.Information, $"Invalid style attribute was removed from node '{elem.XPath}'"));
+                            style.Remove();
+                        }
                     }
                 }
             }
@@ -774,12 +778,16 @@ namespace UIUCLibrary.EaPdf.Helpers
                 {
                     //TODO: Add support for ListSelectors, so that the separate specificity of its selectors can be determined.
                     //      The ExCss library doesn't seem to allow access to the individual selectors of a SelectorList
+                    //      I need to do a pull-request for the ExCSS change that I would like
                     //TODO: Add support for the shorthand property "all"
                     //TODO: Add support for the !important modifier.
 
                     var selectorText = rule.Selector.Text;
                     var styleText = rule.Style.CssText;
                     var specificity = rule.Selector.Specificity;
+
+                    if (string.IsNullOrWhiteSpace(styleText))
+                        continue; //skip this rule andf move to the next
 
                     IEnumerable<HtmlNode>? nodes = null;
                     try
@@ -796,10 +804,13 @@ namespace UIUCLibrary.EaPdf.Helpers
                     {
                         foreach (var node in nodes)
                         {
-                            var styleAttr = node.Attributes["style"];
+                            var styleAttr = node.GetAttributes("style").SingleOrDefault();
                             if (styleAttr == null)
                             {
-                                node.Attributes.Add("style", styleText);
+                                var newStyle = cssParser.Parse($"dummy {{{styleText}}}").StyleRules.Single().Style;
+                                var newStyleText = string.Join("; ", newStyle.Select(p => p.Name + ":" + p.Value)) + "; ";
+
+                                node.Attributes.Add("style", newStyleText);
                                 messages.Add((LogLevel.Debug, $"Node: {node.XPath}, Inlining style:  {selectorText} {{{styleText}}}, new style attribute"));
                             }
                             else
