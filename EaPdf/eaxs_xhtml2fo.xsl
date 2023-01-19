@@ -1,9 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE stylesheet
-[
-<!ENTITY UPPER "ABCDEFGHIJKLMNOPQRSTUVWXYZ" >
-<!ENTITY lower "abcdefghijklmnopqrstuvwxyz" >
-]>
+<?xml version="1.0" encoding="utf-8"?>
 
 <!--
 
@@ -19,10 +14,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 <!-- Modified by Tom Habing, 2023-01-12 for EMAIL to PDF conversion project -->
 
-<xsl:stylesheet version="1.0"
+<xsl:stylesheet version="2.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:fo="http://www.w3.org/1999/XSL/Format"
-                xmlns:html="http://www.w3.org/1999/xhtml">
+                xmlns:html="http://www.w3.org/1999/xhtml"
+                xmlns:fn="http://www.w3.org/2005/xpath-functions"
+                >
 
   <xsl:output method="xml"
               version="1.0"
@@ -616,34 +613,34 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         <xsl:when test="self::html:caption">
         </xsl:when>
         <xsl:when test="self::html:img or self::html:object">
-          <xsl:if test="translate(@align,'&UPPER;','&lower;') = 'bottom' or translate(@align,'&UPPER;','&lower;') = 'middle' or translate(@align,'&UPPER;','&lower;') = 'top'">
+          <xsl:if test="fn:lower-case(@align) = 'bottom' or fn:lower-case(@align) = 'middle' or fn:lower-case(@align) = 'top'">
             <xsl:attribute name="vertical-align">
-              <xsl:value-of select="translate(@align,'&UPPER;','&lower;')"/>
+              <xsl:value-of select="fn:lower-case(@align)"/>
             </xsl:attribute>
           </xsl:if>
         </xsl:when>
         <xsl:otherwise>
           <xsl:call-template name="process-cell-align">
-            <xsl:with-param name="align" select="translate(@align,'&UPPER;','&lower;')"/>
+            <xsl:with-param name="align" select="fn:lower-case(@align)"/>
           </xsl:call-template>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
     <xsl:if test="@valign">
       <xsl:call-template name="process-cell-valign">
-        <xsl:with-param name="valign" select="translate(@valign,'&UPPER;','&lower;')"/>
+        <xsl:with-param name="valign" select="fn:lower-case(@valign)"/>
       </xsl:call-template>
     </xsl:if>
     
     <xsl:if test="@color">
       <xsl:attribute name="color">
-        <xsl:value-of select="translate(@color,'&UPPER;','&lower;')"/>
+        <xsl:value-of select="fn:lower-case(@color)"/>
       </xsl:attribute>      
     </xsl:if>
 
     <xsl:if test="@bgcolor">
       <xsl:attribute name="background-color">
-        <xsl:value-of select="translate(@bgcolor,'&UPPER;','&lower;')"/>
+        <xsl:value-of select="fn:lower-case(@bgcolor)"/>
       </xsl:attribute>      
     </xsl:if>
 
@@ -1352,7 +1349,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           </xsl:when>
           <xsl:otherwise>
 			<!-- TGH convert alignment values to lower-case -->
-            <xsl:value-of select="translate($align,'&UPPER;','&lower;')"/>
+            <xsl:value-of select="fn:lower-case($align)"/>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:attribute>
@@ -1364,13 +1361,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <xsl:if test="$valign">
       <xsl:attribute name="display-align">
         <xsl:choose>
-          <xsl:when test="translate($valign,'&UPPER;','&lower;') = 'middle'">center</xsl:when>
-          <xsl:when test="translate($valign,'&UPPER;','&lower;') = 'bottom'">after</xsl:when>
-          <xsl:when test="translate($valign,'&UPPER;','&lower;') = 'baseline'">auto</xsl:when>
+          <xsl:when test="fn:lower-case($valign) = 'middle'">center</xsl:when>
+          <xsl:when test="fn:lower-case($valign) = 'bottom'">after</xsl:when>
+          <xsl:when test="fn:lower-case($valign) = 'baseline'">auto</xsl:when>
           <xsl:otherwise>before</xsl:otherwise>
         </xsl:choose>
       </xsl:attribute>
-      <xsl:if test="translate($valign,'&UPPER;','&lower;') = 'baseline'">
+      <xsl:if test="fn:lower-case($valign) = 'baseline'">
         <xsl:attribute name="relative-align">baseline</xsl:attribute>
       </xsl:if>
     </xsl:if>

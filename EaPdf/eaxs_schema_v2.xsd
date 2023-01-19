@@ -42,6 +42,10 @@
 
 			2022-12-08
 			* SingleBody BodyContent may now contain a choice of either Content or ContentAsXhtml.  ContentAsXhtml is a new element that contains the XHTML content of the body, which is useful for PDF creation
+			
+			2023-01-19
+			* Add a FileExt element to Mbox.  This is the extension to be used for the source filename.  It should match the actual extension used on the source filename, of it the source filename doesn't have an actual extension, it should be whatever matches the file type
+			  This is used whenever a filename needs to be constructed for the file, such as if the file hash is used as a filename.  It must not include the leading period.
 
 		</documentation>
 	</annotation>
@@ -487,6 +491,9 @@
 					</documentation>
 				</annotation>
 			</element>
+			<!-- Added Hash and Size because these attributes can also be useful even when the content is embedded inside the XML -->
+			<element name="Hash" type="xm:hash-type" minOccurs="0"/>
+			<element name="Size" type="long" minOccurs="0"/>
 		</sequence>
 	</complexType>
 
@@ -676,6 +683,16 @@
 					<documentation>
 						URI component that when added to the path from which this XML file
 						was accessed will give the URI from which the mbox full of original messages may be retrieved.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="FileExt" type="string">
+				<annotation>
+					<documentation>
+						TGH_2023-01-19: This is the extension to be used for the source filename.  It should match the actual 
+						extension used on the source filename, of it the source filename doesn't have an actual extension, it 
+						should be whatever matches the file type. This is used whenever a filename needs to be constructed for 
+						the file, such as if the file hash is used as a filename. It must not include the leading period.
 					</documentation>
 				</annotation>
 			</element>

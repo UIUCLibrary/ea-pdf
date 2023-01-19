@@ -3,20 +3,17 @@
 [
 <!ENTITY mdash "&#8212;" >
 <!ENTITY nbsp "&#160;" >
-<!ENTITY UPPER "ABCDEFGHIJKLMNOPQRSTUVWXYZ" >
-<!ENTITY lower "abcdefghijklmnopqrstuvwxyz" >
 ]>
 
-<xsl:stylesheet version="1.0" 
+<xsl:stylesheet version="2.0" 
 	xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	xmlns:fo="http://www.w3.org/1999/XSL/Format"
-	xmlns:msxsl="urn:schemas-microsoft-com:xslt" 
+	xmlns:pdf="http://xmlgraphics.apache.org/fop/extensions/pdf"
 	xmlns:fn="http://www.w3.org/2005/xpath-functions"
 	xmlns:fox="http://xmlgraphics.apache.org/fop/extensions"
 	xmlns:eaxs="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
 	xmlns:html="http://www.w3.org/1999/xhtml"
-	xmlns:func="my_functions"
-	exclude-result-prefixes="msxsl">
+	>
 
 	<xsl:import href="eaxs_xhtml2fo.xsl"/>
 
@@ -37,6 +34,9 @@
 					<fo:region-after extent="1in"/>
 				</fo:simple-page-master>
 			</fo:layout-master-set>
+			
+			<xsl:call-template name="declarations"/>
+			
 			<fo:page-sequence master-reference="message-page">
 				<fo:static-content flow-name="xsl-region-before">
 					<fo:block text-align="center" margin-left="1in" margin-right="1in">Account:
@@ -57,24 +57,31 @@
 		</fo:root>
 	</xsl:template>
 	
+	<xsl:template name="declarations">
+		<fo:declarations>
+			<xsl:for-each select="//eaxs:Folder/eaxs:Mbox">
+				<pdf:embedded-file>
+					<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
+					<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+					<xsl:attribute name="description">Source file for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
+				</pdf:embedded-file>				
+			</xsl:for-each>
+			<xsl:for-each select="//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))]">
+				<pdf:embedded-file>
+					<xsl:attribute name="filename"><xsl:value-of select="eaxs:BodyContent/eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
+					<xsl:attribute name="src">url('data:<xsl:value-of select="fn:normalize-space(fn:lower-case(eaxs:ContentType))"/>;base64,<xsl:value-of select="eaxs:BodyContent/eaxs:Content"/>')</xsl:attribute>
+					<xsl:attribute name="description">Original File Name: <xsl:value-of select="eaxs:DispositionFile | eaxs:ContentName"/></xsl:attribute>
+				</pdf:embedded-file>								
+			</xsl:for-each>
+		</fo:declarations>
+	</xsl:template>
+	
 	<xsl:template name="CoverPage">
 		<fo:block page-break-after="always">
 			<fo:block xsl:use-attribute-sets="h1">PDF Email Archive (PDF/mail-m)</fo:block>
 			<fo:block xsl:use-attribute-sets="h2">
 				<xsl:text>Created: </xsl:text>
-				<xsl:choose>
-					<xsl:when test="function-available('msxsl:format-date')">
-						<xsl:value-of select="msxsl:format-date(func:CurrentDateTime(), 'dddd, MMM dd, yyyy, ')"/>
-						<xsl:value-of select="msxsl:format-time(func:CurrentDateTime(), ' h:m:s tt')"/>					
-					</xsl:when>
-					<xsl:when test="function-available('fn:format-dateTime')">
-						<xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
-					</xsl:when>
-					<xsl:otherwise>
-						<xsl:value-of select="."/>
-						<xsl:comment>Datetime formatting function not available</xsl:comment>
-					</xsl:otherwise>
-				</xsl:choose> 
+				<xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
 			</fo:block>
 			<xsl:choose>
 				<xsl:when test="count(/eaxs:Account/eaxs:EmailAddress) > 1">
@@ -94,17 +101,25 @@
 			</xsl:choose>
 			<fo:block xsl:use-attribute-sets="h2">Global Id: <xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block>
 			<fo:block xsl:use-attribute-sets="h2">Message Count: <xsl:value-of select="count(//eaxs:Message)"/></fo:block>
+			<fo:block xsl:use-attribute-sets="h2">Attachment Count: <xsl:value-of select="count(//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block>
 			<xsl:choose>
 				<xsl:when test="count(//eaxs:Folder) > 1">
 					<fo:block xsl:use-attribute-sets="h2">Folders: <xsl:value-of select="count(/eaxs:Account//eaxs:Folder)"/></fo:block>
 					<!-- TODO: Create an indented list of folder names -->
 				</xsl:when>	
 				<xsl:when test="count(//eaxs:Folder) = 1">
-					<fo:block xsl:use-attribute-sets="h2">Folder: <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Name"/></fo:block>					
+					<fo:block xsl:use-attribute-sets="h2">
+						Folder: <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Name"/>
+						<fo:basic-link>
+							<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Source file</fo:inline>)</fo:inline>
+						</fo:basic-link>
+					</fo:block>					
 				</xsl:when>
 			</xsl:choose>
 		</fo:block>
 	</xsl:template>
+	
 		
 
 	<xsl:template match="eaxs:Message">
@@ -143,19 +158,7 @@
 			<fo:inline-container xsl:use-attribute-sets="width-header1">
 				<fo:block keep-together="always">Date:</fo:block>
 			</fo:inline-container>
-			<xsl:choose>
-				<xsl:when test="function-available('msxsl:format-date')">
-					<xsl:value-of select="msxsl:format-date(., 'dddd, MMM dd, yyyy, ')"/>
-					<xsl:value-of select="msxsl:format-time(., ' h:m:s tt')"/>					
-				</xsl:when>
-				<xsl:when test="function-available('fn:format-dateTime')">
-					<xsl:value-of select="fn:format-dateTime(., '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
-				</xsl:when>
-				<xsl:otherwise>
-					<xsl:value-of select="."/>
-					<xsl:comment>Datetime formatting function not available</xsl:comment>
-				</xsl:otherwise>
-			</xsl:choose> 
+			<xsl:value-of select="fn:format-dateTime(., '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
 		</fo:block>
 	</xsl:template>
 
@@ -290,11 +293,12 @@
 				<fo:block keep-together="always">Content Type:</fo:block>
 			</fo:inline-container>
 			<xsl:apply-templates/>
-			<!--
-			<xsl:if test="following-sibling::eaxs:Charset">
-				<xsl:text>; charset=</xsl:text><xsl:value-of select="following-sibling::eaxs:Charset"/>
+			<xsl:if test="fn:lower-case(normalize-space(../eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(.)),'text/')))">
+				<fo:basic-link>
+					<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="../eaxs:BodyContent/eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"><xsl:with-param name="SingleBody" select=".."></xsl:with-param></xsl:call-template>)</xsl:attribute>
+					<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Open Attachment</fo:inline>)</fo:inline>
+				</fo:basic-link>				
 			</xsl:if>
-			-->
 			<xsl:if test="following-sibling::eaxs:ContentName != following-sibling::eaxs:DispositionFileName">
 				<xsl:text>; name="</xsl:text>
 				<xsl:call-template name="escape-specials">
@@ -302,17 +306,6 @@
 				</xsl:call-template>
 				<xsl:text>"</xsl:text>
 			</xsl:if>
-			<!--
-			<xsl:for-each select="following-sibling::eaxs:ContentTypeParam">
-				<xsl:text>; </xsl:text>
-				<xsl:value-of select="eaxs:Name"/>
-				<xsl:text>="</xsl:text>
-				<xsl:call-template name="escape-specials">
-					<xsl:with-param name="text"><xsl:value-of select="eaxs:Value"/></xsl:with-param>
-				</xsl:call-template>
-				<xsl:text>"</xsl:text>
-			</xsl:for-each>
-			-->
 		</fo:block>
 	</xsl:template>
 
@@ -329,17 +322,6 @@
 				</xsl:call-template>
 				<xsl:text>"</xsl:text>
 			</xsl:if>
-			<!--
-			<xsl:for-each select="following-sibling::eaxs:DispositionParam">
-				<xsl:text>; </xsl:text>
-				<xsl:value-of select="eaxs:Name"/>
-				<xsl:text>="</xsl:text>
-				<xsl:call-template name="escape-specials">
-					<xsl:with-param name="text"><xsl:value-of select="eaxs:Value"/></xsl:with-param>
-				</xsl:call-template>
-				<xsl:text>"</xsl:text>
-			</xsl:for-each>
-			-->
 		</fo:block>
 	</xsl:template>
 
@@ -354,7 +336,7 @@
 	
 	<xsl:template match="eaxs:MultiBody" mode="RenderContent">
 		<xsl:choose>
-			<xsl:when test="translate(normalize-space(eaxs:ContentType),'&UPPER;','&lower;') = 'multipart/alternative'">
+			<xsl:when test="fn:lower-case(eaxs:ContentType) = 'multipart/alternative'">
 				<xsl:for-each select="eaxs:SingleBody | eaxs:MultiBody">
 					<xsl:sort select="position()" data-type="number" order="descending"/> <!-- alternatives have priority in descending order, so the last is displayed first -->
 					<xsl:apply-templates select="." mode="RenderContent"/>
@@ -367,11 +349,11 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:SingleBody" mode="RenderContent">
-		<xsl:if test="not(translate(normalize-space(@IsAttachment),'&UPPER;','&lower;') = 'true') and starts-with(translate(normalize-space(eaxs:ContentType),'&UPPER;','&lower;'),'text/')">
+		<xsl:if test="not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')">
 			<xsl:choose>
-				<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(translate(normalize-space(@IsAttachment),'&UPPER;','&lower;') = 'true') and starts-with(translate(normalize-space(eaxs:ContentType),'&UPPER;','&lower;'),'text/')]) >1 ">
+				<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
 					<!-- Only put the header if there are multiple bodies -->
-					<fo:block font-size="1.17em" font-weight="bold" space-before="1em" space-after="1em" border-bottom="1.5pt solid black" keep-with-next="always">Content Type: <xsl:value-of select="eaxs:ContentType"/></fo:block>				
+					<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">Content Type: <xsl:value-of select="eaxs:ContentType"/></fo:block>				
 				</xsl:when>
 				<xsl:otherwise>
 					<fo:block margin-top="1em"> </fo:block>
@@ -455,18 +437,15 @@
 		</xsl:call-template>
 	</xsl:template>
 	
-	<!-- ===================================================================================
-	Beginning of MSXSL script functions
-	========================================================================================-->
-	<msxsl:script language="VBScript" implements-prefix="func">
-		<![CDATA[
-
-		function CurrentDateTime()
-			CurrentDateTime = FormatDateTime(Now,"yyyy-mm-ddThh:mm:ss")
-		end function
-		
-		]]>		
-	</msxsl:script>
-
-		
+	<xsl:template name="GetFileExtension">
+		<xsl:param name="SingleBody" select="."/>
+		<xsl:variable name="ContentName" select="fn:tokenize($SingleBody/eaxs:ContentName,'\.')[last()]"/>
+		<xsl:variable name="DispositionFilename" select="fn:tokenize($SingleBody/eaxs:DispositionFilename,'\.')[last()]"/>
+		<xsl:choose>
+			<xsl:when test="$DispositionFilename"><xsl:value-of select="$DispositionFilename"/></xsl:when>
+			<xsl:when test="$ContentName"><xsl:value-of select="$ContentName"/></xsl:when>
+			<xsl:otherwise>bin</xsl:otherwise>
+		</xsl:choose>
+	</xsl:template>
+	
 </xsl:stylesheet>

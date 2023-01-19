@@ -82,5 +82,11 @@ namespace UIUCLibrary.EaPdf
         /// LogLevels equal to or above this threshold will also be written to the output XML file as comments
         /// </summary>
         public LogLevel LogToXmlThreshold { get; set; } = LogLevel.Debug;
+
+        /// <summary>
+        /// If the source input file does not have a filename extension, this is the value that should be used.
+        /// It should not include the leading period.
+        /// </summary>
+        public string DefaultFileExtension { get; set; } = "mbox";
     }
 }

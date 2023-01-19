@@ -570,8 +570,12 @@ namespace UIUCLibrary.EaPdf
         {
             xwriter.WriteStartElement("Mbox", XM_NS);
 
-            var relPath = Path.GetRelativePath(mboxProps.OutDirectoryName, mboxProps.MboxFilePath);
-            xwriter.WriteElementString("RelPath", XM_NS, relPath);
+            var relPath = new Uri(Path.GetRelativePath(mboxProps.OutDirectoryName, mboxProps.MboxFilePath), UriKind.Relative);
+            var ext = Path.GetExtension(mboxProps.MboxFilePath).TrimStart('.');
+            if(string.IsNullOrWhiteSpace(ext))
+                ext = Settings.DefaultFileExtension;
+            xwriter.WriteElementString("RelPath", XM_NS, relPath.ToString().Replace('\\','/'));
+            xwriter.WriteElementString("FileExt", XM_NS, ext);
             xwriter.WriteElementString("Eol", XM_NS, mboxProps.MostCommonEol);
             if (mboxProps.UsesDifferentEols)
             {
@@ -791,7 +795,7 @@ namespace UIUCLibrary.EaPdf
 
             if (!isChildMessage)
             {
-                xwriter.WriteElementString("RelPath", XM_NS, Settings.ExternalContentFolder);
+                xwriter.WriteElementString("RelPath", XM_NS, new Uri(Settings.ExternalContentFolder, UriKind.Relative).ToString().Replace('\\', '/'));
             }
 
             xwriter.WriteStartElement("LocalId", XM_NS);
@@ -1620,13 +1624,22 @@ namespace UIUCLibrary.EaPdf
             }
 
             xwriter.WriteStartElement("Content", XM_NS);
+            
+            //set up hashing
+            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
+            byte[]? hash;
+            long? fileSize = null; //FUTURE: Add support for file size
 
             string? encoding;
             //7bit and 8bit should be text content, so decode it and use the streamreader with the contenttype charset, if any, to get the text and write it to the xml in a cdata section.  Default is the same as 7bit.
             if (content.Encoding == ContentEncoding.EightBit || content.Encoding == ContentEncoding.SevenBit || content.Encoding == ContentEncoding.Default)
             {
-                StreamReader reader = new(content.Open(), part.ContentType.CharsetEncoding, true);
+                var baseStream = content.Open(); //get decoded stream
+                using CryptoStream cryptoStream = new(baseStream, cryptoHashAlg, CryptoStreamMode.Read);
+                
+                using StreamReader reader = new(cryptoStream, part.ContentType.CharsetEncoding, true);
                 xwriter.WriteCData(reader.ReadToEnd());
+                hash = cryptoHashAlg.Hash;
                 encoding = String.Empty;
                 if (content.Encoding == ContentEncoding.Default && !string.IsNullOrWhiteSpace(actualEncoding))
                 {
@@ -1637,9 +1650,13 @@ namespace UIUCLibrary.EaPdf
             else if (Settings.PreserveContentTransferEncodingIfPossible && (content.Encoding == ContentEncoding.UUEncode || content.Encoding == ContentEncoding.QuotedPrintable || content.Encoding == ContentEncoding.Base64))
             //use the original content encoding in the XML
             {
+                var baseStream = content.Stream; //get un-decoded stream
+                using CryptoStream cryptoStream = new(baseStream, cryptoHashAlg, CryptoStreamMode.Read);
+                
                 //treat the stream as ASCII because it is already encoded and just write it out using the same encoding
-                StreamReader reader = new(content.Stream, System.Text.Encoding.ASCII);
+                using StreamReader reader = new(cryptoStream, System.Text.Encoding.ASCII);
                 xwriter.WriteCData(reader.ReadToEnd());
+                hash = cryptoHashAlg.Hash;
                 encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
             }
             else //anything is treated as binary content (binary, quoted-printable, uuencode, base64), so copy to a memory stream and write it to the XML as base64
@@ -1647,9 +1664,10 @@ namespace UIUCLibrary.EaPdf
                 byte[] byts;
                 using (MemoryStream ms = new())
                 {
-                    content.Open().CopyTo(ms);
+                    content.Open().CopyTo(ms); //get decoded stream and copy it to memory stream and then get an array
                     byts = ms.ToArray();
                 }
+                hash = cryptoHashAlg.ComputeHash(byts);
                 xwriter.WriteBase64(byts, 0, byts.Length);
                 encoding = "base64";
             }
@@ -1660,6 +1678,17 @@ namespace UIUCLibrary.EaPdf
             {
                 xwriter.WriteElementString("TransferEncoding", XM_NS, encoding);
             }
+
+            if (fileSize != null) //FUTURE:  Add support for file size
+            {
+                xwriter.WriteElementString("FileSize", XM_NS, fileSize.ToString());
+            }
+
+            if (hash != null)
+            {
+                WriteHash(xwriter, hash, Settings.HashAlgorithmName);
+            }
+            
             xwriter.WriteEndElement(); //BodyContent
         }
 
@@ -1739,7 +1768,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             xwriter.WriteStartElement("ExtBodyContent", XM_NS);
-            xwriter.WriteElementString("RelPath", XM_NS, Path.GetRelativePath(Path.Combine(mboxProps.OutDirectoryName, Settings.ExternalContentFolder), hashFileName));
+            xwriter.WriteElementString("RelPath", XM_NS, new Uri(Path.GetRelativePath(Path.Combine(mboxProps.OutDirectoryName, Settings.ExternalContentFolder), hashFileName), UriKind.Relative).ToString().Replace('\\', '/'));
 
             //The CharSet and TransferEncoding elements are not needed here since they are same as for the SingleBody
 
