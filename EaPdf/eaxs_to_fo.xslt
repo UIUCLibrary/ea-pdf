@@ -51,7 +51,7 @@
 				<fo:flow flow-name="xsl-region-body">
 					<xsl:call-template name="CoverPage"/>
 					<!-- TODO: Need to add a support for multiple folders, possibly nested, in the file -->
-					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder/eaxs:Message" />
+					<!--<xsl:apply-templates select="/eaxs:Account/eaxs:Folder/eaxs:Message" />-->
 				</fo:flow>
 			</fo:page-sequence>
 		</fo:root>
@@ -59,7 +59,7 @@
 	
 	<xsl:template name="declarations">
 		<fo:declarations>
-			<xsl:for-each select="//eaxs:Folder/eaxs:Mbox">
+			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
 				<pdf:embedded-file>
 					<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
 					<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
@@ -107,15 +107,15 @@
 			<fo:block xsl:use-attribute-sets="h2">Attachment Count: <xsl:value-of select="count(//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block>
 			
 			<xsl:choose>
-				<xsl:when test="count(//eaxs:Folder) > 1">
-					<fo:block xsl:use-attribute-sets="h2">Folders: <xsl:value-of select="count(/eaxs:Account//eaxs:Folder)"/></fo:block>
-					<!-- TODO: Create an indented list of folder names -->
+				<xsl:when test="count(//eaxs:Folder[eaxs:Message]) > 1">
+					<fo:block xsl:use-attribute-sets="h2">Folders: <xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message])"/></fo:block>
+					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]"/>
 				</xsl:when>	
-				<xsl:when test="count(//eaxs:Folder) = 1">
+				<xsl:when test="count(//eaxs:Folder[eaxs:Message]) = 1">
 					<fo:block xsl:use-attribute-sets="h2">
-						Folder: <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Name"/>
+						Folder: <xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Name"/>
 						<fo:basic-link>
-							<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+							<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
 							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
 						</fo:basic-link>
 					</fo:block>					
@@ -124,7 +124,24 @@
 		</fo:block>
 	</xsl:template>
 	
-		
+	<xsl:template match="eaxs:Folder">
+		<fo:list-block>
+			<fo:list-item>
+				<fo:list-item-label end-indent="label-end()"><fo:block xsl:use-attribute-sets="h3">&#x2022;</fo:block></fo:list-item-label>
+				<fo:list-item-body start-indent="body-start()">
+					<fo:block xsl:use-attribute-sets="h3">
+						<xsl:apply-templates select="eaxs:Name"/>
+						<fo:inline font-size="small"> (<xsl:value-of select="count(eaxs:Message)"/> Messages)</fo:inline>
+						<fo:basic-link>
+							<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
+						</fo:basic-link>
+					</fo:block>
+					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]"/>
+				</fo:list-item-body>
+			</fo:list-item>
+		</fo:list-block>
+	</xsl:template>
 
 	<xsl:template match="eaxs:Message">
 		<fo:block page-break-after="always">
