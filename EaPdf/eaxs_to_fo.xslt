@@ -51,7 +51,7 @@
 				<fo:flow flow-name="xsl-region-body">
 					<xsl:call-template name="CoverPage"/>
 					<!-- TODO: Need to add a support for multiple folders, possibly nested, in the file -->
-					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder/eaxs:Message"/>
+					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder/eaxs:Message" />
 				</fo:flow>
 			</fo:page-sequence>
 		</fo:root>
@@ -100,8 +100,12 @@
 				</xsl:when>
 			</xsl:choose>
 			<fo:block xsl:use-attribute-sets="h2">Global Id: <xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block>
+			
+			<!-- TODO: Do not count child messages -->
 			<fo:block xsl:use-attribute-sets="h2">Message Count: <xsl:value-of select="count(//eaxs:Message)"/></fo:block>
+			<!-- TODO: Only count distinct attachments, based on the hash -->
 			<fo:block xsl:use-attribute-sets="h2">Attachment Count: <xsl:value-of select="count(//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block>
+			
 			<xsl:choose>
 				<xsl:when test="count(//eaxs:Folder) > 1">
 					<fo:block xsl:use-attribute-sets="h2">Folders: <xsl:value-of select="count(/eaxs:Account//eaxs:Folder)"/></fo:block>
@@ -112,7 +116,7 @@
 						Folder: <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Name"/>
 						<fo:basic-link>
 							<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
-							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Source file</fo:inline>)</fo:inline>
+							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
 						</fo:basic-link>
 					</fo:block>					
 				</xsl:when>
@@ -124,26 +128,29 @@
 
 	<xsl:template match="eaxs:Message">
 		<fo:block page-break-after="always">
-			<fo:block xsl:use-attribute-sets="h2">Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
-			<xsl:apply-templates select="eaxs:MessageId"/>
-			<xsl:apply-templates select="eaxs:OrigDate"/>
-			<xsl:apply-templates select="eaxs:From"/>
-			<xsl:apply-templates select="eaxs:Sender"/>
-			<xsl:apply-templates select="eaxs:To"/>
-			<xsl:apply-templates select="eaxs:Cc"/>
-			<xsl:apply-templates select="eaxs:Bcc"/>
-			<xsl:apply-templates select="eaxs:Subject"/>
-			<xsl:apply-templates select="eaxs:Comments"/>
-			<xsl:apply-templates select="eaxs:Keywords"/>
-			<xsl:apply-templates select="eaxs:InReplyTo"/>
-			<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black">Message Contents</fo:block>
-			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>
-			<xsl:call-template name="hr"/>
-			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent"/>
+			<fo:block xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black">Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
+			<xsl:call-template name="Message"/>
 		</fo:block>
 	</xsl:template>
 	
-
+	<xsl:template name="Message">
+		<xsl:apply-templates select="eaxs:MessageId"/>
+		<xsl:apply-templates select="eaxs:OrigDate"/>
+		<xsl:apply-templates select="eaxs:From"/>
+		<xsl:apply-templates select="eaxs:Sender"/>
+		<xsl:apply-templates select="eaxs:To"/>
+		<xsl:apply-templates select="eaxs:Cc"/>
+		<xsl:apply-templates select="eaxs:Bcc"/>
+		<xsl:apply-templates select="eaxs:Subject"/>
+		<xsl:apply-templates select="eaxs:Comments"/>
+		<xsl:apply-templates select="eaxs:Keywords"/>
+		<xsl:apply-templates select="eaxs:InReplyTo"/>
+		<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black">Message Contents</fo:block>
+		<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>
+		<xsl:call-template name="hr"/>
+		<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent"/>
+	</xsl:template>
+	
 	<xsl:template match="eaxs:MessageId">
 		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
 			<fo:inline-container xsl:use-attribute-sets="width-header1">
@@ -349,32 +356,84 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:SingleBody" mode="RenderContent">
-		<xsl:if test="not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')">
+		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:ChildMessage | eaxs:DeliveryStatus"/>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:BodyContent">
+		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/')">
+			<!-- only render content which is text and which is not an attachment -->
 			<xsl:choose>
 				<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
 					<!-- Only put the header if there are multiple bodies -->
-					<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">Content Type: <xsl:value-of select="eaxs:ContentType"/></fo:block>				
+					<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">Content Type: <xsl:value-of select="../eaxs:ContentType"/></fo:block>				
 				</xsl:when>
 				<xsl:otherwise>
+					<!-- don't put a header, but add an extra line above the content -->
 					<fo:block margin-top="1em"> </fo:block>
 				</xsl:otherwise>
 			</xsl:choose>
-			<xsl:apply-templates select="eaxs:BodyContent/eaxs:Content | eaxs:BodyContent/eaxs:ContentAsXhtml"/>
+			<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
 		</xsl:if>
 	</xsl:template>
 	
+	<xsl:template match="eaxs:ExtBodyContent">
+		<fo:block xsl:use-attribute-sets="todo">TODO: ExtBodyContent</fo:block>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:ChildMessage">
+		<fo:block xsl:use-attribute-sets="child-message">
+			<xsl:if test="count(ancestor::eaxs:ChildMessage) > 0">
+				<xsl:call-template name="hr"/>
+			</xsl:if>
+			<fo:block xsl:use-attribute-sets="h3">
+				<xsl:call-template name="RepeatString"><xsl:with-param name="Count" select="1 + count(ancestor::eaxs:ChildMessage)"></xsl:with-param></xsl:call-template>
+				<xsl:text> Child Message </xsl:text> 
+				<xsl:value-of select="eaxs:LocalId"/>
+			</fo:block>
+			<xsl:call-template name="Message"></xsl:call-template>
+		</fo:block>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:DeliveryStatus">
+		<fo:block xsl:use-attribute-sets="todo">TODO: DeliveryStatus</fo:block>
+	</xsl:template>
+
 	<xsl:template match="eaxs:Content">
-		<fo:block>CONTENT <!-- TODO --></fo:block>
+		<xsl:choose>
+			<xsl:when test="not(normalize-space(.) = '')">
+				<fo:block xsl:use-attribute-sets="todo">TODO: Content</fo:block>			
+			</xsl:when>	
+			<xsl:otherwise>
+				<fo:inline font-style="italic">BLANK</fo:inline>
+			</xsl:otherwise>
+		</xsl:choose>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:ContentAsXhtml">
-		<xsl:apply-templates select="html:html/html:body/html:*"/>
+		<xsl:choose>
+			<xsl:when test="not(normalize-space(.) = '')">
+				<xsl:apply-templates select="html:html/html:body/html:*"/>
+			</xsl:when>	
+			<xsl:otherwise>
+				<fo:inline font-style="italic">BLANK</fo:inline>
+			</xsl:otherwise>
+		</xsl:choose>
 	</xsl:template>
 	
-
 	<!-- ========================================================================
 		Attribute Sets 
 	============================================================================= -->
+	<xsl:attribute-set name="child-message">
+		<xsl:attribute name="margin-top">1em</xsl:attribute>
+		<xsl:attribute name="background-color">beige</xsl:attribute>
+	</xsl:attribute-set>
+	
+	<xsl:attribute-set name="todo">
+		<xsl:attribute name="color">red</xsl:attribute>
+		<xsl:attribute name="font-size">large</xsl:attribute>
+		<xsl:attribute name="font-weight">bold</xsl:attribute>
+		<xsl:attribute name="margin-top">1em</xsl:attribute>
+	</xsl:attribute-set>
 
 	<xsl:attribute-set name="hanging-indent-header1">
 		<xsl:attribute name="margin-left">6em</xsl:attribute>
@@ -395,6 +454,14 @@
 	<!-- ========================================================================
 		Some utility templates 
 	============================================================================= -->
+	
+	<xsl:template name="RepeatString">
+		<xsl:param name="Count" >1</xsl:param>
+		<xsl:param name="String">&gt;</xsl:param>
+		<xsl:for-each select="1 to $Count">
+			<xsl:value-of select="$String"/>
+		</xsl:for-each>
+	</xsl:template>
 	
 	<xsl:template name="hr">
 		<fo:block><fo:leader leader-pattern="rule" leader-length="100%" rule-style="solid" rule-thickness="1.5pt"/></fo:block>						
