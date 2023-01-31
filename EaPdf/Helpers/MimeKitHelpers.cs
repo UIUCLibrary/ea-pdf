@@ -11,7 +11,11 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public class MimeKitHelpers
     {
+
+        public static string[] TextContentEncodings = new string[] { "", "7bit", "8bit" };
+        public static string[] BinaryContentEncodings = new string[] { "binary", "base64", "quoted-printable", "uuencode" };
         public static string[] ContentEncodings = new string[] { "", "7bit", "8bit", "binary", "base64", "quoted-printable", "uuencode" };
+
 
         //https://github.com/noelmartinon/mboxzilla/blob/master/nsMsgMessageFlags.h
         //https://vincent.bernat.ch/en/x-mozilla-status

@@ -356,7 +356,21 @@ namespace UIUCLibrary.EaPdf
         private void WriteAccountHeaderFields(XmlWriter xwriter, string globalId, string accntEmails = "")
         {
             {
-                xwriter.WriteProcessingInstruction("Settings", $"HashAlgorithmName: {Settings.HashAlgorithmName}, SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, PreserveContentTransferEncodingIfPossible: {Settings.PreserveContentTransferEncodingIfPossible}, IncludeSubFolders: {Settings.IncludeSubFolders}, OneFilePerMbox: {Settings.OneFilePerMbox}");
+                xwriter.WriteProcessingInstruction("Settings", 
+                    $"HashAlgorithmName: {Settings.HashAlgorithmName}, " +
+                    $"SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, " +
+                    $"WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, " +
+                    $"PreserveBinaryAttachmentTransferEncodingIfPossible: {Settings.PreserveBinaryAttachmentTransferEncodingIfPossible}, " +
+                    $"Preserve7bitAnd8bitAttachmentTransferEncoding: {Settings.PreserveTextAttachmentTransferEncoding}, " +
+                    $"IncludeSubFolders: {Settings.IncludeSubFolders}, " +
+                    $"ExternalContentFolder: {Settings.ExternalContentFolder}, " +
+                    $"OneFilePerMbox: {Settings.OneFilePerMbox}," +
+                    $"MaximumXmlFileSize: {Settings.MaximumXmlFileSize}, " +
+                    $"SaveTextAsXhtml: {Settings.SaveTextAsXhtml}, " +
+                    $"LogToXmlThreshold: {Settings.LogToXmlThreshold}, " +
+                    $"DefaultFileExtension: {Settings.DefaultFileExtension}"
+                    );
+
                 xwriter.WriteStartElement("Account", XM_NS);
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
                 foreach (var addr in accntEmails.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -1631,8 +1645,8 @@ namespace UIUCLibrary.EaPdf
             long? fileSize = null; //FUTURE: Add support for file size
 
             string? encoding;
-            //7bit and 8bit should be text content, so decode it and use the streamreader with the contenttype charset, if any, to get the text and write it to the xml in a cdata section.  Default is the same as 7bit.
-            if (content.Encoding == ContentEncoding.EightBit || content.Encoding == ContentEncoding.SevenBit || content.Encoding == ContentEncoding.Default)
+            //7bit and 8bit should be text content, so if preserving the encoding, decode it and use the streamreader with the contenttype charset, if any, to get the text and write it to the xml in a cdata section.  Default is the same as 7bit.
+            if (Settings.PreserveTextAttachmentTransferEncoding && (content.Encoding == ContentEncoding.EightBit || content.Encoding == ContentEncoding.SevenBit || content.Encoding == ContentEncoding.Default))
             {
                 var baseStream = content.Open(); //get decoded stream
                 using CryptoStream cryptoStream = new(baseStream, cryptoHashAlg, CryptoStreamMode.Read);
@@ -1647,7 +1661,7 @@ namespace UIUCLibrary.EaPdf
                     encoding = actualEncoding;
                 }
             }
-            else if (Settings.PreserveContentTransferEncodingIfPossible && (content.Encoding == ContentEncoding.UUEncode || content.Encoding == ContentEncoding.QuotedPrintable || content.Encoding == ContentEncoding.Base64))
+            else if (Settings.PreserveBinaryAttachmentTransferEncodingIfPossible && (content.Encoding == ContentEncoding.UUEncode || content.Encoding == ContentEncoding.QuotedPrintable || content.Encoding == ContentEncoding.Base64))
             //use the original content encoding in the XML
             {
                 var baseStream = content.Stream; //get un-decoded stream
@@ -1659,7 +1673,7 @@ namespace UIUCLibrary.EaPdf
                 hash = cryptoHashAlg.Hash;
                 encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
             }
-            else //anything is treated as binary content (binary, quoted-printable, uuencode, base64), so copy to a memory stream and write it to the XML as base64
+            else //anything is treated as binary content, so copy to a memory stream and write it to the XML as base64
             {
                 byte[] byts;
                 using (MemoryStream ms = new())
