@@ -169,6 +169,7 @@
 					<documentation>URI component that when added to the path from which this XML document was accessed gives the URI for the root folder for which external body parts may be accessed. If not given "." is assumed.</documentation>
 				</annotation>
 			</element>
+			<!-- TODO: Instead of using long for the LocalId, we should use the XML id data type -->
 			<element name="LocalId" type="long"/>
 			<element name="MessageId" type="xm:message-id-type"/>
 			<element name="MimeVersion" type="string" minOccurs="0">
@@ -423,6 +424,7 @@
 
 	<complexType name="child-message-type">
 		<sequence>
+			<!-- TODO: Instead of using long for the LocalId, we should use the XML id data type -->
 			<element name="LocalId" type="long"/>
 			<element name="MessageId" type="xm:message-id-type"/>
 			<element name="MimeVersion" type="string" minOccurs="0">
@@ -530,6 +532,7 @@
 					</documentation>
 				</annotation>
 			</element>
+			<!-- TODO: Instead of using long for the LocalId, we should use the XML id data type -->
 			<element name="LocalId" type="integer"/>
 			<element name="XMLWrapped" type="boolean" minOccurs="0">
 				<annotation>

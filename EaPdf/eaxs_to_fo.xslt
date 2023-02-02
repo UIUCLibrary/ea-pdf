@@ -59,6 +59,8 @@
 			
 			<xsl:call-template name="declarations"/>
 			
+			<xsl:call-template name="bookmarks"/>
+			
 			<fo:page-sequence master-reference="message-page">
 				<fo:static-content flow-name="xsl-region-before">
 					<fo:block text-align="center" margin-left="1in" margin-right="1in">Account:
@@ -76,6 +78,41 @@
 				</fo:flow>
 			</fo:page-sequence>
 		</fo:root>
+	</xsl:template>
+	
+	<xsl:template name="bookmarks">
+		<fo:bookmark-tree>
+			<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]" mode="RenderBookmarks"></xsl:apply-templates>
+		</fo:bookmark-tree>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Folder" mode="RenderBookmarks">
+		<fo:bookmark>
+			<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+			<fo:bookmark-title><xsl:value-of select="eaxs:Name"/></fo:bookmark-title>
+			<fo:bookmark starting-state="hide">
+				<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+				<fo:bookmark-title><xsl:value-of select="count(eaxs:Message)"/> Messages</fo:bookmark-title>
+				<xsl:apply-templates select="eaxs:Message" mode="RenderBookmarks"/>
+			</fo:bookmark>
+			<xsl:if test="eaxs:Folder[eaxs:Message]">
+				<fo:bookmark starting-state="hide">
+					<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+					<fo:bookmark-title><xsl:value-of select="count(eaxs:Folder[eaxs:Message])"/> Sub-folders</fo:bookmark-title>
+					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]" mode="RenderBookmarks"/>
+				</fo:bookmark>
+			</xsl:if>
+		</fo:bookmark>	
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Message" mode="RenderBookmarks">
+		<fo:bookmark><xsl:attribute name="internal-destination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
+			<fo:bookmark-title>
+				<xsl:value-of select="normalize-space(eaxs:Subject)"/>
+				<xsl:text>&#13;&#10;from </xsl:text><xsl:value-of select="normalize-space(eaxs:From)"/>
+				<xsl:text>&#13;&#10;on </xsl:text><xsl:value-of select="fn:format-dateTime(eaxs:OrigDate, '[FNn], [MNn] [D], [Y]')"/>
+			</fo:bookmark-title>
+		</fo:bookmark>			
 	</xsl:template>
 	
 	<xsl:template name="declarations">
@@ -230,12 +267,16 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Folder" mode="RenderContent">
-		<xsl:apply-templates select="eaxs:Message" />	
-		<xsl:apply-templates select="eaxs:Folder" mode="RenderContent"/>	
+		<fo:block>
+			<xsl:attribute name="id"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+			<xsl:apply-templates select="eaxs:Message" />	
+			<xsl:apply-templates select="eaxs:Folder" mode="RenderContent"/>	
+		</fo:block>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Message">
 		<fo:block page-break-after="always">
+			<xsl:attribute name="id">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<fo:block xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
 			<xsl:call-template name="MessageHeaderTocAndContent"/>
 		</fo:block>
@@ -457,21 +498,9 @@
 			</fo:list-item>
 		</fo:list-block>
 	</xsl:template>
+	
 
 	<xsl:template match="eaxs:ContentType">
-		
-		<xsl:variable name="file-ext"><xsl:call-template name="GetFileExtension"/></xsl:variable>
-		<xsl:variable name="content-type">
-			<xsl:choose>
-				<!-- The xep processor tries to process pdf attachments if they have an 'application/pdf' mime type. This will prevent 'slightly corrupt' PDFs from being attached, so instead use the generic octet-stream mime type when embedding using 'data:' urls -->
-				<!-- Note this will not help if the pdf is being attached from an external binary file using the 'file:' url -->
-				<xsl:when test="$fo-processor='xep' and fn:lower-case(fn:normalize-space(.))='application/pdf'">application/octet-stream</xsl:when>
-				<xsl:otherwise>
-					<xsl:value-of select="."/>
-				</xsl:otherwise>
-			</xsl:choose>
-		</xsl:variable>
-		
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
 				<fo:block>Content Type:</fo:block>
@@ -479,59 +508,7 @@
 			<fo:list-item-body start-indent="body-start()">
 				<fo:block>
 					<xsl:apply-templates/>
-					<xsl:if test="../eaxs:ExtBodyContent or lower-case(normalize-space(../eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(.)),'text/')))">
-						<xsl:choose>
-							<xsl:when test="$fo-processor='fop'">
-								<fo:basic-link>
-									<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="../eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/>)</xsl:attribute>
-									<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Open Attachment</fo:inline>)</fo:inline>
-								</fo:basic-link>												
-							</xsl:when>
-							<xsl:when test="$fo-processor='xep'">
-								<fo:inline font-size="small"> (Open Attachment) &nbsp;&nbsp;
-									<rx:pdf-comment>
-										<xsl:attribute name="title">Attachment &mdash; </xsl:attribute>
-										<rx:pdf-file-attachment icon-type="pushpin">
-											<xsl:attribute name="filename"><xsl:value-of select="../eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/></xsl:attribute>
-											<xsl:choose>
-												<xsl:when test="../eaxs:ExtBodyContent">
-													<xsl:variable name="rel-path">
-														<xsl:call-template name="concat-path">
-															<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
-															<xsl:with-param name="path2" select="normalize-space(../eaxs:ExtBodyContent/eaxs:RelPath)"/>
-														</xsl:call-template>
-													</xsl:variable>
-													<xsl:choose>
-														<xsl:when test="fn:normalize-space(fn:lower-case(../eaxs:ExtBodyContent/eaxs:XMLWrapped)) = 'false'">
-															<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri($rel-path, fn:base-uri())"/>)</xsl:attribute>								
-														</xsl:when>
-														<xsl:when test="fn:normalize-space(fn:lower-case(../eaxs:ExtBodyContent/eaxs:XMLWrapped)) = 'true'">
-															<xsl:attribute name="src">
-																<xsl:call-template name="data-uri">
-																	<xsl:with-param name="transfer-encoding" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:TransferEncoding"/>
-																	<xsl:with-param name="content-type" select="$content-type"/>
-																	<xsl:with-param name="content" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Content"/>
-																</xsl:call-template>
-															</xsl:attribute>																
-														</xsl:when>
-													</xsl:choose>
-												</xsl:when>
-												<xsl:when test="../eaxs:BodyContent">
-													<xsl:attribute name="src">
-														<xsl:call-template name="data-uri">
-															<xsl:with-param name="transfer-encoding" select="../eaxs:BodyContent/eaxs:TransferEncoding"/>
-															<xsl:with-param name="content-type" select="$content-type"/>
-															<xsl:with-param name="content" select="../eaxs:BodyContent/eaxs:Content"/>
-														</xsl:call-template>
-													</xsl:attribute>																
-												</xsl:when>
-											</xsl:choose>
-										</rx:pdf-file-attachment>
-									</rx:pdf-comment>
-								</fo:inline>								
-							</xsl:when>
-						</xsl:choose>
-					</xsl:if>
+					<xsl:call-template name="AttachmentLink"/>
 					<xsl:if test="following-sibling::eaxs:ContentName != following-sibling::eaxs:DispositionFileName">
 						<xsl:text>; name="</xsl:text>
 						<xsl:call-template name="escape-specials">
@@ -776,15 +753,15 @@
 	</xsl:template>
 	
 	<xsl:template name="GetFileExtension">
-		<xsl:param name="SingleBody" select="ancestor-or-self::eaxs:SingleBody[1]"/>
+		<xsl:param name="single-body" select="ancestor-or-self::eaxs:SingleBody[1]"/>
 		
 		<xsl:choose>
 			<!-- force the file extension for certain mime content types, regardless of the content name or disposition filename -->
-			<xsl:when test="fn:lower-case(normalize-space($SingleBody/eaxs:ContentType)) = 'application/pdf'">pdf</xsl:when>
+			<xsl:when test="fn:lower-case(normalize-space($single-body/eaxs:ContentType)) = 'application/pdf'">pdf</xsl:when>
 			
 			<!-- use the extension from the content name or disposition filename if there is one -->
-			<xsl:when test="fn:contains($SingleBody/eaxs:DispositionFilename,'.')"><xsl:value-of select="fn:tokenize($SingleBody/eaxs:DispositionFilename,'\.')[last()]"/></xsl:when>
-			<xsl:when test="fn:contains($SingleBody/eaxs:ContentName,'.')"><xsl:value-of select="fn:tokenize($SingleBody/eaxs:ContentName,'\.')[last()]"/></xsl:when>
+			<xsl:when test="fn:contains($single-body/eaxs:DispositionFilename,'.')"><xsl:value-of select="fn:tokenize($single-body/eaxs:DispositionFilename,'\.')[last()]"/></xsl:when>
+			<xsl:when test="fn:contains($single-body/eaxs:ContentName,'.')"><xsl:value-of select="fn:tokenize($single-body/eaxs:ContentName,'\.')[last()]"/></xsl:when>
 			
 			<!-- fallback to just 'bin' -->
 			<xsl:otherwise>bin</xsl:otherwise>
@@ -792,4 +769,75 @@
 		
 	</xsl:template>
 	
+	<xsl:template name="AttachmentLink">
+		<xsl:param name="single-body" select="ancestor-or-self::eaxs:SingleBody[1]"/>
+		
+		<xsl:variable name="file-ext"><xsl:call-template name="GetFileExtension"><xsl:with-param name="single-body" select="$single-body"></xsl:with-param></xsl:call-template></xsl:variable>
+		
+		<xsl:variable name="content-type">
+			<xsl:choose>
+				<!-- The xep processor tries to process pdf attachments if they have an 'application/pdf' mime type. This will prevent 'slightly corrupt' PDFs from being attached, so instead use the generic octet-stream mime type when embedding using 'data:' urls -->
+				<!-- Note this will not help if the pdf is being attached from an external binary file using the 'file:' url -->
+				<xsl:when test="$fo-processor='xep' and fn:lower-case(fn:normalize-space($single-body/eaxs:ContentType))='application/pdf'">application/octet-stream</xsl:when>
+				<xsl:otherwise>
+					<xsl:value-of select="$single-body/eaxs:ContentType"/>
+				</xsl:otherwise>
+			</xsl:choose>
+		</xsl:variable>
+		
+		<xsl:if test="$single-body/eaxs:ExtBodyContent or lower-case(normalize-space($single-body/eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space($single-body/@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space($single-body/eaxs:ContentType)),'text/')))">
+			<xsl:choose>
+				<xsl:when test="$fo-processor='fop'">
+					<fo:basic-link>
+						<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/>)</xsl:attribute>
+						<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Open Attachment</fo:inline>)</fo:inline>
+					</fo:basic-link>												
+				</xsl:when>
+				<xsl:when test="$fo-processor='xep'">
+					<fo:inline font-size="small"> (Open Attachment) &nbsp;&nbsp;
+						<rx:pdf-comment>
+							<xsl:attribute name="title">Attachment &mdash; </xsl:attribute>
+							<rx:pdf-file-attachment icon-type="pushpin">
+								<xsl:attribute name="filename"><xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/></xsl:attribute>
+								<xsl:choose>
+									<xsl:when test="$single-body/eaxs:ExtBodyContent">
+										<xsl:variable name="rel-path">
+											<xsl:call-template name="concat-path">
+												<xsl:with-param name="path1" select="normalize-space($single-body/ancestor::eaxs:Message/eaxs:RelPath)"/>
+												<xsl:with-param name="path2" select="normalize-space($single-body/eaxs:ExtBodyContent/eaxs:RelPath)"/>
+											</xsl:call-template>
+										</xsl:variable>
+										<xsl:choose>
+											<xsl:when test="fn:normalize-space(fn:lower-case($single-body/eaxs:ExtBodyContent/eaxs:XMLWrapped)) = 'false'">
+												<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri($rel-path, fn:base-uri())"/>)</xsl:attribute>								
+											</xsl:when>
+											<xsl:when test="fn:normalize-space(fn:lower-case($single-body/eaxs:ExtBodyContent/eaxs:XMLWrapped)) = 'true'">
+												<xsl:attribute name="src">
+													<xsl:call-template name="data-uri">
+														<xsl:with-param name="transfer-encoding" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:TransferEncoding"/>
+														<xsl:with-param name="content-type" select="$content-type"/>
+														<xsl:with-param name="content" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Content"/>
+													</xsl:call-template>
+												</xsl:attribute>																
+											</xsl:when>
+										</xsl:choose>
+									</xsl:when>
+									<xsl:when test="$single-body/eaxs:BodyContent">
+										<xsl:attribute name="src">
+											<xsl:call-template name="data-uri">
+												<xsl:with-param name="transfer-encoding" select="$single-body/eaxs:BodyContent/eaxs:TransferEncoding"/>
+												<xsl:with-param name="content-type" select="$content-type"/>
+												<xsl:with-param name="content" select="$single-body/eaxs:BodyContent/eaxs:Content"/>
+											</xsl:call-template>
+										</xsl:attribute>																
+									</xsl:when>
+								</xsl:choose>
+							</rx:pdf-file-attachment>
+						</rx:pdf-comment>
+					</fo:inline>								
+				</xsl:when>
+			</xsl:choose>
+		</xsl:if>
+	</xsl:template>
+
 </xsl:stylesheet>

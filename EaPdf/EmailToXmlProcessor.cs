@@ -1079,6 +1079,7 @@ namespace UIUCLibrary.EaPdf
             bool isMultipart = false;
 
             MimePart? part = mimeEntity as MimePart;
+            //TODO: Check if the entity is a TnefPart for application/ms-tnef content type attachments 
             Multipart? multipart = mimeEntity as Multipart;
             MessagePart? message = mimeEntity as MessagePart;
 
