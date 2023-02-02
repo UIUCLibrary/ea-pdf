@@ -214,6 +214,8 @@ namespace UIUCLibrary.EaPdf
                 xwriter.Dispose();
                 xstream.Dispose();
 
+                //TODO: Open the XML file and do some post processing to make sure that all html id attributes are unique across the whole document
+
                 _logger.LogInformation("Output XML File: {xmlFilePath}, Total messages: {messageCount}", xmlFilePath, localId - startingLocalId);
             }
 
@@ -316,6 +318,9 @@ namespace UIUCLibrary.EaPdf
             xwriter.Dispose();
             xstream.Dispose();
 
+            //TODO: Open the XML file and do some post processing to make sure that all html id attributes are unique across the whole document
+
+
             //write the csv file
             if (saveCsv)
             {
@@ -361,7 +366,7 @@ namespace UIUCLibrary.EaPdf
                     $"SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, " +
                     $"WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, " +
                     $"PreserveBinaryAttachmentTransferEncodingIfPossible: {Settings.PreserveBinaryAttachmentTransferEncodingIfPossible}, " +
-                    $"Preserve7bitAnd8bitAttachmentTransferEncoding: {Settings.PreserveTextAttachmentTransferEncoding}, " +
+                    $"PreserveTextAttachmentTransferEncoding: {Settings.PreserveTextAttachmentTransferEncoding}, " +
                     $"IncludeSubFolders: {Settings.IncludeSubFolders}, " +
                     $"ExternalContentFolder: {Settings.ExternalContentFolder}, " +
                     $"OneFilePerMbox: {Settings.OneFilePerMbox}," +
@@ -722,6 +727,8 @@ namespace UIUCLibrary.EaPdf
             xwriter.Close(); //this should close the underlying stream
             xwriter.Dispose();
             xstream.Dispose();
+
+            //TODO: Open the XML file and do some post processing to make sure that all html id attributes are unique across the whole document
 
             xstream = new FileStream(newXmlFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
             var xset = new XmlWriterSettings()
@@ -1842,6 +1849,9 @@ namespace UIUCLibrary.EaPdf
         /// <exception cref="Exception"></exception>
         private byte[] SaveContentAsXml(string filePath, MimePart part, long localId, string comment, out long size)
         {
+            //TODO: It might be good to embellish the external XML schema, maybe make it equivalent to the internal XML schema SingleBody element
+            //      This would provide more context if the external file is ever separated from the main XML email message file
+            
             using var contentStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write);
             using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);

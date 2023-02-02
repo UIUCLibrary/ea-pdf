@@ -13,7 +13,6 @@ namespace UIUCLibrary.EaPdf.Helpers
     internal class HtmlHelpers
     {
 
-        const string PREMAILER_NET_PSEUDO = "PreMailer.Net is unable to process the pseudo class/element";
 
         /// <summary>
         /// Use the HTML Agility Pack to parse the HTML and return it as valid XHTML
@@ -208,6 +207,8 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <returns></returns>
         private static string MakeIdUnique(string id, Dictionary<string, int> idCnts)
         {
+            //TODO: This could break internal links if the id is used as a fragment in an href attribute
+            //      Might want to look hrefs like '#id' and change them to '#id_1' if id is changed to id_1
             if (idCnts.TryGetValue(id, out var cnt))
             {
                 //this is a duplicate
@@ -230,7 +231,8 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="ignoreHtmlIssues"></param>
         private static void FixImproprerlyNestedLists(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
-            var nodes = htmlNode.SelectNodes(".//ul/* | .//ol/*");
+            List<(HtmlNode insert, HtmlNode delete)> toBeReplaced = new();
+            var nodes = htmlNode.QuerySelectorAll("ul > * , ol > *");
             if (nodes != null)
             {
                 foreach (var li in nodes)
@@ -238,14 +240,18 @@ namespace UIUCLibrary.EaPdf.Helpers
                     if (li.Name != "li")
                     {
                         // this is an improperly nested list item, so wrap it in an li
+                        // this works well if the element is another list, ul or ol, but if the other item is a font, span, etc., it will be wrapped in an li
+                        // and the nested items will be lost
+                        //TODO: Not sure what a good generic solution would be???  Maybe the solution belongs in the XSLT instead of here
                         var newLi = htmlNode.OwnerDocument.CreateElement("li");
-                        li.ParentNode.InsertBefore(newLi, li);
-                        li.Remove();
-                        newLi.AppendChild(li);
+                        toBeReplaced.Add((newLi,li));
                         if (!ignoreHtmlIssues)
-                            messages.Add((LogLevel.Information, $"List Node '{newLi.ParentNode.XPath}' had improperly nested elements; these were wrapped in <li> elements"));
+                            messages.Add((LogLevel.Information, $"List Node '{li.ParentNode.XPath}' had improperly nested elements; these were wrapped in <li> elements"));
                     }
                 }
+                toBeReplaced.ForEach(x => x.delete.ParentNode.InsertBefore(x.insert, x.delete));
+                toBeReplaced.ForEach(x => x.insert.AppendChild(x.delete.CloneNode(true)));
+                toBeReplaced.ForEach(x => x.delete.ParentNode.RemoveChild(x.delete));
             }
         }
 

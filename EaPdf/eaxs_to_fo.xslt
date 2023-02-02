@@ -6,13 +6,18 @@
 ]>
 
 <xsl:stylesheet version="2.0" 
+	xmlns:eaxs="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
+
 	xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	xmlns:fo="http://www.w3.org/1999/XSL/Format"
-	xmlns:pdf="http://xmlgraphics.apache.org/fop/extensions/pdf"
 	xmlns:fn="http://www.w3.org/2005/xpath-functions"
-	xmlns:fox="http://xmlgraphics.apache.org/fop/extensions"
-	xmlns:eaxs="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
 	xmlns:html="http://www.w3.org/1999/xhtml"
+	
+	xmlns:pdf="http://xmlgraphics.apache.org/fop/extensions/pdf"
+	xmlns:fox="http://xmlgraphics.apache.org/fop/extensions"
+	
+	xmlns:rx="http://www.renderx.com/XSL/Extensions"
+	
 	>
 
 	<xsl:import href="eaxs_xhtml2fo.xsl"/>
@@ -23,7 +28,24 @@
 	<xsl:param name="SansSerifFont" select="'Helvetica'"/>
 	<xsl:param name="MonospaceFont" select="'Courier'"/>
 
+	<!-- TGH Which FO Processor -->
+	<xsl:param name="fo-processor">fop</xsl:param> <!-- Values used: fop or xep -->
+	
+	<xsl:template name="check-params">
+		<xsl:choose>
+			<xsl:when test="$fo-processor='fop'"/>
+			<xsl:when test="$fo-processor='xep'"/>
+			<xsl:otherwise>
+				<xsl:message terminate="yes">
+					The value '<xsl:value-of select="$fo-processor"/>' is not a valid value for fo-processor param; the only allowed values are 'fop' and 'xep'.
+				</xsl:message>
+			</xsl:otherwise>
+		</xsl:choose>
+	</xsl:template>
+
 	<xsl:template match="/">
+		
+		<xsl:call-template name="check-params"/>
 		<fo:root>
 			<fo:layout-master-set>
 				<fo:simple-page-master master-name="message-page" page-width="8.5in"
@@ -50,35 +72,69 @@
 				</fo:static-content>
 				<fo:flow flow-name="xsl-region-body">
 					<xsl:call-template name="CoverPage"/>
-					<!-- TODO: Need to add a support for multiple folders, possibly nested, in the file -->
-					<!--<xsl:apply-templates select="/eaxs:Account/eaxs:Folder/eaxs:Message" />-->
+					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]" mode="RenderContent"/>
 				</fo:flow>
 			</fo:page-sequence>
 		</fo:root>
 	</xsl:template>
 	
 	<xsl:template name="declarations">
-		<fo:declarations>
-			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
-				<pdf:embedded-file>
-					<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
-					<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
-					<xsl:attribute name="description">Source file for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
-				</pdf:embedded-file>				
-			</xsl:for-each>
-			<xsl:for-each select="//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))]">
-				<pdf:embedded-file>
-					<xsl:attribute name="filename"><xsl:value-of select="eaxs:BodyContent/eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
-					<xsl:attribute name="src">url('data:<xsl:value-of select="fn:normalize-space(fn:lower-case(eaxs:ContentType))"/>;base64,<xsl:value-of select="eaxs:BodyContent/eaxs:Content"/>')</xsl:attribute>
-					<xsl:attribute name="description">Original File Name: <xsl:value-of select="eaxs:DispositionFile | eaxs:ContentName"/></xsl:attribute>
-				</pdf:embedded-file>								
-			</xsl:for-each>
-		</fo:declarations>
+		<xsl:if test="$fo-processor='fop'">
+			<fo:declarations>
+				<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
+					<pdf:embedded-file>
+						<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
+						<xsl:attribute name="description">Source file for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
+						<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+					</pdf:embedded-file>				
+				</xsl:for-each>
+				<!--xsl:for-each select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/')))]">-->
+				<xsl:for-each select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+					<pdf:embedded-file>
+						<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
+						<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
+						<xsl:attribute name="src">
+							<xsl:call-template name="data-uri">
+								<xsl:with-param name="content-type" select="../eaxs:ContentType"/>
+								<xsl:with-param name="transfer-encoding" select="eaxs:TransferEncoding"/>
+								<xsl:with-param name="content" select="eaxs:Content"/>
+							</xsl:call-template>
+						</xsl:attribute>
+					</pdf:embedded-file>								
+				</xsl:for-each>
+				<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent">
+					<xsl:variable name="rel-path">
+						<xsl:call-template name="concat-path">
+							<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
+							<xsl:with-param name="path2" select="normalize-space(eaxs:RelPath)"/>
+						</xsl:call-template>
+					</xsl:variable>
+					<pdf:embedded-file>
+						<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
+						<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
+						<xsl:choose>
+							<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'false'">
+								<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri($rel-path, fn:base-uri())"/>)</xsl:attribute>								
+							</xsl:when>
+							<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'true'">
+								<xsl:attribute name="src">
+									<xsl:call-template name="data-uri">
+										<xsl:with-param name="transfer-encoding" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:TransferEncoding"/>
+										<xsl:with-param name="content-type" select="../eaxs:ContentType"/>
+										<xsl:with-param name="content" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Content"/>
+									</xsl:call-template>
+								</xsl:attribute>																
+							</xsl:when>
+						</xsl:choose>
+					</pdf:embedded-file>								
+				</xsl:for-each>
+			</fo:declarations>
+		</xsl:if>
 	</xsl:template>
 	
 	<xsl:template name="CoverPage">
 		<fo:block page-break-after="always">
-			<fo:block xsl:use-attribute-sets="h1">PDF Email Archive (PDF/mail-m)</fo:block>
+			<fo:block xsl:use-attribute-sets="h1">PDF Email Archive (PDF/mail-1m)</fo:block>
 			<fo:block xsl:use-attribute-sets="h2">
 				<xsl:text>Created: </xsl:text>
 				<xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
@@ -104,27 +160,42 @@
 			<!-- TODO: Do not count child messages -->
 			<fo:block xsl:use-attribute-sets="h2">Message Count: <xsl:value-of select="count(//eaxs:Message)"/></fo:block>
 			<!-- TODO: Only count distinct attachments, based on the hash -->
-			<fo:block xsl:use-attribute-sets="h2">Attachment Count: <xsl:value-of select="count(//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block>
+			<fo:block xsl:use-attribute-sets="h2">Attachment Count: <xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block>
 			
 			<xsl:choose>
 				<xsl:when test="count(//eaxs:Folder[eaxs:Message]) > 1">
 					<fo:block xsl:use-attribute-sets="h2">Folders: <xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message])"/></fo:block>
-					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]"/>
+					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]" mode="RenderToc"/>
 				</xsl:when>	
 				<xsl:when test="count(//eaxs:Folder[eaxs:Message]) = 1">
 					<fo:block xsl:use-attribute-sets="h2">
 						Folder: <xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Name"/>
-						<fo:basic-link>
-							<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
-							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
-						</fo:basic-link>
+						<xsl:choose>
+							<xsl:when test="$fo-processor='fop'">
+								<fo:basic-link>
+									<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+									<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
+								</fo:basic-link>
+							</xsl:when>
+							<xsl:when test="$fo-processor='xep'">
+								<fo:inline font-size="small"> (Open Source File) &nbsp;&nbsp;
+									<rx:pdf-comment>
+										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:RelPath"/></xsl:attribute>
+										<rx:pdf-file-attachment icon-type="pushpin">
+											<xsl:attribute name="filename"><xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:FileExt"/></xsl:attribute>
+											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+										</rx:pdf-file-attachment>
+									</rx:pdf-comment>
+								</fo:inline>
+							</xsl:when>
+						</xsl:choose>
 					</fo:block>					
 				</xsl:when>
 			</xsl:choose>
 		</fo:block>
 	</xsl:template>
 	
-	<xsl:template match="eaxs:Folder">
+	<xsl:template match="eaxs:Folder" mode="RenderToc">
 		<fo:list-block>
 			<fo:list-item>
 				<fo:list-item-label end-indent="label-end()"><fo:block xsl:use-attribute-sets="h3">&#x2022;</fo:block></fo:list-item-label>
@@ -132,137 +203,216 @@
 					<fo:block xsl:use-attribute-sets="h3">
 						<xsl:apply-templates select="eaxs:Name"/>
 						<fo:inline font-size="small"> (<xsl:value-of select="count(eaxs:Message)"/> Messages)</fo:inline>
-						<fo:basic-link>
-							<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
-							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
-						</fo:basic-link>
+						<xsl:choose>
+							<xsl:when test="$fo-processor='fop'">
+								<fo:basic-link>
+									<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+									<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
+								</fo:basic-link>
+							</xsl:when>
+							<xsl:when test="$fo-processor='xep'">
+								<fo:inline font-size="small"> (Open Source File) &nbsp;&nbsp;
+									<rx:pdf-comment>
+										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:Mbox/eaxs:RelPath"/></xsl:attribute>
+										<rx:pdf-file-attachment icon-type="pushpin">
+											<xsl:attribute name="filename"><xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/></xsl:attribute>
+											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:Mbox/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+										</rx:pdf-file-attachment>
+									</rx:pdf-comment>
+								</fo:inline>
+							</xsl:when>
+						</xsl:choose>
 					</fo:block>
-					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]"/>
+					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]" mode="RenderToc"/>
 				</fo:list-item-body>
 			</fo:list-item>
 		</fo:list-block>
 	</xsl:template>
+	
+	<xsl:template match="eaxs:Folder" mode="RenderContent">
+		<xsl:apply-templates select="eaxs:Message" />	
+		<xsl:apply-templates select="eaxs:Folder" mode="RenderContent"/>	
+	</xsl:template>
 
 	<xsl:template match="eaxs:Message">
 		<fo:block page-break-after="always">
-			<fo:block xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black">Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
-			<xsl:call-template name="Message"/>
+			<fo:block xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
+			<xsl:call-template name="MessageHeaderTocAndContent"/>
 		</fo:block>
 	</xsl:template>
 	
-	<xsl:template name="Message">
-		<xsl:apply-templates select="eaxs:MessageId"/>
-		<xsl:apply-templates select="eaxs:OrigDate"/>
-		<xsl:apply-templates select="eaxs:From"/>
-		<xsl:apply-templates select="eaxs:Sender"/>
-		<xsl:apply-templates select="eaxs:To"/>
-		<xsl:apply-templates select="eaxs:Cc"/>
-		<xsl:apply-templates select="eaxs:Bcc"/>
-		<xsl:apply-templates select="eaxs:Subject"/>
-		<xsl:apply-templates select="eaxs:Comments"/>
-		<xsl:apply-templates select="eaxs:Keywords"/>
-		<xsl:apply-templates select="eaxs:InReplyTo"/>
+	<xsl:template name="MessageHeaderTocAndContent">
+		<xsl:message><xsl:value-of select="parent::eaxs:Folder/eaxs:Mbox/eaxs:RelPath"/> -- <xsl:value-of select="eaxs:MessageId"/></xsl:message>
+			<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
+				<xsl:apply-templates select="eaxs:MessageId"/>
+				<xsl:apply-templates select="eaxs:OrigDate"/>
+				<xsl:apply-templates select="eaxs:From"/>
+				<xsl:apply-templates select="eaxs:Sender"/>
+				<xsl:apply-templates select="eaxs:To"/>
+				<xsl:apply-templates select="eaxs:Cc"/>
+				<xsl:apply-templates select="eaxs:Bcc"/>
+				<xsl:apply-templates select="eaxs:Subject"/>
+				<xsl:apply-templates select="eaxs:Comments"/>
+				<xsl:apply-templates select="eaxs:Keywords"/>
+				<xsl:apply-templates select="eaxs:InReplyTo"/>
+			</fo:list-block>	
 		<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black">Message Contents</fo:block>
 		<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>
 		<xsl:call-template name="hr"/>
 		<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent"/>
 	</xsl:template>
 	
+	<xsl:template name="FolderHeader">
+		<xsl:for-each select="ancestor::eaxs:Folder">
+			<xsl:sort select="position()" data-type="number" order="ascending"/> 
+			<xsl:if test="name()='Folder'">
+				<xsl:value-of select="eaxs:Name"/>
+				<xsl:if test="position() != last()"><xsl:text> &gt; </xsl:text></xsl:if>
+			</xsl:if>
+		</xsl:for-each>
+	</xsl:template>
+	
 	<xsl:template match="eaxs:MessageId">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">Message Id:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates/>
-		</fo:block>
+		<fo:list-item >
+			<fo:list-item-label end-indent="label-end()" >
+				<fo:block>Message Id:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates/>									
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:OrigDate">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">Date:</fo:block>
-			</fo:inline-container>
-			<xsl:value-of select="fn:format-dateTime(., '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>Date:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:value-of select="fn:format-dateTime(., '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>									
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:From">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">From:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>From:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Sender">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">Sender:</fo:block>
-			</fo:inline-container>
-			<xsl:call-template name="mailbox"/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>Sender:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:call-template name="mailbox"/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:To">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">To:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>To:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
+	
 	<xsl:template match="eaxs:Cc">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">CC:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label  end-indent="label-end()">
+				<fo:block>CC:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
+	
 	<xsl:template match="eaxs:Bcc">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">BCC:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label  end-indent="label-end()">
+				<fo:block>BCC:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Subject">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">Subject:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>Subject:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Comments">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">Comments:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>Comments:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Keywords">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">Keywords:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>Keywords:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:InReplyTo">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header1">
-			<fo:inline-container xsl:use-attribute-sets="width-header1">
-				<fo:block keep-together="always">In Reply To:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>In Reply To:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Mailbox">
@@ -287,75 +437,144 @@
 	</xsl:template>
 
 	<xsl:template match="eaxs:SingleBody" mode="RenderToc">
-		<!-- TODO: make these clickable to go to rendered content or to download attachments -->
-		<xsl:param name="depth" select="0"/>
-		<fo:block-container border-left="1px solid black" margin-top="5px">
-			<xsl:attribute name="margin-left"><xsl:value-of select="$depth"/>em</xsl:attribute>
+		<fo:list-block  margin="0.25em" padding="0.25em"  border-left="1px solid black" provisional-distance-between-starts="8em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:ContentType"/>
 			<xsl:apply-templates select="eaxs:Disposition"/>
 			<xsl:apply-templates select="eaxs:ContentLanguage"/>
-		</fo:block-container>
+		</fo:list-block>
 	</xsl:template>
 
 	<xsl:template match="eaxs:MultiBody" mode="RenderToc">
-		<xsl:param name="depth" select="0"/>
-		<fo:block-container border-left="1px solid black" margin-top="5px">
-			<xsl:attribute name="margin-left"><xsl:value-of select="$depth"/>em</xsl:attribute>
+		<fo:list-block margin="0.25em" padding="0.25em" border-left="1px solid black" provisional-distance-between-starts="8em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:ContentType"/>
 			<xsl:apply-templates select="eaxs:Disposition"/>
 			<xsl:apply-templates select="eaxs:ContentLanguage"/>
-
-			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc">
-				<xsl:with-param name="depth" select="1"/>
-			</xsl:apply-templates>
-		</fo:block-container>
+			<fo:list-item margin-bottom="0.25em">
+				<fo:list-item-label end-indent="label-end()"><fo:block></fo:block></fo:list-item-label>
+				<fo:list-item-body start-indent="body-start()">
+					<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>
+				</fo:list-item-body>
+			</fo:list-item>
+		</fo:list-block>
 	</xsl:template>
 
 	<xsl:template match="eaxs:ContentType">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header2">
-			<fo:inline-container xsl:use-attribute-sets="width-header2">
-				<fo:block keep-together="always">Content Type:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates/>
-			<xsl:if test="fn:lower-case(normalize-space(../eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(.)),'text/')))">
-				<fo:basic-link>
-					<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="../eaxs:BodyContent/eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"><xsl:with-param name="SingleBody" select=".."></xsl:with-param></xsl:call-template>)</xsl:attribute>
-					<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Open Attachment</fo:inline>)</fo:inline>
-				</fo:basic-link>				
-			</xsl:if>
-			<xsl:if test="following-sibling::eaxs:ContentName != following-sibling::eaxs:DispositionFileName">
-				<xsl:text>; name="</xsl:text>
-				<xsl:call-template name="escape-specials">
-					<xsl:with-param name="text"><xsl:value-of select="following-sibling::eaxs:ContentName"/></xsl:with-param>
-				</xsl:call-template>
-				<xsl:text>"</xsl:text>
-			</xsl:if>
-		</fo:block>
+		
+		<xsl:variable name="file-ext"><xsl:call-template name="GetFileExtension"/></xsl:variable>
+		<xsl:variable name="content-type">
+			<xsl:choose>
+				<!-- The xep processor tries to process pdf attachments if they have an 'application/pdf' mime type. This will prevent 'slightly corrupt' PDFs from being attached, so instead use the generic octet-stream mime type when embedding using 'data:' urls -->
+				<!-- Note this will not help if the pdf is being attached from an external binary file using the 'file:' url -->
+				<xsl:when test="$fo-processor='xep' and fn:lower-case(fn:normalize-space(.))='application/pdf'">application/octet-stream</xsl:when>
+				<xsl:otherwise>
+					<xsl:value-of select="."/>
+				</xsl:otherwise>
+			</xsl:choose>
+		</xsl:variable>
+		
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>Content Type:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates/>
+					<xsl:if test="../eaxs:ExtBodyContent or lower-case(normalize-space(../eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(.)),'text/')))">
+						<xsl:choose>
+							<xsl:when test="$fo-processor='fop'">
+								<fo:basic-link>
+									<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="../eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/>)</xsl:attribute>
+									<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Open Attachment</fo:inline>)</fo:inline>
+								</fo:basic-link>												
+							</xsl:when>
+							<xsl:when test="$fo-processor='xep'">
+								<fo:inline font-size="small"> (Open Attachment) &nbsp;&nbsp;
+									<rx:pdf-comment>
+										<xsl:attribute name="title">Attachment &mdash; </xsl:attribute>
+										<rx:pdf-file-attachment icon-type="pushpin">
+											<xsl:attribute name="filename"><xsl:value-of select="../eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/></xsl:attribute>
+											<xsl:choose>
+												<xsl:when test="../eaxs:ExtBodyContent">
+													<xsl:variable name="rel-path">
+														<xsl:call-template name="concat-path">
+															<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
+															<xsl:with-param name="path2" select="normalize-space(../eaxs:ExtBodyContent/eaxs:RelPath)"/>
+														</xsl:call-template>
+													</xsl:variable>
+													<xsl:choose>
+														<xsl:when test="fn:normalize-space(fn:lower-case(../eaxs:ExtBodyContent/eaxs:XMLWrapped)) = 'false'">
+															<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri($rel-path, fn:base-uri())"/>)</xsl:attribute>								
+														</xsl:when>
+														<xsl:when test="fn:normalize-space(fn:lower-case(../eaxs:ExtBodyContent/eaxs:XMLWrapped)) = 'true'">
+															<xsl:attribute name="src">
+																<xsl:call-template name="data-uri">
+																	<xsl:with-param name="transfer-encoding" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:TransferEncoding"/>
+																	<xsl:with-param name="content-type" select="$content-type"/>
+																	<xsl:with-param name="content" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Content"/>
+																</xsl:call-template>
+															</xsl:attribute>																
+														</xsl:when>
+													</xsl:choose>
+												</xsl:when>
+												<xsl:when test="../eaxs:BodyContent">
+													<xsl:attribute name="src">
+														<xsl:call-template name="data-uri">
+															<xsl:with-param name="transfer-encoding" select="../eaxs:BodyContent/eaxs:TransferEncoding"/>
+															<xsl:with-param name="content-type" select="$content-type"/>
+															<xsl:with-param name="content" select="../eaxs:BodyContent/eaxs:Content"/>
+														</xsl:call-template>
+													</xsl:attribute>																
+												</xsl:when>
+											</xsl:choose>
+										</rx:pdf-file-attachment>
+									</rx:pdf-comment>
+								</fo:inline>								
+							</xsl:when>
+						</xsl:choose>
+					</xsl:if>
+					<xsl:if test="following-sibling::eaxs:ContentName != following-sibling::eaxs:DispositionFileName">
+						<xsl:text>; name="</xsl:text>
+						<xsl:call-template name="escape-specials">
+							<xsl:with-param name="text"><xsl:value-of select="following-sibling::eaxs:ContentName"/></xsl:with-param>
+						</xsl:call-template>
+						<xsl:text>"</xsl:text>
+					</xsl:if>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Disposition">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header2">
-			<fo:inline-container xsl:use-attribute-sets="width-header2">
-				<fo:block keep-together="always">Disposition:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates/>
-			<xsl:if test="following-sibling::eaxs:DispositionFileName">
-				<xsl:text>; filename="</xsl:text>
-				<xsl:call-template name="escape-specials">
-					<xsl:with-param name="text"><xsl:value-of select="following-sibling::eaxs:DispositionFileName"/></xsl:with-param>
-				</xsl:call-template>
-				<xsl:text>"</xsl:text>
-			</xsl:if>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>Disposition:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates/>
+					<xsl:if test="following-sibling::eaxs:DispositionFileName">
+						<xsl:text>; filename="</xsl:text>
+						<xsl:call-template name="escape-specials">
+							<xsl:with-param name="text"><xsl:value-of select="following-sibling::eaxs:DispositionFileName"/></xsl:with-param>
+						</xsl:call-template>
+						<xsl:text>"</xsl:text>
+					</xsl:if>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 
 	<xsl:template match="eaxs:ContentLanguage">
-		<fo:block xsl:use-attribute-sets="hanging-indent-header2">
-			<fo:inline-container xsl:use-attribute-sets="width-header2">
-				<fo:block keep-together="always">Content Language:</fo:block>
-			</fo:inline-container>
-			<xsl:apply-templates/>
-		</fo:block>
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block >Content Language:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:apply-templates/>
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:MultiBody" mode="RenderContent">
@@ -394,7 +613,6 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:ExtBodyContent">
-		<fo:block xsl:use-attribute-sets="todo">TODO: ExtBodyContent</fo:block>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:ChildMessage">
@@ -407,7 +625,7 @@
 				<xsl:text> Child Message </xsl:text> 
 				<xsl:value-of select="eaxs:LocalId"/>
 			</fo:block>
-			<xsl:call-template name="Message"></xsl:call-template>
+			<xsl:call-template name="MessageHeaderTocAndContent"></xsl:call-template>
 		</fo:block>
 	</xsl:template>
 	
@@ -452,25 +670,34 @@
 		<xsl:attribute name="margin-top">1em</xsl:attribute>
 	</xsl:attribute-set>
 
-	<xsl:attribute-set name="hanging-indent-header1">
-		<xsl:attribute name="margin-left">6em</xsl:attribute>
-		<xsl:attribute name="text-indent">-6em</xsl:attribute>
-	</xsl:attribute-set>
-	<xsl:attribute-set name="width-header1">
-		<xsl:attribute name="width">6em</xsl:attribute>
-	</xsl:attribute-set>
-
-	<xsl:attribute-set name="hanging-indent-header2">
-		<xsl:attribute name="margin-left">10em</xsl:attribute>
-		<xsl:attribute name="text-indent">-10em</xsl:attribute>
-	</xsl:attribute-set>
-	<xsl:attribute-set name="width-header2">
-		<xsl:attribute name="width">10em</xsl:attribute>
-	</xsl:attribute-set>
-
 	<!-- ========================================================================
 		Some utility templates 
 	============================================================================= -->
+	
+	<!-- join two strings with a path separator, taking into account that the strings might already have a separator or not -->
+	<xsl:template name="concat-path">
+		<xsl:param name="path1"/>
+		<xsl:param name="path2"/>
+		<xsl:choose>
+			<xsl:when test="not(fn:ends-with($path1,'/')) and not(fn:starts-with($path2,'/'))">
+				<xsl:value-of select="fn:concat($path1,'/',$path2)"/>
+			</xsl:when>
+			<xsl:when test="fn:ends-with($path1,'/') and not(fn:starts-with($path2,'/'))">
+				<xsl:call-template name="concat-path">
+					<xsl:with-param name="path1" select="fn:substring($path1,1, fn:string-length($path1)-1)"/>
+					<xsl:with-param name="path2" select="$path2"/>
+				</xsl:call-template>
+			</xsl:when>
+			<xsl:when test="not(fn:ends-with($path1,'/')) and fn:starts-with($path2,'/')">
+				<xsl:with-param name="path1" select="$path1"/>
+				<xsl:with-param name="path2" select="fn:substring($path2,2)"/>
+			</xsl:when>
+			<xsl:when test="fn:ends-with($path1,'/') and fn:starts-with($path2,'/')">
+				<xsl:with-param name="path1" select="fn:substring($path1,1, fn:string-length($path1)-1)"/>
+				<xsl:with-param name="path2" select="fn:substring($path2,2)"/>
+			</xsl:when>
+		</xsl:choose>
+	</xsl:template>
 	
 	<xsl:template name="RepeatString">
 		<xsl:param name="Count" >1</xsl:param>
@@ -482,6 +709,33 @@
 	
 	<xsl:template name="hr">
 		<fo:block><fo:leader leader-pattern="rule" leader-length="100%" rule-style="solid" rule-thickness="1.5pt"/></fo:block>						
+	</xsl:template>
+	
+	<xsl:template name="data-uri">
+		<xsl:param name="content-type">text/plain</xsl:param>
+		<xsl:param name="transfer-encoding">base64</xsl:param>
+		<xsl:param name="content"></xsl:param>
+		
+		<xsl:variable name="normal-content-type" select="fn:normalize-space(fn:lower-case($content-type))"/>
+		<xsl:variable name="normal-transfer-encoding" select="fn:normalize-space(fn:lower-case($transfer-encoding))"/>
+		
+		<xsl:if test="$normal-transfer-encoding != 'base64' and $normal-transfer-encoding != ''">
+			<xsl:message terminate="yes">Unsupported transfer encoding '<xsl:value-of select="$normal-transfer-encoding"/>'</xsl:message>
+		</xsl:if>
+
+		<xsl:text>url('data:</xsl:text>
+		<xsl:value-of select="$normal-content-type"/>
+		<xsl:if test="$normal-transfer-encoding">;<xsl:value-of select="$normal-transfer-encoding"/></xsl:if>
+		<xsl:text>,</xsl:text>
+		<xsl:choose>
+			<xsl:when test="$normal-transfer-encoding = 'base64'">
+				<xsl:value-of select="$content"/>			
+			</xsl:when>
+			<xsl:otherwise>
+				<xsl:value-of select="fn:encode-for-uri($content)"/>			
+			</xsl:otherwise>
+		</xsl:choose>
+		<xsl:text>')</xsl:text>
 	</xsl:template>
 	
 	<xsl:template name="replace-string">
@@ -522,14 +776,20 @@
 	</xsl:template>
 	
 	<xsl:template name="GetFileExtension">
-		<xsl:param name="SingleBody" select="."/>
-		<xsl:variable name="ContentName" select="fn:tokenize($SingleBody/eaxs:ContentName,'\.')[last()]"/>
-		<xsl:variable name="DispositionFilename" select="fn:tokenize($SingleBody/eaxs:DispositionFilename,'\.')[last()]"/>
+		<xsl:param name="SingleBody" select="ancestor-or-self::eaxs:SingleBody[1]"/>
+		
 		<xsl:choose>
-			<xsl:when test="$DispositionFilename"><xsl:value-of select="$DispositionFilename"/></xsl:when>
-			<xsl:when test="$ContentName"><xsl:value-of select="$ContentName"/></xsl:when>
+			<!-- force the file extension for certain mime content types, regardless of the content name or disposition filename -->
+			<xsl:when test="fn:lower-case(normalize-space($SingleBody/eaxs:ContentType)) = 'application/pdf'">pdf</xsl:when>
+			
+			<!-- use the extension from the content name or disposition filename if there is one -->
+			<xsl:when test="fn:contains($SingleBody/eaxs:DispositionFilename,'.')"><xsl:value-of select="fn:tokenize($SingleBody/eaxs:DispositionFilename,'\.')[last()]"/></xsl:when>
+			<xsl:when test="fn:contains($SingleBody/eaxs:ContentName,'.')"><xsl:value-of select="fn:tokenize($SingleBody/eaxs:ContentName,'\.')[last()]"/></xsl:when>
+			
+			<!-- fallback to just 'bin' -->
 			<xsl:otherwise>bin</xsl:otherwise>
 		</xsl:choose>
+		
 	</xsl:template>
 	
 </xsl:stylesheet>

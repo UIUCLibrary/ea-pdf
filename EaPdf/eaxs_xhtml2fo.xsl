@@ -15,9 +15,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 <!-- Modified by Tom Habing, 2023-01-12 for EMAIL to PDF conversion project -->
 
 <xsl:stylesheet version="2.0"
+                xmlns:html="http://www.w3.org/1999/xhtml"
+  
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:fo="http://www.w3.org/1999/XSL/Format"
-                xmlns:html="http://www.w3.org/1999/xhtml"
                 xmlns:fn="http://www.w3.org/2005/xpath-functions"
                 >
 
@@ -25,7 +26,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
               version="1.0"
               encoding="UTF-8"
               indent="no"/>
-
+  
+  <xsl:key name="HTML_IDS" match="//html:*[@id]" use="@id"  />
+  <xsl:key name="HTML_NAMES" match="//html:a[@name]" use="@name"  />
+  
   <!--======================================================================
       Parameters
   =======================================================================-->
@@ -65,8 +69,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:param>
   
   <!-- TGH Which FO Processor -->
-  <xsl:param name="fo-processor">apache</xsl:param>
-
+  <xsl:param name="fo-processor">fop</xsl:param> <!-- Values used: fop or xep -->
+  
   <!--======================================================================
       Attribute Sets
   =======================================================================-->
@@ -213,21 +217,29 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   <xsl:attribute-set name="ul">
     <xsl:attribute name="space-before">1em</xsl:attribute>
     <xsl:attribute name="space-after">1em</xsl:attribute>
+    <xsl:attribute name="provisional-distance-between-starts">1em</xsl:attribute>
+    <xsl:attribute name="provisional-label-separation">0.25em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="ul-nested">
     <xsl:attribute name="space-before">0pt</xsl:attribute>
     <xsl:attribute name="space-after">0pt</xsl:attribute>
+    <xsl:attribute name="provisional-distance-between-starts">1em</xsl:attribute>
+    <xsl:attribute name="provisional-label-separation">0.25em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="ol">
     <xsl:attribute name="space-before">1em</xsl:attribute>
     <xsl:attribute name="space-after">1em</xsl:attribute>
+    <xsl:attribute name="provisional-distance-between-starts">1em</xsl:attribute>
+    <xsl:attribute name="provisional-label-separation">0.25em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="ol-nested">
     <xsl:attribute name="space-before">0pt</xsl:attribute>
     <xsl:attribute name="space-after">0pt</xsl:attribute>
+    <xsl:attribute name="provisional-distance-between-starts">1em</xsl:attribute>
+    <xsl:attribute name="provisional-label-separation">0.25em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="ul-li">
@@ -281,7 +293,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <xsl:param name="ol-label-3">i.</xsl:param>
   <xsl:attribute-set name="ol-label-3"/>
-
+  
   <!--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
        Table
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
@@ -596,12 +608,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </xsl:choose>
 
     <xsl:choose>
-      <xsl:when test="@id">
+      <!-- only create id attributes if they are unique with the whole document -->
+      <!-- TODO: Eventually we should probably rewrite non-unique ids so they are unbique -->
+      <!--       This will require a bit of logoic to avoid breaking possible internal fragment id links -->
+      <xsl:when test="@id and count(key('HTML_IDS',@id)) &lt;= 1">
         <xsl:attribute name="id">
           <xsl:value-of select="@id"/>
         </xsl:attribute>
       </xsl:when>
-      <xsl:when test="self::html:a/@name">
+      <xsl:when test="self::html:a/@name and count(key('HTML_NAMES',self::html:a/@name)) &lt;= 1">
         <xsl:attribute name="id">
           <xsl:value-of select="@name"/>
         </xsl:attribute>
@@ -701,12 +716,36 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             </xsl:otherwise>
           </xsl:choose>
         </xsl:when>
+        <xsl:when test="$name = 'text-align'">
+          <xsl:choose>
+            <xsl:when test="$value = 'middle'">
+              <!-- TGH Convert values of middle to values of center -->
+              <xsl:attribute name="{$name}">center</xsl:attribute>     
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:attribute name="{$name}">
+                <xsl:value-of select="$value"/>
+              </xsl:attribute>                          
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:when>
         <xsl:otherwise>
-          <xsl:if test="$name != 'list-style-type'"><!-- TGH  Need to find way to paramterize this so that arbitrary style properties can be blacklisted -->
-            <xsl:attribute name="{$name}">
-              <xsl:value-of select="$value"/>
-            </xsl:attribute>            
-          </xsl:if>
+          <xsl:choose>
+            <!-- TGH ignore some styles and transform some others -->
+            <xsl:when test="$name = 'list-style-type'"/>
+            <xsl:when test="$name = 'text-decoration-style'"/>
+            <xsl:when test="$name = 'text-decoration-color'"/>
+            <xsl:when test="$name = 'text-decoration-line'">
+              <xsl:attribute name="text-decoration">
+                <xsl:value-of select="$value"/>
+              </xsl:attribute>            
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:attribute name="{$name}">
+                <xsl:value-of select="$value"/>
+              </xsl:attribute>            
+            </xsl:otherwise>
+          </xsl:choose>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
@@ -898,10 +937,25 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </fo:block>
   </xsl:template>
 
-  <xsl:template match="html:fieldset | html:form | html:dir | html:menu">
+  <xsl:template match="html:fieldset | html:dir | html:menu">
     <fo:block space-before="1em" space-after="1em">
       <xsl:call-template name="process-common-attributes-and-children"/>
     </fo:block>
+  </xsl:template>
+  
+  <xsl:template match="html:form">
+    <xsl:choose>
+      <xsl:when test="parent::html:tr and (html:td or html:th)">
+        <!-- TGH form is a child of tr and has td or th children -->
+        <xsl:comment>WARNING: A form child of the tr was removed.</xsl:comment>
+        <xsl:apply-templates/>
+      </xsl:when>
+      <xsl:otherwise>
+        <fo:block space-before="1em" space-after="1em">
+          <xsl:call-template name="process-common-attributes-and-children"/>
+        </fo:block>        
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <!--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -938,6 +992,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </fo:list-item>
   </xsl:template>
 
+  <!-- TODO: Need to suppress the label if this is a nested list -->
+  
   <xsl:template name="process-ul-li">
     <xsl:call-template name="process-common-attributes"/>
     <fo:list-item-label end-indent="label-end()"
@@ -1030,21 +1086,53 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
        Table
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
 
-  <xsl:template match="html:table[*]"><!-- TGH only process tables which have child elements  -->
+  <xsl:template match="html:table[*]"><!-- TGH only process tables which have children  -->
     <xsl:choose>
-      <xsl:when test="$fo-processor = 'apache'"> <!-- apache fop does no support table-and-caption -->
-          <fo:table xsl:use-attribute-sets="table">
-            <!-- TODO: Process table caption -->
-            <xsl:call-template name="process-table"/>
-          </fo:table>
+      <xsl:when test="$fo-processor = 'fop'"> <!-- apache fop does no support table-and-caption -->
+        <xsl:choose>
+          <xsl:when test="parent::html:table or parent::html:tbody"><!-- TGH If the parent of this table is another table or tbody, just ignore it and process its children-->
+            <xsl:comment>WARNING: Extraneous table element started here, but was removed</xsl:comment>
+            <xsl:choose>
+              <xsl:when test="html:tbody">
+                <xsl:apply-templates select="html:tbody/*"/>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:apply-templates/>               
+              </xsl:otherwise>
+            </xsl:choose>
+            <xsl:comment>WARNING: Extraneous table element that was removed ended here</xsl:comment>            
+          </xsl:when>
+          <xsl:otherwise>
+            <fo:table xsl:use-attribute-sets="table">
+              <!-- TODO: Process table caption using different markup than fo:table-and-caption-->
+              <xsl:call-template name="process-table"/>
+            </fo:table>
+          </xsl:otherwise>
+        </xsl:choose>
       </xsl:when>  
       <xsl:otherwise>
-        <fo:table-and-caption xsl:use-attribute-sets="table-and-caption">
-          <xsl:call-template name="make-table-caption"/>
-          <fo:table xsl:use-attribute-sets="table">
-            <xsl:call-template name="process-table"/>
-          </fo:table>
-        </fo:table-and-caption>        
+        <xsl:choose>
+          <xsl:when test="parent::html:table or parent::html:tbody"><!-- TGH If the parent of this table is another table or tbody, just ignore it and process its children-->
+            <xsl:comment>WARNING: Extraneous table element started here, but was removed</xsl:comment>
+            <xsl:choose>
+              <xsl:when test="html:tbody">
+                <xsl:apply-templates select="html:tbody/*"/>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:apply-templates/>               
+              </xsl:otherwise>
+            </xsl:choose>
+            <xsl:comment>WARNING: Extraneous table element that was removed ended here</xsl:comment>                        
+          </xsl:when>
+          <xsl:otherwise>
+            <fo:table-and-caption xsl:use-attribute-sets="table-and-caption">
+              <xsl:call-template name="make-table-caption"/>
+              <fo:table xsl:use-attribute-sets="table">
+                <xsl:call-template name="process-table"/>
+              </fo:table>
+            </fo:table-and-caption>                    
+          </xsl:otherwise>
+        </xsl:choose>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
@@ -1158,9 +1246,27 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:template>
 
   <xsl:template match="html:tbody">
-    <fo:table-body xsl:use-attribute-sets="tbody">
-      <xsl:call-template name="process-table-rowgroup"/>
-    </fo:table-body>
+    <xsl:choose>
+      <xsl:when test="*"><!-- TGH If the tbody has children -->
+        <xsl:choose>
+          <xsl:when test="parent::html:tbody"><!-- TGH if the parent of this tbody is another tbody, just ignore it and keep processing its children-->
+            <xsl:comment>WARNING: Extraneous tbody element started here, but was removed</xsl:comment>
+            <xsl:apply-templates/>
+            <xsl:comment>WARNING: Extraneous tbody element that was removed ended here</xsl:comment>
+          </xsl:when>
+          <xsl:otherwise>
+            <fo:table-body xsl:use-attribute-sets="tbody">
+              <xsl:call-template name="process-table-rowgroup"/>
+            </fo:table-body>        
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:otherwise>
+        <fo:table-body xsl:use-attribute-sets="tbody">
+          <fo:table-cell><fo:block><xsl:comment>WARNING: Empty Table</xsl:comment></fo:block></fo:table-cell>
+        </fo:table-body>        
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template name="process-table-rowgroup">
@@ -1234,27 +1340,67 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:template>
 
   <xsl:template match="html:th">
-    <fo:table-cell xsl:use-attribute-sets="th">
-      <xsl:call-template name="process-table-cell"/>
-    </fo:table-cell>
+    <xsl:choose>
+      <!-- also need to accomodate oddball cases like <table><tr><form><td> where the immediate child of tr may not be a td or th -->
+      <xsl:when test="not(parent::html:tr or parent::*/parent::html:tr)">
+        <!-- does not have a tr parent, so just treat it as a block -->
+        <xsl:comment>WARNING: th element without a tr parent is treated as a block element</xsl:comment>
+        <fo:block xsl:use-attribute-sets="td">
+          <xsl:apply-templates/>
+        </fo:block>                
+      </xsl:when>
+      <xsl:otherwise>
+        <fo:table-cell xsl:use-attribute-sets="th">
+          <xsl:call-template name="process-table-cell"/>
+        </fo:table-cell>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template match="html:td">
-    <fo:table-cell xsl:use-attribute-sets="td">
-      <xsl:call-template name="process-table-cell"/>
-    </fo:table-cell>
+    <xsl:choose>
+      <!-- also need to accomodate oddball cases like <table><tr><form><td> where the immediate child of tr may not be a td or th -->
+      <xsl:when test="not(parent::html:tr or parent::*/parent::html:tr)">
+        <!-- does not have a tr parent, so just treat it as a block -->
+        <xsl:comment>WARNING: td element without a tr parent is treated as a block element</xsl:comment>
+        <fo:block xsl:use-attribute-sets="td">
+          <xsl:apply-templates/>
+        </fo:block>                
+      </xsl:when>
+      <xsl:otherwise>
+        <fo:table-cell xsl:use-attribute-sets="td">
+          <xsl:call-template name="process-table-cell"/>
+        </fo:table-cell>        
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
-
+  
+  
   <xsl:template name="process-table-cell">
-    <xsl:if test="@colspan">
+    <xsl:variable name="row-count" select="count(../../html:tr)"/>
+     <xsl:if test="@colspan">
       <xsl:attribute name="number-columns-spanned">
         <xsl:value-of select="@colspan"/>
       </xsl:attribute>
     </xsl:if>
     <xsl:if test="@rowspan">
-      <xsl:attribute name="number-rows-spanned">
-        <xsl:value-of select="@rowspan"/>
-      </xsl:attribute>
+      <xsl:variable name="preceding-row-count" select="count(parent::html:tr/preceding-sibling::html:tr)"/>
+      <xsl:choose>
+        <xsl:when test="($preceding-row-count + @rowspan) &gt; $row-count">
+          <!-- rowspan goes beyond the last row in the table, so shorten it, assuming the intention was to use all the remaining rows -->
+          <!-- based on answer to https://stackoverflow.com/questions/41123392/detecting-table-element-error-in-docbook-5-0-document -->
+          <xsl:attribute name="number-rows-spanned">
+            <xsl:value-of select="$row-count - $preceding-row-count"/>
+          </xsl:attribute>
+          <!-- use xml:comment to sneak in debug info w/o parsers complaining -->
+          <!-- <xsl:attribute name="xml:comment">CurrentRow-<xsl:value-of select="$preceding-row-count + 1"/>, OrigRowSpan-<xsl:value-of select="@rowspan"/>, RowCount-<xsl:value-of select="$row-count"/></xsl:attribute> -->
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:attribute name="number-rows-spanned">
+            <xsl:value-of select="@rowspan"/>
+          </xsl:attribute>          
+        </xsl:otherwise>
+      </xsl:choose>
     </xsl:if>
     <xsl:for-each select="ancestor::html:table[1]">
       <xsl:if test="(@border or @rules) and (@rules = 'all' or
@@ -1348,8 +1494,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             </xsl:choose>
           </xsl:when>
           <xsl:otherwise>
-			<!-- TGH convert alignment values to lower-case -->
-            <xsl:value-of select="fn:lower-case($align)"/>
+			     <!-- TGH convert alignment values to lower-case -->
+            <xsl:choose>
+              <xsl:when test="fn:lower-case($align)='middle'">
+                <!-- TGH should be center -->
+                <xsl:text>center</xsl:text>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:value-of select="fn:lower-case($align)"/>
+              </xsl:otherwise>
+            </xsl:choose>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:attribute>
