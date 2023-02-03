@@ -22,6 +22,7 @@ using FilePathHelpers = UIUCLibrary.EaPdf.Helpers.FilePathHelpers;
 using System.Collections.Generic;
 using static System.Net.Mime.MediaTypeNames;
 using MimeKit.Text;
+using MimeKit.Tnef;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -72,6 +73,8 @@ namespace UIUCLibrary.EaPdf
         /// <exception cref="FileNotFoundException"></exception>
         public EmailToXmlProcessor(ILogger<EmailToXmlProcessor> logger, EmailToXmlProcessorSettings settings)
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -361,7 +364,7 @@ namespace UIUCLibrary.EaPdf
         private void WriteAccountHeaderFields(XmlWriter xwriter, string globalId, string accntEmails = "")
         {
             {
-                xwriter.WriteProcessingInstruction("Settings", 
+                xwriter.WriteProcessingInstruction("Settings",
                     $"HashAlgorithmName: {Settings.HashAlgorithmName}, " +
                     $"SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, " +
                     $"WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, " +
@@ -591,9 +594,9 @@ namespace UIUCLibrary.EaPdf
 
             var relPath = new Uri(Path.GetRelativePath(mboxProps.OutDirectoryName, mboxProps.MboxFilePath), UriKind.Relative);
             var ext = Path.GetExtension(mboxProps.MboxFilePath).TrimStart('.');
-            if(string.IsNullOrWhiteSpace(ext))
+            if (string.IsNullOrWhiteSpace(ext))
                 ext = Settings.DefaultFileExtension;
-            xwriter.WriteElementString("RelPath", XM_NS, relPath.ToString().Replace('\\','/'));
+            xwriter.WriteElementString("RelPath", XM_NS, relPath.ToString().Replace('\\', '/'));
             xwriter.WriteElementString("FileExt", XM_NS, ext);
             xwriter.WriteElementString("Eol", XM_NS, mboxProps.MostCommonEol);
             if (mboxProps.UsesDifferentEols)
@@ -1079,7 +1082,6 @@ namespace UIUCLibrary.EaPdf
             bool isMultipart = false;
 
             MimePart? part = mimeEntity as MimePart;
-            //TODO: Check if the entity is a TnefPart for application/ms-tnef content type attachments 
             Multipart? multipart = mimeEntity as Multipart;
             MessagePart? message = mimeEntity as MessagePart;
 
@@ -1163,7 +1165,13 @@ namespace UIUCLibrary.EaPdf
             }
             else if (!isMultipart)
             {
-                if (mimeEntity is MessageDeliveryStatus deliveryStatus)
+                if (mimeEntity is TnefPart tnefPart)
+                {
+                    //TODO: Instead of treating TNEF as a ChildMessage, maybe treat the same as a multipart mime type
+                    var tnefMsg = tnefPart.ConvertToMessage();
+                    localId = WriteSingleBodyChildMessage(xwriter, tnefMsg, localId, expectingBodyContent, mboxProps, msgProps);
+                }
+                else if (mimeEntity is MessageDeliveryStatus deliveryStatus)
                 {
                     localId = WriteDeliveryStatus(xwriter, deliveryStatus, localId, mboxProps);
                 }
@@ -1282,10 +1290,22 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
+        private long WriteSingleBodyChildMessage(XmlWriter xwriter, MimeMessage message, long localId, bool expectingBodyContent, MboxProperties mboxProps, MimeMessageProperties msgProps)
+        {
+            //The message parameter might contain a MessagePart or its subclass TextRfc822Headers
+            //If it is TextRfc822Headers it will not have a MessageBody.  This is handle correctly in the WriteMessageBody function 
+            xwriter.WriteStartElement("ChildMessage", XM_NS);
+            localId++;
+
+            localId = WriteMessage(xwriter, message, localId, true, expectingBodyContent, mboxProps, msgProps);
+            xwriter.WriteEndElement(); //ChildMessage
+            return localId;
+        }
+
         private long WriteSingleBodyContent(XmlWriter xwriter, MimePart part, long localId, bool expectingBodyContent, MboxProperties mboxProps)
         {
             //if it is text and not an attachment, save embedded in the XML
-            if (part.ContentType.IsMimeType("text", "*") && !part.IsAttachment)
+            if (part is TextPart txtPart && (txtPart.IsPlain || txtPart.IsHtml) && !part.IsAttachment)
             {
                 var (text, encoding, warning) = GetContentText(part);
 
@@ -1300,7 +1320,7 @@ namespace UIUCLibrary.EaPdf
 
                     if (Settings.SaveTextAsXhtml)
                     {
-                        var xhtml = GetTextAsXhtml(part, out List<(LogLevel level, string message)> messages);
+                        var xhtml = GetTextAsXhtml(txtPart, out List<(LogLevel level, string message)> messages);
                         WriteToLogMessages(xwriter, messages);
 
                         if (string.IsNullOrWhiteSpace(xhtml) || messages.Any(m => m.level == LogLevel.Error || m.level == LogLevel.Critical))
@@ -1342,15 +1362,11 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private string GetTextAsXhtml(MimePart part, out List<(LogLevel level, string message)> messages)
+        private string GetTextAsXhtml(TextPart txtPart, out List<(LogLevel level, string message)> messages)
         {
 
             messages = new List<(LogLevel level, string message)>();
 
-            if (part is not TextPart txtPart)
-            {
-                throw new Exception($"Unexpected part type '{part.GetType().Name}'");
-            }
 
             string htmlText = txtPart.Text;
 
@@ -1360,41 +1376,35 @@ namespace UIUCLibrary.EaPdf
             }
 
 
-            if (txtPart.ContentType.IsMimeType("text", "html") || txtPart.ContentType.IsMimeType("text", "plain"))
+            if (txtPart.IsHtml)
             {
-                if (txtPart.IsHtml)
-                {
-                    //clean up the html so it is valid-ish xhtml, log any issues to the messages list
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, false);
-                }
-                else if (txtPart.IsFlowed)
-                {
-                    //Use the MimeKit converters to convert plain/text, flowed to html,
-                    var converter = new FlowedToHtml();
-                    if (txtPart.ContentType.Parameters.TryGetValue("delsp", out string delsp))
-                        converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
+                //clean up the html so it is valid-ish xhtml, log any issues to the messages list
+                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, false);
+            }
+            else if (txtPart.IsFlowed)
+            {
+                //Use the MimeKit converters to convert plain/text, flowed to html,
+                var converter = new FlowedToHtml();
+                if (txtPart.ContentType.Parameters.TryGetValue("delsp", out string delsp))
+                    converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
 
-                    htmlText = converter.Convert(htmlText);
-                    //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
-                }
-                else //plain text not flowed
-                {
-                    //Use the MimeKit converters to convert plain/text, fixed to html,
-                    var converter = new TextToHtml();
-                    htmlText = converter.Convert(htmlText);
-                    //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
-                    htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
-                }
-
+                htmlText = converter.Convert(htmlText);
+                //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
+                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
+            }
+            else if (txtPart.IsPlain)
+            {
+                //Use the MimeKit converters to convert plain/text, fixed to html,
+                var converter = new TextToHtml();
+                htmlText = converter.Convert(htmlText);
+                //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
+                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
             }
             else
             {
                 //TODO: Need to make accomodations for text/enriched (and text/richtext? -- not Microsoft RTF), see Pine sent-mail-aug-2007, message id: 4d2cbdd341d0e87da57ba2245562265f@uiuc.edu                 
-
-                messages.Add((LogLevel.Error, $"The '{part.ContentType.MimeType}' content is not plain text or html."));
+                messages.Add((LogLevel.Error, $"The '{txtPart.ContentType.MimeType}' content is not plain text or html."));
             }
-
 
             return htmlText;
         }
@@ -1646,7 +1656,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             xwriter.WriteStartElement("Content", XM_NS);
-            
+
             //set up hashing
             using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
             byte[]? hash;
@@ -1658,7 +1668,7 @@ namespace UIUCLibrary.EaPdf
             {
                 var baseStream = content.Open(); //get decoded stream
                 using CryptoStream cryptoStream = new(baseStream, cryptoHashAlg, CryptoStreamMode.Read);
-                
+
                 using StreamReader reader = new(cryptoStream, part.ContentType.CharsetEncoding, true);
                 xwriter.WriteCData(reader.ReadToEnd());
                 hash = cryptoHashAlg.Hash;
@@ -1674,7 +1684,7 @@ namespace UIUCLibrary.EaPdf
             {
                 var baseStream = content.Stream; //get un-decoded stream
                 using CryptoStream cryptoStream = new(baseStream, cryptoHashAlg, CryptoStreamMode.Read);
-                
+
                 //treat the stream as ASCII because it is already encoded and just write it out using the same encoding
                 using StreamReader reader = new(cryptoStream, System.Text.Encoding.ASCII);
                 xwriter.WriteCData(reader.ReadToEnd());
@@ -1710,7 +1720,7 @@ namespace UIUCLibrary.EaPdf
             {
                 WriteHash(xwriter, hash, Settings.HashAlgorithmName);
             }
-            
+
             xwriter.WriteEndElement(); //BodyContent
         }
 
@@ -1852,7 +1862,7 @@ namespace UIUCLibrary.EaPdf
         {
             //TODO: It might be good to embellish the external XML schema, maybe make it equivalent to the internal XML schema SingleBody element
             //      This would provide more context if the external file is ever separated from the main XML email message file
-            
+
             using var contentStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write);
             using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);

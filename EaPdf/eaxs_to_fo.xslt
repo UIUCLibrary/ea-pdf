@@ -478,15 +478,34 @@
 	</xsl:template>
 
 	<xsl:template match="eaxs:SingleBody" mode="RenderToc">
-		<fo:list-block  margin="0.25em" padding="0.25em"  border-left="1px solid black" provisional-distance-between-starts="8em" provisional-label-separation="0.25em">
+		<fo:list-block  margin="0.25em" padding="0.25em"  border-left="1px solid black" provisional-distance-between-starts="1em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:ContentType"/>
 			<xsl:apply-templates select="eaxs:Disposition"/>
 			<xsl:apply-templates select="eaxs:ContentLanguage"/>
+			<xsl:if test="eaxs:ChildMessage">
+				<fo:list-item margin-bottom="0.25em">
+					<fo:list-item-label end-indent="label-end()"><fo:block></fo:block></fo:list-item-label>
+					<fo:list-item-body start-indent="body-start()">
+						<xsl:apply-templates select="eaxs:ChildMessage" mode="RenderToc"/>
+					</fo:list-item-body>
+				</fo:list-item>
+			</xsl:if>
+		</fo:list-block>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:ChildMessage" mode="RenderToc">
+		<fo:list-block margin="0.25em" padding="0.25em" border-left="1px solid black" provisional-distance-between-starts="1em" provisional-label-separation="0.25em">
+			<fo:list-item margin-bottom="0.25em">
+				<fo:list-item-label end-indent="label-end()"><fo:block></fo:block></fo:list-item-label>
+				<fo:list-item-body start-indent="body-start()">
+					<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>
+				</fo:list-item-body>
+			</fo:list-item>
 		</fo:list-block>
 	</xsl:template>
 
 	<xsl:template match="eaxs:MultiBody" mode="RenderToc">
-		<fo:list-block margin="0.25em" padding="0.25em" border-left="1px solid black" provisional-distance-between-starts="8em" provisional-label-separation="0.25em">
+		<fo:list-block margin="0.25em" padding="0.25em" border-left="1px solid black" provisional-distance-between-starts="1em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:ContentType"/>
 			<xsl:apply-templates select="eaxs:Disposition"/>
 			<xsl:apply-templates select="eaxs:ContentLanguage"/>
@@ -503,7 +522,7 @@
 	<xsl:template match="eaxs:ContentType">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>Content Type:</fo:block>
+				<fo:block></fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
 				<fo:block>
@@ -524,7 +543,7 @@
 	<xsl:template match="eaxs:Disposition">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>Disposition:</fo:block>
+				<fo:block></fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
 				<fo:block>
@@ -544,7 +563,7 @@
 	<xsl:template match="eaxs:ContentLanguage">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block >Content Language:</fo:block>
+				<fo:block ></fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
 				<fo:block>
@@ -602,6 +621,7 @@
 				<xsl:text> Child Message </xsl:text> 
 				<xsl:value-of select="eaxs:LocalId"/>
 			</fo:block>
+			<!-- TODO:  Instead of rendering the full Message Header, Toc, and Content, just render the Message Header and Content, not the TOC -->
 			<xsl:call-template name="MessageHeaderTocAndContent"></xsl:call-template>
 		</fo:block>
 	</xsl:template>
@@ -758,6 +778,7 @@
 		<xsl:choose>
 			<!-- force the file extension for certain mime content types, regardless of the content name or disposition filename -->
 			<xsl:when test="fn:lower-case(normalize-space($single-body/eaxs:ContentType)) = 'application/pdf'">pdf</xsl:when>
+			<xsl:when test="fn:lower-case(normalize-space($single-body/eaxs:ContentType)) = 'text/rtf'">rtf</xsl:when>
 			
 			<!-- use the extension from the content name or disposition filename if there is one -->
 			<xsl:when test="fn:contains($single-body/eaxs:DispositionFilename,'.')"><xsl:value-of select="fn:tokenize($single-body/eaxs:DispositionFilename,'\.')[last()]"/></xsl:when>
