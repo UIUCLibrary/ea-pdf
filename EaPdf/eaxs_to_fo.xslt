@@ -686,12 +686,16 @@
 				</xsl:call-template>
 			</xsl:when>
 			<xsl:when test="not(fn:ends-with($path1,'/')) and fn:starts-with($path2,'/')">
-				<xsl:with-param name="path1" select="$path1"/>
-				<xsl:with-param name="path2" select="fn:substring($path2,2)"/>
+				<xsl:call-template name="concat-path">
+					<xsl:with-param name="path1" select="$path1"/>
+					<xsl:with-param name="path2" select="fn:substring($path2,2)"/>
+				</xsl:call-template>
 			</xsl:when>
 			<xsl:when test="fn:ends-with($path1,'/') and fn:starts-with($path2,'/')">
-				<xsl:with-param name="path1" select="fn:substring($path1,1, fn:string-length($path1)-1)"/>
-				<xsl:with-param name="path2" select="fn:substring($path2,2)"/>
+				<xsl:call-template name="concat-path">
+					<xsl:with-param name="path1" select="fn:substring($path1,1, fn:string-length($path1)-1)"/>
+					<xsl:with-param name="path2" select="fn:substring($path2,2)"/>
+				</xsl:call-template>
 			</xsl:when>
 		</xsl:choose>
 	</xsl:template>
