@@ -627,7 +627,30 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:DeliveryStatus">
-		<fo:block xsl:use-attribute-sets="todo">TODO: DeliveryStatus</fo:block>
+		<fo:block xsl:use-attribute-sets="delivery-status">
+			<fo:block xsl:use-attribute-sets="h3">Delivery Status</fo:block>
+			<fo:block xsl:use-attribute-sets="h4">Per Message Fields</fo:block>
+			<fo:list-block provisional-distance-between-starts="10em" provisional-label-separation="0.25em">
+				<xsl:for-each select="eaxs:MessageFields/eaxs:Field">
+					<fo:list-item>
+						<fo:list-item-label end-indent="label-end()"><fo:block><xsl:value-of select="eaxs:Name"/></fo:block></fo:list-item-label>
+						<fo:list-item-body  start-indent="body-start()"><fo:block><xsl:value-of select="eaxs:Value"/></fo:block></fo:list-item-body>
+					</fo:list-item>					
+				</xsl:for-each>
+			</fo:list-block>
+			<fo:block xsl:use-attribute-sets="h4">Per Recipient Fields</fo:block>
+			<fo:list-block provisional-distance-between-starts="10em" provisional-label-separation="0.25em">
+				<xsl:for-each select="eaxs:RecipientFields/eaxs:Field">
+					<fo:list-item>
+						<fo:list-item-label end-indent="label-end()"><fo:block><xsl:value-of select="eaxs:Name"/></fo:block></fo:list-item-label>
+						<fo:list-item-body  start-indent="body-start()"><fo:block><xsl:value-of select="eaxs:Value"/></fo:block></fo:list-item-body>
+					</fo:list-item>					
+				</xsl:for-each>
+			</fo:list-block>
+			<xsl:if test="../following-sibling::eaxs:SingleBody/eaxs:ChildMessage">
+				<xsl:call-template name="hr"/>
+			</xsl:if>
+		</fo:block>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Content">
@@ -660,6 +683,11 @@
 		<xsl:attribute name="background-color">beige</xsl:attribute>
 	</xsl:attribute-set>
 	
+	<xsl:attribute-set name="delivery-status">
+		<xsl:attribute name="margin-top">1em</xsl:attribute>
+		<xsl:attribute name="background-color">beige</xsl:attribute>
+	</xsl:attribute-set>
+
 	<xsl:attribute-set name="todo">
 		<xsl:attribute name="color">red</xsl:attribute>
 		<xsl:attribute name="font-size">large</xsl:attribute>
