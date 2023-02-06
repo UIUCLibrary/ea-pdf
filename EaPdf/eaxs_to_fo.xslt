@@ -656,7 +656,10 @@
 	<xsl:template match="eaxs:Content">
 		<xsl:choose>
 			<xsl:when test="not(normalize-space(.) = '')">
-				<fo:block xsl:use-attribute-sets="todo">TODO: Content</fo:block>			
+				<!-- treat the same as the html <pre> tag -->
+				<fo:block xsl:use-attribute-sets="pre">
+					<xsl:call-template name="process-pre"/>
+				</fo:block>			
 			</xsl:when>	
 			<xsl:otherwise>
 				<fo:inline font-style="italic">BLANK</fo:inline>
