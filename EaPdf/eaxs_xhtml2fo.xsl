@@ -20,7 +20,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:fo="http://www.w3.org/1999/XSL/Format"
                 xmlns:fn="http://www.w3.org/2005/xpath-functions"
-                >
+
+                xmlns:pdf="http://xmlgraphics.apache.org/fop/extensions/pdf"
+                xmlns:fox="http://xmlgraphics.apache.org/fop/extensions"
+                
+                xmlns:rx="http://www.renderx.com/XSL/Extensions"
+                  >
 
   <xsl:output method="xml"
               version="1.0"
@@ -61,15 +66,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   <!-- hyphenate: true | false -->
   <xsl:param name="hyphenate">false</xsl:param>
   
-  <!-- TGH backlist css properties -->
-  <xsl:param name="css-blacklist">
-    <list>
-      <item>list-style-type</item>
-    </list>
-  </xsl:param>
-  
+
   <!-- TGH Which FO Processor -->
   <xsl:param name="fo-processor">fop</xsl:param> <!-- Values used: fop or xep -->
+  
+  <!-- TGH For increased performance and also security set this to false -->
+  <xsl:param name="load-external-images">false</xsl:param>
   
   <!--======================================================================
       Attribute Sets
@@ -468,6 +470,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <xsl:attribute name="border">2px solid</xsl:attribute>
   </xsl:attribute-set>
 
+  <xsl:attribute-set name="img-omitted">
+    <xsl:attribute name="color">red</xsl:attribute>
+    <xsl:attribute name="font-size">large</xsl:attribute>
+    <xsl:attribute name="font-weight">bold</xsl:attribute>
+    <xsl:attribute name="border">1px solid red</xsl:attribute>
+  </xsl:attribute-set>
+  
   <!--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
        Link
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
@@ -1797,15 +1806,35 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
 
   <xsl:template match="html:img">
-    <fo:external-graphic xsl:use-attribute-sets="img">
-      <xsl:call-template name="process-img"/>
-    </fo:external-graphic>
+    <xsl:choose>
+      <xsl:when test="fn:lower-case(normalize-space($load-external-images))='true'">
+        <fo:external-graphic xsl:use-attribute-sets="img">
+          <xsl:call-template name="process-img"/>
+        </fo:external-graphic>
+      </xsl:when>
+      <xsl:otherwise>
+        <fo:inline xsl:use-attribute-sets="img-omitted">
+          <xsl:attribute name="fox:alt-text">Image was not loaded</xsl:attribute>
+          <xsl:text> X </xsl:text>
+        </fo:inline>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template match="html:img[ancestor::html:a/@href]">
-    <fo:external-graphic xsl:use-attribute-sets="img-link">
-      <xsl:call-template name="process-img"/>
-    </fo:external-graphic>
+    <xsl:choose>
+      <xsl:when test="fn:lower-case(normalize-space($load-external-images))='true'">
+        <fo:external-graphic xsl:use-attribute-sets="img-link">
+          <xsl:call-template name="process-img"/>
+        </fo:external-graphic>
+      </xsl:when>
+      <xsl:otherwise>
+        <fo:inline xsl:use-attribute-sets="img-omitted">
+          <xsl:attribute name="fox:alt-text">Image was not loaded</xsl:attribute>
+          <xsl:text> X </xsl:text>
+        </fo:inline>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template name="process-img">
