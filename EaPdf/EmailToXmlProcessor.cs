@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using static System.Net.Mime.MediaTypeNames;
 using MimeKit.Text;
 using MimeKit.Tnef;
+using System.Diagnostics.CodeAnalysis;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -378,6 +379,8 @@ namespace UIUCLibrary.EaPdf
                     $"LogToXmlThreshold: {Settings.LogToXmlThreshold}, " +
                     $"DefaultFileExtension: {Settings.DefaultFileExtension}"
                     );
+
+                xwriter.WriteProcessingInstruction("DateGenerated", DateTime.Now.ToString("u"));
 
                 xwriter.WriteStartElement("Account", XM_NS);
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
@@ -934,7 +937,7 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteAllMessageHeaders(XmlWriter xwriter, MimeMessage message)
         {
-            foreach (var hdr in message.Headers) //All headers even if already covered above
+            foreach (var hdr in message.Headers.Where(h => !string.IsNullOrWhiteSpace(h.Value))) //All headers that have values even if already covered above
             {
                 xwriter.WriteStartElement("Header", XM_NS);
 
@@ -960,9 +963,21 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteElementString("MimeVersion", XM_NS, message.MimeVersion.ToString());
             }
 
-            xwriter.WriteStartElement("OrigDate", XM_NS);
-            xwriter.WriteValue(message.Date);
-            xwriter.WriteEndElement();
+            if (message.Date != DateTimeOffset.MinValue) //MinValue is used if the message does not have a date field
+            {
+                xwriter.WriteStartElement("OrigDate", XM_NS);
+                xwriter.WriteValue(message.Date);
+                xwriter.WriteEndElement();
+            }
+
+            if (message.Date != DateTimeOffset.MinValue && message.Date.Year < 1971)
+            {
+                WriteToLogWarningMessage(xwriter, $"The first email was sent in 1971.  '{message.Date.ToString("u")}' must be an invalid date.");
+            }
+            else if (message.Date.Year > DateTime.Now.Year)
+            {
+                WriteToLogWarningMessage(xwriter, $"This is an unlikely email from the future.  '{message.Date.ToString("u")}' must be an invalid date.");
+            }
 
             WriteInternetAddressList(xwriter, message.From, "From");
 

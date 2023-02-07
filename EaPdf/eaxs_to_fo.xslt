@@ -76,6 +76,8 @@
 					<xsl:call-template name="CoverPage"/>
 					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]" mode="RenderContent"/>
 				</fo:flow>
+				<!-- TODO: Add a section which is the conversion report with info, warning, and error messages -->
+				<!--       Might need to embedd these into the source XML, not just as xml comments -->
 			</fo:page-sequence>
 		</fo:root>
 	</xsl:template>
@@ -194,9 +196,9 @@
 			</xsl:choose>
 			<fo:block xsl:use-attribute-sets="h2">Global Id: <xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block>
 			
-			<!-- TODO: Do not count child messages -->
+			<!-- QUESTIOIN: Do not count child messages? -->
 			<fo:block xsl:use-attribute-sets="h2">Message Count: <xsl:value-of select="count(//eaxs:Message)"/></fo:block>
-			<!-- TODO: Only count distinct attachments, based on the hash -->
+			<!-- QUESTION: Only count distinct attachments, based on the hash? -->
 			<fo:block xsl:use-attribute-sets="h2">Attachment Count: <xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block>
 			
 			<xsl:choose>
@@ -248,7 +250,8 @@
 								</fo:basic-link>
 							</xsl:when>
 							<xsl:when test="$fo-processor='xep'">
-								<fo:inline font-size="small"> (Open Source File) &nbsp;&nbsp;
+								<fo:inline font-size="small">
+									<xsl:text>(Open Source File&nbsp;</xsl:text>
 									<rx:pdf-comment>
 										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:Mbox/eaxs:RelPath"/></xsl:attribute>
 										<rx:pdf-file-attachment icon-type="pushpin">
@@ -256,9 +259,14 @@
 											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:Mbox/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 										</rx:pdf-file-attachment>
 									</rx:pdf-comment>
+									<xsl:text>&nbsp;&nbsp;&nbsp;&nbsp;)</xsl:text>
 								</fo:inline>
 							</xsl:when>
 						</xsl:choose>
+						<fo:basic-link>
+							<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Go To First Message</fo:inline>)</fo:inline>
+						</fo:basic-link>
 					</fo:block>
 					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]" mode="RenderToc"/>
 				</fo:list-item-body>
@@ -283,22 +291,25 @@
 	</xsl:template>
 	
 	<xsl:template name="MessageHeaderTocAndContent">
+		<xsl:param name="RenderToc">true</xsl:param>
 		<xsl:message><xsl:value-of select="parent::eaxs:Folder/eaxs:Mbox/eaxs:RelPath"/> -- <xsl:value-of select="eaxs:MessageId"/></xsl:message>
-			<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
-				<xsl:apply-templates select="eaxs:MessageId"/>
-				<xsl:apply-templates select="eaxs:OrigDate"/>
-				<xsl:apply-templates select="eaxs:From"/>
-				<xsl:apply-templates select="eaxs:Sender"/>
-				<xsl:apply-templates select="eaxs:To"/>
-				<xsl:apply-templates select="eaxs:Cc"/>
-				<xsl:apply-templates select="eaxs:Bcc"/>
-				<xsl:apply-templates select="eaxs:Subject"/>
-				<xsl:apply-templates select="eaxs:Comments"/>
-				<xsl:apply-templates select="eaxs:Keywords"/>
-				<xsl:apply-templates select="eaxs:InReplyTo"/>
-			</fo:list-block>	
-		<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black">Message Contents</fo:block>
-		<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>
+		<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
+			<xsl:apply-templates select="eaxs:MessageId"/>
+			<xsl:apply-templates select="eaxs:OrigDate[not('0001-01-01T00:00:00Z')]"/> <!-- MimeKit seems to use this as the default value if there is no date -->
+			<xsl:apply-templates select="eaxs:From"/>
+			<xsl:apply-templates select="eaxs:Sender"/>
+			<xsl:apply-templates select="eaxs:To"/>
+			<xsl:apply-templates select="eaxs:Cc"/>
+			<xsl:apply-templates select="eaxs:Bcc"/>
+			<xsl:apply-templates select="eaxs:Subject"/>
+			<xsl:apply-templates select="eaxs:Comments"/>
+			<xsl:apply-templates select="eaxs:Keywords"/>
+			<xsl:apply-templates select="eaxs:InReplyTo"/>
+		</fo:list-block>	
+		<xsl:if test="$RenderToc='true'">
+			<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black">Message Contents</fo:block>
+			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>			
+		</xsl:if>
 		<xsl:call-template name="hr"/>
 		<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent"/>
 	</xsl:template>
@@ -528,6 +539,12 @@
 				<fo:block>
 					<xsl:apply-templates/>
 					<xsl:call-template name="AttachmentLink"/>
+					<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and (fn:lower-case(normalize-space(.)) = 'text/plain' or fn:lower-case(normalize-space(.)) = 'text/html')">
+						<fo:basic-link>
+							<xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(../eaxs:BodyContent)"/></xsl:attribute>									
+							<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Go To Content</fo:inline>)</fo:inline>
+						</fo:basic-link>												
+					</xsl:if>
 					<xsl:if test="following-sibling::eaxs:ContentName != following-sibling::eaxs:DispositionFileName">
 						<xsl:text>; name="</xsl:text>
 						<xsl:call-template name="escape-specials">
@@ -588,23 +605,27 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:SingleBody" mode="RenderContent">
-		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:ChildMessage | eaxs:DeliveryStatus"/>
+		<!-- only render child messages if they contain plain text or html content -->
+		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:ChildMessage[.//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:ContentType))='text/plain' or fn:lower-case(normalize-space(eaxs:ContentType)) = 'text/html']] | eaxs:DeliveryStatus"/>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:BodyContent">
 		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/')">
 			<!-- only render content which is text and which is not an attachment -->
-			<xsl:choose>
-				<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
-					<!-- Only put the header if there are multiple bodies -->
-					<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">Content Type: <xsl:value-of select="../eaxs:ContentType"/></fo:block>				
-				</xsl:when>
-				<xsl:otherwise>
-					<!-- don't put a header, but add an extra line above the content -->
-					<fo:block margin-top="1em"> </fo:block>
-				</xsl:otherwise>
-			</xsl:choose>
-			<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
+			<fo:block>
+				<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+				<xsl:choose>
+					<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
+						<!-- Only put the header if there are multiple bodies -->
+						<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">Content Type: <xsl:value-of select="../eaxs:ContentType"/></fo:block>				
+					</xsl:when>
+					<xsl:otherwise>
+						<!-- don't put a header, but add an extra line above the content -->
+						<fo:block margin-top="1em"> </fo:block>
+					</xsl:otherwise>
+				</xsl:choose>
+				<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
+			</fo:block>
 		</xsl:if>
 	</xsl:template>
 	
@@ -621,8 +642,9 @@
 				<xsl:text> Child Message </xsl:text> 
 				<xsl:value-of select="eaxs:LocalId"/>
 			</fo:block>
-			<!-- TODO:  Instead of rendering the full Message Header, Toc, and Content, just render the Message Header and Content, not the TOC -->
-			<xsl:call-template name="MessageHeaderTocAndContent"></xsl:call-template>
+			<xsl:call-template name="MessageHeaderTocAndContent">
+				<xsl:with-param name="RenderToc">false</xsl:with-param>
+			</xsl:call-template>
 		</fo:block>
 	</xsl:template>
 	
@@ -662,7 +684,10 @@
 				</fo:block>			
 			</xsl:when>	
 			<xsl:otherwise>
-				<fo:inline font-style="italic">BLANK</fo:inline>
+				<fo:block>
+					<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+					<fo:inline font-style="italic">BLANK</fo:inline>					
+				</fo:block>
 			</xsl:otherwise>
 		</xsl:choose>
 	</xsl:template>
@@ -670,10 +695,15 @@
 	<xsl:template match="eaxs:ContentAsXhtml">
 		<xsl:choose>
 			<xsl:when test="not(normalize-space(.) = '')">
-				<xsl:apply-templates select="html:html/html:body/html:*"/>
+				<fo:block>
+					<xsl:apply-templates select="html:html/html:body/html:*"/>					
+				</fo:block>
 			</xsl:when>	
 			<xsl:otherwise>
-				<fo:inline font-style="italic">BLANK</fo:inline>
+				<fo:block>
+					<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+					<fo:inline font-style="italic">BLANK</fo:inline>
+				</fo:block>
 			</xsl:otherwise>
 		</xsl:choose>
 	</xsl:template>
