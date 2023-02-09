@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fop version="1.0">
+	<strict-configuration>true</strict-configuration>
+	
+	<font-base>file:/C:/Windows/Fonts/</font-base>
+
+	<source-resolution>120</source-resolution>
+	<target-resolution>120</target-resolution>
+
+	<default-page-settings height="11in" width="8.26in"/>
+
+	<renderers>
+		<renderer mime="application/pdf">
+			<pdf-a-mode>PDF/A-3u</pdf-a-mode>
+			<version>1.7</version>
+			<filterList>
+				<value>flate</value>
+			</filterList>
+
+			<!-- embed the primary PDF base14 fonts (expect Symbol and DingBats) -->
+			<fonts>
+				<font embed-url="Arial.ttf" >
+					<font-triplet name="Helvetica" style="normal" weight="normal"/>
+					<font-triplet name="sans-serif" style="normal" weight="normal"/>
+					<font-triplet name="SansSerif" style="normal" weight="normal"/>
+				</font>
+				<font embed-url="ArialI.ttf" >
+					<font-triplet name="Helvetica" style="italic" weight="normal"/>
+					<font-triplet name="sans-serif" style="italic" weight="normal"/>
+					<font-triplet name="SansSerif" style="italic" weight="normal"/>
+				</font>
+				<font embed-url="ArialBD.ttf" >
+					<font-triplet name="Helvetica" style="normal" weight="bold"/>
+					<font-triplet name="sans-serif" style="normal" weight="bold"/>
+					<font-triplet name="SansSerif" style="normal" weight="bold"/>
+				</font>
+				<font embed-url="ArialBI.ttf" >
+					<font-triplet name="Helvetica" style="italic" weight="bold"/>
+					<font-triplet name="sans-serif" style="italic" weight="bold"/>
+					<font-triplet name="SansSerif" style="italic" weight="bold"/>
+				</font>
+
+				<font embed-url="Times.ttf" >
+					<font-triplet name="Times" style="normal" weight="normal"/>
+					<font-triplet name="Times Roman" style="normal" weight="normal"/>
+					<font-triplet name="Times-Roman" style="normal" weight="normal"/>
+					<font-triplet name="serif" style="normal" weight="normal"/>
+					<font-triplet name="any" style="normal" weight="normal"/>
+				</font>
+				<font embed-url="TimesI.ttf" >
+					<font-triplet name="Times" style="italic" weight="normal"/>
+					<font-triplet name="Times Roman" style="italic" weight="normal"/>
+					<font-triplet name="Times-Roman" style="italic" weight="normal"/>
+					<font-triplet name="serif" style="italic" weight="normal"/>
+					<font-triplet name="any" style="italic" weight="normal"/>
+				</font>
+				<font embed-url="TimesBD.ttf" >
+					<font-triplet name="Times" style="normal" weight="bold"/>
+					<font-triplet name="Times Roman" style="normal" weight="bold"/>
+					<font-triplet name="Times-Roman" style="normal" weight="bold"/>
+					<font-triplet name="serif" style="normal" weight="bold"/>
+					<font-triplet name="any" style="normal" weight="bold"/>
+				</font>
+				<font embed-url="TimesBI.ttf" >
+					<font-triplet name="Times" style="italic" weight="bold"/>
+					<font-triplet name="Times Roman" style="italic" weight="bold"/>
+					<font-triplet name="Times-Roman" style="italic" weight="bold"/>
+					<font-triplet name="serif" style="italic" weight="bold"/>
+					<font-triplet name="any" style="italic" weight="bold"/>
+				</font>
+
+				<font embed-url="Cour.ttf" >
+					<font-triplet name="Courier" style="normal" weight="normal"/>
+					<font-triplet name="monospace" style="normal" weight="normal"/>
+					<font-triplet name="Monospaced" style="normal" weight="normal"/>
+				</font>
+				<font embed-url="CourI.ttf" >
+					<font-triplet name="Courier" style="italic" weight="normal"/>
+					<font-triplet name="monospace" style="italic" weight="normal"/>
+					<font-triplet name="Monospaced" style="italic" weight="normal"/>
+				</font>
+				<font embed-url="CourBD.ttf" >
+					<font-triplet name="Courier" style="normal" weight="bold"/>
+					<font-triplet name="monospace" style="normal" weight="bold"/>
+					<font-triplet name="Monospaced" style="normal" weight="bold"/>
+				</font>
+				<font embed-url="CourBI.ttf" >
+					<font-triplet name="Courier" style="italic" weight="bold"/>
+					<font-triplet name="monospace" style="italic" weight="bold"/>
+					<font-triplet name="Monospaced" style="italic" weight="bold"/>
+				</font>
+
+				<!-- any other fonts just get them from the default spot -->
+				<auto-detect/>
+			</fonts>
+		</renderer>
+	</renderers>
+</fop>

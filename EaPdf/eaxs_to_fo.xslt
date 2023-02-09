@@ -24,9 +24,10 @@
 
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no"/>
 	
-	<xsl:param name="SerifFont" select="'Times-Roman'"/>
-	<xsl:param name="SansSerifFont" select="'Helvetica'"/>
-	<xsl:param name="MonospaceFont" select="'Courier'"/>
+	
+	<xsl:param name="SerifFont" select="'Times New Roman'"/>
+	<xsl:param name="SansSerifFont" select="'Arial'"/><!-- Used as the default at the root level of the document -->
+	<xsl:param name="MonospaceFont" select="'Courier New'"/>
 
 	<!-- TGH Which FO Processor -->
 	<xsl:param name="fo-processor">fop</xsl:param> <!-- Values used: fop or xep -->
@@ -47,6 +48,7 @@
 		
 		<xsl:call-template name="check-params"/>
 		<fo:root>
+			<xsl:attribute name="font-family"><xsl:value-of select="$SansSerifFont"/></xsl:attribute>
 			<fo:layout-master-set>
 				<fo:simple-page-master master-name="message-page" page-width="8.5in"
 					page-height="11in">
@@ -220,7 +222,7 @@
 								<fo:inline font-size="small"> (Open Source File) &nbsp;&nbsp;
 									<rx:pdf-comment>
 										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:RelPath"/></xsl:attribute>
-										<rx:pdf-file-attachment icon-type="pushpin">
+										<rx:pdf-file-attachment icon-type="paperclip">
 											<xsl:attribute name="filename"><xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:FileExt"/></xsl:attribute>
 											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 										</rx:pdf-file-attachment>
@@ -254,7 +256,7 @@
 									<xsl:text>(Open Source File&nbsp;</xsl:text>
 									<rx:pdf-comment>
 										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:Mbox/eaxs:RelPath"/></xsl:attribute>
-										<rx:pdf-file-attachment icon-type="pushpin">
+										<rx:pdf-file-attachment icon-type="paperclip">
 											<xsl:attribute name="filename"><xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/></xsl:attribute>
 											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:Mbox/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 										</rx:pdf-file-attachment>
@@ -883,7 +885,7 @@
 					<fo:inline font-size="small"> (Open Attachment) &nbsp;&nbsp;
 						<rx:pdf-comment>
 							<xsl:attribute name="title">Attachment &mdash; </xsl:attribute>
-							<rx:pdf-file-attachment icon-type="pushpin">
+							<rx:pdf-file-attachment icon-type="paperclip">
 								<xsl:attribute name="filename"><xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/></xsl:attribute>
 								<xsl:choose>
 									<xsl:when test="$single-body/eaxs:ExtBodyContent">

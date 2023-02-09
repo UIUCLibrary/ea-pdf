@@ -8,3 +8,8 @@ https://www.codeproject.com/Tips/5255423/Linux-on-Windows
 # _Conversion Notes_
 If the the RenderX XEP processor is used, attached files must be base64 encoded and if external, wrapped in XML.  XEP will fail when attaching a slightly malformed PDF file.
 By wrapping them, we can trick the processor inot treating them as arbitrary binary attachments which it can handle just fine.
+
+# Fonts
+FOP: https://xmlgraphics.apache.org/fop/2.1/fonts.html
+
+Embedding: https://stackoverflow.com/questions/19767205/embedding-font-into-apache-fop

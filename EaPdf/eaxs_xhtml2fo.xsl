@@ -1444,6 +1444,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <xsl:attribute name="relative-align">from-table-column()</xsl:attribute>
     </xsl:if>
     <!-- TGH Add the width and height attribute -->
+    <!-- TODO:  FOP sometimes generates a warning: "ERROR - Cannot find LM to handle given FO for LengthBase. (fo:table-cell, location: row:col)" -->
+    <!--        Seems to be associated with cell width attribute.  Maybe on nested tables??? -->
     <xsl:choose>
       <xsl:when test="string(number(@width)) != 'NaN'">
         <xsl:attribute name="width"><xsl:value-of select="@width"/>px</xsl:attribute>
