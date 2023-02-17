@@ -10,27 +10,33 @@
 
 	xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	xmlns:fo="http://www.w3.org/1999/XSL/Format"
-	xmlns:fn="http://www.w3.org/2005/xpath-functions"
 	xmlns:html="http://www.w3.org/1999/xhtml"
+	xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns:fn="http://www.w3.org/2005/xpath-functions"
 	
 	xmlns:pdf="http://xmlgraphics.apache.org/fop/extensions/pdf"
 	xmlns:fox="http://xmlgraphics.apache.org/fop/extensions"
 	
 	xmlns:rx="http://www.renderx.com/XSL/Extensions"
-	
 	>
 
 	<xsl:import href="eaxs_xhtml2fo.xsl"/>
 
-	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no"/>
+	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no" cdata-section-elements="rx:custom-meta"/>
 	
 	
 	<xsl:param name="SerifFont" select="'Times New Roman'"/>
 	<xsl:param name="SansSerifFont" select="'Arial'"/><!-- Used as the default at the root level of the document -->
 	<xsl:param name="MonospaceFont" select="'Courier New'"/>
+	
+	<xsl:param name="icc-profile" select="'file:/C:/Program Files/RenderX/XEP/sRGB2014.icc'"/>
 
 	<!-- TGH Which FO Processor -->
 	<xsl:param name="fo-processor">fop</xsl:param> <!-- Values used: fop or xep -->
+	
+	<!-- Applied to FOP processor -->
+	<xsl:param name="use-embedded-file-link">false</xsl:param>
+	<!-- TODO: Instead of embedded-file links, provide a list of attachments at bottom of file along with instructions on how to open attachment list -->
 	
 	<xsl:template name="check-params">
 		<xsl:choose>
@@ -47,8 +53,20 @@
 	<xsl:template match="/">
 		
 		<xsl:call-template name="check-params"/>
+		
+		<xsl:if test="$fo-processor='xep'">
+			<!-- Add XEP PIs to set version and PDF/A profile level -->
+			<xsl:processing-instruction name="xep-pdf-pdf-a">pdf-a-3b</xsl:processing-instruction><!-- '3u' is not supported by XEP-->
+			<xsl:processing-instruction name="xep-pdf-pdf-version">1.4</xsl:processing-instruction><!-- 1.7 is not supported by XEP -->
+			<!-- Add ICC color profile -->
+			<xsl:processing-instruction name="xep-pdf-icc-profile">url(<xsl:value-of select="$icc-profile"/>)</xsl:processing-instruction>
+		</xsl:if>
+		
 		<fo:root>
 			<xsl:attribute name="font-family"><xsl:value-of select="$SansSerifFont"/></xsl:attribute>
+			<xsl:if test="$fo-processor='xep'">
+				<xsl:call-template name="xep-metadata"/>
+			</xsl:if>
 			<fo:layout-master-set>
 				<fo:simple-page-master master-name="message-page" page-width="8.5in"
 					page-height="11in">
@@ -77,11 +95,57 @@
 				<fo:flow flow-name="xsl-region-body">
 					<xsl:call-template name="CoverPage"/>
 					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]" mode="RenderContent"/>
+					<xsl:call-template name="AttachmentsList"/>
 				</fo:flow>
 				<!-- TODO: Add a section which is the conversion report with info, warning, and error messages -->
 				<!--       Might need to embedd these into the source XML, not just as xml comments -->
 			</fo:page-sequence>
 		</fo:root>
+	</xsl:template>
+	
+	<xsl:template name="xep-metadata">
+		<rx:meta-info>
+			<rx:custom-meta>
+				<xsl:variable name="xmp"><xsl:call-template name="xmp"></xsl:call-template></xsl:variable>
+				<xsl:value-of select="fn:serialize($xmp)"/>
+			</rx:custom-meta>
+			<rx:meta-field name="NAME_XEP" value="VALUE_XEP"/>
+		</rx:meta-info>
+	</xsl:template>
+	
+	<xsl:template name="AttachmentsList">
+		<fo:block id="AttachmentList" xsl:use-attribute-sets="h1">All Attachments</fo:block>
+		<fo:block background-color="beige" border="1px solid brown" padding="0.125em">
+			You may need to open the PDF reader's attachments list to download or open these files. Look for the name that matches the long random-looking string of characters.
+		</fo:block>
+		<fo:block xsl:use-attribute-sets="h2">Source Email Files</fo:block>
+		<fo:block xsl:use-attribute-sets="dl">
+			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
+				<fo:block xsl:use-attribute-sets="dt" font-weight="bold">
+					<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
+					<xsl:value-of select="../eaxs:Name"/>
+				</fo:block>
+				<fo:block xsl:use-attribute-sets="dd">
+					<xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/>
+				</fo:block>
+			</xsl:for-each>
+		</fo:block>
+
+		<fo:block xsl:use-attribute-sets="h2">File Attachments</fo:block>
+		<fo:block xsl:use-attribute-sets="dl">
+			<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+				<fo:block xsl:use-attribute-sets="dt"  font-weight="bold">
+					<xsl:attribute name="id">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
+					<xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/>
+					<xsl:if test="eaxs:Size">
+						<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'0,000')"/> bytes)</fo:inline>
+					</xsl:if>
+				</fo:block>
+				<fo:block xsl:use-attribute-sets="dd">
+					<xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/>
+				</fo:block>
+			</xsl:for-each>
+		</fo:block>
 	</xsl:template>
 	
 	<xsl:template name="bookmarks">
@@ -91,6 +155,10 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Folder" mode="RenderBookmarks">
+		<fo:bookmark>
+			<xsl:attribute name="internal-destination">CoverPage</xsl:attribute>
+			<fo:bookmark-title>Cover Page</fo:bookmark-title>
+		</fo:bookmark>
 		<fo:bookmark>
 			<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
 			<fo:bookmark-title><xsl:value-of select="eaxs:Name"/></fo:bookmark-title>
@@ -106,7 +174,11 @@
 					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]" mode="RenderBookmarks"/>
 				</fo:bookmark>
 			</xsl:if>
-		</fo:bookmark>	
+		</fo:bookmark>
+		<fo:bookmark>
+			<xsl:attribute name="internal-destination">AttachmentList</xsl:attribute>
+			<fo:bookmark-title>List of All Attachments</fo:bookmark-title>
+		</fo:bookmark>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Message" mode="RenderBookmarks">
@@ -122,59 +194,224 @@
 	<xsl:template name="declarations">
 		<xsl:if test="$fo-processor='fop'">
 			<fo:declarations>
-				<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
-					<pdf:embedded-file>
-						<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
-						<xsl:attribute name="description">Source file for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
-						<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
-					</pdf:embedded-file>				
-				</xsl:for-each>
-				<!--xsl:for-each select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/')))]">-->
-				<xsl:for-each select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
-					<pdf:embedded-file>
-						<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
-						<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
-						<xsl:attribute name="src">
-							<xsl:call-template name="data-uri">
-								<xsl:with-param name="content-type" select="../eaxs:ContentType"/>
-								<xsl:with-param name="transfer-encoding" select="eaxs:TransferEncoding"/>
-								<xsl:with-param name="content" select="eaxs:Content"/>
-							</xsl:call-template>
-						</xsl:attribute>
-					</pdf:embedded-file>								
-				</xsl:for-each>
-				<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent">
-					<xsl:variable name="rel-path">
-						<xsl:call-template name="concat-path">
-							<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
-							<xsl:with-param name="path2" select="normalize-space(eaxs:RelPath)"/>
-						</xsl:call-template>
-					</xsl:variable>
-					<pdf:embedded-file>
-						<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
-						<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
-						<xsl:choose>
-							<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'false'">
-								<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri($rel-path, fn:base-uri())"/>)</xsl:attribute>								
-							</xsl:when>
-							<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'true'">
-								<xsl:attribute name="src">
-									<xsl:call-template name="data-uri">
-										<xsl:with-param name="transfer-encoding" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:TransferEncoding"/>
-										<xsl:with-param name="content-type" select="../eaxs:ContentType"/>
-										<xsl:with-param name="content" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Content"/>
-									</xsl:call-template>
-								</xsl:attribute>																
-							</xsl:when>
-						</xsl:choose>
-					</pdf:embedded-file>								
-				</xsl:for-each>
+				<xsl:call-template name="declarations-attachments"/>
+				<xsl:call-template name="xmp"/>
+				<pdf:info>
+					<pdf:name key="NAME_FOP">VALUE_FOP</pdf:name>
+				</pdf:info>
 			</fo:declarations>
 		</xsl:if>
 	</xsl:template>
 	
+	<xsl:template name="xmp">
+		
+		<!-- get current date time, converted to Zulu time, and formatted as ISO 8601 without fractional seconds -->
+		<xsl:variable name="datetime-string" select="fn:format-dateTime(fn:adjust-dateTime-to-timezone(fn:current-dateTime(),xs:dayTimeDuration('P0D')),'[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
+		
+		<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 9.0-c000 79.cca54b0, 2022/11/26-09:29:55        ">
+			<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+				
+				<xsl:if test="$fo-processor='xep'"><!-- FOP can't seem to deal with extension schema -->
+					<rdf:Description rdf:about=""
+						xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+						xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+						xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+						>
+						<pdfaExtension:schemas>
+							<rdf:Bag>
+								<rdf:li>
+									<rdf:Description 
+										xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+										xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+										xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+										>
+										<pdfaSchema:schema>Archival PDF (PDF/A) Profile Identification schema</pdfaSchema:schema>
+										<pdfaSchema:namespaceURI>http://www.aiim.org/pdfa/ns/id/</pdfaSchema:namespaceURI>
+										<pdfaSchema:prefix>pdfaid</pdfaSchema:prefix>
+										<pdfaSchema:property>
+											<rdf:Seq>
+												<rdf:li>
+													<rdf:Description 
+														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+														>
+														<pdfaProperty:category>internal</pdfaProperty:category>
+														<pdfaProperty:description>The PDF/A conformance level, a, b, u, to which the document complies.</pdfaProperty:description>
+														<pdfaProperty:name>conformance</pdfaProperty:name>
+														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+													</rdf:Description>
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description 
+														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+														>
+														<pdfaProperty:category>internal</pdfaProperty:category>
+														<pdfaProperty:description>The part of the PDF/A profile to which the document complies.</pdfaProperty:description>
+														<pdfaProperty:name>part</pdfaProperty:name>
+														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+													</rdf:Description>
+												</rdf:li>
+											</rdf:Seq>
+										</pdfaSchema:property>
+									</rdf:Description>
+								</rdf:li>
+								<rdf:li>
+									<rdf:Description  
+										xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+										xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+										xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+										>
+										<pdfaSchema:schema>EA PDF (PDF/mail) Profile Identification schema</pdfaSchema:schema>
+										<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/id/</pdfaSchema:namespaceURI>
+										<pdfaSchema:prefix>pdfmailid</pdfaSchema:prefix>
+										<pdfaSchema:property>
+											<rdf:Seq>
+												<rdf:li>
+													<rdf:Description 
+														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+														>
+														<pdfaProperty:category>internal</pdfaProperty:category>
+														<pdfaProperty:description>The PDF/mail conformance level, s, m, or c, to which the document complies.</pdfaProperty:description>
+														<pdfaProperty:name>conformance</pdfaProperty:name>
+														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+													</rdf:Description>
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description 
+														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+														>
+														<pdfaProperty:category>internal</pdfaProperty:category>
+														<pdfaProperty:description>The part of the PDF/mail profile to which the document complies.</pdfaProperty:description>
+														<pdfaProperty:name>part</pdfaProperty:name>
+														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+													</rdf:Description>
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description 
+														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+														>
+														<pdfaProperty:category>internal</pdfaProperty:category>
+														<pdfaProperty:description>The revision of the PDF/mail profile to which the document complies.</pdfaProperty:description>
+														<pdfaProperty:name>rev</pdfaProperty:name>
+														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+													</rdf:Description>
+												</rdf:li>
+											</rdf:Seq>
+										</pdfaSchema:property>
+									</rdf:Description>
+								</rdf:li>
+							</rdf:Bag>
+						</pdfaExtension:schemas>
+					</rdf:Description>
+					
+				</xsl:if>
+				
+				<rdf:Description rdf:about=""
+					xmlns:dc="http://purl.org/dc/elements/1.1/"
+					
+					xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+					xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/"
+					xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+					
+					xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+					
+					xmlns:pdfmail="http://www.pdfa.org/eapdf/"
+					xmlns:pdfmailid="http://www.pdfa.org/eapdf/ns/id/"
+					
+					>
+					
+					<dc:format>application/pdf</dc:format>
+					<dc:language>
+						<rdf:Bag>
+							<rdf:li>x-unknown</rdf:li>
+						</rdf:Bag>
+					</dc:language>
+					<dc:date>
+						<rdf:Seq>
+							<rdf:li><xsl:value-of select="$datetime-string"/></rdf:li>
+						</rdf:Seq>
+					</dc:date>
+					
+					<pdf:Producer>UIUCLibrary.EaPdf</pdf:Producer>
+					<pdf:PDFVersion>1.7</pdf:PDFVersion>
+					
+					<pdfaid:part>3</pdfaid:part>
+					<pdfaid:conformance>U</pdfaid:conformance>
+					
+					<pdfmailid:part>1</pdfmailid:part>
+					<pdfmailid:rev>2022</pdfmailid:rev>
+					<pdfmailid:conformance>m</pdfmailid:conformance>
+					
+					<xmp:CreatorTool>UIUCLibrary.EaPdf</xmp:CreatorTool>
+					<xmp:MetadataDate><xsl:value-of select="$datetime-string"/></xmp:MetadataDate>
+					<xmp:CreateDate><xsl:value-of select="$datetime-string"/></xmp:CreateDate>
+					<xmp:ModifyDate><xsl:value-of select="$datetime-string"/></xmp:ModifyDate>
+				</rdf:Description>
+				
+			</rdf:RDF>
+		</x:xmpmeta>
+	</xsl:template>
+	
+	<xsl:template name="declarations-attachments">
+		<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
+			<pdf:embedded-file>
+				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
+				<xsl:attribute name="description">Source file for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
+				<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+			</pdf:embedded-file>				
+		</xsl:for-each>
+		<xsl:for-each select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+			<pdf:embedded-file>
+				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
+				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
+				<xsl:attribute name="src">
+					<xsl:call-template name="data-uri">
+						<xsl:with-param name="content-type" select="../eaxs:ContentType"/>
+						<xsl:with-param name="transfer-encoding" select="eaxs:TransferEncoding"/>
+						<xsl:with-param name="content" select="eaxs:Content"/>
+					</xsl:call-template>
+				</xsl:attribute>
+			</pdf:embedded-file>								
+		</xsl:for-each>
+		<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent">
+			<xsl:variable name="rel-path">
+				<xsl:call-template name="concat-path">
+					<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
+					<xsl:with-param name="path2" select="normalize-space(eaxs:RelPath)"/>
+				</xsl:call-template>
+			</xsl:variable>
+			<pdf:embedded-file>
+				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
+				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
+				<xsl:choose>
+					<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'false'">
+						<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri($rel-path, fn:base-uri())"/>)</xsl:attribute>								
+					</xsl:when>
+					<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'true'">
+						<xsl:attribute name="src">
+							<xsl:call-template name="data-uri">
+								<xsl:with-param name="transfer-encoding" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:TransferEncoding"/>
+								<xsl:with-param name="content-type" select="../eaxs:ContentType"/>
+								<xsl:with-param name="content" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Content"/>
+							</xsl:call-template>
+						</xsl:attribute>																
+					</xsl:when>
+				</xsl:choose>
+			</pdf:embedded-file>								
+		</xsl:for-each>		
+	</xsl:template>
+	
 	<xsl:template name="CoverPage">
-		<fo:block page-break-after="always">
+		<fo:block id="CoverPage" page-break-after="always">
 			<fo:block xsl:use-attribute-sets="h1">PDF Email Archive (PDF/mail-1m)</fo:block>
 			<fo:block xsl:use-attribute-sets="h2">
 				<xsl:text>Created: </xsl:text>
@@ -198,7 +435,7 @@
 			</xsl:choose>
 			<fo:block xsl:use-attribute-sets="h2">Global Id: <xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block>
 			
-			<!-- QUESTIOIN: Do not count child messages? -->
+			<!-- QUESTION: Do not count child messages? -->
 			<fo:block xsl:use-attribute-sets="h2">Message Count: <xsl:value-of select="count(//eaxs:Message)"/></fo:block>
 			<!-- QUESTION: Only count distinct attachments, based on the hash? -->
 			<fo:block xsl:use-attribute-sets="h2">Attachment Count: <xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block>
@@ -213,13 +450,27 @@
 						Folder: <xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Name"/>
 						<xsl:choose>
 							<xsl:when test="$fo-processor='fop'">
-								<fo:basic-link>
-									<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
-									<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
-								</fo:basic-link>
+								<xsl:choose>
+									<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
+										<fo:basic-link>
+											<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+											<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Go To Source File</fo:inline>)</fo:inline>
+										</fo:basic-link>										
+									</xsl:when>
+									<xsl:otherwise>
+										<fo:basic-link>
+											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+											<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link"  font-size="small">Go To Source File</fo:inline>
+										</fo:basic-link>
+									</xsl:otherwise>
+								</xsl:choose>
 							</xsl:when>
 							<xsl:when test="$fo-processor='xep'">
-								<fo:inline font-size="small"> (Open Source File) &nbsp;&nbsp;
+								<fo:basic-link>
+									<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+									<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link"  font-size="small">Go To Source File</fo:inline>
+								</fo:basic-link>
+								<fo:inline font-size="small">&nbsp;&nbsp;  
 									<rx:pdf-comment>
 										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:RelPath"/></xsl:attribute>
 										<rx:pdf-file-attachment icon-type="paperclip">
@@ -246,10 +497,20 @@
 						<fo:inline font-size="small"> (<xsl:value-of select="count(eaxs:Message)"/> Messages)</fo:inline>
 						<xsl:choose>
 							<xsl:when test="$fo-processor='fop'">
-								<fo:basic-link>
-									<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
-									<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
-								</fo:basic-link>
+								<xsl:choose>
+									<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
+										<fo:basic-link>
+											<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+											<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
+										</fo:basic-link>
+									</xsl:when>
+									<xsl:otherwise>
+										<fo:basic-link>
+											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+											<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Attachment</fo:inline>
+										</fo:basic-link>
+									</xsl:otherwise>
+								</xsl:choose>
 							</xsl:when>
 							<xsl:when test="$fo-processor='xep'">
 								<fo:inline font-size="small">
@@ -267,7 +528,7 @@
 						</xsl:choose>
 						<fo:basic-link>
 							<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
-							<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Go To First Message</fo:inline>)</fo:inline>
+							<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To First Message</fo:inline>
 						</fo:basic-link>
 					</fo:block>
 					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]" mode="RenderToc"/>
@@ -544,7 +805,7 @@
 					<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and (fn:lower-case(normalize-space(.)) = 'text/plain' or fn:lower-case(normalize-space(.)) = 'text/html')">
 						<fo:basic-link>
 							<xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(../eaxs:BodyContent)"/></xsl:attribute>									
-							<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Go To Content</fo:inline>)</fo:inline>
+							<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Content</fo:inline>
 						</fo:basic-link>												
 					</xsl:if>
 					<xsl:if test="following-sibling::eaxs:ContentName != following-sibling::eaxs:DispositionFileName">
@@ -876,13 +1137,27 @@
 		<xsl:if test="$single-body/eaxs:ExtBodyContent or lower-case(normalize-space($single-body/eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space($single-body/@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space($single-body/eaxs:ContentType)),'text/')))">
 			<xsl:choose>
 				<xsl:when test="$fo-processor='fop'">
-					<fo:basic-link>
-						<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/>)</xsl:attribute>
-						<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Open Attachment</fo:inline>)</fo:inline>
-					</fo:basic-link>												
+					<xsl:choose>
+						<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
+							<fo:basic-link>
+								<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/>)</xsl:attribute>
+								<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Open Attachment</fo:inline>)</fo:inline>
+							</fo:basic-link>	
+						</xsl:when>
+						<xsl:otherwise>
+							<fo:basic-link>
+								<xsl:attribute name="internal-destination">ATT_<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+								<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Attachment</fo:inline>	
+							</fo:basic-link>
+						</xsl:otherwise>
+					</xsl:choose>
 				</xsl:when>
 				<xsl:when test="$fo-processor='xep'">
-					<fo:inline font-size="small"> (Open Attachment) &nbsp;&nbsp;
+					<fo:basic-link>
+						<xsl:attribute name="internal-destination">ATT_<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+						<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Attachment</fo:inline>	
+					</fo:basic-link>
+					<fo:inline font-size="small">&nbsp;&nbsp;
 						<rx:pdf-comment>
 							<xsl:attribute name="title">Attachment &mdash; </xsl:attribute>
 							<rx:pdf-file-attachment icon-type="paperclip">

@@ -26,6 +26,12 @@
     <None Update="eaxs_schema_v2.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="eaxs_to_fo.xslt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="eaxs_xhtml2fo.xsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="eaxs_xhtml_mini.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

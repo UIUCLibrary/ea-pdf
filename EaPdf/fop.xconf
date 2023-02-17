@@ -9,6 +9,8 @@
 
 	<default-page-settings height="11in" width="8.26in"/>
 
+	<accessibility>true</accessibility>
+
 	<renderers>
 		<renderer mime="application/pdf">
 			<pdf-a-mode>PDF/A-3u</pdf-a-mode>
@@ -17,51 +19,53 @@
 				<value>flate</value>
 			</filterList>
 
+			<output-profile>file:/C:/Program Files/RenderX/XEP/sRGB2014.icc</output-profile>
+
 			<!-- embed the primary PDF base14 fonts (expect Symbol and DingBats) -->
 			<fonts>
-				<font embed-url="Arial.ttf" >
+				<font embed-url="Arial.ttf" embedding-mode="full">
 					<font-triplet name="Helvetica" style="normal" weight="normal"/>
 					<font-triplet name="sans-serif" style="normal" weight="normal"/>
 					<font-triplet name="SansSerif" style="normal" weight="normal"/>
 				</font>
-				<font embed-url="ArialI.ttf" >
+				<font embed-url="ArialI.ttf"  embedding-mode="full">
 					<font-triplet name="Helvetica" style="italic" weight="normal"/>
 					<font-triplet name="sans-serif" style="italic" weight="normal"/>
 					<font-triplet name="SansSerif" style="italic" weight="normal"/>
 				</font>
-				<font embed-url="ArialBD.ttf" >
+				<font embed-url="ArialBD.ttf" embedding-mode="full" >
 					<font-triplet name="Helvetica" style="normal" weight="bold"/>
 					<font-triplet name="sans-serif" style="normal" weight="bold"/>
 					<font-triplet name="SansSerif" style="normal" weight="bold"/>
 				</font>
-				<font embed-url="ArialBI.ttf" >
+				<font embed-url="ArialBI.ttf" embedding-mode="full" >
 					<font-triplet name="Helvetica" style="italic" weight="bold"/>
 					<font-triplet name="sans-serif" style="italic" weight="bold"/>
 					<font-triplet name="SansSerif" style="italic" weight="bold"/>
 				</font>
 
-				<font embed-url="Times.ttf" >
+				<font embed-url="Times.ttf"  embedding-mode="full">
 					<font-triplet name="Times" style="normal" weight="normal"/>
 					<font-triplet name="Times Roman" style="normal" weight="normal"/>
 					<font-triplet name="Times-Roman" style="normal" weight="normal"/>
 					<font-triplet name="serif" style="normal" weight="normal"/>
 					<font-triplet name="any" style="normal" weight="normal"/>
 				</font>
-				<font embed-url="TimesI.ttf" >
+				<font embed-url="TimesI.ttf" embedding-mode="full" >
 					<font-triplet name="Times" style="italic" weight="normal"/>
 					<font-triplet name="Times Roman" style="italic" weight="normal"/>
 					<font-triplet name="Times-Roman" style="italic" weight="normal"/>
 					<font-triplet name="serif" style="italic" weight="normal"/>
 					<font-triplet name="any" style="italic" weight="normal"/>
 				</font>
-				<font embed-url="TimesBD.ttf" >
+				<font embed-url="TimesBD.ttf" embedding-mode="full" >
 					<font-triplet name="Times" style="normal" weight="bold"/>
 					<font-triplet name="Times Roman" style="normal" weight="bold"/>
 					<font-triplet name="Times-Roman" style="normal" weight="bold"/>
 					<font-triplet name="serif" style="normal" weight="bold"/>
 					<font-triplet name="any" style="normal" weight="bold"/>
 				</font>
-				<font embed-url="TimesBI.ttf" >
+				<font embed-url="TimesBI.ttf" embedding-mode="full" >
 					<font-triplet name="Times" style="italic" weight="bold"/>
 					<font-triplet name="Times Roman" style="italic" weight="bold"/>
 					<font-triplet name="Times-Roman" style="italic" weight="bold"/>
@@ -69,29 +73,29 @@
 					<font-triplet name="any" style="italic" weight="bold"/>
 				</font>
 
-				<font embed-url="Cour.ttf" >
+				<font embed-url="Cour.ttf" embedding-mode="full" >
 					<font-triplet name="Courier" style="normal" weight="normal"/>
 					<font-triplet name="monospace" style="normal" weight="normal"/>
 					<font-triplet name="Monospaced" style="normal" weight="normal"/>
 				</font>
-				<font embed-url="CourI.ttf" >
+				<font embed-url="CourI.ttf" embedding-mode="full" >
 					<font-triplet name="Courier" style="italic" weight="normal"/>
 					<font-triplet name="monospace" style="italic" weight="normal"/>
 					<font-triplet name="Monospaced" style="italic" weight="normal"/>
 				</font>
-				<font embed-url="CourBD.ttf" >
+				<font embed-url="CourBD.ttf" embedding-mode="full" >
 					<font-triplet name="Courier" style="normal" weight="bold"/>
 					<font-triplet name="monospace" style="normal" weight="bold"/>
 					<font-triplet name="Monospaced" style="normal" weight="bold"/>
 				</font>
-				<font embed-url="CourBI.ttf" >
+				<font embed-url="CourBI.ttf" embedding-mode="full"  >
 					<font-triplet name="Courier" style="italic" weight="bold"/>
 					<font-triplet name="monospace" style="italic" weight="bold"/>
 					<font-triplet name="Monospaced" style="italic" weight="bold"/>
 				</font>
 
 				<!-- any other fonts just get them from the default spot -->
-				<auto-detect/>
+				<!--<auto-detect/>--><!-- Auto-detect interferes with PDF/A compliance -->
 			</fonts>
 		</renderer>
 	</renderers>
