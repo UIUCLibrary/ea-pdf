@@ -211,7 +211,7 @@
 		<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 9.0-c000 79.cca54b0, 2022/11/26-09:29:55        ">
 			<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 				
-				<xsl:if test="$fo-processor='xep'"><!-- FOP can't seem to deal with extension schema -->
+				<xsl:if test="$fo-processor='xep'"><!-- This is required by PDF/A, but FOP can't seem to deal with extension schema, so will probably need to add these during post processing -->
 					<rdf:Description rdf:about=""
 						xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
 						xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
@@ -328,6 +328,18 @@
 					xmlns:pdfmailid="http://www.pdfa.org/eapdf/ns/id/"
 					
 					>
+					
+					<dc:description>
+						<xsl:text>PDF Email Archive</xsl:text> 
+						<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
+							<xsl:text> for Account '</xsl:text><xsl:value-of select="fn:string-join(/eaxs:Account/eaxs:EmailAddress,', ')"/><xsl:text>'</xsl:text>
+						</xsl:if> 
+						<xsl:if test="/eaxs:Account/eaxs:Folder[eaxs:Message]">
+							<xsl:text> for Folder '</xsl:text><xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Name"/><xsl:text>'</xsl:text>							
+						</xsl:if>
+					</dc:description>
+					
+					<dc:identifier><xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></dc:identifier>
 					
 					<dc:format>application/pdf</dc:format>
 					<dc:language>
