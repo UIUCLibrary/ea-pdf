@@ -49,16 +49,16 @@ var host = Host.CreateDefaultBuilder(args)
     .Build();
 
 //get the logger
-var logger = host.Services.GetRequiredService<ILogger<EmailToXmlProcessor>>();
+var logger = host.Services.GetRequiredService<ILogger<EmailToEaxsProcessor>>();
 
 rootCommand.SetHandler((mboxFilePath, outFolderPath, globalId, accntEmails, startingLocalId) => 
 {
     int ret = 0; //Successful return value
     
     //TODO: Get settings from command line options
-    var settings = new EmailToXmlProcessorSettings();
+    var settings = new EmailToEaxsProcessorSettings();
 
-    var emailProc = new EmailToXmlProcessor(logger, settings);
+    var emailProc = new EmailToEaxsProcessor(logger, settings);
 
     try
     {

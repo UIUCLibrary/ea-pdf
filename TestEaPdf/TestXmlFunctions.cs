@@ -19,7 +19,7 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestXmlFunctions
     {
-        ILogger<XmlToPdfProcessor>? logger;
+        ILogger<EaxsToEaPdfProcessor>? logger;
         ILoggerFactory? loggerFactory;
         bool validXml = true;
         List<string> loggedLines = new List<string>();
@@ -41,7 +41,7 @@ namespace UIUCLibrary.TestEaPdf
             //using StringListLogger for testing purposes https://www.nuget.org/packages/Extensions.Logging.ListOfString https://github.com/chrisfcarroll/TestBase
             loggerFactory.AddStringListLogger(loggedLines);
 
-            logger = loggerFactory.CreateLogger<XmlToPdfProcessor>();
+            logger = loggerFactory.CreateLogger<EaxsToEaPdfProcessor>();
             logger.LogDebug("Starting Test");  //all loging done by the test scripts are debug level
         }
 
@@ -59,13 +59,25 @@ namespace UIUCLibrary.TestEaPdf
         }
 
         [TestMethod]
-        public void TestXmlToPdfProcessor()
+        public void TestEaxsToEaPdfProcessor()
         {
-            var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
-            var xsltFile = XmlToPdfProcessor.FO_XSLT;
-            var pdfFile = Path.ChangeExtension(xmlFile, ".pdf");
+            if(logger != null)
+            {
+                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
 
-            XmlToPdfProcessor.Process(xmlFile,xsltFile,pdfFile);
+                File.Delete(Path.ChangeExtension(xmlFile, ".fo"));
+
+                var proc = new EaxsToEaPdfProcessor(logger, new EaxsToEaPdfProcessorSettings());
+
+                proc.ConvertEaxsToPdf(xmlFile);
+
+                Assert.IsTrue(File.Exists(Path.ChangeExtension(xmlFile,".fo")));
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
         }
 
     }

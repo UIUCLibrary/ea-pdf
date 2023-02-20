@@ -27,7 +27,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace UIUCLibrary.EaPdf
 {
-    public class EmailToXmlProcessor
+    public class EmailToEaxsProcessor
     {
         //TODO: Need to add support for TNEF format, especially if will be processing Microsoft PST files
 
@@ -55,7 +55,7 @@ namespace UIUCLibrary.EaPdf
         const string EX_MBOX_FROM_MARKER = "Failed to find mbox From marker";
         const string EX_MBOX_PARSE_HEADERS = "Failed to parse message headers";
 
-        public EmailToXmlProcessorSettings Settings { get; }
+        public EmailToEaxsProcessorSettings Settings { get; }
 
         //stats used for development and debuging
         private readonly Dictionary<string, int> contentTypeCounts = new();
@@ -72,7 +72,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="settings"></param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
-        public EmailToXmlProcessor(ILogger<EmailToXmlProcessor> logger, EmailToXmlProcessorSettings settings)
+        public EmailToEaxsProcessor(ILogger<EmailToEaxsProcessor> logger, EmailToEaxsProcessorSettings settings)
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
