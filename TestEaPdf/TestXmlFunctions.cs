@@ -48,30 +48,126 @@ namespace UIUCLibrary.TestEaPdf
         [TestCleanup]
         public void EndTest()
         {
-            if (logger != null) 
+            if (logger != null)
             {
                 logger.LogDebug($"Information: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count()}");
                 logger.LogDebug($"Warnings: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count()}");
                 logger.LogDebug($"Errors: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count()}");
-                logger.LogDebug("Ending Test"); 
+                logger.LogDebug("Ending Test");
             }
             if (loggerFactory != null) loggerFactory.Dispose();
         }
 
         [TestMethod]
-        public void TestEaxsToEaPdfProcessor()
+        public void Test01SaxonXsltFopTransformer()
         {
-            if(logger != null)
+            if (logger != null)
             {
                 var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                var xsltFile = "eaxs_to_fo.xslt";
+                var foFile = Path.ChangeExtension(xmlFile, "fop");
 
-                File.Delete(Path.ChangeExtension(xmlFile, ".fo"));
+                File.Delete(foFile);
 
-                var proc = new EaxsToEaPdfProcessor(logger, new EaxsToEaPdfProcessorSettings());
+                var messages = new List<(LogLevel level, string message)>();
+                var parms = new Dictionary<string,object>() { { "fo-processor","fop" } };
 
-                proc.ConvertEaxsToPdf(xmlFile);
+                var tran = new SaxonXsltTransformer();
 
-                Assert.IsTrue(File.Exists(Path.ChangeExtension(xmlFile,".fo")));
+                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
+
+                Assert.AreEqual(0, ret);
+
+                Assert.IsTrue(File.Exists(foFile));
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
+        [TestMethod]
+        public void Test02FopToPdfTransformer()
+        {
+            if (logger != null)
+            {
+                var foFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.fop");
+                var configFile = "C:\\Users\\thabi\\Source\\UIUC\\ea-pdf\\EaPdf\\fop.xconf";
+                var pdfFile = Path.ChangeExtension(foFile, "fop.pdf");
+
+                File.Delete(pdfFile);
+
+                var messages = new List<(LogLevel level, string message)>();
+
+                var tran = new FopToPdfTransformer();
+
+                int ret = tran.Transform(foFile, configFile, pdfFile, ref messages);
+
+                Assert.AreEqual(0, ret);
+
+                Assert.IsTrue(File.Exists(pdfFile));
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
+        [TestMethod]
+        public void Test03SaxonXsltXepTransformer()
+        {
+            if (logger != null)
+            {
+                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                var xsltFile = "eaxs_to_fo.xslt";
+                var foFile = Path.ChangeExtension(xmlFile, ".xep");
+
+                File.Delete(foFile);
+
+                var messages = new List<(LogLevel level, string message)>();
+                var parms = new Dictionary<string, object>() { { "fo-processor", "xep" } };
+
+                var tran = new SaxonXsltTransformer();
+
+                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
+
+                Assert.AreEqual(0, ret);
+
+                Assert.IsTrue(File.Exists(foFile));
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
+        [TestMethod]
+        public void Test04XepToPdfTransformer()
+        {
+            if (logger != null)
+            {
+                var foFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xep");
+                var configFile = "C:\\Program Files\\RenderX\\XEP\\xep.xml";
+                var pdfFile = Path.ChangeExtension(foFile, "xep.pdf");
+
+                File.Delete(pdfFile);
+
+                var messages = new List<(LogLevel level, string message)>();
+
+                var tran = new XepToPdfTransformer();
+
+                int ret = tran.Transform(foFile, configFile, pdfFile, ref messages);
+
+                Assert.AreEqual(0, ret);
+
+                Assert.IsTrue(File.Exists(pdfFile));
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
             }
             else
             {
