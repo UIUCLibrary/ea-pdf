@@ -38,6 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="XResources\" />
     <Folder Include="Properties\" />
   </ItemGroup>
 

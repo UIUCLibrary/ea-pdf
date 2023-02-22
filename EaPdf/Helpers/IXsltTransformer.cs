@@ -19,5 +19,8 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="messages"></param>
         /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
         int Transform(string sourceFilePath, string xsltFilePath, string outputFilePath, Dictionary<string,object> xsltParams, ref List<(LogLevel level, string message)> messages);
+
+        string ProcessorVersion { get; }
+
     }
 }

@@ -70,9 +70,13 @@ namespace UIUCLibrary.TestEaPdf
                 File.Delete(foFile);
 
                 var messages = new List<(LogLevel level, string message)>();
-                var parms = new Dictionary<string,object>() { { "fo-processor","fop" } };
+                var parms = new Dictionary<string,object>() { { "fo-processor-version", "FOP Version 2.8" } };
 
                 var tran = new SaxonXsltTransformer();
+
+                var version = tran.ProcessorVersion;
+                Assert.IsTrue(version.StartsWith("Saxon",StringComparison.OrdinalIgnoreCase));
+                logger.LogInformation("Version: " + version);
 
                 int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
 
@@ -102,6 +106,10 @@ namespace UIUCLibrary.TestEaPdf
 
                 var tran = new FopToPdfTransformer();
 
+                var version = tran.ProcessorVersion;
+                Assert.IsTrue(version.StartsWith("FOP", StringComparison.OrdinalIgnoreCase));
+                logger.LogInformation("Version: " + version);
+
                 int ret = tran.Transform(foFile, configFile, pdfFile, ref messages);
 
                 Assert.AreEqual(0, ret);
@@ -129,9 +137,13 @@ namespace UIUCLibrary.TestEaPdf
                 File.Delete(foFile);
 
                 var messages = new List<(LogLevel level, string message)>();
-                var parms = new Dictionary<string, object>() { { "fo-processor", "xep" } };
+                var parms = new Dictionary<string, object>() { { "fo-processor-version", "XEP 4.30.961" } };
 
                 var tran = new SaxonXsltTransformer();
+
+                var version = tran.ProcessorVersion;
+                Assert.IsTrue(version.StartsWith("Saxon", StringComparison.OrdinalIgnoreCase));
+                logger.LogInformation("Version: " + version);
 
                 int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
 
@@ -160,6 +172,10 @@ namespace UIUCLibrary.TestEaPdf
                 var messages = new List<(LogLevel level, string message)>();
 
                 var tran = new XepToPdfTransformer();
+
+                var version = tran.ProcessorVersion;
+                Assert.IsTrue(version.StartsWith("XEP", StringComparison.OrdinalIgnoreCase));
+                logger.LogInformation("Version: " + version);
 
                 int ret = tran.Transform(foFile, configFile, pdfFile, ref messages);
 

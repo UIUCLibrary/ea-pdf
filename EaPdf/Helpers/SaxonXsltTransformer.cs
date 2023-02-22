@@ -18,6 +18,17 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
         }
 
+        public string ProcessorVersion
+        {
+            get
+            {
+                List<(LogLevel level, string message)> messages = new();
+                int status = RunMainClass("net.sf.saxon.Version", ref messages);
+
+                return messages[0].message;
+            }
+        }
+
         /// <summary>
         /// Transform the source file into the output file using the xslt file and parameters
         /// </summary>

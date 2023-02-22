@@ -32,7 +32,9 @@
 	<xsl:param name="icc-profile" select="'file:/C:/Program Files/RenderX/XEP/sRGB2014.icc'"/>
 
 	<!-- TGH Which FO Processor -->
-	<xsl:param name="fo-processor">fop</xsl:param> <!-- Values used: fop or xep -->
+	<xsl:param name="fo-processor-version">FOP Version 2.8</xsl:param> <!-- Values used: fop or xep -->
+	<xsl:variable name="fo-processor" select="fn:lower-case(fn:tokenize($fo-processor-version)[1])"/>
+	<xsl:variable name="producer">UIUCLibrary.EaPdf; <xsl:value-of select="$fo-processor-version"/></xsl:variable>
 	
 	<!-- Applied to FOP processor -->
 	<xsl:param name="use-embedded-file-link">false</xsl:param>
@@ -357,7 +359,7 @@
 						</rdf:Seq>
 					</dc:date>
 					
-					<pdf:Producer>UIUCLibrary.EaPdf</pdf:Producer>
+					<pdf:Producer><xsl:value-of select="$producer"/></pdf:Producer>
 					<pdf:PDFVersion>1.7</pdf:PDFVersion>
 					
 					<pdfaid:part>3</pdfaid:part>
@@ -430,8 +432,14 @@
 		<fo:block id="CoverPage" page-break-after="always">
 			<fo:block xsl:use-attribute-sets="h1">PDF Email Archive (PDF/mail-1m)</fo:block>
 			<fo:block xsl:use-attribute-sets="h2">
-				<xsl:text>Created: </xsl:text>
-				<xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
+				<fo:block>
+					<xsl:text>Created On: </xsl:text>
+					<xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>
+				</fo:block>
+				<fo:block>
+					<xsl:text>Created By: </xsl:text>
+					<xsl:value-of select="$producer"/>
+				</fo:block>
 			</fo:block>
 			<xsl:choose>
 				<xsl:when test="count(/eaxs:Account/eaxs:EmailAddress) > 1">

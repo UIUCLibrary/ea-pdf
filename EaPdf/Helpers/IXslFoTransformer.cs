@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    public interface IFoToPdfTransformer
+    public interface IXslFoTransformer
     {
 
         /// <summary>
@@ -19,5 +19,6 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
         int Transform(string sourceFoFilePath, string configFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages);
 
+        string ProcessorVersion { get; }
     }
 }

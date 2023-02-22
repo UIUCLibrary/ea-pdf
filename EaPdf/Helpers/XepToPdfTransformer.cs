@@ -9,13 +9,26 @@ using System.Threading.Tasks;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    public class XepToPdfTransformer : JavaRunner, IFoToPdfTransformer
+    public class XepToPdfTransformer : JavaRunner, IXslFoTransformer
     {
         const string CLASS_PATH = "C:\\Program Files\\RenderX\\XEP\\lib\\xep.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon-xml-apis.jar;C:\\Program Files\\RenderX\\XEP\\lib\\xt.jar";
         const string MAIN_CLASS = "com.renderx.xep.XSLDriver";
 
         public XepToPdfTransformer() : base(CLASS_PATH)
         {
+        }
+
+        public string ProcessorVersion
+        {
+            get
+            {
+                var args = "-version";
+                List<(LogLevel level, string message)> messages = new();
+
+                int status = RunMainClass(MAIN_CLASS, args, ref messages);
+
+                return messages[0].message;
+            }
         }
 
         /// <summary>

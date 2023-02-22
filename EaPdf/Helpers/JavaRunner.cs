@@ -53,9 +53,14 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (!string.IsNullOrWhiteSpace(arguments))
                 args += $" {arguments}";
 
-            var workingDir = Path.GetDirectoryName(jarPath) ?? "";
+            var workingDir = Path.GetDirectoryName(jarPath) ?? "";  //for fop the working dir should contain the fop.jar file
 
             return Run(args, workingDir, ref messages);
+        }
+
+        public int RunMainClass(string mainClass, ref List<(LogLevel level, string message)> messages)
+        {
+            return this.RunMainClass(mainClass, "", ref messages);
         }
 
 
