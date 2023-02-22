@@ -330,13 +330,17 @@
 					>
 					
 					<dc:description>
-						<xsl:text>PDF Email Archive</xsl:text> 
-						<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
-							<xsl:text> for Account '</xsl:text><xsl:value-of select="fn:string-join(/eaxs:Account/eaxs:EmailAddress,', ')"/><xsl:text>'</xsl:text>
-						</xsl:if> 
-						<xsl:if test="/eaxs:Account/eaxs:Folder[eaxs:Message]">
-							<xsl:text> for Folder '</xsl:text><xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Name"/><xsl:text>'</xsl:text>							
-						</xsl:if>
+						<rdf:Alt>
+							<rdf:li xml:lang="en">
+								<xsl:text>PDF Email Archive</xsl:text> 
+								<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
+									<xsl:text> for Account '</xsl:text><xsl:value-of select="fn:string-join(/eaxs:Account/eaxs:EmailAddress,', ')"/><xsl:text>'</xsl:text>
+								</xsl:if> 
+								<xsl:if test="/eaxs:Account/eaxs:Folder[eaxs:Message]">
+									<xsl:text> for Folder '</xsl:text><xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Name"/><xsl:text>'</xsl:text>							
+								</xsl:if>								
+							</rdf:li>
+						</rdf:Alt>
 					</dc:description>
 					
 					<dc:identifier><xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></dc:identifier>
