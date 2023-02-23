@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<role-map xmlns="http://www.renderx.com/XEP/config">
+
+  <!-- ======================================================= -->
+  <!-- PDF Structure Types                                     -->
+  <!-- ======================================================= -->
+
+  <!-- Maps input XSL-FO elements to the PDF structure types -->
+  
+  <structure-elements>
+      <structure-element name="root" role-mapping="Root"/>
+      <structure-element name="page-sequence" role-mapping="PageSequence"/>
+      <structure-element name="block" role-mapping="Block"/>
+      <structure-element name="leader" role-mapping="Leader"/>
+      <structure-element name="page-number" role-mapping="PageNumber"/>
+      <structure-element name="page-number-citation" role-mapping="PageNumberCitation"/>
+      <structure-element name="page-number-citation-last" role-mapping="PageNumberCitationLast"/>
+      <structure-element name="external-graphic" role-mapping="ExternalGraphic"/>
+      <structure-element name="instream-foreign-object" role-mapping="InstreamForeignObject"/>
+      <structure-element name="basic-link" role-mapping="BasicLink"/>
+      <structure-element name="footnote" role-mapping="Footnote"/>
+      <structure-element name="footnote-label" role-mapping="FootnoteLabel"/>
+      <structure-element name="footnote-body" role-mapping="FootnoteBody"/>
+      <structure-element name="list-block" role-mapping="ListBlock"/>
+      <structure-element name="list-item" role-mapping="ListItem"/>
+      <structure-element name="list-item-label" role-mapping="ListItemLabel"/>
+      <structure-element name="list-item-body" role-mapping="ListItemBody"/>
+      <structure-element name="table" role-mapping="Table"/>
+      <structure-element name="table-row" role-mapping="TableRow"/>
+      <structure-element name="header-table-cell" role-mapping="HeaderTableCell"/>
+      <structure-element name="body-table-cell" role-mapping="BodyTableCell"/>
+      <structure-element name="footer-table-cell" role-mapping="FooterTableCell"/>
+      <structure-element name="flow" role-mapping="Flow"/>
+      <structure-element name="static-content" role-mapping="StaticContent"/>
+      <structure-element name="flow-section" role-mapping="FlowSection"/>
+      <structure-element name="block-container" role-mapping="BlockContainer"/>
+      <structure-element name="inline" role-mapping="Inline"/>
+      <structure-element name="wrapper" role-mapping="Wrapper"/>
+      <structure-element name="table-header" role-mapping="TableHeader"/>
+      <structure-element name="table-body" role-mapping="TableBody"/>
+      <structure-element name="table-footer" role-mapping="TableFooter"/>
+      <structure-element name="ruler" role-mapping="Ruler"/>
+      <structure-element name="pdf-form-field" role-mapping="PdfFormField"/>
+  </structure-elements>
+
+  <!-- Standard structure types -->
+  <structure-elements standard="true">
+      <!-- Grouping elements -->
+      <structure-element name="Document" />
+      <structure-element name="Part" />
+      <structure-element name="Art" />
+      <structure-element name="Div" />
+      <structure-element name="Sect" />
+      <structure-element name="BlockQuote" />
+      <structure-element name="Caption" />
+      <structure-element name="TOC" />
+      <structure-element name="TOCI" />
+      <structure-element name="Index" />
+      <structure-element name="NonStruct" />
+      <structure-element name="Private" />
+      <!-- Paragraphlike elements -->
+      <structure-element name="P" />
+      <structure-element name="H" />
+      <structure-element name="H1" />
+      <structure-element name="H2" />
+      <structure-element name="H3" />
+      <structure-element name="H4" />
+      <structure-element name="H5" />
+      <structure-element name="H6" />
+      <!-- List elements -->
+      <structure-element name="L" />
+      <structure-element name="LI" />
+      <structure-element name="Lbl" />
+      <structure-element name="LBody" />
+      <!-- Table elements -->
+      <structure-element name="Table" />
+      <structure-element name="TR" />
+      <structure-element name="TH" />
+      <structure-element name="TD" />
+      <structure-element name="THead" />
+      <structure-element name="TBody" />
+      <structure-element name="TFoot" />
+      <!-- Inline-level elements -->
+      <structure-element name="Span" />
+      <structure-element name="Quote" />
+      <structure-element name="Note" />
+      <structure-element name="Reference" />
+      <structure-element name="BibEntry" />
+      <structure-element name="Code" />
+      <structure-element name="Link" />
+      <structure-element name="Annot" />
+      <structure-element name="Ruby" />
+      <structure-element name="Warichu" />
+      <!-- Illustration elements -->
+      <structure-element name="Figure" />
+      <structure-element name="Formula" />
+      <structure-element name="Form" />
+      <!-- 'Artifact' is a special value -->
+      <structure-element name="Artifact" />
+    </structure-elements>
+
+
+  <!-- The aliases for XEP structure types -->
+      <structure-alias name="Root" value="Document"/>
+      <structure-alias name="PageSequence" value="Part"/>
+      <structure-alias name="Flow" value="Sect"/>
+      <structure-alias name="StaticContent" value="Sect"/>
+      <structure-alias name="FlowSection" value="Sect"/>
+      <structure-alias name="BlockContainer" value="Div"/>
+      <structure-alias name="Block" value="P"/>
+      <structure-alias name="Inline" value="Span"/>
+      <structure-alias name="Wrapper" value="Span"/>
+      <structure-alias name="Leader" value="Span"/>
+      <structure-alias name="Ruler" value="Span"/>
+      <structure-alias name="PageNumber" value="Quote"/>
+      <structure-alias name="PageNumberCitation" value="Quote"/>
+      <structure-alias name="PageNumberCitationLast" value="Quote"/>
+      <structure-alias name="ExternalGraphic" value="Figure"/>
+      <structure-alias name="InstreamForeignObject" value="Figure"/>
+      <structure-alias name="BasicLink" value="Link"/>
+      <structure-alias name="Footnote" value="Note"/>
+      <structure-alias name="FootnoteLabel" value="Span"/>
+      <structure-alias name="FootnoteBody" value="Sect"/>
+      <structure-alias name="ListBlock" value="L"/>
+      <structure-alias name="ListItem" value="LI"/>
+      <structure-alias name="ListItemLabel" value="Lbl"/>
+      <structure-alias name="ListItemBody" value="LBody"/>
+      <structure-alias name="Table" value="Table"/>
+      <structure-alias name="TableRow" value="TR"/>
+      <structure-alias name="HeaderTableCell" value="TH"/>
+      <structure-alias name="BodyTableCell" value="TD"/>
+      <structure-alias name="FooterTableCell" value="TD"/>
+      <structure-alias name="TableHeader" value="THead"/>
+      <structure-alias name="TableBody" value="TBody"/>
+      <structure-alias name="TableFooter" value="TFoot"/>
+      <structure-alias name="PdfFormField" value="Form"/>
+
+</role-map>

@@ -23,22 +23,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="eaxs_schema_v2.xsd">
+    <None Update="XResources\eaxs_schema_v2.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="eaxs_to_fo.xslt">
+    <None Update="XResources\eaxs_to_fo.xslt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="eaxs_xhtml2fo.xsl">
+    <None Update="XResources\eaxs_xhtml2fo.xsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="eaxs_xhtml_mini.xsd">
+    <None Update="XResources\eaxs_xhtml_mini.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="XResources\" />
     <Folder Include="Properties\" />
   </ItemGroup>
 
