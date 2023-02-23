@@ -49,8 +49,32 @@ namespace UIUCLibrary.EaPdf
                 { "fo-processor-version", _xslfo.ProcessorVersion }
             };
 
-            List<(LogLevel,string)> messages = new();
+            List<(LogLevel level,string message)> messages = new();
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltFilePath, foFilePath, xsltParams, ref messages);
+            foreach(var m in messages)
+            {
+                _logger.Log(m.level, m.message);
+            }
+
+            if (status == 0)
+            {
+                messages.Clear();
+                var status2 = _xslfo.Transform(foFilePath, pdfFilePath, ref messages);
+                foreach (var m in messages)
+                {
+                    _logger.Log(m.level, m.message);
+                }
+                if (status2 != 0)
+                {
+                    throw new Exception("XSLT transformation failed; review log details.");
+                }
+            }
+            else
+            {
+                throw new Exception("FO transformation to PDF failed; review log details.");
+            }
+
+            //TODO: Delete the intermediate FO file
 
 
         }

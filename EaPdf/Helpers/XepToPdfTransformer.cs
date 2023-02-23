@@ -11,12 +11,19 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public class XepToPdfTransformer : JavaRunner, IXslFoTransformer
     {
-        const string CLASS_PATH = "C:\\Program Files\\RenderX\\XEP\\lib\\xep.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon-xml-apis.jar;C:\\Program Files\\RenderX\\XEP\\lib\\xt.jar";
-        const string MAIN_CLASS = "com.renderx.xep.XSLDriver";
+        public const string CLASS_PATH = "C:\\Program Files\\RenderX\\XEP\\lib\\xep.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon-xml-apis.jar;C:\\Program Files\\RenderX\\XEP\\lib\\xt.jar";
+        public const string MAIN_CLASS = "com.renderx.xep.XSLDriver";
 
-        public XepToPdfTransformer() : base(CLASS_PATH)
+        public XepToPdfTransformer(string classPath, string configFilePath) : base(classPath)
+        {
+            ConfigFilePath = configFilePath;
+        }
+
+        public XepToPdfTransformer(string configFilePath) : this(CLASS_PATH, configFilePath)
         {
         }
+
+        public string ConfigFilePath { get; set; }
 
         public string ProcessorVersion
         {
@@ -40,9 +47,9 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="xsltParams"></param>
         /// <param name="messages"></param>
         /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
-        public int Transform(string sourceFoFilePath, string configFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages)
+        public int Transform(string sourceFoFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages)
         {
-            var args = $"\"-DCONFIG={configFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+            var args = $"\"-DCONFIG={ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
 
             int status = RunMainClass(MAIN_CLASS, args, ref messages);
 

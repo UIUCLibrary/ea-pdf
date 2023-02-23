@@ -8,7 +8,7 @@ namespace UIUCLibrary.EaPdf
 {
     public  class EaxsToEaPdfProcessorSettings
     {
-        public string XsltFilePath { get; set; } = "eaxs_to_fo.xslt";
+        public string XsltFilePath { get; set; } = "XResources\\eaxs_to_fo.xslt";
 
 
     }

@@ -23,11 +23,9 @@
     <generator-options format="PDF">
       <!-- <option name="COMPRESS" value="false"/> -->
 	  
-	  <!-- Set to PDF/A-3.  XEP does not support any higher PDF version than 1.4 if using PDF/A-3. XEP does not support the '3u' compliance level. -->
-      <!-- 
+	  <!-- Set to PDF/A-3.  XEP does not support any higher PDF version than 1.4 if using PDF/A-3. XEP does not support the '3u' compliance level. This can be overridden in the XMP metadata.-->
 	  <option name="PDF_VERSION" value="1.4"/>
 	  <option name="PDF_A" value="pdf-a-3b"/>
-	  -->
     </generator-options>
       
     <generator-options format="PostScript">

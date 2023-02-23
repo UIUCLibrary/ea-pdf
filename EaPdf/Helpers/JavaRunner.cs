@@ -11,10 +11,10 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public class JavaRunner
     {
-        const string DEFAULT_JAVA_EXEC = "java";
+        const string DEFAULT_JAVA_EXEC = "java"; //default assumes that java is in the path
         const string DEFAULT_MAX_MEMORY = "1024m";
 
-        public string JavaExec { get; set; } = DEFAULT_JAVA_EXEC; //default assumes that java is in the path
+        public string JavaExec { get; set; } = DEFAULT_JAVA_EXEC; 
         public string MaxMemory { get; set; } = DEFAULT_MAX_MEMORY;
         public string ClassPath { get; set; } = "";
 
