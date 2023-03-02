@@ -116,7 +116,7 @@
 	</xsl:template>
 	
 	<xsl:template name="AttachmentsList">
-		<fo:block id="AttachmentList" xsl:use-attribute-sets="h1">All Attachments</fo:block>
+		<fo:block id="AttachmentList" xsl:use-attribute-sets="h1"><fox:destination internal-destination="AttachmentList"/>All Attachments</fo:block>
 		<fo:block background-color="beige" border="1px solid brown" padding="0.125em">
 			You may need to open the PDF reader's attachments list to download or open these files. Look for the name that matches the long random-looking string of characters.
 		</fo:block>
@@ -125,6 +125,7 @@
 			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
 				<fo:block xsl:use-attribute-sets="dt" font-weight="bold">
 					<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
+					<fox:destination><xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
 					<xsl:value-of select="../eaxs:Name"/>
 				</fo:block>
 				<fo:block xsl:use-attribute-sets="dd">
@@ -138,6 +139,7 @@
 			<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
 				<fo:block xsl:use-attribute-sets="dt"  font-weight="bold">
 					<xsl:attribute name="id">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
+					<fox:destination><xsl:attribute name="internal-destination">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
 					<xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/>
 					<xsl:if test="eaxs:Size">
 						<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'0,000')"/> bytes)</fo:inline>
@@ -430,6 +432,7 @@
 	
 	<xsl:template name="CoverPage">
 		<fo:block id="CoverPage" page-break-after="always">
+			<fox:destination internal-destination="CoverPage"/>
 			<fo:block xsl:use-attribute-sets="h1">PDF Email Archive (PDF/mail-1m)</fo:block>
 			<fo:block xsl:use-attribute-sets="h2">
 				<fo:block>
@@ -564,6 +567,7 @@
 	<xsl:template match="eaxs:Folder" mode="RenderContent">
 		<fo:block>
 			<xsl:attribute name="id"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+			<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute></fox:destination>
 			<xsl:apply-templates select="eaxs:Message" />	
 			<xsl:apply-templates select="eaxs:Folder" mode="RenderContent"/>	
 		</fo:block>
@@ -572,6 +576,7 @@
 	<xsl:template match="eaxs:Message">
 		<fo:block page-break-after="always">
 			<xsl:attribute name="id">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
+			<fox:destination><xsl:attribute name="internal-destination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>
 			<fo:block xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
 			<xsl:call-template name="MessageHeaderTocAndContent"/>
 		</fo:block>
@@ -901,6 +906,7 @@
 			<!-- only render content which is text and which is not an attachment -->
 			<fo:block>
 				<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+				<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
 				<xsl:choose>
 					<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
 						<!-- Only put the header if there are multiple bodies -->
@@ -973,6 +979,7 @@
 			<xsl:otherwise>
 				<fo:block>
 					<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+					<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
 					<fo:inline font-style="italic">BLANK</fo:inline>					
 				</fo:block>
 			</xsl:otherwise>
@@ -989,6 +996,7 @@
 			<xsl:otherwise>
 				<fo:block>
 					<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+					<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
 					<fo:inline font-style="italic">BLANK</fo:inline>
 				</fo:block>
 			</xsl:otherwise>

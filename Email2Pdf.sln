@@ -9,8 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestEaPdf", "TestEaPdf\Test
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{100AE2D8-47A2-44F6-B8AE-B01180FA323C}"
 	ProjectSection(SolutionItems) = preProject
-		README.md = README.md
+		BONEYARD.md = BONEYARD.md
 		DEV_NOTES.md = DEV_NOTES.md
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "DArcMail", "DArcMail\DArcMail.pyproj", "{27A815E6-00A3-4B5C-863A-946EC0012B68}"

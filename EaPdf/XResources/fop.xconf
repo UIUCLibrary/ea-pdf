@@ -17,10 +17,18 @@
 		<renderer mime="application/pdf">
 			<pdf-a-mode>PDF/A-3u</pdf-a-mode>
 			<version>1.7</version>
-			<filterList>
+			<!--<filterList>
 				<value>flate</value>
+			</filterList>-->
+			
+			<filterList>
+				<value>null</value>
 			</filterList>
-
+			<filterList type="image">
+				<value>flate</value>
+				<value>ascii-85</value>
+			</filterList>
+			
 			<output-profile>sRGB2014.icc</output-profile>
 
 			<!-- embed the primary PDF base14 fonts (expect Symbol and DingBats) -->
