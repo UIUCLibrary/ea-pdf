@@ -222,6 +222,7 @@ namespace UIUCLibrary.TestEaPdf
             if (logger != null)
             {
                 var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
                 var configFile = Path.GetFullPath("XResources\\fop.xconf");
 
                 var xslt = new SaxonXsltTransformer();
@@ -230,7 +231,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, set);
 
-                proc.ConvertEaxsToPdf(xmlFile);
+                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
             }
             else
             {
@@ -245,6 +246,7 @@ namespace UIUCLibrary.TestEaPdf
             if (logger != null)
             {
                 var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
                 var configFile = Path.GetFullPath("XResources\\xep.xml");
 
                 var xslt = new SaxonXsltTransformer();
@@ -253,7 +255,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, set);
 
-                proc.ConvertEaxsToPdf(xmlFile);
+                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
             }
             else
             {

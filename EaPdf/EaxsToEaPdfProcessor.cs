@@ -9,6 +9,8 @@ using Fizzler;
 using iTextSharp.text.pdf;
 using iTextSharp.text.xml.xmp;
 using Microsoft.Extensions.Logging;
+using NDepend.Path;
+using Org.BouncyCastle.Crypto.Prng;
 using PdfTemplating.XslFO.ApacheFOP.Serverless;
 using UIUCLibrary.EaPdf.Helpers;
 
@@ -16,6 +18,9 @@ namespace UIUCLibrary.EaPdf
 {
     public class EaxsToEaPdfProcessor
     {
+
+        public const string EABCC = "eabcc";
+        public const string EABCC_NS = "http://emailarchivesgrant.library.illinois.edu/ns/";
 
         private readonly ILogger _logger;
         private readonly IXsltTransformer _xslt;
@@ -42,10 +47,9 @@ namespace UIUCLibrary.EaPdf
 
         }
 
-        public void ConvertEaxsToPdf(string eaxsFilePath)
+        public void ConvertEaxsToPdf(string eaxsFilePath, string pdfFilePath)
         {
             var foFilePath = Path.ChangeExtension(eaxsFilePath, ".fo");
-            var pdfFilePath = Path.ChangeExtension(eaxsFilePath, ".pdf");
 
             var xsltParams = new Dictionary<string, object>
             {
@@ -53,7 +57,7 @@ namespace UIUCLibrary.EaPdf
             };
 
             List<(LogLevel level, string message)> messages = new();
-            var status = _xslt.Transform(eaxsFilePath, Settings.XsltFilePath, foFilePath, xsltParams, ref messages);
+            var status = _xslt.Transform(eaxsFilePath, Settings.XsltFoFilePath, foFilePath, xsltParams, ref messages);
             foreach (var m in messages)
             {
                 _logger.Log(m.level, m.message);
@@ -69,71 +73,70 @@ namespace UIUCLibrary.EaPdf
                 }
                 if (status2 != 0)
                 {
-                    throw new Exception("XSLT transformation failed; review log details.");
+                    throw new Exception("FO transformation to PDF failed; review log details.");
                 }
             }
             else
             {
-                throw new Exception("FO transformation to PDF failed; review log details.");
+                throw new Exception("EAXS transformation to FO failed; review log details.");
             }
 
             //Delete the intermediate FO file
             File.Delete(foFilePath);
 
             //Do some post processing to add metadata
-            AddXmpToPage(pdfFilePath);
+            AddXmpToPage(eaxsFilePath, pdfFilePath);
         }
 
 
         //https://stackoverflow.com/questions/28427100/how-do-i-add-xmp-metadata-to-each-page-of-an-existing-pdf-using-itextsharp
-        private void AddXmpToPage(string pdfFilePath)
+        private void AddXmpToPage(string eaxsFilePath, string pdfFilePath)
         {
             var outFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
+            var pageMetas = GetXmpMetadataForMessages(eaxsFilePath);
+
             using PdfReader reader = new PdfReader(pdfFilePath);
-            using PdfStamper stamper = new PdfStamper(reader, new FileStream(outFilePath, FileMode.Create),PdfWriter.VERSION_1_7);
+            using PdfStamper stamper = new PdfStamper(reader, new FileStream(outFilePath, FileMode.Create), PdfWriter.VERSION_1_7);
 
-            PdfDictionary? page = GetPageDictWithNamedDestination(reader, "MESSAGE_4");
+            AddXmpExtensionSchema(stamper);
 
-            if (page != null)
+            foreach (var pageMeta in pageMetas)
             {
-                PrStream stream = (PrStream)page.GetAsStream(PdfName.Metadata);
-                if(stream == null)
+                PdfDictionary? page = GetPageDictWithNamedDestination(reader, $"MESSAGE_{pageMeta.Key}");
+                byte[] meta = Encoding.Default.GetBytes(pageMeta.Value);
+
+                if (page != null)
                 {
-                    // We create some XMP bytes
-                    MemoryStream memStrm = new MemoryStream();
-                    XmpWriter xmp = new XmpWriter(memStrm, new PdfDictionary(), PdfWriter.PDFA1B);
-                    //TODO: Add the metadata
-                    xmp.Close();
+                    PrStream stream = (PrStream)page.GetAsStream(PdfName.Metadata);
+                    if (stream == null)
+                    {
+                        // We add the XMP bytes to the writer
+                        PdfIndirectObject ind = stamper.Writer.AddToBody(new PdfStream(meta));
+                        // We add a reference to the XMP bytes to the page dictionary
+                        page.Put(PdfName.Metadata, ind.IndirectReference);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Page for message (LocalId: {LocalId}) already had metadata; it was replaced.", pageMeta.Key);
+                        byte[] xmpBytes = PdfReader.GetStreamBytes(stream);
+                        stream.SetData(meta);
+                    }
 
-                    byte[] bts = memStrm.ToArray();
-                    string s = System.Text.Encoding.Default.GetString(bts);
-
-
-                    // We add the XMP bytes to the writer
-                    PdfIndirectObject ind = stamper.Writer.AddToBody(new PdfStream(memStrm.ToArray()));
-                    // We add a reference to the XMP bytes to the page dictionary
-                    page.Put(PdfName.Metadata, ind.IndirectReference);
                 }
                 else
                 {
-                    byte[] xmpBytes = PdfReader.GetStreamBytes(stream);
-                    //TODO: Modify the XMP metadata
-                    stream.SetData(xmpBytes);
+                    throw new Exception($"Page for message (LocalId: {pageMeta.Key}) was not found.");
                 }
+            }
 
-                stamper.Close();
-                reader.Close();
-            }
-            else
-            {
-                throw new Exception("");
-            }
+            stamper.Close();
+            reader.Close();
+
         }
 
         /// <summary>
         /// Return the page containing the named destination
-        /// Assume PDF version 1.2 or later
         /// </summary>
         /// <param name="reader"></param>
         /// <param name="name"></param>
@@ -158,13 +161,63 @@ namespace UIUCLibrary.EaPdf
         /// The key is the message LocalId and the value is the XMP metadata for that message.
         /// </summary>
         /// <returns></returns>
-        private Dictionary<string,string> GetXmpMetadataForMessage(string eaxsFilePath)
+        private Dictionary<string, string> GetXmpMetadataForMessages(string eaxsFilePath)
         {
             Dictionary<string, string> ret = new();
 
+            var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
 
+            List<(LogLevel level, string message)> messages = new();
+            var status = _xslt.Transform(eaxsFilePath, Settings.XsltXmpFilePath, xmpFilePath, null, ref messages);
+            foreach (var m in messages)
+            {
+                _logger.Log(m.level, m.message);
+            }
+
+            if (status == 0)
+            {
+                XmlDocument xdoc = new();
+                xdoc.Load(xmpFilePath);
+                var xmlns = new XmlNamespaceManager(xdoc.NameTable);
+                xmlns.AddNamespace(EABCC, EABCC_NS);
+                var nodes = xdoc.SelectNodes("//eabcc:message", xmlns);
+                if (nodes != null)
+                {
+                    foreach (XmlElement node in nodes)
+                    {
+                        var id = node.GetAttribute("LocalId");
+                        var meta = node.InnerXml;
+                        ret.Add(id, meta);
+                    }
+                }
+                else
+                {
+                    throw new Exception("EAXS transformation to XMP was corrupt; review log details.");
+                }
+            }
+            else
+            {
+                throw new Exception("EAXS transformation to XMP failed; review log details.");
+            }
+
+            //Delete the intermediate FO file
+            File.Delete(xmpFilePath);
 
             return ret;
+        }
+
+        private void AddXmpExtensionSchema(PdfStamper stamper)
+        {
+            var xmp = File.ReadAllText(Settings.XmpSchemaExtension);
+
+            //Fill in the missing placeholders
+            xmp = xmp.Replace("$description$", "PDF Email Archive for Account 'ACCOUNT' for Folder 'FOLDER'");
+            xmp = xmp.Replace("$global-id$", "GLOBAL_ID");
+            xmp = xmp.Replace("$datetime-string$", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"));
+            xmp = xmp.Replace("$producer$", GetType().Namespace);
+
+            var xmpByt = System.Text.Encoding.Default.GetBytes(xmp);
+            stamper.XmpMetadata = xmpByt;
         }
 
     }

@@ -7,7 +7,7 @@
 	xmlns:xs="http://www.w3.org/2001/XMLSchema"
 	xmlns:fn="http://www.w3.org/2005/xpath-functions"
 	
-	xmlns:eabcc="http://emailarchivesgrant.library.illinois.edu/"
+	xmlns:eabcc="http://emailarchivesgrant.library.illinois.edu/ns/"
 
 	xmlns:x="adobe:ns:meta/"
 	
@@ -40,15 +40,32 @@
 						<dc:identifier><xsl:value-of select="eaxs:MessageId"/></dc:identifier>
 						
 						<xsl:if test="eaxs:Subject">
-							<dc:subject><xsl:value-of select="eaxs:Subject"/></dc:subject>							
+							<dc:subject>
+								<rdf:Bag>
+									<rdf:li>
+										<xsl:value-of select="eaxs:Subject"/>
+									</rdf:li>
+									<xsl:apply-templates select="eaxs:Keywords"/>
+								</rdf:Bag>
+							</dc:subject>							
 						</xsl:if>
-						
-						<xsl:apply-templates select="eaxs:Keywords"/>
-						
-						<xsl:apply-templates select="eaxs:Comments"/>
+
+						<xsl:if test="eaxs:Comments">
+							<dc:description>
+								<rdf:Alt>
+									<xsl:apply-templates select="eaxs:Comments"/>
+								</rdf:Alt>
+							</dc:description>
+						</xsl:if>
 
 						<xsl:if test="eaxs:OrigDate">
-							<dc:date><xsl:value-of select="eaxs:OrigDate"/></dc:date>							
+							<dc:date>
+								<rdf:Seq>
+									<rdf:li>
+										<xsl:value-of select="eaxs:OrigDate"/>
+									</rdf:li>
+								</rdf:Seq>
+							</dc:date>							
 						</xsl:if>
 						
 						<xsl:if test="eaxs:Sender">
@@ -149,19 +166,19 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:InReplyTo">
-		<eapdf:inReplyTo><xsl:value-of/></eapdf:inReplyTo>
+		<eapdf:inReplyTo><xsl:value-of select="."/></eapdf:inReplyTo>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:References">
-		<dcterms:references><xsl:value-of/></dcterms:references>
+		<dcterms:references><xsl:value-of select="."/></dcterms:references>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Keywords">
-		<dc:subject><xsl:value-of/></dc:subject>
+		<rdf:li><xsl:value-of select="."/></rdf:li>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Comments">
-		<dc:description><xsl:value-of/></dc:description>
+		<rdf:li xml:lang="x-default"><xsl:value-of select="."/></rdf:li>
 	</xsl:template>
 	
 </xsl:stylesheet>

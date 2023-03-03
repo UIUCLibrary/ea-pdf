@@ -40,6 +40,8 @@
 	<xsl:param name="use-embedded-file-link">false</xsl:param>
 	<!-- TODO: Instead of embedded-file links, provide a list of attachments at bottom of file along with instructions on how to open attachment list -->
 	
+	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadatat -->
+	
 	<xsl:template name="check-params">
 		<xsl:choose>
 			<xsl:when test="$fo-processor='fop'"/>
@@ -106,13 +108,16 @@
 	</xsl:template>
 	
 	<xsl:template name="xep-metadata">
-		<rx:meta-info>
-			<rx:custom-meta>
-				<xsl:variable name="xmp"><xsl:call-template name="xmp"></xsl:call-template></xsl:variable>
-				<xsl:value-of select="fn:serialize($xmp)"/>
-			</rx:custom-meta>
-			<rx:meta-field name="NAME_XEP" value="VALUE_XEP"/>
-		</rx:meta-info>
+		<xsl:if test="fn:lower-case(normalize-space($generate-xmp)) = 'true'">
+			<rx:meta-info>
+				<rx:custom-meta>
+					<xsl:variable name="xmp"><xsl:call-template name="xmp"></xsl:call-template></xsl:variable>
+					<xsl:value-of select="fn:serialize($xmp)"/>
+				</rx:custom-meta>
+				<!-- other custom metadata fields -->
+				<!-- <rx:meta-field name="NAME_XEP" value="VALUE_XEP"/> -->
+			</rx:meta-info>
+		</xsl:if>
 	</xsl:template>
 	
 	<xsl:template name="AttachmentsList">
@@ -199,10 +204,13 @@
 		<xsl:if test="$fo-processor='fop'">
 			<fo:declarations>
 				<xsl:call-template name="declarations-attachments"/>
-				<xsl:call-template name="xmp"/>
-				<pdf:info>
-					<pdf:name key="NAME_FOP">VALUE_FOP</pdf:name>
-				</pdf:info>
+				<xsl:if test="fn:lower-case(normalize-space($generate-xmp)) = 'true'">
+					<xsl:call-template name="xmp"/>
+					<!-- other custom metadata fields -->
+					<!-- <pdf:info>
+						<pdf:name key="NAME_FOP">VALUE_FOP</pdf:name>
+					</pdf:info> -->
+				</xsl:if>
 			</fo:declarations>
 		</xsl:if>
 	</xsl:template>

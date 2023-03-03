@@ -24,6 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="XResources\EaPdfXmpSchema.xmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="XResources\eaxs_schema_v2.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

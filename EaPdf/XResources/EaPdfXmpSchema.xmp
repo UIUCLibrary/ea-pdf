@@ -1,0 +1,302 @@
+<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+	<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+		<rdf:Description rdf:about=""
+			xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+			xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+			xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+			xmlns:pdfaType="http://www.aiim.org/pdfa/ns/type#"
+			xmlns:pdfaField="http://www.aiim.org/pdfa/ns/field#"
+			>
+			<pdfaExtension:schemas>
+				<rdf:Bag>
+					<rdf:li>
+						<rdf:Description>
+							<pdfaSchema:schema>Email header fields from RFC5322 (originally RFC822) which are deemed signifcant by the PDF/mail specification</pdfaSchema:schema>
+							<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/meta/</pdfaSchema:namespaceURI>
+							<pdfaSchema:prefix>eapdf</pdfaSchema:prefix>
+							<pdfaSchema:property>
+								<rdf:Seq>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>The "Sender:" field specifies the mailbox of the agent responsible for the actual transmission of the message.</pdfaProperty:description>
+											<pdfaProperty:name>sender</pdfaProperty:name>
+											<pdfaProperty:valueType>Agent</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>The "From:" field specifies the author(s) of the message, that is, the mailbox(es) of the person(s) or system(s) responsible for the writing of the message.</pdfaProperty:description>
+											<pdfaProperty:name>from</pdfaProperty:name>
+											<pdfaProperty:valueType>seq Agent</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>The "To:" field contains the address(es) of the primary recipient(s) of the message.</pdfaProperty:description>
+											<pdfaProperty:name>to</pdfaProperty:name>
+											<pdfaProperty:valueType>seq Agent</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description></pdfaProperty:description>
+											<pdfaProperty:name>cc</pdfaProperty:name>
+											<pdfaProperty:valueType>seq Agent</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description></pdfaProperty:description>
+											<pdfaProperty:name>bcc</pdfaProperty:name>
+											<pdfaProperty:valueType>seq Agent</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description></pdfaProperty:description>
+											<pdfaProperty:name>inReplyTo</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+								</rdf:Seq>
+							</pdfaSchema:property>
+							<pdfaSchema:valueType>
+								<rdf:Seq>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaType:description>An agent (eg. person, group, software or physical artifact). The foaf:Agent class is the class of agents; things that do stuff.</pdfaType:description>
+											<pdfaType:namespaceURI>http://xmlns.com/foaf/0.1/</pdfaType:namespaceURI>
+											<pdfaType:prefix>foaf</pdfaType:prefix>
+											<pdfaType:type>Agent</pdfaType:type>
+											<pdfaType:field>
+												<rdf:Seq>
+													<rdf:li>
+														<rdf:Description>
+															<pdfaField:description>A name for some thing</pdfaField:description>
+															<pdfaField:name>name</pdfaField:name>
+															<pdfaField:valueType>Text</pdfaField:valueType>
+														</rdf:Description>
+													</rdf:li>
+													<rdf:li>
+														<rdf:Description>
+															<pdfaField:description>A personal mailbox, ie. an Internet mailbox associated with exactly one owner, the first owner of this mailbox.</pdfaField:description>
+															<pdfaField:name>mbox</pdfaField:name>
+															<pdfaField:valueType>URI</pdfaField:valueType>
+														</rdf:Description>
+													</rdf:li>
+												</rdf:Seq>
+											</pdfaType:field>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaType:description>The foaf:Group class represents a collection of individual agents (and may itself play the role of a foaf:Agent, ie. something that can perform actions).</pdfaType:description>
+											<pdfaType:namespaceURI>http://xmlns.com/foaf/0.1/</pdfaType:namespaceURI>
+											<pdfaType:prefix>foaf</pdfaType:prefix>
+											<pdfaType:type>Group</pdfaType:type>
+										</rdf:Description>
+									</rdf:li>
+								</rdf:Seq>
+							</pdfaSchema:valueType>
+						</rdf:Description>
+					</rdf:li>
+					<rdf:li>
+						<rdf:Description>
+							<pdfaSchema:schema>FOAF (an acronym of friend of a friend) is a machine-readable ontology describing persons, their activities and their relations to other people and objects.</pdfaSchema:schema>
+							<pdfaSchema:namespaceURI>http://xmlns.com/foaf/0.1/</pdfaSchema:namespaceURI>
+							<pdfaSchema:prefix>foaf</pdfaSchema:prefix>
+							<pdfaSchema:property>
+								<rdf:Seq>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>A name for some thing</pdfaProperty:description>
+											<pdfaProperty:name>name</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>A personal mailbox, ie. an Internet mailbox associated with exactly one owner, the first owner of this mailbox.</pdfaProperty:description>
+											<pdfaProperty:name>mbox</pdfaProperty:name>
+											<pdfaProperty:valueType>URI</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>Indicates a member of a Group</pdfaProperty:description>
+											<pdfaProperty:name>member</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+								</rdf:Seq>
+							</pdfaSchema:property>
+						</rdf:Description>
+					</rdf:li>
+					<rdf:li>
+						<rdf:Description>
+							<pdfaSchema:schema>Identifies additional terms coined outside of the original fifteen elements of Dublin Core.</pdfaSchema:schema>
+							<pdfaSchema:namespaceURI>http://purl.org/dc/terms/</pdfaSchema:namespaceURI>
+							<pdfaSchema:prefix>dcterms</pdfaSchema:prefix>
+							<pdfaSchema:property>
+								<rdf:Seq>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>A related resource that is referenced, cited, or otherwise pointed to by the described resource.</pdfaProperty:description>
+											<pdfaProperty:name>references</pdfaProperty:name>
+											<pdfaProperty:valueType>URI</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+								</rdf:Seq>
+							</pdfaSchema:property>
+						</rdf:Description>
+					</rdf:li>
+					<rdf:li>
+						<rdf:Description>
+							<pdfaSchema:schema>Archival PDF (PDF/A) Profile Identification schema</pdfaSchema:schema>
+							<pdfaSchema:namespaceURI>http://www.aiim.org/pdfa/ns/id/</pdfaSchema:namespaceURI>
+							<pdfaSchema:prefix>pdfaid</pdfaSchema:prefix>
+							<pdfaSchema:property>
+								<rdf:Seq>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>internal</pdfaProperty:category>
+											<pdfaProperty:description>The PDF/A conformance level, a, b, u, to which the document complies.</pdfaProperty:description>
+											<pdfaProperty:name>conformance</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>internal</pdfaProperty:category>
+											<pdfaProperty:description>The part of the PDF/A profile to which the document complies.</pdfaProperty:description>
+											<pdfaProperty:name>part</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+								</rdf:Seq>
+							</pdfaSchema:property>
+						</rdf:Description>
+					</rdf:li>
+					<rdf:li>
+						<rdf:Description>
+							<pdfaSchema:schema>EA PDF (PDF/mail) Profile Identification schema</pdfaSchema:schema>
+							<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/id/</pdfaSchema:namespaceURI>
+							<pdfaSchema:prefix>pdfmailid</pdfaSchema:prefix>
+							<pdfaSchema:property>
+								<rdf:Seq>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>internal</pdfaProperty:category>
+											<pdfaProperty:description>The PDF/mail conformance level, s, m, or c, to which the document complies.</pdfaProperty:description>
+											<pdfaProperty:name>conformance</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>internal</pdfaProperty:category>
+											<pdfaProperty:description>The part of the PDF/mail profile to which the document complies.</pdfaProperty:description>
+											<pdfaProperty:name>part</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>internal</pdfaProperty:category>
+											<pdfaProperty:description>The revision of the PDF/mail profile to which the document complies.</pdfaProperty:description>
+											<pdfaProperty:name>rev</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>
+									</rdf:li>
+								</rdf:Seq>
+							</pdfaSchema:property>
+						</rdf:Description>
+					</rdf:li>
+				</rdf:Bag>
+			</pdfaExtension:schemas>
+		</rdf:Description>
+		
+		<rdf:Description rdf:about=""
+			xmlns:dc="http://purl.org/dc/elements/1.1/"
+					
+			xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+			xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/"
+			xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+					
+			xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+					
+			xmlns:pdfmail="http://www.pdfa.org/eapdf/"
+			xmlns:pdfmailid="http://www.pdfa.org/eapdf/ns/id/"
+					
+					>
+
+			<dc:description>
+				<rdf:Alt>
+					<rdf:li xml:lang="en">$description$</rdf:li>
+				</rdf:Alt>
+			</dc:description>
+
+			<dc:identifier>$global-id$</dc:identifier>
+
+			<dc:format>application/pdf</dc:format>
+			<dc:language>
+				<rdf:Bag>
+					<rdf:li>x-unknown</rdf:li>
+				</rdf:Bag>
+			</dc:language>
+			<dc:date>
+				<rdf:Seq>
+					<rdf:li>$datetime-string$</rdf:li>
+				</rdf:Seq>
+			</dc:date>
+
+			<pdf:Producer>$producer$</pdf:Producer>
+			<pdf:PDFVersion>1.7</pdf:PDFVersion>
+
+			<pdfaid:part>3</pdfaid:part>
+			<pdfaid:conformance>U</pdfaid:conformance>
+
+			<pdfmailid:part>1</pdfmailid:part>
+			<pdfmailid:rev>2022</pdfmailid:rev>
+			<pdfmailid:conformance>m</pdfmailid:conformance>
+
+			<xmp:CreatorTool>UIUCLibrary.EaPdf</xmp:CreatorTool>
+			<xmp:MetadataDate>$datetime-string$</xmp:MetadataDate>
+			<xmp:CreateDate>$datetime-string$</xmp:CreateDate>
+			<xmp:ModifyDate>$datetime-string$</xmp:ModifyDate>
+		</rdf:Description>
+
+
+	</rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<?xpacket end="w"?>
