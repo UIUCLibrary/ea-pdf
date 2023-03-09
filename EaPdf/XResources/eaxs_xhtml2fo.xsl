@@ -599,9 +599,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:template>
 
   <xsl:template name="process-common-attributes">
-    <xsl:attribute name="role">
-      <xsl:value-of select="concat('html:', local-name())"/>
-    </xsl:attribute>
+    <!-- TGH Add roles or tags as needed for PDF Accessability tagging -->
+    <xsl:variable name="tags" select="('P','H1','H2','H3','H4','H5','H6')"/>
+    <xsl:choose>
+      <xsl:when test="$tags = fn:upper-case(local-name())">
+        <xsl:attribute name="role"><xsl:value-of select="fn:upper-case(local-name())"/></xsl:attribute>
+        <xsl:if test="$fo-processor='xep'">
+          <xsl:attribute name="rx:pdf-structure-tag"><xsl:value-of select="fn:upper-case(local-name())"/></xsl:attribute>          
+        </xsl:if>
+      </xsl:when>
+    </xsl:choose>
 
     <xsl:choose>
       <xsl:when test="@xml:lang">
