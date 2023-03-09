@@ -79,7 +79,7 @@ namespace UIUCLibrary.EaPdf
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _logger.LogTrace("MboxProcessor Created");
+            _logger.LogTrace($"{this.GetType().Name} Created");
 
         }
 

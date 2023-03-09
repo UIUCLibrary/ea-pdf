@@ -17,7 +17,7 @@
 	xmlns:dc="http://purl.org/dc/elements/1.1/"
 	xmlns:dcterms="http://purl.org/dc/terms/"
 	xmlns:foaf="http://xmlns.com/foaf/0.1/"
-	xmlns:eapdf="http://www.pdfa.org/eapdf/ns/meta/"
+	xmlns:eapdf="http://www.pdfa.org/eapdf/ns/"
 	>
 
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="yes" omit-xml-declaration="no" />
@@ -30,6 +30,7 @@
 	
 	<xsl:template match="eaxs:Message">
 		<eabcc:message>
+			<xsl:attribute name="NamedDestination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="LocalId"><xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="MessageId"><xsl:value-of select="eaxs:MessageId"/></xsl:attribute>
 			<xsl:processing-instruction name="xpacket">begin="&#xFEFF;" id="W5M0MpCehiHzreSzNTczkc9d"</xsl:processing-instruction>
@@ -59,13 +60,7 @@
 						</xsl:if>
 
 						<xsl:if test="eaxs:OrigDate">
-							<dc:date>
-								<rdf:Seq>
-									<rdf:li>
-										<xsl:value-of select="eaxs:OrigDate"/>
-									</rdf:li>
-								</rdf:Seq>
-							</dc:date>							
+							<dcterms:created><xsl:value-of select="eaxs:OrigDate"/></dcterms:created>
 						</xsl:if>
 						
 						<xsl:if test="eaxs:Sender">

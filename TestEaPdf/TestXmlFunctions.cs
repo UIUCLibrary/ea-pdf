@@ -227,9 +227,10 @@ namespace UIUCLibrary.TestEaPdf
 
                 var xslt = new SaxonXsltTransformer();
                 var fop = new FopToPdfTransformer(configFile);
+                var iText = new iTextSharpPdfEnhancerFactory();
                 var set = new EaxsToEaPdfProcessorSettings();
 
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, set);
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
 
                 proc.ConvertEaxsToPdf(xmlFile, pdfFile);
             }
@@ -251,9 +252,10 @@ namespace UIUCLibrary.TestEaPdf
 
                 var xslt = new SaxonXsltTransformer();
                 var fop = new XepToPdfTransformer(configFile);
+                var iText = new iTextSharpPdfEnhancerFactory();
                 var set = new EaxsToEaPdfProcessorSettings();
 
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, set);
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
 
                 proc.ConvertEaxsToPdf(xmlFile, pdfFile);
             }
