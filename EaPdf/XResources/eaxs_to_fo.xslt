@@ -66,7 +66,7 @@
 			<xsl:processing-instruction name="xep-pdf-icc-profile">url(<xsl:value-of select="$icc-profile"/>)</xsl:processing-instruction>
 		</xsl:if>
 		
-		<fo:root>
+		<fo:root xml:lang="en">
 			<xsl:attribute name="font-family"><xsl:value-of select="$SansSerifFont"/></xsl:attribute>
 			<xsl:if test="$fo-processor='xep'">
 				<xsl:call-template name="xep-metadata"/>
@@ -216,6 +216,7 @@
 	</xsl:template>
 	
 	<xsl:template name="xmp">
+		<!-- NOTE:  This is actually replaced during a post-processing step in the EAXS to PDF processing step -->
 		
 		<!-- get current date time, converted to Zulu time, and formatted as ISO 8601 without fractional seconds -->
 		<xsl:variable name="datetime-string" select="fn:format-dateTime(fn:adjust-dateTime-to-timezone(fn:current-dateTime(),xs:dayTimeDuration('P0D')),'[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
@@ -951,6 +952,9 @@
 	
 	<xsl:template match="eaxs:DeliveryStatus">
 		<fo:block xsl:use-attribute-sets="delivery-status">
+			<xsl:if test="../eaxs:ContentLanguage">
+				<xsl:attribute name="xml:lang"><xsl:value-of select="../eaxs:ContentLanguage"/></xsl:attribute>
+			</xsl:if>
 			<fo:block xsl:use-attribute-sets="h3">Delivery Status</fo:block>
 			<fo:block xsl:use-attribute-sets="h4">Per Message Fields</fo:block>
 			<fo:list-block provisional-distance-between-starts="10em" provisional-label-separation="0.25em">
@@ -981,6 +985,9 @@
 			<xsl:when test="not(normalize-space(.) = '')">
 				<!-- treat the same as the html <pre> tag -->
 				<fo:block xsl:use-attribute-sets="pre">
+					<xsl:if test="../../eaxs:ContentLanguage">
+						<xsl:attribute name="xml:lang"><xsl:value-of select="../../eaxs:ContentLanguage"/></xsl:attribute>
+					</xsl:if>
 					<xsl:call-template name="process-pre"/>
 				</fo:block>			
 			</xsl:when>	
@@ -998,6 +1005,21 @@
 		<xsl:choose>
 			<xsl:when test="not(normalize-space(.) = '')">
 				<fo:block>
+					<xsl:choose>
+						<xsl:when test="html:html/@xml:lang">
+							<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/@xml:lang"/></xsl:attribute>
+						</xsl:when>
+						<xsl:when test="html:html/@lang">
+							<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/@lang"/></xsl:attribute>
+						</xsl:when>
+						<xsl:when test="html:html/html:head/html:meta[fn:lower-case(@http-equiv)='content-language']">
+							<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/html:head/html:meta[fn:lower-case(@http-equiv)='content-language']/@content"/></xsl:attribute>							
+						</xsl:when>
+						<xsl:when test="../../eaxs:ContentLanguage">
+							<xsl:attribute name="xml:lang"><xsl:value-of select="../../eaxs:ContentLanguage"/></xsl:attribute>
+						</xsl:when>
+					</xsl:choose>
+					<!-- TODO: Also try to determine xml:lang attribute from html root or html head -->
 					<xsl:apply-templates select="html:html/html:body/html:*"/>					
 				</fo:block>
 			</xsl:when>	
