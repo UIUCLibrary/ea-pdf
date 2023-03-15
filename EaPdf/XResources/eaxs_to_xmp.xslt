@@ -31,6 +31,7 @@
 	<xsl:template match="eaxs:Message">
 		<eabcc:message>
 			<xsl:attribute name="NamedDestination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
+			<xsl:attribute name="NamedDestinationEnd">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="LocalId"><xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="MessageId"><xsl:value-of select="eaxs:MessageId"/></xsl:attribute>
 			<xsl:processing-instruction name="xpacket">begin="&#xFEFF;" id="W5M0MpCehiHzreSzNTczkc9d"</xsl:processing-instruction>

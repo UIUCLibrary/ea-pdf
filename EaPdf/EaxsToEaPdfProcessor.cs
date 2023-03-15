@@ -75,11 +75,11 @@ namespace UIUCLibrary.EaPdf
             File.Delete(foFilePath);
 
             //Do some post processing to add metadata
-            AddXmpToPage(eaxsFilePath, pdfFilePath);
+            AddXmp(eaxsFilePath, pdfFilePath);
         }
 
 
-        private void AddXmpToPage(string eaxsFilePath, string pdfFilePath)
+        private void AddXmp(string eaxsFilePath, string pdfFilePath)
         {
             var outFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
@@ -89,7 +89,8 @@ namespace UIUCLibrary.EaPdf
             using var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, outFilePath);
 
             enhancer.SetDocumentXmp(docXmp);
-            enhancer.AddXmpToPages(pageXmps);
+            // enhancer.AddXmpToPages(pageXmps); //Associate XMP with first PDF page of the message
+            enhancer.AddXmpToDParts(pageXmps); //Associate XMP with the PDF DPart of the message
 
 
         }
@@ -97,12 +98,12 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// Return a dictionary of XMP metadata for all the messages in the EAXS file.
-        /// The key is the message LocalId and the value is the XMP metadata for that message.
+        /// The key is start and end named destinations for the message and the value is the XMP metadata for that message.
         /// </summary>
         /// <returns></returns>
-        private Dictionary<string, string> GetXmpMetadataForMessages(string eaxsFilePath)
+        private Dictionary<(string start, string end), string> GetXmpMetadataForMessages(string eaxsFilePath)
         {
-            Dictionary<string, string> ret = new();
+            Dictionary<(string start, string end), string> ret = new();
 
             var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
 
@@ -124,9 +125,10 @@ namespace UIUCLibrary.EaPdf
                 {
                     foreach (XmlElement node in nodes)
                     {
-                        var id = node.GetAttribute("NamedDestination");
+                        var start = node.GetAttribute("NamedDestination");
+                        var end = node.GetAttribute("NamedDestinationEnd");
                         var meta = node.InnerXml;
-                        ret.Add(id, meta);
+                        ret.Add((start, end), meta);
                     }
                 }
                 else
