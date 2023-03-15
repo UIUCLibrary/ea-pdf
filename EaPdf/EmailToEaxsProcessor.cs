@@ -42,11 +42,11 @@ namespace UIUCLibrary.EaPdf
 
         public const string XM = "xm";
         public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2";
-        public const string XM_XSD = "eaxs_schema_v2.xsd";
+        public const string XM_XSD = "XResources/eaxs_schema_v2.xsd";
 
         public const string XHTML = "xhtml";
         public const string XHTML_NS = "http://www.w3.org/1999/xhtml";
-        public const string XHTML_XSD = "eaxs_xhtml_mini.xsd";
+        public const string XHTML_XSD = "XResources/eaxs_xhtml_mini.xsd";
 
         private readonly ILogger _logger;
 
@@ -1320,6 +1320,7 @@ namespace UIUCLibrary.EaPdf
         private long WriteSingleBodyContent(XmlWriter xwriter, MimePart part, long localId, bool expectingBodyContent, MboxProperties mboxProps)
         {
             //if it is text and not an attachment, save embedded in the XML
+            //TODO: Maybe accomodate txtPart.IsEnriched || txtPart.IsRichText instead of treating them as non-text
             if (part is TextPart txtPart && (txtPart.IsPlain || txtPart.IsHtml) && !part.IsAttachment)
             {
                 var (text, encoding, warning) = GetContentText(part);
