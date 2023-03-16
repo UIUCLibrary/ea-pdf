@@ -18,6 +18,9 @@ namespace UIUCLibrary.EaPdf.Helpers
         private readonly PdfStamper _stamper;
         private readonly ILogger _logger;
 
+        /// <summary>
+        /// Dictionary where either the indirect refererence or the page number can be used to get the page data
+        /// </summary>
         private readonly MultiKeyDictionary<PdfIndirectReference, int, PageData> _pages = new(new iTextSharpIndirectReferenceEqualityComparer());
 
         public iTextSharpPdfEnhancer(ILogger logger, string inPdfFilePath, string outPdfFilePath)
@@ -26,6 +29,8 @@ namespace UIUCLibrary.EaPdf.Helpers
             _reader = new PdfReader(inPdfFilePath);
             _stamper = new PdfStamper(_reader, new FileStream(outPdfFilePath, FileMode.Create), PdfWriter.VERSION_1_7);
 
+
+            //populate the page dictionary
             for (int i = 1; i <= _reader.NumberOfPages; i++)
             {
                 var indRef = _reader.GetPageOrigRef(i);
@@ -33,7 +38,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
         }
 
-        //https://stackoverflow.com/questions/28427100/how-do-i-add-xmp-metadata-to-each-page-of-an-existing-pdf-using-itextsharp
+        /// <summary>
+        /// Set the Xmp metadata for a single page
+        /// <see cref="https://stackoverflow.com/questions/28427100/how-do-i-add-xmp-metadata-to-each-page-of-an-existing-pdf-using-itextsharp"/>
+        /// </summary>
+        /// <param name="pageXmps">Dictionary with the named destinations for pages and the corresponding Xmp to set for that page</param>
+        /// <exception cref="Exception"></exception>
         public void AddXmpToPages(Dictionary<(string start, string end), string> pageXmps)
         {
             foreach (var pageMeta in pageXmps)
@@ -66,8 +76,33 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
         }
 
+        /// <summary>
+        /// Add Xmp metadata to a range of pages represented as a DPart
+        /// </summary>
+        /// <param name="pageXmps">Dictionary with the named destinations for start and end pages and the corresponding Xmp to set for that page range</param>
+        /// <exception cref="Exception"></exception>
         public void AddXmpToDParts(Dictionary<(string start, string end), string> pageXmps)
         {
+            var dpartLeafs = new PdfArray(); //collect all the DPart leaf nodes
+
+            //create the indirect references for the new objects
+            var dpartRootIndRef=_stamper.Writer.PdfIndirectReference;
+            var dpartRootNodeIndRef = _stamper.Writer.PdfIndirectReference;
+
+            //create dpartroot
+            var dpartRoot = new PdfDictionary();
+            dpartRoot.Put(new PdfName("Type"), new PdfName("DPartRoot"));
+            dpartRoot.Put(new PdfName("DPartRootNode"), dpartRootNodeIndRef);
+
+            //create the root node
+            var dpartRootNode = new PdfDictionary();
+            dpartRootNode.Put(new PdfName("Type"), new PdfName("DPart"));
+            dpartRootNode.Put(new PdfName("Parent"), dpartRootIndRef);
+
+            //add DPartRoot to the catalog
+            //Note: _stamper.Writer.ExtraCatalog will not work for this
+            _reader.Catalog.Put(new PdfName("DPartRoot"), dpartRootIndRef);
+
             foreach (var pageMeta in pageXmps)
             {
                 var pageStart = GetPageDataForNamedDestination(pageMeta.Key.start);
@@ -82,15 +117,17 @@ namespace UIUCLibrary.EaPdf.Helpers
                     // Add a DPart leaf node that references the start and end pages and the XMP metadata
                     var dpartLeaf = new PdfDictionary();
                     dpartLeaf.Put(new PdfName("Type"), new PdfName("DPart"));
+                    dpartLeaf.Put(new PdfName("Parent"), dpartRootNodeIndRef);
                     dpartLeaf.Put(new PdfName("Start"), pageStart.PageReference);
                     if (pageStart.PageReference != pageEnd.PageReference)
                     {
                         dpartLeaf.Put(new PdfName("End"), pageEnd.PageReference);
                     }
+                    dpartLeaf.Put(new PdfName("DPM"), metaInd.IndirectReference);
 
                     PdfIndirectObject leafInd = _stamper.Writer.AddToBody(dpartLeaf);
 
-                    //add dpart key to pages dictionary, so there is a two-way linkage
+                    //add dpart indirect reference to pages dictionary, so there is a two-way linkage
                     for(int i = pageStart.PageNumber; i <= pageEnd.PageNumber; i++)
                     {
                         if (_pages[i] != null)
@@ -98,14 +135,28 @@ namespace UIUCLibrary.EaPdf.Helpers
                         else
                             throw new Exception($"Page number {i} not found");
                     }
+                    dpartLeafs.Add(leafInd.IndirectReference);
                 }
                 else
                 {
                     throw new Exception($"Start or end page for message (Named Destinations: {pageMeta.Key.start}, {pageMeta.Key.end}) were not found.");
                 }
             }
+
+            //QUESTION: for some reason in the examples, Dparts is an array of an array
+            var outerArr = new PdfArray();
+            outerArr.Add(dpartLeafs);
+            dpartRootNode.Put(new PdfName("DParts"), outerArr);
+
+            //add the new objects
+            var ref1 = _stamper.Writer.AddToBody(dpartRoot, dpartRootIndRef);
+            var ref2 = _stamper.Writer.AddToBody(dpartRootNode, dpartRootNodeIndRef);
         }
 
+        /// <summary>
+        /// Set the document level XMP metadata to the given string
+        /// </summary>
+        /// <param name="xmp"></param>
         public void SetDocumentXmp(string xmp)
         {
             var xmpByt = System.Text.Encoding.Default.GetBytes(xmp);
@@ -113,7 +164,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
 
         /// <summary>
-        /// Return the page dictionary and page indirect reference containing the named destination
+        /// Return the page dictionary, page number, and page indirect reference containing the named destination
         /// </summary>
         /// <param name="name">the name of the destination</param>
         /// <returns></returns>
