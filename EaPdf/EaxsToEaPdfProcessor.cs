@@ -48,18 +48,18 @@ namespace UIUCLibrary.EaPdf
 
             List<(LogLevel level, string message)> messages = new();
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltFoFilePath, foFilePath, xsltParams, ref messages);
-            foreach (var m in messages)
+            foreach (var (level, message) in messages)
             {
-                _logger.Log(m.level, m.message);
+                _logger.Log(level, message);
             }
 
             if (status == 0)
             {
                 messages.Clear();
                 var status2 = _xslfo.Transform(foFilePath, pdfFilePath, ref messages);
-                foreach (var m in messages)
+                foreach (var (level, message) in messages)
                 {
-                    _logger.Log(m.level, m.message);
+                    _logger.Log(level, message);
                 }
                 if (status2 != 0)
                 {
@@ -99,7 +99,7 @@ namespace UIUCLibrary.EaPdf
             var pdfFi = new FileInfo(pdfFilePath);
             var tempFi = new FileInfo(tempOutFilePath);
 
-            if (tempFi.Exists && tempFi.Length >= pdfFi.Length) 
+            if (tempFi.Exists && tempFi.Length >= pdfFi.Length)
             {
                 File.Move(tempOutFilePath, pdfFilePath, true);
             }
@@ -119,9 +119,9 @@ namespace UIUCLibrary.EaPdf
 
             List<(LogLevel level, string message)> messages = new();
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltXmpFilePath, xmpFilePath, null, ref messages);
-            foreach (var m in messages)
+            foreach (var (level, message) in messages)
             {
-                _logger.Log(m.level, m.message);
+                _logger.Log(level, message);
             }
 
             if (status == 0)

@@ -54,7 +54,7 @@ namespace UIUCLibrary.TestEaPdf
                 logger.LogDebug($"Errors: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count()}");
                 logger.LogDebug("Ending Test");
             }
-            if (loggerFactory != null) loggerFactory.Dispose();
+            loggerFactory?.Dispose();
         }
 
 

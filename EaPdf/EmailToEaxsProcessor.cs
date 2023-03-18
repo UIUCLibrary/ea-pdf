@@ -29,8 +29,6 @@ namespace UIUCLibrary.EaPdf
 {
     public class EmailToEaxsProcessor
     {
-        //TODO: Need to add support for TNEF format, especially if will be processing Microsoft PST files
-
         //TODO: Need to check for XML invalid characters almost anyplace I write XML string content, see the WriteElementStringReplacingInvalidChars function
 
         //for LWSP (Linear White Space) detection, compaction, and trimming
@@ -972,11 +970,11 @@ namespace UIUCLibrary.EaPdf
 
             if (message.Date != DateTimeOffset.MinValue && message.Date.Year < 1971)
             {
-                WriteToLogWarningMessage(xwriter, $"The first email was sent in 1971.  '{message.Date.ToString("u")}' must be an invalid date.");
+                WriteToLogWarningMessage(xwriter, $"The first email was sent in 1971.  '{message.Date:u}' must be an invalid date.");
             }
             else if (message.Date.Year > DateTime.Now.Year)
             {
-                WriteToLogWarningMessage(xwriter, $"This is an unlikely email from the future.  '{message.Date.ToString("u")}' must be an invalid date.");
+                WriteToLogWarningMessage(xwriter, $"This is an unlikely email from the future.  '{message.Date:u}' must be an invalid date.");
             }
 
             WriteInternetAddressList(xwriter, message.From, "From");

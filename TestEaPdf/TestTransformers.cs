@@ -52,7 +52,7 @@ namespace UIUCLibrary.TestEaPdf
                 logger.LogDebug($"Errors: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count()}");
                 logger.LogDebug("Ending Test");
             }
-            if (loggerFactory != null) loggerFactory.Dispose();
+            loggerFactory?.Dispose();
         }
 
         //NOTE:  These are named so they will run in order.  Test01 runs first, then Test02, etc.
@@ -79,9 +79,9 @@ namespace UIUCLibrary.TestEaPdf
 
                 int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
 
-                foreach (var m in messages)
+                foreach (var (level, message) in messages)
                 {
-                    logger.Log(m.level, m.message);
+                    logger.Log(level, message);
                 }
 
                 Assert.AreEqual(0, ret);
@@ -117,9 +117,9 @@ namespace UIUCLibrary.TestEaPdf
 
                 int ret = tran.Transform(foFile, pdfFile, ref messages);
 
-                foreach (var m in messages)
+                foreach (var (level, message) in messages)
                 {
-                    logger.Log(m.level, m.message);
+                    logger.Log(level, message);
                 }
 
                 Assert.AreEqual(0, ret);
@@ -159,9 +159,9 @@ namespace UIUCLibrary.TestEaPdf
 
                 int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
 
-                foreach (var m in messages)
+                foreach (var (level, message) in messages)
                 {
-                    logger.Log(m.level, m.message);
+                    logger.Log(level, message);
                 }
 
                 Assert.AreEqual(0, ret);
@@ -197,9 +197,9 @@ namespace UIUCLibrary.TestEaPdf
 
                 int ret = tran.Transform(foFile, pdfFile, ref messages);
 
-                foreach (var m in messages)
+                foreach (var (level, message) in messages)
                 {
-                    logger.Log(m.level, m.message);
+                    logger.Log(level, message);
                 }
 
                 Assert.AreEqual(0, ret);
