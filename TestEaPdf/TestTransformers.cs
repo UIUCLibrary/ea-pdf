@@ -17,17 +17,14 @@ using NDepend.Path;
 namespace UIUCLibrary.TestEaPdf
 {
     [TestClass]
-    public class TestXmlFunctions
+    public class TestTransformers
     {
+        private bool OPEN_PDFS = false;  //set to true to open the PDFs in the default PDF viewer
+
         ILogger<EaxsToEaPdfProcessor>? logger;
         ILoggerFactory? loggerFactory;
-        bool validXml = true;
-        List<string> loggedLines = new List<string>();
-
-        const string UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        const string LOWER = "abcdefghijklmnopqrstuvwxyz";
-
-        string testFilesBaseDirectory = @"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles\Testing";
+        readonly List<string> loggedLines = new();
+        readonly string testFilesBaseDirectory = @"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles\Testing";
 
         [TestInitialize]
         public void InitTest()
@@ -57,6 +54,8 @@ namespace UIUCLibrary.TestEaPdf
             }
             if (loggerFactory != null) loggerFactory.Dispose();
         }
+
+        //NOTE:  These are named so they will run in order.  Test01 runs first, then Test02, etc.
 
         [TestMethod]
         public void Test01SaxonXsltFopTransformer()
@@ -127,7 +126,8 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(File.Exists(pdfFile));
 
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+                if(OPEN_PDFS)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
 
             }
             else
@@ -206,7 +206,8 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(File.Exists(pdfFile));
 
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+                if(OPEN_PDFS)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
 
             }
             else
@@ -216,54 +217,5 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
-        [TestMethod]
-        public void Test05EaxsToPdfProcessorFop()
-        {
-            if (logger != null)
-            {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
-                var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
-                var configFile = Path.GetFullPath("XResources\\fop.xconf");
-
-                var xslt = new SaxonXsltTransformer();
-                var fop = new FopToPdfTransformer(configFile);
-                var iText = new iTextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-
-        }
-
-        [TestMethod]
-        public void Test06EaxsToPdfProcessorXep()
-        {
-            if (logger != null)
-            {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
-                var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
-                var configFile = Path.GetFullPath("XResources\\xep.xml");
-
-                var xslt = new SaxonXsltTransformer();
-                var fop = new XepToPdfTransformer(configFile);
-                var iText = new iTextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-
-        }
     }
 }
