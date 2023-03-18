@@ -15,6 +15,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         private bool disposedValue;
 
         private readonly PdfReader _reader;
+        private readonly Stream _out;
         private readonly PdfStamper _stamper;
         private readonly ILogger _logger;
 
@@ -27,7 +28,8 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             _logger = logger;
             _reader = new PdfReader(inPdfFilePath);
-            _stamper = new PdfStamper(_reader, new FileStream(outPdfFilePath, FileMode.Create), PdfWriter.VERSION_1_7);
+            _out = new FileStream(outPdfFilePath, FileMode.Create);
+            _stamper = new PdfStamper(_reader, _out, PdfWriter.VERSION_1_7);
 
 
             //populate the page dictionary
@@ -194,6 +196,10 @@ namespace UIUCLibrary.EaPdf.Helpers
                     _reader.Close();
                     _stamper.Dispose();
                     _reader.Dispose();
+
+                    _out.Close();
+                    _out.Dispose();
+
                 }
 
                 disposedValue = true;

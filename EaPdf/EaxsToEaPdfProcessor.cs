@@ -81,18 +81,28 @@ namespace UIUCLibrary.EaPdf
 
         private void AddXmp(string eaxsFilePath, string pdfFilePath)
         {
-            var outFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
+            var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
             var pageXmps = GetXmpMetadataForMessages(eaxsFilePath);
             var docXmp = GetDocumentXmp(eaxsFilePath);
 
-            using var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, outFilePath);
+            using var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, tempOutFilePath);
 
             enhancer.SetDocumentXmp(docXmp);
             // enhancer.AddXmpToPages(pageXmps); //Associate XMP with first PDF page of the message
             enhancer.AddXmpToDParts(pageXmps); //Associate XMP with the PDF DPart of the message
 
+            //dispose of the enhancer to make sure files are closed
+            enhancer.Dispose();
 
+            //if all is well, move the temp file over the top of the original
+            var pdfFi = new FileInfo(pdfFilePath);
+            var tempFi = new FileInfo(tempOutFilePath);
+
+            if (tempFi.Exists && tempFi.Length >= pdfFi.Length) 
+            {
+                File.Move(tempOutFilePath, pdfFilePath, true);
+            }
         }
 
 
@@ -143,8 +153,6 @@ namespace UIUCLibrary.EaPdf
 
             //Delete the intermediate FO file
             File.Delete(xmpFilePath);
-
-
 
             return ret;
         }
