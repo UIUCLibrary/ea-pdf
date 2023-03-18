@@ -159,11 +159,27 @@ namespace UIUCLibrary.EaPdf
 
         private string GetDocumentXmp(string eaxsFilePath)
         {
+            //open the eaxs and get values from it
+            var xdoc = new XmlDocument();
+            xdoc.Load(eaxsFilePath);
+            var xmlns = new XmlNamespaceManager(xdoc.NameTable);
+            xmlns.AddNamespace(EmailToEaxsProcessor.XM, EmailToEaxsProcessor.XM_NS);
+
+            var globalId = xdoc.SelectSingleNode("/xm:Account/xm:GlobalId", xmlns)?.InnerText;
+            var accounts = xdoc.SelectNodes("/xm:Account/xm:EmailAddress", xmlns);
+            var folder = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Name", xmlns)?.InnerText;
+            var accntStrs = new List<string>();
+            if (accounts != null)
+                foreach (XmlElement account in accounts)
+                {
+                    accntStrs.Add(account.InnerText);
+                }
+
             var xmp = File.ReadAllText(Settings.XmpSchemaExtension);
 
             //Fill in the missing placeholders
-            xmp = xmp.Replace("$description$", "PDF Email Archive for Account 'ACCOUNT' for Folder 'FOLDER'");
-            xmp = xmp.Replace("$global-id$", "GLOBAL_ID");
+            xmp = xmp.Replace("$description$", $"PDF Email Archive for Account '{string.Join(", ", accntStrs)}' for Folder '{folder}'");
+            xmp = xmp.Replace("$global-id$", globalId);
             xmp = xmp.Replace("$datetime-string$", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"));
             xmp = xmp.Replace("$producer$", GetType().Namespace);
 
