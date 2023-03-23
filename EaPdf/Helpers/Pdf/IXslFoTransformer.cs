@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UIUCLibrary.EaPdf.Helpers
+namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
     public interface IXslFoTransformer
     {
 
         /// <summary>
-        /// Transform the source file into the output file using the xslt file and parameters
+        /// Transform the source FO file into the output PDF file using the xslt file and parameters
         /// </summary>
         /// <param name="sourceFoFilePath"></param>
         /// <param name="outputPdfFilePath"></param>

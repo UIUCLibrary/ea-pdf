@@ -21,7 +21,7 @@ namespace UIUCLibrary.TestEaPdf
         ILogger<EmailToEaxsProcessor>? logger;
         ILoggerFactory? loggerFactory;
         bool validXml = true;
-        List<string> loggedLines = new List<string>();
+        readonly List<string> loggedLines = new();
 
         const string UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         const string LOWER = "abcdefghijklmnopqrstuvwxyz";
@@ -47,14 +47,14 @@ namespace UIUCLibrary.TestEaPdf
         [TestCleanup]
         public void EndTest()
         {
-            if (logger != null) 
+            if (logger != null)
             {
                 logger.LogDebug($"Information: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count()}");
                 logger.LogDebug($"Warnings: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count()}");
                 logger.LogDebug($"Errors: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count()}");
-                logger.LogDebug("Ending Test"); 
+                logger.LogDebug("Ending Test");
             }
-            if (loggerFactory != null) loggerFactory.Dispose();
+            loggerFactory?.Dispose();
         }
 
         //The expected error, warning, and message counts were set by running the test scripts as of 2022-12-08
@@ -63,8 +63,6 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, false, 0, 1, 330, DisplayName = "gmail-emls")] //gmail mbox export file
         [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, false, 0, 0, 1, DisplayName = "gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness 
         [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, false, 0, 0, 1, DisplayName = "gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
-        [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, false, 0, 99796, 245734, false, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
-        [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, false, 0, 99796, 245734, false, 10000000, DisplayName = "gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
         [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, false, 0, 1, 331, DisplayName = "gmail-mbox")] //gmail mbox export file
 
         //Mozilla mbox with child mboxes, different combinations of settings
@@ -125,7 +123,7 @@ namespace UIUCLibrary.TestEaPdf
             int expectedWarnings,
             int expectedCounts, //default to check everything
             bool quick = false, //default to no max
-            long maxOutFileSize = 0, 
+            long maxOutFileSize = 0,
             bool xhtml = false //default to not creating the xhtml content
             )
         {
@@ -209,7 +207,7 @@ namespace UIUCLibrary.TestEaPdf
                 string csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
                 Assert.IsTrue(File.Exists(csvPathStr));
 
-                List<string> expectedXmlFiles = new List<string>();
+                List<string> expectedXmlFiles = new();
 
                 if (!oneFilePerMbox)
                 {
@@ -219,7 +217,7 @@ namespace UIUCLibrary.TestEaPdf
 
                     //Output might be split into multiple files
                     var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                    if (files != null) 
+                    if (files != null)
                     {
                         expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
                     }
@@ -234,7 +232,7 @@ namespace UIUCLibrary.TestEaPdf
                             string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(file), "xml"));
                             Assert.IsTrue(File.Exists(xmlPathStr));
                             expectedXmlFiles.Add(xmlPathStr);
-                            
+
                             //Output might be split into multiple files
                             var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
                             if (files != null)
@@ -256,8 +254,10 @@ namespace UIUCLibrary.TestEaPdf
                     logger.LogDebug($"Validating xml file '{xmlFile}'");
 
                     //use an XmlReader to validate with line numbers as soon as the Xml document is loaded
-                    XmlReaderSettings rdrSettings = new XmlReaderSettings();
-                    rdrSettings.Schemas = new XmlSchemaSet();
+                    XmlReaderSettings rdrSettings = new()
+                    {
+                        Schemas = new XmlSchemaSet()
+                    };
                     rdrSettings.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
                     rdrSettings.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
 
@@ -272,7 +272,7 @@ namespace UIUCLibrary.TestEaPdf
                     {
                         xDoc.Load(xRdr);
                     }
-                    catch(XmlException xex)
+                    catch (XmlException xex)
                     {
                         validXml = false;
                         Assert.Fail(xex.Message);
@@ -281,7 +281,7 @@ namespace UIUCLibrary.TestEaPdf
                     {
                         Assert.Fail(ex.Message);
                     }
-                    Assert.IsTrue(validXml,"XML Schema Validation");
+                    Assert.IsTrue(validXml, "XML Schema Validation");
 
                     var xmlns = new XmlNamespaceManager(xDoc.NameTable);
                     xmlns.AddNamespace(EmailToEaxsProcessor.XM, EmailToEaxsProcessor.XM_NS);
@@ -311,7 +311,7 @@ namespace UIUCLibrary.TestEaPdf
                             Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
 
                             //make sure size match
-                            FileInfo fi = new FileInfo(absPath);
+                            FileInfo fi = new(absPath);
                             long expectedSize = fi.Length;
                             long actualSize = long.Parse(sizeNd?.InnerText ?? "-1");
                             Assert.AreEqual(expectedSize, actualSize);
@@ -375,7 +375,7 @@ namespace UIUCLibrary.TestEaPdf
 
                                 Assert.IsTrue(extNode != null || phantomNode != null, $"Message Id: {id} should have external body content and/or phantom content");
 
-                                if(extNode==null) //no need for further checks
+                                if (extNode == null) //no need for further checks
                                     continue;
 
                                 string? extPath = extNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText;
@@ -387,7 +387,7 @@ namespace UIUCLibrary.TestEaPdf
                                 var extHash = CalculateHash(hashAlg, extFilepath);
                                 if (string.IsNullOrEmpty(extHash))
                                 {
-                                    if (logger != null) logger.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
+                                    logger?.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
                                 }
                                 else
                                 {
@@ -398,7 +398,7 @@ namespace UIUCLibrary.TestEaPdf
                                 Assert.AreEqual(hashAlg, calcHashAlg);
 
                                 //make sure the size values match
-                                FileInfo fi = new FileInfo(extFilepath);
+                                FileInfo fi = new(extFilepath);
                                 long expectedSize = fi.Length;
                                 long actualSize = long.Parse(extNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
                                 Assert.AreEqual(expectedSize, actualSize);
@@ -412,13 +412,13 @@ namespace UIUCLibrary.TestEaPdf
                                 if (actualWrapExtInXml != wrapExtInXml && wrapExtInXml)
                                 {
                                     var msg = $"External file: {extFilepath} is not wrapped in xml as expected";
-                                    if (logger != null) logger.LogDebug(msg);
+                                    logger?.LogDebug(msg);
                                     Assert.Fail(msg); //shouldn't be any exceptions to this
                                 }
                                 else if (actualWrapExtInXml != wrapExtInXml && !wrapExtInXml)
                                 {
                                     var msg = $"External file: {extFilepath} is wrapped in xml when it shouldn't be";
-                                    if (logger != null) logger.LogDebug(msg);
+                                    logger?.LogDebug(msg);
                                     //Assert.Inconclusive(msg); //inconclusive since it might be wrapped in XML because of a virus or other file IO problem
                                 }
 
@@ -481,7 +481,7 @@ namespace UIUCLibrary.TestEaPdf
                                     catch (IOException ioex)
                                     {
                                         //file might be a virus or have some other problem, assume it is not valid XML
-                                        if (logger != null) logger.LogDebug(ioex.Message);
+                                        logger?.LogDebug(ioex.Message);
                                         validXml = false;
                                     }
                                     Assert.IsFalse(validXml);
@@ -500,7 +500,7 @@ namespace UIUCLibrary.TestEaPdf
                         {
 
                             var id = node.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
-                            
+
                             //logger.LogDebug($"RFC822 Message Id: {id}");
 
                             Assert.IsNull(node.SelectSingleNode("xm:ExtBodyContent", xmlns));
@@ -519,7 +519,7 @@ namespace UIUCLibrary.TestEaPdf
                             //Test the preserve transfer encoding setting
                             var enc = node.SelectSingleNode("xm:BodyContent/xm:TransferEncoding", xmlns)?.InnerText;
                             var origEnc = node.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText;
-                            if (preserveBinaryEnc && MimeKitHelpers.BinaryContentEncodings.Contains(origEnc,StringComparer.OrdinalIgnoreCase))
+                            if (preserveBinaryEnc && MimeKitHelpers.BinaryContentEncodings.Contains(origEnc, StringComparer.OrdinalIgnoreCase))
                             {
                                 if (enc != null)
                                     Assert.AreEqual(origEnc, enc);
@@ -536,7 +536,7 @@ namespace UIUCLibrary.TestEaPdf
                                 if (enc != null)
                                 {
                                     var contentType = node.SelectSingleNode("xm:ContentType", xmlns)?.InnerText;
-                                    
+
                                     Assert.IsTrue(enc == "base64" || (enc == "quoted-printable" && contentType != null && contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)));
                                 }
                             }
@@ -551,11 +551,11 @@ namespace UIUCLibrary.TestEaPdf
                         foreach (XmlElement nd in rfc822Nds)
                         {
                             var id = nd.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
-                            
+
                             //logger.LogDebug($"RFC822 Message Id: {id}");
-                            
+
                             var encoding = nd.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText ?? "";
-                            if (!new[]{"7bit", "8bit", "binary", ""}.Contains(encoding))
+                            if (!new[] { "7bit", "8bit", "binary", "" }.Contains(encoding))
                             {
                                 //if the encoding is anything other than 7bit, 8bit, or binary, it is treated as normal BodyContent
                                 Assert.IsNotNull(nd.SelectSingleNode("xm:BodyContent", xmlns));
@@ -564,13 +564,12 @@ namespace UIUCLibrary.TestEaPdf
 
                             var childNds = nd.SelectNodes("xm:ChildMessage", xmlns);
                             Assert.IsNotNull(childNds);
-                            Assert.AreEqual(1,childNds.Count);
+                            Assert.AreEqual(1, childNds.Count);
 
                             //if the mime type is text/rfc822-headers, make sure the ChildMessage has no content, it might have a body but it should be empty
                             if (nd.SelectSingleNode("xm:ContentType", xmlns)?.InnerText.ToLower() == "text/rfc822-headers")
                             {
-                                var childMsg = childNds[0] as XmlElement;
-                                if (childMsg != null)
+                                if (childNds[0] is XmlElement childMsg)
                                 {
                                     Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:BodyContent", xmlns));
                                     Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:ExtBodyContent", xmlns));
@@ -630,10 +629,6 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, false, 0, 87, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
         [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness
         [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, false, 0, 2, 1, DisplayName = "xhtml-gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
-        
-        [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, false, 0, 99796, 245734, false, DisplayName = "xhtml-gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
-        [DataRow("D:\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, false, 0, 99796, 245734, false, 10000000, DisplayName = "xhtml-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
-        
         [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, false, 0, 87, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
 
         //Mozilla mbox with child mboxes, different combinations of settings
@@ -689,15 +684,65 @@ namespace UIUCLibrary.TestEaPdf
             int expectedErrors,
             int expectedWarnings,
             int expectedCounts, //default to check everything
-            bool quick = false, 
+            bool quick = false,
             long maxOutFileSize = 0 //default to no max
             )
         {
             TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts, quick, maxOutFileSize, true);
         }
-        
 
-            [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\folder", false, DisplayName = "path_check_drafts_folder")]
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "allx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311, false, DisplayName = "xhtml-gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "splitx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311, false, 10000000, DisplayName = "xhtml-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
+
+        [DataTestMethod]
+        public void TestHugeFilesOutputXhtml
+            (
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false,
+            long maxOutFileSize = 0 //default to no max
+            )
+        {
+            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts, quick, maxOutFileSize, true);
+        }
+
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311, false, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311, false, 10000000, DisplayName = "gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
+
+        [DataTestMethod]
+        public void TestHugeFiles
+            (
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false,
+            long maxOutFileSize = 0 //default to no max
+            )
+        {
+            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts, quick, maxOutFileSize, false);
+        }
+
+
+        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\folder", false, DisplayName = "path_check_drafts_folder")]
         [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\\\Drafts.out", true, DisplayName = "path_check_drafts_out")]
         [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\\\Drafts.out\\test", true, DisplayName = "path_check_drafts_out_test")]
         [DataTestMethod]
@@ -758,17 +803,17 @@ namespace UIUCLibrary.TestEaPdf
             validXml = false;
             if (e.Severity == XmlSeverityType.Warning)
             {
-                if (logger != null) logger.LogDebug($"Line: {e.Exception.LineNumber} -- {e.Message}");
+                logger?.LogDebug($"Line: {e.Exception.LineNumber} -- {e.Message}");
             }
             else if (e.Severity == XmlSeverityType.Error)
             {
-                if (logger != null) logger.LogDebug($"Line: {e.Exception.LineNumber} -- {e.Message}");
+                logger?.LogDebug($"Line: {e.Exception.LineNumber} -- {e.Message}");
             }
         }
 
         string CalculateHash(string algName, string filePath)
         {
-            byte[] hash = new byte[0];
+            byte[] hash = Array.Empty<byte>();
 
             using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
 
@@ -779,7 +824,7 @@ namespace UIUCLibrary.TestEaPdf
             }
             catch
             {
-                hash = new byte[0];
+                hash = Array.Empty<byte>();
             }
 
             return Convert.ToHexString(hash);
@@ -793,12 +838,12 @@ namespace UIUCLibrary.TestEaPdf
             if (localIds != null && localIds.Count > 0)
             {
                 //init the prevId to one less than the first localId
-                if(!long.TryParse(localIds[0]?.InnerText, out long prevId))
+                if (!long.TryParse(localIds[0]?.InnerText, out long prevId))
                 {
                     Assert.Fail("localId is not a number");
                 }
                 prevId--;
-                
+
                 foreach (XmlElement localId in localIds)
                 {
                     if (long.TryParse(localId.InnerText, out long id))
@@ -816,7 +861,7 @@ namespace UIUCLibrary.TestEaPdf
             {
                 //This is not an error because some files will contain no messages, usually if the source file was not a valid mbox file
                 //Assert.Fail("No localIds found");
-                if(logger !=null) logger.LogDebug("No localIds found");
+                logger?.LogDebug("No localIds found");
             }
         }
 

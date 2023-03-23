@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UIUCLibrary.EaPdf.Helpers
+namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
-    public class iTextSharpIndirectReferenceEqualityComparer : IEqualityComparer<PdfIndirectReference>
+    public class ITextSharpIndirectReferenceEqualityComparer : IEqualityComparer<PdfIndirectReference>
     {
         public bool Equals(PdfIndirectReference? x, PdfIndirectReference? y)
         {
@@ -19,7 +19,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         public int GetHashCode(PdfIndirectReference obj)
         {
-            return obj.Number; // obj.Generation is almost always zero, so ignoring it
+            return HashCode.Combine(obj.Number, obj.Generation);
         }
     }
 }

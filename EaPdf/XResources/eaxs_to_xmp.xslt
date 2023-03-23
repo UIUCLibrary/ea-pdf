@@ -7,8 +7,6 @@
 	xmlns:xs="http://www.w3.org/2001/XMLSchema"
 	xmlns:fn="http://www.w3.org/2005/xpath-functions"
 	
-	xmlns:eabcc="http://emailarchivesgrant.library.illinois.edu/ns/"
-
 	xmlns:x="adobe:ns:meta/"
 	
 	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -23,13 +21,21 @@
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="yes" omit-xml-declaration="no" />
 	
 	<xsl:template match="/">
-		<eabcc:root>
-			<xsl:apply-templates select="/eaxs:Account/eaxs:Folder/eaxs:Message"/>
-		</eabcc:root>
+		<root>
+			<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]"/>
+		</root>
+	</xsl:template>
+
+	<xsl:template match="eaxs:Folder">
+		<folder>
+			<xsl:attribute name="Name"><xsl:value-of select="eaxs:Name"/></xsl:attribute>
+			<xsl:apply-templates select="eaxs:Message"/>
+			<xsl:apply-templates select="eaxs:Folder[eaxs:Message]"/>
+		</folder>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Message">
-		<eabcc:message>
+		<message>
 			<xsl:attribute name="NamedDestination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="NamedDestinationEnd">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="LocalId"><xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
@@ -127,7 +133,7 @@
 			</x:xmpmeta>
 			
 			<xsl:processing-instruction name="xpacket">end="w"</xsl:processing-instruction>
-		</eabcc:message>
+		</message>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Mailbox">

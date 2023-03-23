@@ -13,13 +13,14 @@ using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Discovery;
 using System.Text.RegularExpressions;
 using UIUCLibrary.EaPdf.Helpers;
 using NDepend.Path;
+using UIUCLibrary.EaPdf.Helpers.Pdf;
 
 namespace UIUCLibrary.TestEaPdf
 {
     [TestClass]
     public class TestTransformers
     {
-        private bool OPEN_PDFS = false;  //set to true to open the PDFs in the default PDF viewer
+        private readonly bool OPEN_PDFS = false;  //set to true to open the PDFs in the default PDF viewer
 
         ILogger<EaxsToEaPdfProcessor>? logger;
         ILoggerFactory? loggerFactory;

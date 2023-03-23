@@ -15,13 +15,14 @@ using UIUCLibrary.EaPdf.Helpers;
 using NDepend.Path;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.interfaces;
+using UIUCLibrary.EaPdf.Helpers.Pdf;
 
 namespace UIUCLibrary.TestEaPdf
 {
     [TestClass]
     public class TesPdfFunctions
     {
-        private bool OPEN_PDFS = false;  //set to true to open the PDFs in the default PDF viewer
+        private readonly bool OPEN_PDFS = false;  //set to true to open the PDFs in the default PDF viewer
 
         ILogger<EaxsToEaPdfProcessor>? logger;
         ILoggerFactory? loggerFactory;
@@ -69,7 +70,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 var xslt = new SaxonXsltTransformer();
                 var fop = new FopToPdfTransformer(configFile);
-                var iText = new iTextSharpPdfEnhancerFactory();
+                var iText = new ITextSharpPdfEnhancerFactory();
                 var set = new EaxsToEaPdfProcessorSettings();
 
                 var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
@@ -101,7 +102,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 var xslt = new SaxonXsltTransformer();
                 var fop = new XepToPdfTransformer(configFile);
-                var iText = new iTextSharpPdfEnhancerFactory();
+                var iText = new ITextSharpPdfEnhancerFactory();
                 var set = new EaxsToEaPdfProcessorSettings();
 
                 var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);

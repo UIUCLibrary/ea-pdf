@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UIUCLibrary.EaPdf.Helpers
+namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
-    public class iTextSharpPdfEnhancerFactory : IPdfEnhancerFactory
+    public class ITextSharpPdfEnhancerFactory : IPdfEnhancerFactory
     {
         public IPdfEnhancer Create(ILogger logger, string inPdfFilePath, string outPdfFilePath)
         {
-            return new iTextSharpPdfEnhancer(logger, inPdfFilePath, outPdfFilePath);
+            return new ITextSharpPdfEnhancer(logger, inPdfFilePath, outPdfFilePath);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Xml;
 using Microsoft.Extensions.Logging;
 using UIUCLibrary.EaPdf.Helpers;
+using UIUCLibrary.EaPdf.Helpers.Pdf;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -83,14 +84,14 @@ namespace UIUCLibrary.EaPdf
         {
             var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
-            var pageXmps = GetXmpMetadataForMessages(eaxsFilePath);
+            var dparts = GetXmpMetadataForMessages(eaxsFilePath);
             var docXmp = GetDocumentXmp(eaxsFilePath);
 
             using var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, tempOutFilePath);
 
             enhancer.SetDocumentXmp(docXmp);
-            // enhancer.AddXmpToPages(pageXmps); //Associate XMP with first PDF page of the message
-            enhancer.AddXmpToDParts(pageXmps); //Associate XMP with the PDF DPart of the message
+            // enhancer.AddXmpToPages(dparts); //Associate XMP with first PDF page of the message
+            enhancer.AddXmpToDParts(dparts); //Associate XMP with the PDF DPart of the message
 
             //dispose of the enhancer to make sure files are closed
             enhancer.Dispose();
@@ -107,13 +108,12 @@ namespace UIUCLibrary.EaPdf
 
 
         /// <summary>
-        /// Return a dictionary of XMP metadata for all the messages in the EAXS file.
-        /// The key is start and end named destinations for the message and the value is the XMP metadata for that message.
+        /// Return the root DPart node for all the folders and messages in the EAXS file.
         /// </summary>
         /// <returns></returns>
-        private Dictionary<(string start, string end), string> GetXmpMetadataForMessages(string eaxsFilePath)
+        private DPartInternalNode GetXmpMetadataForMessages(string eaxsFilePath)
         {
-            Dictionary<(string start, string end), string> ret = new();
+            DPartInternalNode ret = new();
 
             var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
 
@@ -126,25 +126,7 @@ namespace UIUCLibrary.EaPdf
 
             if (status == 0)
             {
-                XmlDocument xdoc = new();
-                xdoc.Load(xmpFilePath);
-                var xmlns = new XmlNamespaceManager(xdoc.NameTable);
-                xmlns.AddNamespace(EABCC, EABCC_NS);
-                var nodes = xdoc.SelectNodes("//eabcc:message", xmlns);
-                if (nodes != null)
-                {
-                    foreach (XmlElement node in nodes)
-                    {
-                        var start = node.GetAttribute("NamedDestination");
-                        var end = node.GetAttribute("NamedDestinationEnd");
-                        var meta = node.InnerXml;
-                        ret.Add((start, end), meta);
-                    }
-                }
-                else
-                {
-                    throw new Exception("EAXS transformation to XMP was corrupt; review log details.");
-                }
+                ret.DParts.Add(DPartNode.Create(xmpFilePath));
             }
             else
             {

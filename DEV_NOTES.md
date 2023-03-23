@@ -6,6 +6,7 @@ Getting a Linux version of the application
 https://www.codeproject.com/Tips/5255423/Linux-on-Windows
 
 ## iTextSharp 4
+ * Library:  https://github.com/VahidN/iTextSharp.LGPLv2.Core, https://www.nuget.org/packages/iTextSharp.LGPLv2.Core/
  * Docs: https://afterlogic.com/mailbee-net/docs-itextsharp/
 
 # _Conversion Notes_

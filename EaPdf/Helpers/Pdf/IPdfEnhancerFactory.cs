@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UIUCLibrary.EaPdf.Helpers
+namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
     public interface IPdfEnhancerFactory
     {

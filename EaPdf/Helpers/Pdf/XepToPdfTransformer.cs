@@ -7,25 +7,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UIUCLibrary.EaPdf.Helpers
+namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
-    public class FopToPdfTransformer : JavaRunner, IXslFoTransformer
+    public class XepToPdfTransformer : JavaRunner, IXslFoTransformer
     {
-        public const string JAR_FILE = "C:\\Program Files\\Apache FOP\\fop-2.8\\fop\\build\\fop.jar";
+        public const string CLASS_PATH = "C:\\Program Files\\RenderX\\XEP\\lib\\xep.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon-xml-apis.jar;C:\\Program Files\\RenderX\\XEP\\lib\\xt.jar";
+        public const string MAIN_CLASS = "com.renderx.xep.XSLDriver";
 
-        public FopToPdfTransformer(string jarFilePath, string configFilePath) 
+        public XepToPdfTransformer(string classPath, string configFilePath) : base(classPath)
         {
-            JarFilePath = jarFilePath;
             ConfigFilePath = configFilePath;
         }
 
-        public FopToPdfTransformer(string configFilePath) : this(JAR_FILE, configFilePath)
+        public XepToPdfTransformer(string configFilePath) : this(CLASS_PATH, configFilePath)
         {
         }
 
         public string ConfigFilePath { get; set; }
-
-        public string JarFilePath { get; }
 
         public string ProcessorVersion
         {
@@ -33,13 +31,11 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 var args = "-version";
                 List<(LogLevel level, string message)> messages = new();
-
-                int status = RunExecutableJar(JarFilePath, args, ref messages);
+                _ = RunMainClass(MAIN_CLASS, args, ref messages);
 
                 return messages[0].message;
             }
         }
-
 
         /// <summary>
         /// Transform the source file into the output file using the xslt file and parameters
@@ -52,11 +48,12 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
         public int Transform(string sourceFoFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages)
         {
-            var args = $"-c \"{ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+            var args = $"\"-DCONFIG={ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
 
-            int status = RunExecutableJar(JarFilePath, args, ref messages);
+            int status = RunMainClass(MAIN_CLASS, args, ref messages);
 
             return status;
+
         }
     }
 }
