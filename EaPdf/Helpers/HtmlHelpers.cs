@@ -778,6 +778,8 @@ namespace UIUCLibrary.EaPdf.Helpers
                 }
 
                 var cssParser = new StylesheetParser();
+                //The parser may get stuck in an endless loop:  https://github.com/TylerBrinks/ExCSS/issues/138
+                //TODO: Need to fix this issue, probably look into an alternative CSS parser, or fix the ExCSS library, or try using PreMailer.Net, https://github.com/milkshakesoftware/PreMailer.Net
                 var sSheet = cssParser.Parse(allStyles);
 
                 foreach (var rule in sSheet.StyleRules.OrderByDescending(sr => sr.Selector.Specificity))

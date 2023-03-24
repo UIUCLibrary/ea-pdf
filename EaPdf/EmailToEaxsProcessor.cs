@@ -311,7 +311,7 @@ namespace UIUCLibrary.EaPdf
 
             localId = ProcessMbox(mboxProps, ref xwriter, ref xstream, localId, messageList);
 
-            xwriter.WriteEndElement(); //WriteXmlAccountHeaderFields
+            xwriter.WriteEndElement(); //Account; see WriteXmlAccountHeaderFields function above
 
             xwriter.WriteEndDocument();
 
@@ -410,7 +410,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteStartElement("Folder", XM_NS);
             xwriter.WriteElementString("Name", XM_NS, mboxProps.MboxName);
 
-            //Keep track of properties for an individual messager, such as Eol and Hash
+            //Keep track of properties for an individual message, such as Eol and Hash
             MimeMessageProperties msgProps = new();
 
             //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
