@@ -67,7 +67,7 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public long MaximumXmlFileSize { get; set; } = 1024 * 1024 * 1024; // 1GB
 
-
+        //TODO: This is just cruft, get rid of it, so what if files can be slightly larger than the MaximumXmlFileSize
         /// <summary>
         /// When this output file size threshold is reached, the file will be split into multiple files
         /// It is within 5% of the <see cref="MaximumXmlFileSize"/>
@@ -89,12 +89,33 @@ namespace UIUCLibrary.EaPdf
         /// <summary>
         /// LogLevels equal to or above this threshold will also be written to the output XML file as comments
         /// </summary>
-        public LogLevel LogToXmlThreshold { get; set; } = LogLevel.Debug;
+        public LogLevel LogToXmlThreshold { get; set; } = LogLevel.Information;
 
         /// <summary>
         /// If the source input file does not have a filename extension, this is the value that should be used.
         /// It should not include the leading period.
         /// </summary>
         public string DefaultFileExtension { get; set; } = "mbox";
+
+        /// <summary>
+        /// Skip processing of all messages until this MessageId is reached, then proceed as normal
+        /// If SkipUntilMessageId and SkipAfterMessageId are both the same, then only that one message will be processed
+        /// If SkipUntilMessageId and SkipAfterMessageId are both set, it is assumed that the SkipUntilMessageId occurs before the SkipAfterMessageId
+        /// Mostly useful for debugging
+        /// </summary>
+        public string? SkipUntilMessageId { get; set; }
+
+        /// <summary>
+        /// Skip processing of all messages after this MessageId is reached
+        /// If SkipUntilMessageId and SkipAfterMessageId are both the same, then only that one message will be processed
+        /// If SkipUntilMessageId and SkipAfterMessageId are both set, it is assumed that the SkipUntilMessageId occurs before the SkipAfterMessageId
+        /// Mostly useful for debugging
+        /// </summary>
+        public string? SkipAfterMessageId { get; set; }
+
+        /// <summary>
+        /// Extra non-standard HTML character entities to add to the list of entities that are converted to their Unicode equivalent
+        /// </summary>
+        public Dictionary<string, int>? ExtraHtmlCharacterEntities { get; set; } = new Dictionary<string, int>(){ { "QUOT", 0x22} };
     }
 }

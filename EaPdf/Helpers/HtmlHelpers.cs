@@ -1,4 +1,5 @@
 ﻿using ExCSS;
+using NUglify;
 using Fizzler.Systems.HtmlAgilityPack;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
@@ -7,12 +8,18 @@ using PdfTemplating.SystemCustomExtensions;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using System.Xml;
+using AngleSharp.Css.Parser;
+using AngleSharp.Css.Dom;
+using System.Text;
+using System.Linq.Expressions;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
+
     internal class HtmlHelpers
     {
-
+        //Add any needed non-standard character entities here; note that character entities are case-sensitive
+        public static Dictionary<string, int> ExtraCharacterEntities = new Dictionary<string, int>() { { "QUOT", 0x22 } };
 
         /// <summary>
         /// Use the HTML Agility Pack to parse the HTML and return it as valid XHTML
@@ -51,12 +58,27 @@ namespace UIUCLibrary.EaPdf.Helpers
             };
             hdoc.LoadHtml(ret);
 
+            //HAP seems to correct some doubly encoded character entities (inside attributes?), i.e. &amp;reg; becomes &reg;
+            //so get the html back out of the HAP document and re-DeEntitize it, and then try to reload it; this seems to get rid of the problem
+            try
+            {
+                ret = hdoc.DocumentNode.OuterHtml;
+                ret = FixCharacterEntities(ret);
+                hdoc.LoadHtml(ret);
+            }
+            catch (Exception ex)
+            {
+                messages.Add((LogLevel.Warning, $"Unable to reload html document node from outer html: {ex.Message}"));
+            }
+
+            CorrectEmptyNamespaceDeclarations(hdoc, ref messages, ignoreHtmlIssues);
+
             //rebalance the xhtml so it contains a single root html just one head and one body child
             //with the appropriate elements created and moved as needed
             var htmlNode = MakeHtmlMinimallyValid(hdoc, ref messages, ignoreHtmlIssues);
 
             //move styles to inline with the elements
-            ConvertToInlineCss(htmlNode, ref messages, ignoreHtmlIssues);
+            ConvertToInlineCssUsingAngleSharpCss(htmlNode, ref messages, ignoreHtmlIssues);
 
             //Normalize style properties and remove any inline style properties that are not supported by the HTML
             NormalizeStyleProperties(htmlNode, ref messages, ignoreHtmlIssues);
@@ -83,10 +105,53 @@ namespace UIUCLibrary.EaPdf.Helpers
                 messages.Add((LogLevel.Warning, msg));
             }
 
-            //HAP does not correctly encode the CDATA sections, so we need to do clean up their mess
+            //HAP does not correctly encode the CDATA sections, so we need to clean up their mess
             ret = FixCData(ret);
 
             return ret;
+        }
+
+        /// <summary>
+        /// An empty declaration like 'xmlns:ns=""' is not valid xhtml, so we need to change it to 'xmlns:ns="http://example.edu/empty-namespace-decl"'
+        /// An empty declaration like 'xmlns=""' is not valid xhtml, so we need get rid of it
+        /// </summary>
+        /// <param name="hdoc"></param>
+        /// <param name="messages"></param>
+        /// <param name="ignoreHtmlIssues"></param>
+        private static void CorrectEmptyNamespaceDeclarations(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var xmlnsNodes = hdoc.DocumentNode.SelectNodes("//*/@*[starts-with(local-name(),'xmlns')]");
+            if (xmlnsNodes != null)
+            {
+                foreach (var xmlnsNode in xmlnsNodes)
+                {
+                    var xmlns = xmlnsNode.Attributes.Where(a => a.Name.StartsWith("xmlns") && string.IsNullOrWhiteSpace(a.Value));
+                    if (xmlns != null)
+                    {
+                        List<HtmlAttribute> toBeRemoved = new();
+                        foreach (var attr in xmlns)
+                        {
+                            var orig = $"{attr.Name}='{attr.Value}'";
+                            if (attr.Name == "xmlns")
+                            {
+                                // get rid of the xmlns unless it defines a prefix
+                                toBeRemoved.Add(attr);
+                                messages.Add((LogLevel.Warning, $"Empty namespace declaration \"{orig}\" was removed."));
+                            }
+                            else
+                            {
+                                //keep the namespace, but give it a dummy value
+                                attr.Value = "http://example.edu/empty-namespace-decl";
+                                messages.Add((LogLevel.Warning, $"Empty namespace declaration \"{orig}\" was changed to \"{attr.Name}='{attr.Value}'\"."));
+                            }
+                        }
+                        foreach (var attr in toBeRemoved)
+                        {
+                            attr.Remove();
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -135,7 +200,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             var baseHref = baseNode.Attributes["href"];
 
-            if (baseNode == null)
+            if (baseHref == null)
                 return;
 
             var href = baseHref.Value;
@@ -143,7 +208,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (string.IsNullOrWhiteSpace(href))
                 return;
 
-            var baseUri = new Uri(href);
+            var baseUri = new Uri(href, UriKind.RelativeOrAbsolute);
 
             //get all the img src attributes
             var imgNodes = hdoc.DocumentNode.QuerySelectorAll("img");
@@ -244,7 +309,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                         // and the nested items will be lost
                         //TODO: Not sure what a good generic solution would be???  Maybe the solution belongs in the XSLT instead of here
                         var newLi = htmlNode.OwnerDocument.CreateElement("li");
-                        toBeReplaced.Add((newLi,li));
+                        toBeReplaced.Add((newLi, li));
                         if (!ignoreHtmlIssues)
                             messages.Add((LogLevel.Information, $"List Node '{li.ParentNode.XPath}' had improperly nested elements; these were wrapped in <li> elements"));
                     }
@@ -267,17 +332,26 @@ namespace UIUCLibrary.EaPdf.Helpers
             var allElements = htmlNode.SelectNodes("//*");
             if (allElements != null)
             {
-                var cssParser = new StylesheetParser();
+                var cssParser = new AngleSharp.Css.Parser.CssParser();
 
-                //loop through all the elements, use ExCSS to parse all the style attributes, and replace the style value with a new one normalized by the ExCSS parser
+                //loop through all the elements, use AngleSharp.Css to parse all the style attributes, and replace the style value with a new one normalized by the AngleSharp.Css parser
                 foreach (var elem in allElements)
                 {
                     var style = elem.GetAttributes("style").SingleOrDefault();
                     if (style != null && !string.IsNullOrWhiteSpace(style.Value))
                     {
-                        var sSheet = cssParser.Parse($"{elem.Name} {{{style.Value}}}");
-
-                        var newStyle = sSheet.StyleRules.Single().Style.ToCss();
+                        string? newStyle = null;
+                        //elem.Name may be invalid causing the parser to not parse correctly, so normalize it
+                        var normalizedName = XmlConvert.EncodeLocalName(elem.Name);
+                        try
+                        {
+                            var sSheet = cssParser.ParseStyleSheet($"{normalizedName} {{{style.Value}}}");
+                            newStyle = ((ICssStyleRule)sSheet.Rules.Single()).Style.CssText;
+                        }
+                        catch (Exception ex)
+                        {
+                            messages.Add((LogLevel.Critical, $"ParseStyleSheet '{normalizedName} {{{style.Value}}}'; {ex.Message}"));
+                        }
 
                         if (!string.IsNullOrWhiteSpace(newStyle))
                         {
@@ -286,7 +360,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                         else
                         {
                             if (!ignoreHtmlIssues)
-                                messages.Add((LogLevel.Information, $"Invalid style attribute was removed from node '{elem.XPath}'"));
+                                messages.Add((LogLevel.Information, $"Invalid style attribute '{style.Value}' was removed from node '{elem.XPath}'"));
                             style.Remove();
                         }
                     }
@@ -296,9 +370,10 @@ namespace UIUCLibrary.EaPdf.Helpers
 
 
 
-        private static string FixCharacterEntities(string htmlStr)
+        public static string FixCharacterEntities(string htmlStr)
         {
             //TODO: probably need to be a bit selective to avoid decoding CDATA sections
+            //TODO: how can I fix already double encoded entities, like &amp;nbsp;?
 
             //replace named character entities with the characters
 
@@ -434,6 +509,21 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <returns></returns>
         private static HtmlNode GetOrCreateHead(HtmlDocument hdoc, HtmlNode htmlNode, HtmlNode body, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
+            //determine if there are multiple heads
+            var heads = htmlNode.SelectNodes("head");
+            if (heads != null && heads.Count > 1)
+            {
+                //need to merge them into a single head
+                var mainHead = heads[0];
+                for (int i = 1; i < heads.Count(); i++)
+                {
+                    var otherHead = heads[i];
+                    mainHead.AppendChildren(otherHead.ChildNodes); //move all the children of the head to the main head
+                    otherHead.RemoveAllChildren();
+                    otherHead.Remove();
+                }
+            }
+
             var head = htmlNode.Element("head");
             if (head == null)
             {
@@ -524,7 +614,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             var bodyTextNodes = body.ChildNodes.Where(n => n.NodeType == HtmlNodeType.Text);
             if (bodyTextNodes != null)
             {
-                if (bodyTextNodes.Any(n => !string.IsNullOrWhiteSpace(((HtmlTextNode)n).Text)))
+                if (bodyTextNodes.Any(n => !XmlHelpers.IsValidXmlWhitespace(((HtmlTextNode)n).Text)))
                 {
                     var newDiv = hdoc.CreateElement("div");
                     newDiv.AppendChildren(body.ChildNodes);
@@ -535,6 +625,22 @@ namespace UIUCLibrary.EaPdf.Helpers
                 }
             }
         }
+
+        private static void RemoveTextFromHead(HtmlDocument hdoc, HtmlNode head, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var bodyTextNodes = head.ChildNodes.Where(n => n.NodeType == HtmlNodeType.Text);
+            foreach (HtmlTextNode node in bodyTextNodes.Cast<HtmlTextNode>())
+            {
+                if(!XmlHelpers.IsValidXmlWhitespace(node.Text))
+                {
+                    var newText = Regex.Replace(node.Text, "[^ \t\r\n]", " ");
+                    if (!ignoreHtmlIssues)
+                        messages.Add((LogLevel.Information, $"The head element does not allow mixed content, so text content '{node.Text}' was converted to all spaces '{newText}'."));
+                    node.Text = newText;
+                  }
+            }
+        }
+
 
         /// <summary>
         /// This will add a <meta name='generator' content='Conversion to XHTML performed by UIUCLibrary.EaPdf.Helpers' /> element to the head 
@@ -613,7 +719,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                             messages.Add((LogLevel.Information, $"The html had another body; it was renamed to div and moved to the bottom of the first body."));
 
                     }
-                    else if (kid.NodeType == HtmlNodeType.Text && !beforeBody && !string.IsNullOrWhiteSpace(((HtmlTextNode)kid).Text))
+                    else if (kid.NodeType == HtmlNodeType.Text && !beforeBody && !XmlHelpers.IsValidXmlWhitespace(((HtmlTextNode)kid).Text))
                     {
                         // looks like some straggling text after the body, put it into a div and append it to the body
                         var newDiv = hdoc.CreateElement("div");
@@ -649,6 +755,9 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             var head = GetOrCreateHead(hdoc, htmlNode, body, ref messages, ignoreHtmlIssues);
 
+            //remove non-whitespace text from the head
+            RemoveTextFromHead(hdoc, head, ref messages, ignoreHtmlIssues);
+
             AddRootDivToBodyIfNeeded(hdoc, body, ref messages, ignoreHtmlIssues);
 
             AddGeneratorMetaToHead(hdoc, head);
@@ -665,7 +774,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
 
             if (!ignoreHtmlIssues && messages.Count > msgCount)
-                messages.Insert(msgCount, (LogLevel.Warning, "Html was not valid; see the following info messages for details"));
+                messages.Insert(msgCount, (LogLevel.Warning, "Html was not valid; see the following info messages for details "));
 
             return htmlNode;
         }
@@ -757,14 +866,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             namespacePrefixes.Pop();
         }
 
-        /// <summary>
-        /// Convert any embedded stylesheets into inline styles
-        /// </summary>
-        /// <param name="htmlNode"></param>
-        /// <param name="messages"></param>
-        /// <param name="ignoreHtmlIssues"></param>
-        /// <returns></returns>
-        private static void ConvertToInlineCss(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void ConvertToInlineCssUsingAngleSharpCss(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
             //get all the style elements
             var styles = htmlNode.SelectNodes("//style");
@@ -772,21 +874,18 @@ namespace UIUCLibrary.EaPdf.Helpers
             string allStyles = "";
             if (styles != null)
             {
+                //merge into one CSS string
                 foreach (var style in styles)
                 {
                     allStyles += style.InnerText + " ;\r\n/* NEXT STYLE */\r\n";
                 }
 
-                var cssParser = new StylesheetParser();
-                //The parser may get stuck in an endless loop:  https://github.com/TylerBrinks/ExCSS/issues/138
-                //TODO: Need to fix this issue, probably look into an alternative CSS parser, or fix the ExCSS library, or try using PreMailer.Net, https://github.com/milkshakesoftware/PreMailer.Net
-                var sSheet = cssParser.Parse(allStyles);
+                var cssParser = new CssParser(); //AngleSharp.Css parser
+                var sSheetTask = cssParser.ParseStyleSheet(allStyles);
 
-                foreach (var rule in sSheet.StyleRules.OrderByDescending(sr => sr.Selector.Specificity))
+                foreach (ICssStyleRule rule in sSheetTask.Rules.Where(r => r is ICssStyleRule sr && sr.Selector != null).OrderByDescending(sr => ((ICssStyleRule)sr).Selector.Specificity))
                 {
                     //TODO: Add support for ListSelectors, so that the separate specificity of its selectors can be determined.
-                    //      The ExCss library doesn't seem to allow access to the individual selectors of a SelectorList
-                    //      I need to do a pull-request for the ExCSS change that I would like
                     //TODO: Add support for the shorthand property "all"
                     //TODO: Add support for the !important modifier.
 
@@ -795,7 +894,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     var specificity = rule.Selector.Specificity;
 
                     if (string.IsNullOrWhiteSpace(styleText))
-                        continue; //skip this rule andf move to the next
+                        continue; //skip this rule and move to the next
 
                     IEnumerable<HtmlNode>? nodes = null;
                     try
@@ -815,7 +914,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                             var styleAttr = node.GetAttributes("style").SingleOrDefault();
                             if (styleAttr == null)
                             {
-                                var newStyle = cssParser.Parse($"dummy {{{styleText}}}").StyleRules.Single().Style;
+                                var newStyle = ((ICssStyleRule)cssParser.ParseStyleSheet($"dummy {{{styleText}}}").Rules.Single()).Style;
                                 var newStyleText = string.Join("; ", newStyle.Select(p => p.Name + ":" + p.Value)) + "; ";
 
                                 node.Attributes.Add("style", newStyleText);
@@ -823,21 +922,21 @@ namespace UIUCLibrary.EaPdf.Helpers
                             }
                             else
                             {
-                                var currentStyle = cssParser.Parse($"dummy {{{styleAttr.Value}}}").StyleRules.Single().Style;
+                                var currentStyle = ((ICssStyleRule)cssParser.ParseStyleSheet($"dummy {{{styleAttr.Value}}}").Rules.Single()).Style;
 
                                 var currentStyleText = string.Join("; ", currentStyle.Select(p => p.Name + ":" + p.Value)) + "; ";
 
                                 foreach (var newProperty in rule.Style)
                                 {
                                     //since we are iterating rules from most specific to the least specific, we can't overwrite an existing property because it originated from a more specific rule
-                                    if (!currentStyle.Contains(newProperty, new PropertyComparer()))
+                                    if (!currentStyle.Contains(newProperty, new AngleSharpCssPropertyComparer()))
                                     {
                                         currentStyleText += newProperty.Name + ":" + newProperty.Value + "; ";
                                         messages.Add((LogLevel.Debug, $"Node: {node.XPath}, Inlining style: {selectorText} {{{styleText}}}, modify style attribute"));
                                     }
                                 }
 
-                                styleAttr.Value = currentStyleText.Trim().Trim(';').Trim(); //get rid of any leading or trainling semi-colons and whitespace
+                                styleAttr.Value = currentStyleText.Trim().Trim(';').Trim(); //get rid of any leading or trailing semi-colons and whitespace
 
                             }
                         }
@@ -847,7 +946,32 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
     }
 
-    class PropertyComparer : IEqualityComparer<IProperty>
+    class AngleSharpCssPropertyComparer : IEqualityComparer<ICssProperty>
+    {
+        public bool Equals(ICssProperty? x, ICssProperty? y)
+        {
+            //Check whether the compared objects reference the same data.
+            if (Object.ReferenceEquals(x, y)) return true;
+
+            //Check whether any of the compared objects is null.
+            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+                return false;
+
+            return x.Name == y.Name;
+        }
+
+        public int GetHashCode([DisallowNull] ICssProperty obj)
+        {
+            //Check whether the object is null
+            if (Object.ReferenceEquals(obj, null)) return 0;
+
+
+            //Calculate the hash code for the product.
+            return obj.Name.GetHashCode();
+        }
+    }
+
+    class ExCssPropertyComparer : IEqualityComparer<IProperty>
     {
         public bool Equals(IProperty? x, IProperty? y)
         {

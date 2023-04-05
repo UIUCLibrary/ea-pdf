@@ -21,7 +21,9 @@ namespace UIUCLibrary.TestEaPdf
         ILogger<EmailToEaxsProcessor>? logger;
         ILoggerFactory? loggerFactory;
         bool validXml = true;
+        string outFile = "xml_validation.out";
         readonly List<string> loggedLines = new();
+        readonly LogLevel minLogLvl = LogLevel.Information;
 
         const string UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         const string LOWER = "abcdefghijklmnopqrstuvwxyz";
@@ -35,10 +37,10 @@ namespace UIUCLibrary.TestEaPdf
             //See https://learn.microsoft.com/en-us/aspnet/core/fundamentals/logging/ for more info on ILogger in .NET Core
 
             //log to the testing console standard error; log all message levels: trace, debug, ..., info
-            loggerFactory = LoggerFactory.Create(builder => builder.AddConsole(opts => opts.LogToStandardErrorThreshold = LogLevel.Trace).SetMinimumLevel(LogLevel.Trace));
+            loggerFactory = LoggerFactory.Create(builder => builder.AddConsole(opts => opts.LogToStandardErrorThreshold = minLogLvl).SetMinimumLevel(minLogLvl));
 
             //using StringListLogger for testing purposes https://www.nuget.org/packages/Extensions.Logging.ListOfString https://github.com/chrisfcarroll/TestBase
-            loggerFactory.AddStringListLogger(loggedLines);
+            loggerFactory.AddStringListLogger(loggedLines, false, (s, lvl) => { if (lvl >= minLogLvl) return true; else return false; });
 
             logger = loggerFactory.CreateLogger<EmailToEaxsProcessor>();
             logger.LogDebug("Starting Test");  //all loging done by the test scripts are debug level
@@ -124,7 +126,8 @@ namespace UIUCLibrary.TestEaPdf
             int expectedCounts, //default to check everything
             bool quick = false, //default to no max
             long maxOutFileSize = 0,
-            bool xhtml = false //default to not creating the xhtml content
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
             )
         {
 
@@ -133,6 +136,10 @@ namespace UIUCLibrary.TestEaPdf
 
             if (logger != null)
             {
+                //parse the skips string to get the skipUntilMessageId and skipAfterMessageId
+                string? skipUntilMessageId = oneMsgId;
+                string? skipAfterMessageId = oneMsgId;
+
                 var settings = new EmailToEaxsProcessorSettings()
                 {
                     HashAlgorithmName = hashAlg,
@@ -143,32 +150,15 @@ namespace UIUCLibrary.TestEaPdf
                     IncludeSubFolders = includeSub,
                     OneFilePerMbox = oneFilePerMbox,
                     MaximumXmlFileSize = maxOutFileSize,
-                    SaveTextAsXhtml = xhtml
+                    SaveTextAsXhtml = xhtml,
+                    SkipUntilMessageId = skipUntilMessageId,
+                    SkipAfterMessageId = skipAfterMessageId
                 };
 
                 //Also save the sample test files in the test project and automate the folder setup and cleanup
                 var sampleFile = Path.Combine(testFilesBaseDirectory, testFileName);
 
-
-                var expectedOutFolder = "";
-                var outFolder = "";
-
-                if (Directory.Exists(sampleFile))
-                {
-                    //sampleFile is a directory, so the output folder is relative to the sample folder's parent
-                    expectedOutFolder = Path.Combine(Path.GetDirectoryName(sampleFile) ?? "", relOutPath);
-                    outFolder = Path.Combine(Path.GetDirectoryName(sampleFile) ?? "", relOutPath);
-                }
-                else if (File.Exists(sampleFile))
-                {
-                    //sample file is a file, so the output folder is relative to the sample file's parent directory
-                    expectedOutFolder = Path.Combine(testFilesBaseDirectory, relOutPath);
-                    outFolder = Path.Combine(testFilesBaseDirectory, relOutPath);
-                }
-                else
-                {
-                    Assert.Fail($"Sample file or folder '{sampleFile}' does not exist");
-                }
+                (string expectedOutFolder, string outFolder) = GetOutFolder(sampleFile, relOutPath);
 
                 //clean out the output folder
                 if (!string.IsNullOrWhiteSpace(relOutPath) && Directory.Exists(outFolder))
@@ -207,44 +197,7 @@ namespace UIUCLibrary.TestEaPdf
                 string csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
                 Assert.IsTrue(File.Exists(csvPathStr));
 
-                List<string> expectedXmlFiles = new();
-
-                if (!oneFilePerMbox)
-                {
-                    string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
-                    Assert.IsTrue(File.Exists(xmlPathStr));
-                    expectedXmlFiles.Add(xmlPathStr);
-
-                    //Output might be split into multiple files
-                    var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                    if (files != null)
-                    {
-                        expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
-                    }
-                }
-                else
-                {
-                    if (Directory.Exists(sampleFile))
-                    {
-                        //the input path is a directory, so make sure there is one xml output file for each input file
-                        foreach (var file in Directory.GetFiles(sampleFile))
-                        {
-                            string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(file), "xml"));
-                            Assert.IsTrue(File.Exists(xmlPathStr));
-                            expectedXmlFiles.Add(xmlPathStr);
-
-                            //Output might be split into multiple files
-                            var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                            if (files != null)
-                            {
-                                expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
-                            }
-
-
-                        }
-                    }
-
-                }
+                List<string> expectedXmlFiles = GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
 
                 if (quick) return;
 
@@ -266,7 +219,7 @@ namespace UIUCLibrary.TestEaPdf
                     rdrSettings.ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings;
 
                     validXml = true;
-                    var xRdr = XmlReader.Create(xmlFile, rdrSettings);
+                    using var xRdr = XmlReader.Create(xmlFile, rdrSettings);
                     var xDoc = new XmlDocument(); //this will validate the XML
                     try
                     {
@@ -614,8 +567,10 @@ namespace UIUCLibrary.TestEaPdf
                         CheckThatAllMessagesAreDraft(xDoc, xmlns);
                     }
 
+                    xRdr.Close();
+                    
                 }
-
+                
             }
             else
             {
@@ -626,10 +581,10 @@ namespace UIUCLibrary.TestEaPdf
         //The expected error, warning, and message counts were set by running the test scripts as of 2022-12-08
 
         //Gmail Exports
-        [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, false, 0, 87, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
+        [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, false, 0, 71, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
         [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness
-        [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, false, 0, 2, 1, DisplayName = "xhtml-gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
-        [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, false, 0, 87, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
+        [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
+        [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, false, 0, 71, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
 
         //Mozilla mbox with child mboxes, different combinations of settings
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha1")]
@@ -649,11 +604,11 @@ namespace UIUCLibrary.TestEaPdf
 
 
         //Pine mbox folder
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 627, 20799, DisplayName = "xhtml-pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 627, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
-        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 572, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 623, 20799, DisplayName = "xhtml-pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 623, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 568, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
-        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 277, 1301, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
+        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 274, 1301, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
         [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, false, 0, 1, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
         [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, false, 0, 1, 418, DisplayName = "xhtml-pine-sent-mail-jun-2004")] //not an mbox file
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, false, 0, 1, 100, DisplayName = "xhtml-pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
@@ -685,14 +640,42 @@ namespace UIUCLibrary.TestEaPdf
             int expectedWarnings,
             int expectedCounts, //default to check everything
             bool quick = false,
-            long maxOutFileSize = 0 //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = true, //default to not creating the xhtml content
+            string? oneMsgId = null
             )
         {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts, quick, maxOutFileSize, true);
+            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId);
         }
 
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "allx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311, false, DisplayName = "xhtml-gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "splitx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311, false, 10000000, DisplayName = "xhtml-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "allx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
+            true, 0, true, DisplayName = "xhtml-gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "splitx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
+            true, 10000000, true, DisplayName = "xhtml-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
+
+        //messages with specific problems
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 0, 1,
+            false, 10000000, true, "d5c1fc93-14b1-48ef-985d-0fbb38878f7e@las1s04mta936.xt.local", DisplayName = "xhtml-skip1-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB, just one message
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 10000000, true, "1E.44.44510.680AEB06@aj.mta1vrest.cc.prd.sparkpost", DisplayName = "xhtml-skip2-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB, just one message
+
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 2, 1,
+            false, 0, true, "2010051415093467A03C1ACC$945C3759F1@COMPUTER", DisplayName = "xhtml-xmlns-gmail-ext-big-mbox")] //invalid namespace declaration
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "4313980.1156434894479.JavaMail.root@fac1010", DisplayName = "xhtml-QUOT-gmail-ext-big-mbox")] //undefined character entity &QUOT; -- all upper case
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 0, 1,
+            false, 0, true, "ee4ca1ce-f044-4536-85d3-553b088bb1dc@las1s04mta905.xt.local", DisplayName = "xhtml-2head-gmail-ext-big-mbox")] //two head elements
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "A5.52.33171.CC105236@gx.mta2vrest.cc.prd.sparkpost", DisplayName = "xhtml-body-text-gmail-ext-big-mbox")] //text content in the body
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "0.1.BE.4E2.1D77914FC5A11B8.0@omptrans.mail.synchronybank.com", DisplayName = "xhtml-head-xmlns-gmail-ext-big-mbox")] //head element has an invalid xmlns attribute
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "4b3ed4f78bcaae4d31caac7d6c4c22c5884b5b09-20081988-110484621@google.com", DisplayName = "xhtml-head-text-xmlns-gmail-ext-big-mbox")] //head element has text
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "FredricPaulEditor-in-Chief.665xjq1q0.dshl@cmp-subscriptions.p0.com", DisplayName = "xhtml-html-text-xmlns-gmail-ext-big-mbox")] //html element has text
+
+        
 
         [DataTestMethod]
         public void TestHugeFilesOutputXhtml
@@ -709,15 +692,33 @@ namespace UIUCLibrary.TestEaPdf
             int expectedErrors,
             int expectedWarnings,
             int expectedCounts, //default to check everything
-            bool quick = false,
-            long maxOutFileSize = 0 //default to no max
+            bool quick = false, //if true, it skips the xml validation
+            long maxOutFileSize = 0,
+            bool xhtml = true, //default to not creating the xhtml content
+            string? oneMsgId = null
             )
         {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts, quick, maxOutFileSize, true);
+            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId);
+
+            if (quick) //do the xml validation separately and store results in different outputfile
+            {
+                testFilesBaseDirectory = Path.GetDirectoryName(Path.Combine(testFilesBaseDirectory, relInPath)) ?? testFilesBaseDirectory;
+                string testFileName = Path.GetFileName(relInPath);
+                var sampleFile = Path.Combine(testFilesBaseDirectory, testFileName);
+                (string expectedOutFolder, string outFolder) = GetOutFolder(sampleFile, relOutPath);
+
+                validXml = ValidateXmlDocuments(oneFilePerMbox, sampleFile, outFolder);
+
+                Assert.IsTrue(validXml, "Invalid XML file.");
+
+            }
         }
 
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311, false, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311, false, 10000000, DisplayName = "gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
+            false, 0, false, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
+            false, 10000000, false, DisplayName = "gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
 
         [DataTestMethod]
         public void TestHugeFiles
@@ -735,10 +736,13 @@ namespace UIUCLibrary.TestEaPdf
             int expectedWarnings,
             int expectedCounts, //default to check everything
             bool quick = false,
-            long maxOutFileSize = 0 //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null
             )
         {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts, quick, maxOutFileSize, false);
+            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId);
         }
 
 
@@ -863,6 +867,143 @@ namespace UIUCLibrary.TestEaPdf
                 //Assert.Fail("No localIds found");
                 logger?.LogDebug("No localIds found");
             }
+        }
+
+        /// <summary>
+        /// Just validate the XML output files and store the results in a separate output file
+        /// </summary>
+        /// <param name="oneFilePerMbox"></param>
+        /// <param name="sampleFile"></param>
+        /// <param name="outFolder"></param>
+        /// <returns></returns>
+        private bool ValidateXmlDocuments(bool oneFilePerMbox, string sampleFile, string outFolder)
+        {
+            List<string> expectedXmlFiles = GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
+
+            validXml = true;
+
+            foreach(var xmlFile in expectedXmlFiles)
+            {
+                //use an XmlReader to validate with line numbers as soon as the Xml document is loaded
+                XmlReaderSettings rdrSettings = new()
+                {
+                    Schemas = new XmlSchemaSet()
+                };
+                rdrSettings.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
+                rdrSettings.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
+
+                rdrSettings.ValidationType = ValidationType.Schema;
+                rdrSettings.ValidationEventHandler += XmlValidationEventHandlerWriteToFile;
+                rdrSettings.ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings;
+
+                outFile = Path.ChangeExtension(xmlFile, "val.out");
+                File.Delete(outFile);
+                using var xRdr = XmlReader.Create(xmlFile, rdrSettings);
+                var xDoc = new XmlDocument(); //this will validate the XML
+                try
+                {
+                    logger?.LogInformation($"Validating '{xmlFile}'; results are in '{outFile}'.");
+                    File.AppendAllText(outFile, $"*** Validating XML File: {xmlFile} ***\r\n");
+                    xDoc.Load(xRdr);
+                }
+                catch (XmlException xex)
+                {
+                    File.AppendAllText(outFile, xex.Message + "\r\n");
+                    validXml = false;
+                }
+                catch (Exception ex)
+                {
+                    File.AppendAllText(outFile, ex.Message + "\r\n");
+                }
+
+                xRdr.Close();
+
+                File.AppendAllText(outFile, $"*** File Valid: {validXml} ***\r\n");
+            }
+
+            return validXml;
+
+        }
+
+        void XmlValidationEventHandlerWriteToFile(object? sender, ValidationEventArgs e)
+        {
+            validXml = false;
+            if (e.Severity == XmlSeverityType.Warning)
+            {
+                File.AppendAllText(outFile, $"Line: {e.Exception.LineNumber} -- {e.Message}\r\n");
+            }
+            else if (e.Severity == XmlSeverityType.Error)
+            {
+                File.AppendAllText(outFile, $"Line: {e.Exception.LineNumber} -- {e.Message}\r\n");
+            }
+        }
+
+        List<string> GetExpectedFiles(bool oneFilePerMbox, string sampleFile, string outFolder)
+        {
+            List<string> expectedXmlFiles = new();
+
+            if (!oneFilePerMbox)
+            {
+                string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
+                Assert.IsTrue(File.Exists(xmlPathStr));
+                expectedXmlFiles.Add(xmlPathStr);
+
+                //Output might be split into multiple files
+                var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
+                if (files != null)
+                {
+                    expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
+                }
+            }
+            else
+            {
+                if (Directory.Exists(sampleFile))
+                {
+                    //the input path is a directory, so make sure there is one xml output file for each input file
+                    foreach (var file in Directory.GetFiles(sampleFile))
+                    {
+                        string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(file), "xml"));
+                        Assert.IsTrue(File.Exists(xmlPathStr));
+                        expectedXmlFiles.Add(xmlPathStr);
+
+                        //Output might be split into multiple files
+                        var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
+                        if (files != null)
+                        {
+                            expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
+                        }
+                    }
+                }
+
+            }
+
+            return expectedXmlFiles;
+        }
+
+        (string expectedOutFolder, string outFolder) GetOutFolder(string sampleFile, string relOutPath)
+        {
+            var expectedOutFolder = "";
+            var outFolder = "";
+
+            if (Directory.Exists(sampleFile))
+            {
+                //sampleFile is a directory, so the output folder is relative to the sample folder's parent
+                expectedOutFolder = Path.Combine(Path.GetDirectoryName(sampleFile) ?? "", relOutPath);
+                outFolder = Path.Combine(Path.GetDirectoryName(sampleFile) ?? "", relOutPath);
+            }
+            else if (File.Exists(sampleFile))
+            {
+                //sample file is a file, so the output folder is relative to the sample file's parent directory
+                expectedOutFolder = Path.Combine(testFilesBaseDirectory, relOutPath);
+                outFolder = Path.Combine(testFilesBaseDirectory, relOutPath);
+            }
+            else
+            {
+                Assert.Fail($"Sample file or folder '{sampleFile}' does not exist");
+            }
+
+            return (expectedOutFolder, outFolder);
+
         }
 
     }

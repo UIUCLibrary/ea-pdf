@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HtmlAgilityPack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -92,6 +93,26 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
 
             return ret;
+        }
+
+        /// <summary>
+        /// Determine whether a string is valid XML whitespace
+        /// String.IsNullOrWhiteSpace uses the Unicode definition of whitespace, which includes more characters than the XML definition of whitespace, such as non-breaking space and others
+        /// So, instead use the XmlConvert.VerifyWhitespace function
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public static bool IsValidXmlWhitespace(string text)
+        {
+            try 
+            { 
+                XmlConvert.VerifyWhitespace(text); 
+                return true; 
+            } 
+            catch 
+            { 
+                return false; 
+            }
         }
 
 

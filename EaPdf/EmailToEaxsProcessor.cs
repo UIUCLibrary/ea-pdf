@@ -24,6 +24,7 @@ using static System.Net.Mime.MediaTypeNames;
 using MimeKit.Text;
 using MimeKit.Tnef;
 using System.Diagnostics.CodeAnalysis;
+using HtmlAgilityPack;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -63,6 +64,9 @@ namespace UIUCLibrary.EaPdf
         //need to keep track of folders in case output file is split into multiple files and the split happens while processing a subfolder
         private readonly Stack<string> _folders = new();
 
+        private bool skippingMessages = false; //will skip processing messages while this is true
+        private bool allDone = false; //will stop processing messages when this is true
+
         /// <summary>
         /// Create a processor for email files, initializing the logger and settings
         /// </summary>
@@ -78,6 +82,27 @@ namespace UIUCLibrary.EaPdf
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _logger.LogTrace($"{this.GetType().Name} Created");
+
+            //Set the skippingMessages flag if both SkipUntilMessageId  is set
+            if (!string.IsNullOrWhiteSpace(Settings.SkipUntilMessageId))
+            {
+                skippingMessages = true;
+                _logger.LogInformation($"Skipping all messages until MessagedId '{Settings.SkipUntilMessageId}' is found");
+            }
+            if (!string.IsNullOrWhiteSpace(Settings.SkipAfterMessageId))
+            {
+                _logger.LogInformation($"Skipping all messages after MessagedId '{Settings.SkipAfterMessageId}' is found");
+            }
+
+            //add any extra character entities to the HtmlAgilityPack.HtmlEntity class
+            if (Settings.ExtraHtmlCharacterEntities != null)
+            {
+                foreach (var ent in Settings.ExtraHtmlCharacterEntities)
+                {
+                    var addValue = HtmlAgilityPack.HtmlEntity.EntityValue.TryAdd(ent.Key, ent.Value);
+                    var addName = HtmlAgilityPack.HtmlEntity.EntityName.TryAdd(ent.Value, ent.Key);
+                }
+            }
 
         }
 
@@ -414,8 +439,8 @@ namespace UIUCLibrary.EaPdf
             MimeMessageProperties msgProps = new();
 
             //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
-            using FileStream mboxStream = new(mboxProps.MboxFilePath, FileMode.Open, FileAccess.Read);
-
+            //TODO: Put inside try catch in case of IO error
+            using FileStream mboxStream = new(mboxProps.MboxFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
             if (Helpers.MimeKitHelpers.IsStreamAnMbx(mboxStream))
             {
@@ -464,6 +489,11 @@ namespace UIUCLibrary.EaPdf
                         msgProps.MbxMessageHeader = mbxParser.CurrentHeader;
                         localId = ProcessCurrentMessage(message, xwriter, localId, messageList, mboxProps, msgProps);
                         mboxProps.MessageCount++;
+                    }  
+                    if (allDone)
+                    {
+                        WriteToLogMessage(xwriter, $"Skipping to the end",LogLevel.Debug);
+                        break;
                     }
                 }
 
@@ -562,6 +592,12 @@ namespace UIUCLibrary.EaPdf
                         WriteToLogErrorMessage(xwriter, "Message is null");
                     }
                     prevMessage = message;
+
+                    if(allDone)
+                    {
+                        WriteToLogMessage(xwriter, $"Skipping to the end",LogLevel.Debug);
+                        break;
+                    }
 
                 }
 
@@ -701,11 +737,14 @@ namespace UIUCLibrary.EaPdf
                 throw new ArgumentNullException(nameof(stream));
             }
 
+            const int bufSz = 4096 * 2;  // 8K
+
             int i;
+            byte[] buffer = new byte[bufSz];
             do
             {
-                i = stream.ReadByte();
-            } while (i != -1);
+                i = stream.Read(buffer,0, bufSz);
+            } while (i > 0);
         }
 
         private void StartNewXmlFile(ref XmlWriter xwriter, ref FileStream xstream, MboxProperties mboxProps)
@@ -785,6 +824,17 @@ namespace UIUCLibrary.EaPdf
         private long ProcessCurrentMessage(MimeMessage message, XmlWriter xwriter, long localId, List<MessageBrief> messageList, MboxProperties mboxProps, MimeMessageProperties msgProps)
         {
 
+            if (!string.IsNullOrWhiteSpace(message.MessageId) && message.MessageId == Settings.SkipUntilMessageId)
+            {
+                skippingMessages = false;
+            }
+
+            if (skippingMessages)
+            {
+                WriteToLogMessage(xwriter, $"Skipping message Id: {message.MessageId}", LogLevel.Debug);
+                return localId;
+            }
+
             localId++;
             var messageId = localId;
 
@@ -809,6 +859,12 @@ namespace UIUCLibrary.EaPdf
             });
 
             msgProps.Eol = MimeMessageProperties.EOL_TYPE_UNK;
+
+            if (!string.IsNullOrWhiteSpace(message.MessageId) && message.MessageId == Settings.SkipAfterMessageId)
+            {
+                skippingMessages = true;
+                allDone = true;
+            }
 
             return localId;
         }
@@ -1389,6 +1445,8 @@ namespace UIUCLibrary.EaPdf
                 return htmlText;
             }
 
+            //convert any character entities to their unicode equivalent
+            htmlText = HtmlHelpers.FixCharacterEntities(htmlText);
 
             if (txtPart.IsHtml)
             {
@@ -1410,6 +1468,8 @@ namespace UIUCLibrary.EaPdf
             {
                 //Use the MimeKit converters to convert plain/text, fixed to html,
                 var converter = new TextToHtml();
+                //TODO: This will double-encode any html entities, &zwnj; becomes &amp;zwnj; -- need to fix this
+                //      Run the HtmlEntity.DeEntitize before passing to the converter
                 htmlText = converter.Convert(htmlText);
                 //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
                 htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
@@ -1943,10 +2003,12 @@ namespace UIUCLibrary.EaPdf
                     WriteToLogErrorMessage(xwriter, message);
                     break;
                 default:
-                    var msg = $"{lvl.ToString().ToUpperInvariant()}: {XmlHelpers.ReplaceInvalidXMLChars(message)}";
+                    var msg = XmlHelpers.ReplaceInvalidXMLChars(message);
+
                     if (lvl >= Settings.LogToXmlThreshold)
-                        xwriter.WriteComment(msg);
-                    _logger.LogInformation(msg);
+                        xwriter.WriteComment($"{lvl.ToString().ToUpperInvariant()}: {msg}");
+
+                    _logger.Log(lvl, msg);
                     break;
             }
         }
