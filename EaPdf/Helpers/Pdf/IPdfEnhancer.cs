@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace UIUCLibrary.EaPdf.Helpers.Pdf
+﻿namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
     public interface IPdfEnhancer : IDisposable
     {

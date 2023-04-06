@@ -1,22 +1,14 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NDepend.Path;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UIUCLibrary.EaPdf;
-using iTextSharp.text.pdf;
-using System.IO;
-using ExCSS;
-using NUglify;
-using System.Threading;
-using AngleSharp;
-using AngleSharp.Css.Parser;
+﻿using AngleSharp;
 using AngleSharp.Css.Dom;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
-using NUglify.Css;
-using Fizzler;
+using System.Linq;
+
+//NOTE: This is for testing different CSS processor. After some testing, I decided to use AngleSharp.Css.  The other processors are commented out.
+//      I left the code here for reference.  The NuGet packages have also been removed from the project.
+//using NUglify;
+//using ExCSS;
+//using System.Threading.Tasks;
 
 namespace UIUCLibrary.TestEaPdf
 {
@@ -885,21 +877,21 @@ table[class*=""col-3""] h2[class=""title""], table[class*=""col-2""] h2[class=""
 ";
 
 
-        [TestMethod]
-        public void TestNUglify()
-        {
+        //[TestMethod]
+        //public void TestNUglify()
+        //{
 
-            var result = Uglify.Css(badCss);
+        //    var result = Uglify.Css(badCss);
 
-            Assert.IsTrue(result.HasErrors);
+        //    Assert.IsTrue(result.HasErrors);
 
-            var result2 = Uglify.Css(goodCss);
+        //    var result2 = Uglify.Css(goodCss);
 
-            Assert.IsFalse(result2.HasErrors);
+        //    Assert.IsFalse(result2.HasErrors);
 
-            var result3 = Uglify.Css(bigCss);
+        //    var result3 = Uglify.Css(bigCss);
 
-        }
+        //}
 
         [TestMethod]
         public void TestAngleSharpCss()
@@ -942,46 +934,46 @@ table[class*=""col-3""] h2[class=""title""], table[class*=""col-2""] h2[class=""
             Assert.AreEqual(name, ((ICssStyleRule)sSheet.Rules.Single()).SelectorText); //and the selector is OK
         }
 
-        [TestMethod]
-        public void TestExCSS()
-        {
+        //[TestMethod]
+        //public void TestExCSS()
+        //{
 
 
-            var parser = new StylesheetParser();
+        //    var parser = new StylesheetParser();
 
 
-            Stylesheet? stylesheet = null;
-            var stylesheetTask = Task.Run<Stylesheet>(() => parser.Parse(badCss));
-            var done = stylesheetTask.Wait(700);
-            if (done)
-                stylesheet = stylesheetTask.Result;
+        //    Stylesheet? stylesheet = null;
+        //    var stylesheetTask = Task.Run<Stylesheet>(() => parser.Parse(badCss));
+        //    var done = stylesheetTask.Wait(700);
+        //    if (done)
+        //        stylesheet = stylesheetTask.Result;
 
-            Assert.IsNull(stylesheet);
+        //    Assert.IsNull(stylesheet);
 
-            Stylesheet? stylesheet2 = null;
-            var stylesheet2Task = Task.Run<Stylesheet>(() => parser.Parse(goodCss));
-            var done2 = stylesheet2Task.Wait(700);
-            if (done2)
-                stylesheet2 = stylesheet2Task.Result;
+        //    Stylesheet? stylesheet2 = null;
+        //    var stylesheet2Task = Task.Run<Stylesheet>(() => parser.Parse(goodCss));
+        //    var done2 = stylesheet2Task.Wait(700);
+        //    if (done2)
+        //        stylesheet2 = stylesheet2Task.Result;
 
-            Assert.IsNotNull(stylesheet2);
+        //    Assert.IsNotNull(stylesheet2);
 
-            Assert.IsFalse(stylesheetTask.IsCompleted);
-            Assert.IsTrue(stylesheet2Task.IsCompleted);
+        //    Assert.IsFalse(stylesheetTask.IsCompleted);
+        //    Assert.IsTrue(stylesheet2Task.IsCompleted);
 
-            var name = "a:test"; // a name with colon 'a:test' will not parse styles rules
-            var value = "color: red; margin:5px; padding: 10px;";
-            var sSheet = parser.Parse($"{name} {{{value}}}");
-            Assert.AreEqual(0, sSheet.StyleRules.Count());
+        //    var name = "a:test"; // a name with colon 'a:test' will not parse styles rules
+        //    var value = "color: red; margin:5px; padding: 10px;";
+        //    var sSheet = parser.Parse($"{name} {{{value}}}");
+        //    Assert.AreEqual(0, sSheet.StyleRules.Count());
 
 
-            name = "test";
-            value = "color: red; margin:5px; padding: 10px;";
-            sSheet = parser.Parse($"{name} {{{value}}}");
-            var newStyle = sSheet.StyleRules.Single().Style.ToCss();
-            Assert.IsFalse(string.IsNullOrEmpty(newStyle));
+        //    name = "test";
+        //    value = "color: red; margin:5px; padding: 10px;";
+        //    sSheet = parser.Parse($"{name} {{{value}}}");
+        //    var newStyle = sSheet.StyleRules.Single().Style.ToCss();
+        //    Assert.IsFalse(string.IsNullOrEmpty(newStyle));
 
-        }
+        //}
 
 
     }

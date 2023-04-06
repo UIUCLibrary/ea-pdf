@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace UIUCLibrary.EaPdf
+﻿namespace UIUCLibrary.EaPdf
 {
     /// <summary>
     /// Properties that need to be persisted while processing an email message

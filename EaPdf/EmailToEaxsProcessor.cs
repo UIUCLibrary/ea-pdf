@@ -1,30 +1,14 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CsvHelper;
+using Microsoft.Extensions.Logging;
 using MimeKit;
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Xml;
-using Wiry.Base32;
-using CsvHelper;
-using Org.BouncyCastle.Utilities.Encoders;
-using Org.BouncyCastle.Asn1.X509.Qualified;
-using MimeKit.Utils;
 using MimeKit.Encodings;
-using System.Text;
-using NDepend.Path;
-using System.ComponentModel;
-using UIUCLibrary.EaPdf.Helpers;
-using System.Reflection.PortableExecutable;
-using Microsoft.VisualBasic;
-using System.Diagnostics;
-using System.Net.Mime;
-using CsvHelper.Configuration;
-using FilePathHelpers = UIUCLibrary.EaPdf.Helpers.FilePathHelpers;
-using System.Collections.Generic;
-using static System.Net.Mime.MediaTypeNames;
 using MimeKit.Text;
 using MimeKit.Tnef;
-using System.Diagnostics.CodeAnalysis;
-using HtmlAgilityPack;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Xml;
+using UIUCLibrary.EaPdf.Helpers;
 
 namespace UIUCLibrary.EaPdf
 {

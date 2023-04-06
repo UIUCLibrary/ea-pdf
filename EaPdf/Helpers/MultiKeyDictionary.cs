@@ -11,19 +11,15 @@
 // 20223-03-14 Modified by TGH to use the new C# 9.0 syntax and to support setting the equality comparers on the internal dictionaries
 // *************************************************
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-
 namespace Aron.Weiler
 {
-	/// <summary>
-	/// Multi-Key Dictionary Class
-	/// </summary>	
-	/// <typeparam name="K">Primary Key Type</typeparam>
-	/// <typeparam name="L">Sub Key Type</typeparam>
-	/// <typeparam name="V">Value Type</typeparam>
-	public class MultiKeyDictionary<K, L, V> where K : notnull where L : notnull
+    /// <summary>
+    /// Multi-Key Dictionary Class
+    /// </summary>	
+    /// <typeparam name="K">Primary Key Type</typeparam>
+    /// <typeparam name="L">Sub Key Type</typeparam>
+    /// <typeparam name="V">Value Type</typeparam>
+    public class MultiKeyDictionary<K, L, V> where K : notnull where L : notnull
 	{
 		internal readonly Dictionary<K, V> baseDictionary;
 		internal readonly Dictionary<L, K> subDictionary;

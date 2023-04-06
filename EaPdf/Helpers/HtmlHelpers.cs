@@ -1,17 +1,11 @@
-﻿using ExCSS;
-using NUglify;
+﻿using AngleSharp.Css.Dom;
+using AngleSharp.Css.Parser;
 using Fizzler.Systems.HtmlAgilityPack;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Asn1;
-using PdfTemplating.SystemCustomExtensions;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using System.Xml;
-using AngleSharp.Css.Parser;
-using AngleSharp.Css.Dom;
-using System.Text;
-using System.Linq.Expressions;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
@@ -961,31 +955,6 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
 
         public int GetHashCode([DisallowNull] ICssProperty obj)
-        {
-            //Check whether the object is null
-            if (Object.ReferenceEquals(obj, null)) return 0;
-
-
-            //Calculate the hash code for the product.
-            return obj.Name.GetHashCode();
-        }
-    }
-
-    class ExCssPropertyComparer : IEqualityComparer<IProperty>
-    {
-        public bool Equals(IProperty? x, IProperty? y)
-        {
-            //Check whether the compared objects reference the same data.
-            if (Object.ReferenceEquals(x, y)) return true;
-
-            //Check whether any of the compared objects is null.
-            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
-                return false;
-
-            return x.Name == y.Name;
-        }
-
-        public int GetHashCode([DisallowNull] IProperty obj)
         {
             //Check whether the object is null
             if (Object.ReferenceEquals(obj, null)) return 0;

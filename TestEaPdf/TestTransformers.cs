@@ -1,18 +1,12 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using UIUCLibrary.EaPdf;
-using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Xml;
-using System.Xml.Schema;
-using System.Security.Cryptography;
-using System;
 using Extensions.Logging.ListOfString;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Discovery;
-using System.Text.RegularExpressions;
+using UIUCLibrary.EaPdf;
 using UIUCLibrary.EaPdf.Helpers;
-using NDepend.Path;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
 
 namespace UIUCLibrary.TestEaPdf

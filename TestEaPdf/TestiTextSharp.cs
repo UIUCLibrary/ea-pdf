@@ -1,12 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NDepend.Path;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UIUCLibrary.EaPdf;
-using iTextSharp.text.pdf;
+﻿using iTextSharp.text.pdf;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 
 namespace UIUCLibrary.TestEaPdf

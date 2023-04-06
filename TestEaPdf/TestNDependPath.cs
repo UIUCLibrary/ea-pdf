@@ -1,11 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NDepend.Path;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UIUCLibrary.EaPdf;
 
 
 namespace UIUCLibrary.TestEaPdf
