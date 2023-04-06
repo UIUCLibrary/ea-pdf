@@ -83,8 +83,8 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (var ent in Settings.ExtraHtmlCharacterEntities)
                 {
-                    var addValue = HtmlAgilityPack.HtmlEntity.EntityValue.TryAdd(ent.Key, ent.Value);
-                    var addName = HtmlAgilityPack.HtmlEntity.EntityName.TryAdd(ent.Value, ent.Key);
+                    _ = HtmlAgilityPack.HtmlEntity.EntityValue.TryAdd(ent.Key, ent.Value);
+                    _ = HtmlAgilityPack.HtmlEntity.EntityName.TryAdd(ent.Value, ent.Key);
                 }
             }
 
@@ -482,7 +482,7 @@ namespace UIUCLibrary.EaPdf
                 }
 
                 //make sure to read to the end of the stream so the hash is correct
-                ReadToEnd(mbxParser.CryptoStream);
+                FilePathHelpers.ReadToEnd(mbxParser.CryptoStream);
 
                 if (Settings.IncludeSubFolders)
                 {
@@ -593,7 +593,7 @@ namespace UIUCLibrary.EaPdf
                 }
 
                 //make sure to read to the end of the stream so the hash is correct
-                ReadToEnd(cryptoStream);
+                FilePathHelpers.ReadToEnd(cryptoStream);
 
                 if (Settings.IncludeSubFolders)
                 {
@@ -708,27 +708,6 @@ namespace UIUCLibrary.EaPdf
 
             }
             return localId;
-        }
-
-        /// <summary>
-        /// Read to the end of a stream to ensure the hash is correct
-        /// </summary>
-        /// <param name="stream"></param>
-        private void ReadToEnd(Stream stream)
-        {
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
-
-            const int bufSz = 4096 * 2;  // 8K
-
-            int i;
-            byte[] buffer = new byte[bufSz];
-            do
-            {
-                i = stream.Read(buffer,0, bufSz);
-            } while (i > 0);
         }
 
         private void StartNewXmlFile(ref XmlWriter xwriter, ref FileStream xstream, MboxProperties mboxProps)
@@ -1361,7 +1340,7 @@ namespace UIUCLibrary.EaPdf
             //TODO: Maybe accomodate txtPart.IsEnriched || txtPart.IsRichText instead of treating them as non-text
             if (part is TextPart txtPart && (txtPart.IsPlain || txtPart.IsHtml) && !part.IsAttachment)
             {
-                var (text, encoding, warning) = GetContentText(part);
+                var (text, encoding, warning) = MimeKitHelpers.GetContentText(part);
 
                 if (!string.IsNullOrWhiteSpace(text) || expectingBodyContent)
                 {
@@ -1374,7 +1353,7 @@ namespace UIUCLibrary.EaPdf
 
                     if (Settings.SaveTextAsXhtml)
                     {
-                        var xhtml = GetTextAsXhtml(txtPart, out List<(LogLevel level, string message)> messages);
+                        var xhtml = MimeKitHelpers.GetTextAsXhtml(txtPart, out List<(LogLevel level, string message)> messages);
                         WriteToLogMessages(xwriter, messages);
 
                         if (string.IsNullOrWhiteSpace(xhtml) || messages.Any(m => m.level == LogLevel.Error || m.level == LogLevel.Critical))
@@ -1416,57 +1395,6 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private string GetTextAsXhtml(TextPart txtPart, out List<(LogLevel level, string message)> messages)
-        {
-
-            messages = new List<(LogLevel level, string message)>();
-
-
-            string htmlText = txtPart.Text;
-
-            if (string.IsNullOrWhiteSpace(htmlText))
-            {
-                return htmlText;
-            }
-
-            //convert any character entities to their unicode equivalent
-            htmlText = HtmlHelpers.FixCharacterEntities(htmlText);
-
-            if (txtPart.IsHtml)
-            {
-                //clean up the html so it is valid-ish xhtml, log any issues to the messages list
-                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, false);
-            }
-            else if (txtPart.IsFlowed)
-            {
-                //Use the MimeKit converters to convert plain/text, flowed to html,
-                var converter = new FlowedToHtml();
-                if (txtPart.ContentType.Parameters.TryGetValue("delsp", out string delsp))
-                    converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
-
-                htmlText = converter.Convert(htmlText);
-                //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
-                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
-            }
-            else if (txtPart.IsPlain)
-            {
-                //Use the MimeKit converters to convert plain/text, fixed to html,
-                var converter = new TextToHtml();
-                //TODO: This will double-encode any html entities, &zwnj; becomes &amp;zwnj; -- need to fix this
-                //      Run the HtmlEntity.DeEntitize before passing to the converter
-                htmlText = converter.Convert(htmlText);
-                //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
-                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
-            }
-            else
-            {
-                //TODO: Need to make accomodations for text/enriched (and text/richtext? -- not Microsoft RTF), see Pine sent-mail-aug-2007, message id: 4d2cbdd341d0e87da57ba2245562265f@uiuc.edu                 
-                messages.Add((LogLevel.Error, $"The '{txtPart.ContentType.MimeType}' content is not plain text or html."));
-            }
-
-            return htmlText;
-        }
-
         private void WriteContentCData(XmlWriter xwriter, string text, string encoding, string warning)
         {
             if (!string.IsNullOrWhiteSpace(warning))
@@ -1499,67 +1427,6 @@ namespace UIUCLibrary.EaPdf
                 throw;
             }
             xwriter.WriteEndElement(); //ContentAsXhtml
-        }
-
-        /// <summary>
-        /// Get the text content from a MimePart.  If the text contains characters not valid in XML, the output will be encoded as quoted-printable, and a warning will be returned
-        /// </summary>
-        /// <param name="part"></param>
-        /// <returns>A tuple containing the output text, output text encoding, and any warning message</returns>
-        /// <exception cref="ArgumentException"></exception>
-        private (string text, string encoding, string warning) GetContentText(MimePart part)
-        {
-            string contentStr = "";
-            string encoding = "";
-            string warning = "";
-
-            if (!part.ContentType.IsMimeType("text", "*"))
-            {
-                throw new ArgumentException("The MimePart is not 'text/*'");
-            }
-
-            if (part != null && part.Content != null)
-            {
-                //Decode the stream and treat it as whatever the charset advertised in the content-type header
-                using StreamReader reader = new(part.Content.Open(), part.ContentType.CharsetEncoding, true);
-                string xmlStr = reader.ReadToEnd();
-
-                //The content stream may contain characters that are not allowed in XML, i.e. ASCII control characters
-                //Check the content, and if this is the case encode it as quoted-printable before saving to XML
-                bool validXmlChars = true;
-                try
-                {
-                    xmlStr = XmlConvert.VerifyXmlChars(xmlStr);
-                }
-                catch (XmlException xex)
-                {
-                    warning = $"Characters not valid in XML.  Line {xex.LinePosition}: {xex.Message}";
-                    validXmlChars = false;
-                }
-
-                if (validXmlChars)
-                {
-                    contentStr = xmlStr;
-                    encoding = "";
-                }
-                else
-                {
-                    //Use the quoted-printable encoding which should escape the low ascii characters
-                    var qpEncoder = new QuotedPrintableEncoder();
-                    byte[] xmlStrByts = Encoding.ASCII.GetBytes(xmlStr);
-                    int len = qpEncoder.EstimateOutputLength(xmlStrByts.Length);
-                    byte[] qpStrByts = new byte[len];
-
-                    int outLen = qpEncoder.Encode(xmlStrByts, 0, xmlStrByts.Length, qpStrByts);
-
-                    var qpStr = Encoding.ASCII.GetString(qpStrByts, 0, outLen);
-
-                    contentStr = qpStr;
-                    encoding = "quoted-printable";
-                }
-            }
-
-            return (contentStr, encoding, warning);
         }
 
         private void WriteMimeOtherStandardHeaders(XmlWriter xwriter, MimeEntity mimeEntity, bool isMultipart)

@@ -8,8 +8,8 @@ namespace UIUCLibrary.EaPdf
 
     public class MbxParser : IDisposable
     {
-        private Stream _baseStream;
-        private CryptoStream _cryptoStream;
+        private readonly Stream _baseStream;
+        private readonly CryptoStream _cryptoStream;
         private MbxMessageHeader? _currentHeader;
 
         private MbxParserState _prevMessageState = MbxParserState.Normal;
@@ -34,16 +34,12 @@ namespace UIUCLibrary.EaPdf
 
         public MbxParser(Stream baseStream, HashAlgorithm hashAlgo)
         {
-            if (baseStream == null)
-            {
-                throw new ArgumentNullException(nameof(baseStream));
-            }
             if (hashAlgo == null)
             {
                 throw new ArgumentNullException(nameof(hashAlgo));
             }
 
-            _baseStream = baseStream;
+            _baseStream = baseStream ?? throw new ArgumentNullException(nameof(baseStream));
             _cryptoStream = new CryptoStream(baseStream, hashAlgo, CryptoStreamMode.Read, true);
 
             //skip the first 2048 bytes, which is the mbx file header
@@ -94,10 +90,7 @@ namespace UIUCLibrary.EaPdf
                 throw new InvalidOperationException("Fatal error occured, cannot continue parsing");
             }
 
-            string result;
-            ParseHeaderResult resultCode;
-            MbxMessageHeader msgHeader;
-            if (TryParseMbxMessageHeader(_cryptoStream, out msgHeader, out result, out resultCode))
+            if (TryParseMbxMessageHeader(_cryptoStream, out MbxMessageHeader msgHeader, out string result, out ParseHeaderResult resultCode))
             {
                 _currentHeader = msgHeader;
                 if (_prevMessageState == MbxParserState.Normal)
@@ -173,8 +166,10 @@ namespace UIUCLibrary.EaPdf
             result = "OK";
             resultCode = ParseHeaderResult.OK;
 
-            MbxMessageHeader headerOut = new MbxMessageHeader();
-            headerOut.HeaderOffset = _baseStream.Position;
+            MbxMessageHeader headerOut = new()
+            {
+                HeaderOffset = _baseStream.Position
+            };
 
             //read the message header from the stream, encoded as ASCII so no fancy parsing is needed
             int i = -1;
@@ -262,10 +257,7 @@ namespace UIUCLibrary.EaPdf
                 if (disposing)
                 {
                     // dispose managed state (managed objects)
-                    if (_cryptoStream != null)
-                    {
-                        _cryptoStream.Dispose();
-                    }
+                    _cryptoStream?.Dispose();
                 }
 
                 // If needed, free unmanaged resources (unmanaged objects) and override finalizer

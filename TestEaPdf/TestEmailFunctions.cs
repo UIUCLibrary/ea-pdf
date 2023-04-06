@@ -196,7 +196,7 @@ namespace UIUCLibrary.TestEaPdf
                 string csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
                 Assert.IsTrue(File.Exists(csvPathStr));
 
-                List<string> expectedXmlFiles = GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
+                List<string> expectedXmlFiles = TestHelpers.GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
 
                 if (quick) return;
 
@@ -259,7 +259,7 @@ namespace UIUCLibrary.TestEaPdf
                             Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
                             Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
 
-                            var expectedHash = CalculateHash(hashAlg, absPath);
+                            var expectedHash = TestHelpers.CalculateHash(hashAlg, absPath);
                             Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
 
                             //make sure size match
@@ -336,7 +336,7 @@ namespace UIUCLibrary.TestEaPdf
                                 Assert.IsTrue(File.Exists(extFilepath));
 
                                 //make sure the hash values match
-                                var extHash = CalculateHash(hashAlg, extFilepath);
+                                var extHash = TestHelpers.CalculateHash(hashAlg, extFilepath);
                                 if (string.IsNullOrEmpty(extHash))
                                 {
                                     logger?.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
@@ -563,7 +563,7 @@ namespace UIUCLibrary.TestEaPdf
                     if (relInPath == "MozillaThunderbird\\Drafts")
                     {
                         //make sure each message is marked as draft
-                        CheckThatAllMessagesAreDraft(xDoc, xmlns);
+                        TestHelpers.CheckThatAllMessagesAreDraft(xDoc, xmlns);
                     }
 
                     xRdr.Close();
@@ -705,7 +705,7 @@ namespace UIUCLibrary.TestEaPdf
                 testFilesBaseDirectory = Path.GetDirectoryName(Path.Combine(testFilesBaseDirectory, relInPath)) ?? testFilesBaseDirectory;
                 string testFileName = Path.GetFileName(relInPath);
                 var sampleFile = Path.Combine(testFilesBaseDirectory, testFileName);
-                (string expectedOutFolder, string outFolder) = GetOutFolder(sampleFile, relOutPath);
+                (_, string outFolder) = GetOutFolder(sampleFile, relOutPath);
 
                 validXml = ValidateXmlDocuments(oneFilePerMbox, sampleFile, outFolder);
 
@@ -786,21 +786,6 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
-        void CheckThatAllMessagesAreDraft(XmlDocument xdoc, XmlNamespaceManager xmlns)
-        {
-            var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
-            if (messages != null)
-            {
-                foreach (XmlElement message in messages)
-                {
-                    var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
-                    var deleted = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Deleted']", xmlns);
-                    //if it is deleted, it may not be marked as draft even if it is in the draft folder
-                    Assert.IsTrue(draft != null || deleted != null);
-                }
-            }
-        }
-
         void XmlValidationEventHandler(object? sender, ValidationEventArgs e)
         {
             validXml = false;
@@ -814,25 +799,6 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
-        string CalculateHash(string algName, string filePath)
-        {
-            byte[] hash = Array.Empty<byte>();
-
-            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
-
-            try
-            {
-                using var fstream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                hash = alg.ComputeHash(fstream);
-            }
-            catch
-            {
-                hash = Array.Empty<byte>();
-            }
-
-            return Convert.ToHexString(hash);
-
-        }
 
         void ValidateLocalIds(XmlDocument xdoc, XmlNamespaceManager xmlns)
         {
@@ -877,7 +843,7 @@ namespace UIUCLibrary.TestEaPdf
         /// <returns></returns>
         private bool ValidateXmlDocuments(bool oneFilePerMbox, string sampleFile, string outFolder)
         {
-            List<string> expectedXmlFiles = GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
+            List<string> expectedXmlFiles = TestHelpers.GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
 
             validXml = true;
 
@@ -937,47 +903,6 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
-        List<string> GetExpectedFiles(bool oneFilePerMbox, string sampleFile, string outFolder)
-        {
-            List<string> expectedXmlFiles = new();
-
-            if (!oneFilePerMbox)
-            {
-                string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
-                Assert.IsTrue(File.Exists(xmlPathStr));
-                expectedXmlFiles.Add(xmlPathStr);
-
-                //Output might be split into multiple files
-                var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                if (files != null)
-                {
-                    expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
-                }
-            }
-            else
-            {
-                if (Directory.Exists(sampleFile))
-                {
-                    //the input path is a directory, so make sure there is one xml output file for each input file
-                    foreach (var file in Directory.GetFiles(sampleFile))
-                    {
-                        string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(file), "xml"));
-                        Assert.IsTrue(File.Exists(xmlPathStr));
-                        expectedXmlFiles.Add(xmlPathStr);
-
-                        //Output might be split into multiple files
-                        var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                        if (files != null)
-                        {
-                            expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
-                        }
-                    }
-                }
-
-            }
-
-            return expectedXmlFiles;
-        }
 
         (string expectedOutFolder, string outFolder) GetOutFolder(string sampleFile, string relOutPath)
         {

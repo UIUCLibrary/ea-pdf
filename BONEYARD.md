@@ -1,5 +1,25 @@
 # Code Removed from the Project, but still available for reference
 
+## Function to remove empty tables
+        private static void RemoveEmptyTables(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var emptyTableNodes = hdoc.DocumentNode.QuerySelectorAll("table");
+
+            List<HtmlNode> toRemove = new();
+            foreach (var node in emptyTableNodes)
+            {
+                if (string.IsNullOrWhiteSpace(node.InnerHtml))
+                {
+                    toRemove.Add(node);
+                }
+            }
+
+            toRemove.ForEach(h => h.Remove());
+
+        }
+
+
+
 ## Function to automatically retry opening a file stream with an exponential backoff
         /// <summary>
         /// Try to open a file stream with multiple retries with exponential backoff in case it is locked by some other process

@@ -1,14 +1,19 @@
-﻿using MimeKit;
+﻿using Microsoft.Extensions.Logging;
+using MimeKit;
+using MimeKit.Encodings;
+using MimeKit.Text;
 using System.Globalization;
+using System.Text;
+using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
     public class MimeKitHelpers
     {
 
-        public static string[] TextContentEncodings = new string[] { "", "7bit", "8bit" };
-        public static string[] BinaryContentEncodings = new string[] { "binary", "base64", "quoted-printable", "uuencode" };
-        public static string[] ContentEncodings = new string[] { "", "7bit", "8bit", "binary", "base64", "quoted-printable", "uuencode" };
+        public static readonly string[] TextContentEncodings = new string[] { "", "7bit", "8bit" };
+        public static readonly string[] BinaryContentEncodings = new string[] { "binary", "base64", "quoted-printable", "uuencode" };
+        public static readonly string[] ContentEncodings = new string[] { "", "7bit", "8bit", "binary", "base64", "quoted-printable", "uuencode" };
 
 
         //https://github.com/noelmartinon/mboxzilla/blob/master/nsMsgMessageFlags.h
@@ -197,8 +202,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             var xMozillaStatus = message.Headers["X-Mozilla-Status"];
             if (!string.IsNullOrWhiteSpace(xMozillaStatus))
             {
-                ushort xMozillaBitFlag;
-                if (ushort.TryParse(xMozillaStatus, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out xMozillaBitFlag))
+                if (ushort.TryParse(xMozillaStatus, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort xMozillaBitFlag))
                 {
                     //test that the value is a valid combination of flags
                     var allFlags = (XMozillaStatusFlags)Enum.GetValues<XMozillaStatusFlags>().Cast<int>().Sum();
@@ -225,8 +229,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             var xMozillaStatus2 = message.Headers["X-Mozilla-Status2"];
             if (!string.IsNullOrWhiteSpace(xMozillaStatus2))
             {
-                uint xMozillaBitFlag2;
-                if (uint.TryParse(xMozillaStatus2, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out xMozillaBitFlag2))
+                if (uint.TryParse(xMozillaStatus2, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint xMozillaBitFlag2))
                 {
                     //test that the value is a valid combination of flags
                     var allFlags = (XMozillaStatusFlags2)Enum.GetValues<XMozillaStatusFlags2>().Cast<int>().Sum();
@@ -587,6 +590,117 @@ namespace UIUCLibrary.EaPdf.Helpers
             return part.Headers.Contains("X-Mozilla-External-Attachment-URL") && (part.Headers["X-Mozilla-Altered"] ?? "").Contains("AttachmentDetached");
         }
 
+        /// <summary>
+        /// Get the text content from a MimePart.  If the text contains characters not valid in XML, the output will be encoded as quoted-printable, and a warning will be returned
+        /// </summary>
+        /// <param name="part"></param>
+        /// <returns>A tuple containing the output text, output text encoding, and any warning message</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public static (string text, string encoding, string warning) GetContentText(MimePart part)
+        {
+            string contentStr = "";
+            string encoding = "";
+            string warning = "";
+
+            if (!part.ContentType.IsMimeType("text", "*"))
+            {
+                throw new ArgumentException("The MimePart is not 'text/*'");
+            }
+
+            if (part != null && part.Content != null)
+            {
+                //Decode the stream and treat it as whatever the charset advertised in the content-type header
+                using StreamReader reader = new(part.Content.Open(), part.ContentType.CharsetEncoding, true);
+                string xmlStr = reader.ReadToEnd();
+
+                //The content stream may contain characters that are not allowed in XML, i.e. ASCII control characters
+                //Check the content, and if this is the case encode it as quoted-printable before saving to XML
+                bool validXmlChars = true;
+                try
+                {
+                    xmlStr = XmlConvert.VerifyXmlChars(xmlStr);
+                }
+                catch (XmlException xex)
+                {
+                    warning = $"Characters not valid in XML.  Line {xex.LinePosition}: {xex.Message}";
+                    validXmlChars = false;
+                }
+
+                if (validXmlChars)
+                {
+                    contentStr = xmlStr;
+                    encoding = "";
+                }
+                else
+                {
+                    //Use the quoted-printable encoding which should escape the low ascii characters
+                    var qpEncoder = new QuotedPrintableEncoder();
+                    byte[] xmlStrByts = Encoding.ASCII.GetBytes(xmlStr);
+                    int len = qpEncoder.EstimateOutputLength(xmlStrByts.Length);
+                    byte[] qpStrByts = new byte[len];
+
+                    int outLen = qpEncoder.Encode(xmlStrByts, 0, xmlStrByts.Length, qpStrByts);
+
+                    var qpStr = Encoding.ASCII.GetString(qpStrByts, 0, outLen);
+
+                    contentStr = qpStr;
+                    encoding = "quoted-printable";
+                }
+            }
+
+            return (contentStr, encoding, warning);
+        }
+
+        public static string GetTextAsXhtml(TextPart txtPart, out List<(LogLevel level, string message)> messages)
+        {
+
+            messages = new List<(LogLevel level, string message)>();
+
+
+            string htmlText = txtPart.Text;
+
+            if (string.IsNullOrWhiteSpace(htmlText))
+            {
+                return htmlText;
+            }
+
+            //convert any character entities to their unicode equivalent
+            htmlText = HtmlHelpers.FixCharacterEntities(htmlText);
+
+            if (txtPart.IsHtml)
+            {
+                //clean up the html so it is valid-ish xhtml, log any issues to the messages list
+                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, false);
+            }
+            else if (txtPart.IsFlowed)
+            {
+                //Use the MimeKit converters to convert plain/text, flowed to html,
+                var converter = new FlowedToHtml();
+                if (txtPart.ContentType.Parameters.TryGetValue("delsp", out string delsp))
+                    converter.DeleteSpace = delsp.Equals("yes", StringComparison.OrdinalIgnoreCase);
+
+                htmlText = converter.Convert(htmlText);
+                //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
+                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
+            }
+            else if (txtPart.IsPlain)
+            {
+                //Use the MimeKit converters to convert plain/text, fixed to html,
+                var converter = new TextToHtml();
+                //TODO: This will double-encode any html entities, &zwnj; becomes &amp;zwnj; -- need to fix this
+                //      Run the HtmlEntity.DeEntitize before passing to the converter
+                htmlText = converter.Convert(htmlText);
+                //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
+                htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
+            }
+            else
+            {
+                //TODO: Need to make accomodations for text/enriched (and text/richtext? -- not Microsoft RTF), see Pine sent-mail-aug-2007, message id: 4d2cbdd341d0e87da57ba2245562265f@uiuc.edu                 
+                messages.Add((LogLevel.Error, $"The '{txtPart.ContentType.MimeType}' content is not plain text or html."));
+            }
+
+            return htmlText;
+        }
 
     }
 }

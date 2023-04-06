@@ -18,7 +18,10 @@ namespace UIUCLibrary.EaPdf.Helpers
                 List<(LogLevel level, string message)> messages = new();
                 int status = RunMainClass("net.sf.saxon.Version", ref messages);
 
-                return messages[0].message;
+                if (status == 0)
+                    return messages[0].message;
+                else
+                    return "UNKNOWN";
             }
         }
 

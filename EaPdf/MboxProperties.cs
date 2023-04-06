@@ -72,7 +72,7 @@ namespace UIUCLibrary.EaPdf
             set
             {
                 //To check for validity, try to create the Uri from the string
-                Uri globalUri = new Uri(value);
+                Uri globalUri = new(value);
 
                 if (!globalUri.IsAbsoluteUri)
                     throw new UriFormatException("");

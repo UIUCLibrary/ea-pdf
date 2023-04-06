@@ -13,7 +13,7 @@ namespace UIUCLibrary.EaPdf.Helpers
     internal class HtmlHelpers
     {
         //Add any needed non-standard character entities here; note that character entities are case-sensitive
-        public static Dictionary<string, int> ExtraCharacterEntities = new Dictionary<string, int>() { { "QUOT", 0x22 } };
+        public static Dictionary<string, int> ExtraCharacterEntities = new() { { "QUOT", 0x22 } };
 
         /// <summary>
         /// Use the HTML Agility Pack to parse the HTML and return it as valid XHTML
@@ -89,9 +89,6 @@ namespace UIUCLibrary.EaPdf.Helpers
             //If an element has the "display: none" style set, delete it from the xhtml.  make sure this is after the inlining process
             RemoveDisplayNone(hdoc, ref messages, ignoreHtmlIssues);
 
-            //Remove empty (whitespace-only) table elements 
-            //RemoveEmptyTables(hdoc, ref messages, ignoreHtmlIssues); //This logic was moved to the eaxs_xhtml2fo.xsl
-
             ret = htmlNode.OuterHtml;
 
             if (XmlHelpers.TryReplaceInvalidXMLChars(ref ret, out string msg))
@@ -162,23 +159,6 @@ namespace UIUCLibrary.EaPdf.Helpers
             foreach (var node in displayNoneNodes)
             {
                 toRemove.Add(node);
-            }
-
-            toRemove.ForEach(h => h.Remove());
-
-        }
-
-        private static void RemoveEmptyTables(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
-        {
-            var emptyTableNodes = hdoc.DocumentNode.QuerySelectorAll("table");
-
-            List<HtmlNode> toRemove = new();
-            foreach (var node in emptyTableNodes)
-            {
-                if (string.IsNullOrWhiteSpace(node.InnerHtml))
-                {
-                    toRemove.Add(node);
-                }
             }
 
             toRemove.ForEach(h => h.Remove());
@@ -509,7 +489,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 //need to merge them into a single head
                 var mainHead = heads[0];
-                for (int i = 1; i < heads.Count(); i++)
+                for (int i = 1; i < heads.Count; i++)
                 {
                     var otherHead = heads[i];
                     mainHead.AppendChildren(otherHead.ChildNodes); //move all the children of the head to the main head
@@ -877,7 +857,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 var cssParser = new CssParser(); //AngleSharp.Css parser
                 var sSheetTask = cssParser.ParseStyleSheet(allStyles);
 
-                foreach (ICssStyleRule rule in sSheetTask.Rules.Where(r => r is ICssStyleRule sr && sr.Selector != null).OrderByDescending(sr => ((ICssStyleRule)sr).Selector.Specificity))
+                foreach (ICssStyleRule rule in sSheetTask.Rules.Where(r => r is ICssStyleRule sr && sr.Selector != null).OrderByDescending(sr => ((ICssStyleRule)sr).Selector.Specificity).Cast<ICssStyleRule>())
                 {
                     //TODO: Add support for ListSelectors, so that the separate specificity of its selectors can be determined.
                     //TODO: Add support for the shorthand property "all"
@@ -948,7 +928,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (Object.ReferenceEquals(x, y)) return true;
 
             //Check whether any of the compared objects is null.
-            if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+            if (x is null || y is null)
                 return false;
 
             return x.Name == y.Name;
@@ -957,7 +937,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         public int GetHashCode([DisallowNull] ICssProperty obj)
         {
             //Check whether the object is null
-            if (Object.ReferenceEquals(obj, null)) return 0;
+            if (obj is null) return 0;
 
 
             //Calculate the hash code for the product.

@@ -16,6 +16,7 @@ namespace UIUCLibrary.TestEaPdf
 
             var rootParent = rootFile.ParentDirectoryPath;
 
+            Assert.IsTrue(rootParent.Kind == AbsolutePathKind.DriveLetter);
             
         }
 
@@ -68,7 +69,7 @@ namespace UIUCLibrary.TestEaPdf
         [ExpectedException(typeof(ArgumentException))]
         public void TestInvalidFileName()
         {
-            var valid = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(@"C:\", @"C:\one\file");
+            _ = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(@"C:\", @"C:\one\file");
 
         }
     }

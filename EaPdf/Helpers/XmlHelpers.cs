@@ -8,7 +8,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         //See: https://stackoverflow.com/questions/397250/unicode-regex-invalid-xml-characters/961504#961504
 
         // Filters control characters but allows only properly-formed surrogate sequences
-        private static Regex _invalidXMLChars = new Regex(
+        private static readonly Regex _invalidXMLChars = new(
             @"(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFEFF\uFFFE\uFFFF]",
             RegexOptions.Compiled);
 

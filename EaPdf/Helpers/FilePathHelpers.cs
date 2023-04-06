@@ -54,7 +54,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <returns></returns>
         public static bool IsValidOutputPathForMboxFile(IAbsoluteDirectoryPath absInPath, IAbsoluteDirectoryPath absOutPath)
         {
-            bool ret = true;
+            bool ret;
 
             if (absInPath==null)
                 throw new ArgumentNullException(nameof(absInPath));
@@ -92,7 +92,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 {
                     //if there is no common root, the out folder must be valid
                     var paths = new List<IAbsoluteDirectoryPath>() { inDirPathNoExt, outDirPathNoExt };
-                    if (!paths.TryGetCommonRootDirectory(out IAbsoluteDirectoryPath commonRoot))
+                    if (!paths.TryGetCommonRootDirectory(out _))
                     {
                         ret = true;
                     }
@@ -153,7 +153,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         public static string GetRandomFilePath(string folderPath)
         {
             //get random file name that doesn't already exist
-            string randomFilePath = "";
+            string randomFilePath;
             do
             {
                 randomFilePath = Path.Combine(folderPath, Path.GetRandomFileName());
@@ -173,14 +173,14 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <exception cref="ArgumentNullException"></exception>
         public static string GetOutputFilePathBasedOnHash(byte[] hash, MimePart part, string folderPath, bool wrapInXml)
         {
-            string hashStr = "";
+            string hashStr;
             if (hash != null)
                 hashStr = Base32Encoding.ZBase32.GetString(hash, 0, hash.Length); // uses z-base-32 encoding for file names, https://en.wikipedia.org/wiki/Base32
             else
                 throw new ArgumentNullException(nameof(hash));
 
             //for convenience get an extension to use with the derived filename
-            var ext = ".bin"; //default extension
+            string ext;
             if (wrapInXml)
             {
                 ext = ".xml";
@@ -201,6 +201,27 @@ namespace UIUCLibrary.EaPdf.Helpers
             var hashFilePath = Path.Combine(folderPath, hashStr[..2], Path.ChangeExtension(hashStr, ext));
 
             return hashFilePath;
+        }
+
+        /// <summary>
+        /// Read to the end of a stream to ensure the hash is correct
+        /// </summary>
+        /// <param name="stream"></param>
+        public static void ReadToEnd(Stream stream)
+        {
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            const int bufSz = 4096 * 2;  // 8K
+
+            int i;
+            byte[] buffer = new byte[bufSz];
+            do
+            {
+                i = stream.Read(buffer, 0, bufSz);
+            } while (i > 0);
         }
 
 
