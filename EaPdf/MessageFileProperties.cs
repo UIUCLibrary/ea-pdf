@@ -1,18 +1,19 @@
-﻿using System.Security.Cryptography;
+﻿using MimeKit;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace UIUCLibrary.EaPdf
 {
     /// <summary>
-    /// Properties that need to be persisted while processing an email mbox file
+    /// Properties that need to be persisted while processing an email message file (mbox or eml)
     /// </summary>
-    internal class MboxProperties
+    internal class MessageFileProperties
     {
 
         /// <summary>
         /// Default to the SHA256 hash algorithm
         /// </summary>
-        public MboxProperties()
+        public MessageFileProperties()
         {
             //init the hash algorithm
             HashAlgorithm = SHA256.Create();
@@ -20,42 +21,62 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
-        /// Create new MboxProperties from an existing MBoxProperties 
+        /// Create new MessageFileProperties from an existing MessageFileProperties 
         /// </summary>
         /// <param name="source"></param>
-        public MboxProperties(MboxProperties source) : this()
+        public MessageFileProperties(MessageFileProperties source) : this()
         {
-            this.MboxFilePath = source.MboxFilePath;
+            this.MessageFilePath = source.MessageFilePath;
             this.OutFilePath = source.OutFilePath;
             this.OutFileNumber = source.OutFileNumber;
             this.AccountEmails = source.AccountEmails;
             this.GlobalId = source.GlobalId;
+            this.MessageFormat = source.MessageFormat;
         }
 
         /// <summary>
-        /// The full path to the mbox file being processed
+        /// The full path to the message file being processed
         /// </summary>
-        public string MboxFilePath { get; set; } = "";
+        public string MessageFilePath { get; set; } = "";
 
         /// <summary>
-        /// The name of the mbox file, which is just the file name minus the path
+        /// The name of the file, which is just the file name minus the path
         /// </summary>
-        public string MboxName
+        public string MessageFileName
         {
             get
             {
-                return System.IO.Path.GetFileName(MboxFilePath);
+                return System.IO.Path.GetFileName(MessageFilePath);
             }
         }
 
         /// <summary>
-        /// The name of the directory containing the mbox file
+        /// Returns the value used for the Folder Name element in the XML
+        /// It is based on the MessageFileName for MBOX files or the parent Directory name for EML files
         /// </summary>
-        public string MboxDirectoryName
+        public string XmlFolderName
         {
             get
             {
-                return System.IO.Path.GetDirectoryName(MboxFilePath) ?? "";
+                if(MessageFormat== MimeFormat.Mbox)
+                {
+                    return MessageFileName;
+                }
+                else
+                {
+                    return Path.GetFileName(Path.GetDirectoryName(MessageFilePath) ?? MessageFileName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The name of the directory containing the message file
+        /// </summary>
+        public string MessageDirectoryName
+        {
+            get
+            {
+                return System.IO.Path.GetDirectoryName(MessageFilePath) ?? "";
             }
         }
 
@@ -164,7 +185,7 @@ namespace UIUCLibrary.EaPdf
 
 
         /// <summary>
-        /// The processor keeps tracks of the different line ending styles used in the mbox file.
+        /// The processor keeps tracks of the different line ending styles used in the message file.
         /// The key is the EOL and the value is the number of occurences of this EOL.
         /// EOLs which do not appear in the file will not appear in the dictionary
         /// </summary>
@@ -204,8 +225,8 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
-        /// The hash algorithm used for the mbox, defaults to SHA256
-        /// Each mbox file needs its own since it records state
+        /// The hash algorithm used for the message file, defaults to SHA256
+        /// Each message file needs its own since it records state
         /// </summary>
         public HashAlgorithm HashAlgorithm { get; private set; }
 
@@ -245,9 +266,14 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
-        /// The number of valid messages found in the mbox
+        /// The number of valid messages found in the message file
         /// </summary>
         public int MessageCount { get; set; } = 0;
+
+        /// <summary>
+        /// The format of the message file, either a single EML message or a MBOX file
+        /// </summary>
+        public MimeFormat MessageFormat { get; set; } = MimeFormat.Mbox;
 
     }
 }

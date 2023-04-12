@@ -1,6 +1,7 @@
 using Extensions.Logging.ListOfString;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MimeKit;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,7 +23,7 @@ namespace UIUCLibrary.TestEaPdf
         bool validXml = true;
         string outFile = "xml_validation.out";
         readonly List<string> loggedLines = new();
-        readonly LogLevel minLogLvl = LogLevel.Information;
+        readonly LogLevel minLogLvl = LogLevel.Trace;
 
         const string UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         const string LOWER = "abcdefghijklmnopqrstuvwxyz";
@@ -107,7 +108,6 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Weird\\virus_notif.mbox", "", "SHA256", false, false, false, false, false, false, 0, 1, 2, DisplayName = "weird-virus-notif-mbox")] //weird virus notification with multipart/report, message/delivery-report. and text/rfc822-headers content types
         [DataRow("Weird\\virus_payload.mbox", "out_virus_payload", "SHA256", true, false, false, false, false, false, 0, 1, 2, DisplayName = "weird-virus-payload-mbox")] //message from very large mbox which contains a virus payload
 
-
         [DataTestMethod]
         public void TestSampleFiles
             (
@@ -126,7 +126,8 @@ namespace UIUCLibrary.TestEaPdf
             bool quick = false, //default to no max
             long maxOutFileSize = 0,
             bool xhtml = false, //default to not creating the xhtml content
-            string? oneMsgId = null //just process the one message with this id 
+            string? oneMsgId = null, //just process the one message with this id 
+            MimeFormat format = MimeFormat.Mbox
             )
         {
 
@@ -168,7 +169,7 @@ namespace UIUCLibrary.TestEaPdf
                 var eProc = new EmailToEaxsProcessor(logger, settings);
 
                 long validMessageCount = 0;
-                if (Directory.Exists(sampleFile))
+                if (format == MimeFormat.Mbox && Directory.Exists(sampleFile))
                 {
                     validMessageCount = eProc.ConvertFolderOfMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                     if (expectedCounts == -1)
@@ -176,9 +177,25 @@ namespace UIUCLibrary.TestEaPdf
                     else
                         Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
                 }
-                else if (File.Exists(sampleFile))
+                else if (format == MimeFormat.Mbox && File.Exists(sampleFile))
                 {
                     validMessageCount = eProc.ConvertMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                    if (expectedCounts == -1)
+                        Assert.IsTrue(validMessageCount > 0);
+                    else
+                        Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
+                }
+                else if (format == MimeFormat.Entity && Directory.Exists(sampleFile))
+                {
+                    validMessageCount = eProc.ConvertFolderOfEmlToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                    if (expectedCounts == -1)
+                        Assert.IsTrue(validMessageCount > 0, "Expected some valid messages");
+                    else
+                        Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
+                }
+                else if (format == MimeFormat.Entity && File.Exists(sampleFile))
+                {
+                    validMessageCount = eProc.ConvertEmlToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                     if (expectedCounts == -1)
                         Assert.IsTrue(validMessageCount > 0);
                     else
@@ -567,15 +584,118 @@ namespace UIUCLibrary.TestEaPdf
                     }
 
                     xRdr.Close();
-                    
+
                 }
-                
+
             }
             else
             {
                 Assert.Fail("Logger was not initialized");
             }
         }
+
+
+
+        //An EML file without the 'From ' header should not work if parsed with the Mbox parser
+        [DataRow("Gmail\\eml_without_mbox_header\\2016-06-23 135245 d87d0cbbd2.eml", "d87d0cbbd2", "SHA256", false, false, false, false, false, false, 0, 1, 0, DisplayName = "gmail-eml-wo-from-header")] //EML file without the mbox 'From ' line
+
+        [DataTestMethod]
+        public void TestEmlFileWithoutFromHeader(
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false, //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
+            )
+        {
+            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Mbox);
+
+            var wrn = loggedLines.Where(l => l.Contains("Failed to find mbox From marker"));
+            Assert.IsNotNull(wrn);
+            Assert.AreEqual(1, wrn.Count());
+        }
+
+        //An mbox file with the 'From ' header should not work if parsed with the Entity parser
+        //The Entity parser will correctly parse the first message in the file, but will fail to parse the second message, instead the Epilogue of the first messages body will contain all the text from the remaining messages
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "DLF_ENTITY", "SHA256", false, false, false, false, false, false, 1, 0, 1, DisplayName = "mbox-using-entity-format")] //mbox file with the 'From ' lines separating the messages
+
+        [DataTestMethod]
+        public void TestMboxFileUsingMimeFormatEntity(
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false, //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
+            )
+        {
+            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Entity);
+
+            var err = loggedLines.Where(l => l.Contains("The file may be corrupt"));
+            Assert.IsNotNull(err);
+            Assert.AreEqual(1, err.Count());
+        }
+
+        //A normal EML file 
+        [DataRow("Gmail\\eml_without_mbox_header\\2016-06-23 135245 d87d0cbbd2.eml", "d87d0cbbd2", "SHA256", false, false, false, false, false, false, 0, 0, 1, DisplayName = "gmail-eml")] //EML file 
+
+        //A folder of normal EML files 
+        [DataRow("Gmail\\eml_without_mbox_header", "eml_out", "SHA256", false, false, false, false, false, false, 0, 0, 11, DisplayName = "gmail-folder-eml")] //Folder of EML files, one output file
+
+        //A folder of normal EML files 
+        [DataRow("Gmail\\eml_without_mbox_header", "eml_out_ext_wrap", "SHA256", true, true, false, false, false, false, 0, 0, 11, DisplayName = "gmail-folder-eml-ext-wrap")] //Folder of EML files, one output file, with external content wrapped in XML
+
+        //A folder of normal EML file 
+        [DataRow("Gmail\\eml_without_mbox_header", "eml_out_one_per", "SHA256", false, false, false, false, false, true, 0, 0, 11, DisplayName = "gmail-folder-eml-one-per")] //Folder of EML files, one output file per input file
+
+        [DataTestMethod]
+        public void TestEmlFile(
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false, //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
+            )
+        {
+            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Entity);
+
+        }
+
 
         //The expected error, warning, and message counts were set by running the test scripts as of 2022-12-08
 
@@ -674,7 +794,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
             false, 0, true, "FredricPaulEditor-in-Chief.665xjq1q0.dshl@cmp-subscriptions.p0.com", DisplayName = "xhtml-html-text-xmlns-gmail-ext-big-mbox")] //html element has text
 
-        
+
 
         [DataTestMethod]
         public void TestHugeFilesOutputXhtml
@@ -847,7 +967,7 @@ namespace UIUCLibrary.TestEaPdf
 
             validXml = true;
 
-            foreach(var xmlFile in expectedXmlFiles)
+            foreach (var xmlFile in expectedXmlFiles)
             {
                 //use an XmlReader to validate with line numbers as soon as the Xml document is loaded
                 XmlReaderSettings rdrSettings = new()
