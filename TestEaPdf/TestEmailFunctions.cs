@@ -6,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Schema;
 using UIUCLibrary.EaPdf;
@@ -168,424 +166,13 @@ namespace UIUCLibrary.TestEaPdf
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);
 
-                long validMessageCount = 0;
-                if (format == MimeFormat.Mbox && Directory.Exists(sampleFile))
-                {
-                    validMessageCount = eProc.ConvertFolderOfMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-                    if (expectedCounts == -1)
-                        Assert.IsTrue(validMessageCount > 0, "Expected some valid messages");
-                    else
-                        Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
-                }
-                else if (format == MimeFormat.Mbox && File.Exists(sampleFile))
-                {
-                    validMessageCount = eProc.ConvertMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-                    if (expectedCounts == -1)
-                        Assert.IsTrue(validMessageCount > 0);
-                    else
-                        Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
-                }
-                else if (format == MimeFormat.Entity && Directory.Exists(sampleFile))
-                {
-                    validMessageCount = eProc.ConvertFolderOfEmlToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-                    if (expectedCounts == -1)
-                        Assert.IsTrue(validMessageCount > 0, "Expected some valid messages");
-                    else
-                        Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
-                }
-                else if (format == MimeFormat.Entity && File.Exists(sampleFile))
-                {
-                    validMessageCount = eProc.ConvertEmlToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-                    if (expectedCounts == -1)
-                        Assert.IsTrue(validMessageCount > 0);
-                    else
-                        Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
-                }
-                else
-                {
-                    Assert.Fail($"Sample file or folder '{sampleFile}' does not exist");
-                }
+                var validMessageCount = ConvertMessagesAndCheckCounts(eProc, format, sampleFile, outFolder, expectedCounts);
 
-                //make sure output folders and files exist
-                Assert.AreEqual(expectedOutFolder, outFolder);
-                Assert.IsTrue(Directory.Exists(outFolder));
-
-                string csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
-                Assert.IsTrue(File.Exists(csvPathStr));
-
-                List<string> expectedXmlFiles = TestHelpers.GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
+                List<string> expectedXmlFiles = CheckOutputFolderAndGetXmlFiles(expectedOutFolder, outFolder, sampleFile, oneFilePerMbox);
 
                 if (quick) return;
 
-                //make sure the xml files are valid
-                foreach (var xmlFile in expectedXmlFiles)
-                {
-                    logger.LogDebug($"Validating xml file '{xmlFile}'");
-
-                    //use an XmlReader to validate with line numbers as soon as the Xml document is loaded
-                    XmlReaderSettings rdrSettings = new()
-                    {
-                        Schemas = new XmlSchemaSet()
-                    };
-                    rdrSettings.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
-                    rdrSettings.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
-
-                    rdrSettings.ValidationType = ValidationType.Schema;
-                    rdrSettings.ValidationEventHandler += XmlValidationEventHandler;
-                    rdrSettings.ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings;
-
-                    validXml = true;
-                    using var xRdr = XmlReader.Create(xmlFile, rdrSettings);
-                    var xDoc = new XmlDocument(); //this will validate the XML
-                    try
-                    {
-                        xDoc.Load(xRdr);
-                    }
-                    catch (XmlException xex)
-                    {
-                        validXml = false;
-                        Assert.Fail(xex.Message);
-                    }
-                    catch (Exception ex)
-                    {
-                        Assert.Fail(ex.Message);
-                    }
-                    Assert.IsTrue(validXml, "XML Schema Validation");
-
-                    var xmlns = new XmlNamespaceManager(xDoc.NameTable);
-                    xmlns.AddNamespace(EmailToEaxsProcessor.XM, EmailToEaxsProcessor.XM_NS);
-
-                    //make sure the localId values in a each xml file all increase by 1
-                    ValidateLocalIds(xDoc, xmlns);
-
-                    //make sure hash values and sizes are correct for root-level mbox files
-
-                    XmlNodeList? mboxNodes = xDoc.SelectNodes("/xm:Account/xm:Folder/xm:Mbox", xmlns);
-                    if (mboxNodes != null)
-                    {
-                        foreach (XmlElement mboxElem in mboxNodes)
-                        {
-                            //get the hash values from the xml
-                            XmlNode? hashValueNd = mboxElem.SelectSingleNode("xm:Hash/xm:Value", xmlns);
-                            XmlNode? hashFuncNd = mboxElem.SelectSingleNode("xm:Hash/xm:Function", xmlns);
-                            XmlNode? sizeNd = mboxElem.SelectSingleNode("xm:Size", xmlns);
-                            XmlNode? relPath = mboxElem.SelectSingleNode("xm:RelPath", xmlns);
-                            string absPath = Path.Combine(outFolder, relPath?.InnerText ?? "");
-
-                            //make sure hashes match
-                            Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
-                            Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
-
-                            var expectedHash = TestHelpers.CalculateHash(hashAlg, absPath);
-                            Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
-
-                            //make sure size match
-                            FileInfo fi = new(absPath);
-                            long expectedSize = fi.Length;
-                            long actualSize = long.Parse(sizeNd?.InnerText ?? "-1");
-                            Assert.AreEqual(expectedSize, actualSize);
-
-                        }
-                    }
-
-
-                    //make sure we have the expected number of error or warning messages
-                    //negative numbers mean the count should be greater than the absolute value of the number, i.e. -1 means at least 1 error
-                    if (expectedErrors <= -1)
-                        Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count() >= -expectedErrors, "Expected some errors");
-                    else
-                        Assert.AreEqual(expectedErrors, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count(), "Expected error count does not match");
-
-                    if (expectedWarnings <= -1)
-                        Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count() >= -expectedWarnings, "Expected some warnings");
-                    else
-                        Assert.AreEqual(expectedWarnings, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count(), "Expected warning count does not match");
-
-                    //if there are no messages in the file, we can skip the rest of the tests
-                    if (validMessageCount == 0)
-                        return;
-
-                    //if there are multiple xml files, need to check each one for content, it might be the case that one file has content and the other doesn't because of an error or warning condition
-                    var message = xDoc.SelectSingleNode("/xm:Account//xm:Folder/xm:Message", xmlns);
-                    if (message == null)
-                    {
-                        //if there are no messages in the file make sure there is a warning or error comment
-                        var comment = xDoc.SelectSingleNode("/xm:Account//xm:Folder/comment()[starts-with(. , 'WARNING') or starts-with(. , 'ERROR')]", xmlns);
-                        Assert.IsNotNull(comment);
-                        return;
-                    }
-
-                    if (extContent)
-                    {
-                        //make sure all attachments or binary content are external and that the file exists and hashes match
-                        //get all SingleBody elements that don't have a child element ChildMessage or child element DeliveryStatus and are attachments or not text/... or message/... mime types
-                        XmlNodeList? extNodes = xDoc.SelectNodes($"/xm:Account//xm:Folder/xm:Message//xm:SingleBody[not(xm:ChildMessage) and not(xm:DeliveryStatus) and (xm:Disposition='attachment' or (not(starts-with(translate(xm:ContentType,'{UPPER}','{LOWER}'),'text/')) and not(starts-with(translate(xm:ContentType,'{UPPER}','{LOWER}'),'message/'))))]", xmlns);
-
-                        if (extNodes != null)
-                        {
-                            var extdoc = new XmlDocument();
-                            extdoc.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
-                            extdoc.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
-
-                            foreach (XmlElement singleBodyNd in extNodes)
-                            {
-
-                                Assert.IsNull(singleBodyNd.SelectSingleNode("xm:BodyContent", xmlns));
-                                XmlElement? extNode = singleBodyNd.SelectSingleNode("xm:ExtBodyContent", xmlns) as XmlElement;
-                                XmlElement? phantomNode = singleBodyNd.SelectSingleNode("xm:PhantomBody", xmlns) as XmlElement;
-
-
-                                string? id = null;
-                                if (extNode == null)
-                                {
-                                    var msgIdNd = singleBodyNd.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns) as XmlElement;
-                                    id = msgIdNd?.InnerText;
-                                }
-
-                                Assert.IsTrue(extNode != null || phantomNode != null, $"Message Id: {id} should have external body content and/or phantom content");
-
-                                if (extNode == null) //no need for further checks
-                                    continue;
-
-                                string? extPath = extNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText;
-                                Assert.IsFalse(string.IsNullOrWhiteSpace(extPath));
-                                var extFilepath = Path.Combine(outFolder, eProc.Settings.ExternalContentFolder, extPath);
-                                Assert.IsTrue(File.Exists(extFilepath));
-
-                                //make sure the hash values match
-                                var extHash = TestHelpers.CalculateHash(hashAlg, extFilepath);
-                                if (string.IsNullOrEmpty(extHash))
-                                {
-                                    logger?.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
-                                }
-                                else
-                                {
-                                    string? calcHash = extNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText;
-                                    Assert.AreEqual(calcHash, extHash);
-                                }
-                                string? calcHashAlg = extNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText;
-                                Assert.AreEqual(hashAlg, calcHashAlg);
-
-                                //make sure the size values match
-                                FileInfo fi = new(extFilepath);
-                                long expectedSize = fi.Length;
-                                long actualSize = long.Parse(extNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
-                                Assert.AreEqual(expectedSize, actualSize);
-
-                                //get the actual wrapped in xml indicator
-                                var xmlWrappedStr = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
-                                bool actualWrapExtInXml = false;
-                                if (bool.TryParse(xmlWrappedStr, out bool b))
-                                    actualWrapExtInXml = b;
-
-                                if (actualWrapExtInXml != wrapExtInXml && wrapExtInXml)
-                                {
-                                    var msg = $"External file: {extFilepath} is not wrapped in xml as expected";
-                                    logger?.LogDebug(msg);
-                                    Assert.Fail(msg); //shouldn't be any exceptions to this
-                                }
-                                else if (actualWrapExtInXml != wrapExtInXml && !wrapExtInXml)
-                                {
-                                    var msg = $"External file: {extFilepath} is wrapped in xml when it shouldn't be";
-                                    logger?.LogDebug(msg);
-                                    //Assert.Inconclusive(msg); //inconclusive since it might be wrapped in XML because of a virus or other file IO problem
-                                }
-
-                                if (actualWrapExtInXml)
-                                {
-                                    //make sure external content is wrapped in XML
-                                    var wrapped = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
-                                    Assert.IsTrue(wrapped.Equals("true", StringComparison.OrdinalIgnoreCase));
-
-                                    Assert.IsTrue(Path.GetExtension(extFilepath) == ".xml");
-
-                                    //make sure external file is valid xml
-                                    validXml = true;
-                                    extdoc.Load(extFilepath);
-                                    Assert.IsTrue(extdoc.DocumentElement?.LocalName == "BodyContent");
-                                    Assert.IsTrue(extdoc.DocumentElement?.NamespaceURI == EmailToEaxsProcessor.XM_NS);
-                                    extdoc.Validate(XmlValidationEventHandler, extdoc.DocumentElement);
-                                    Assert.IsTrue(validXml);
-
-                                    //Test the preserve transfer encoding setting
-                                    var enc = extdoc.SelectSingleNode("/xm:BodyContent/xm:TransferEncoding", xmlns)?.InnerText;
-                                    var origEnc = singleBodyNd.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText;
-                                    if (preserveBinaryEnc && MimeKitHelpers.BinaryContentEncodings.Contains(origEnc))
-                                    {
-                                        if (enc != null)
-                                            Assert.AreEqual(origEnc, enc);
-                                    }
-                                    else if (preserveTextEnc && MimeKitHelpers.TextContentEncodings.Contains(origEnc))
-                                    {
-                                        if (enc != null)
-                                            Assert.AreEqual(origEnc, enc);
-                                    }
-                                    else
-                                    {
-                                        if (enc != null)
-                                            Assert.AreEqual("base64", enc);
-                                    }
-
-                                }
-                                else
-                                {
-                                    //make sure is not wrapped
-                                    var wrapped = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
-                                    Assert.IsTrue(wrapped.Equals("false", StringComparison.OrdinalIgnoreCase));
-                                    //Test that file is not XML
-                                    validXml = true;
-                                    try
-                                    {
-                                        extdoc.Load(extFilepath);
-                                        //must be well formed XML, so make sure it is not a wrapped email content xml
-                                        Assert.IsFalse(extdoc.DocumentElement?.LocalName == "BodyContent");
-                                        Assert.IsFalse(extdoc.DocumentElement?.NamespaceURI == EmailToEaxsProcessor.XM_NS);
-                                        validXml = false;  //if it gets here, it is XML but not a wrapped email content, so it is invalid
-                                    }
-                                    catch (XmlException)
-                                    {
-                                        //probably not even XML
-                                        validXml = false;
-                                    }
-                                    catch (IOException ioex)
-                                    {
-                                        //file might be a virus or have some other problem, assume it is not valid XML
-                                        logger?.LogDebug(ioex.Message);
-                                        validXml = false;
-                                    }
-                                    Assert.IsFalse(validXml);
-
-
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        //make sure all content is saved in the XML 
-                        XmlNodeList? nodes = xDoc.SelectNodes("/xm:Account//xm:Folder/xm:Message//xm:SingleBody", xmlns);
-                        Assert.IsTrue(nodes != null && nodes.Count > 0);
-                        foreach (XmlElement node in nodes)
-                        {
-
-                            var id = node.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
-
-                            //logger.LogDebug($"RFC822 Message Id: {id}");
-
-                            Assert.IsNull(node.SelectSingleNode("xm:ExtBodyContent", xmlns));
-
-                            //unless this is a 'text/rfc822-headers', make sure there is a body
-                            if (node.SelectSingleNode($"ancestor::xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'text/rfc822-headers']", xmlns) == null)
-                            {
-                                Assert.IsNotNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage | xm:DeliveryStatus | xm:PhantomBody", xmlns));
-                            }
-                            else
-                            {
-                                Assert.IsNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage | xm:DeliveryStatus | xm:PhantomBody", xmlns));
-                            }
-
-
-                            //Test the preserve transfer encoding setting
-                            var enc = node.SelectSingleNode("xm:BodyContent/xm:TransferEncoding", xmlns)?.InnerText;
-                            var origEnc = node.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText;
-                            if (preserveBinaryEnc && MimeKitHelpers.BinaryContentEncodings.Contains(origEnc, StringComparer.OrdinalIgnoreCase))
-                            {
-                                if (enc != null)
-                                    Assert.AreEqual(origEnc, enc);
-                            }
-                            else if (preserveTextEnc && MimeKitHelpers.TextContentEncodings.Contains(origEnc, StringComparer.OrdinalIgnoreCase))
-                            {
-                                if (enc != null)
-                                    Assert.AreEqual(origEnc, enc);
-                            }
-                            else
-                            {
-                                //quoted-printable will be used if the content is text but has XML invalid control chars 
-                                //otherwise it should be base64
-                                if (enc != null)
-                                {
-                                    var contentType = node.SelectSingleNode("xm:ContentType", xmlns)?.InnerText;
-
-                                    Assert.IsTrue(enc == "base64" || (enc == "quoted-printable" && contentType != null && contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)));
-                                }
-                            }
-
-                        }
-                    }
-
-                    //If mime type is message/rfc822 or text/rfc822-headers, make sure there is a ChildMessage 
-                    var rfc822Nds = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'text/rfc822-headers' or translate(xm:ContentType,'{UPPER}','{LOWER}') = 'message/rfc822']", xmlns);
-                    if (rfc822Nds != null)
-                    {
-                        foreach (XmlElement nd in rfc822Nds)
-                        {
-                            var id = nd.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
-
-                            //logger.LogDebug($"RFC822 Message Id: {id}");
-
-                            var encoding = nd.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText ?? "";
-                            if (!new[] { "7bit", "8bit", "binary", "" }.Contains(encoding))
-                            {
-                                //if the encoding is anything other than 7bit, 8bit, or binary, it is treated as normal BodyContent
-                                Assert.IsNotNull(nd.SelectSingleNode("xm:BodyContent", xmlns));
-                                continue;
-                            }
-
-                            var childNds = nd.SelectNodes("xm:ChildMessage", xmlns);
-                            Assert.IsNotNull(childNds);
-                            Assert.AreEqual(1, childNds.Count);
-
-                            //if the mime type is text/rfc822-headers, make sure the ChildMessage has no content, it might have a body but it should be empty
-                            if (nd.SelectSingleNode("xm:ContentType", xmlns)?.InnerText.ToLower() == "text/rfc822-headers")
-                            {
-                                if (childNds[0] is XmlElement childMsg)
-                                {
-                                    Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:BodyContent", xmlns));
-                                    Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:ExtBodyContent", xmlns));
-                                    Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:ChildMessage", xmlns));
-                                    Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:DeliveryStatus", xmlns));
-
-                                    Assert.IsNull(childMsg.SelectSingleNode("xm:MultiBody/xm:MultiBody", xmlns));
-                                    Assert.IsNull(childMsg.SelectSingleNode("xm:MultiBody/xm:SingleBody", xmlns));
-
-                                }
-                            }
-                        }
-                    }
-
-
-                    //check that any PhantomBody elements are valid
-                    XmlNodeList? nds = xDoc.SelectNodes("//xm:SingleBody[xm:PhantomBody]", xmlns);
-                    if (nds != null)
-                    {
-                        foreach (XmlElement nd in nds)
-                        {
-                            //check that the content-type is message/external-body or that there are X-Mozilla-* headers
-                            var contentType = nd.SelectSingleNode("xm:ContentType", xmlns)?.InnerText;
-                            var xMozillaExternal = nd.SelectSingleNode("xm:OtherMimeHeader/xm:Name['X-Mozilla-External-Attachment-URL']", xmlns);
-                            Assert.IsTrue((!string.IsNullOrWhiteSpace(contentType) && contentType.Equals("message/external-body", StringComparison.OrdinalIgnoreCase)) || (xMozillaExternal != null));
-                        }
-                    }
-                    XmlNodeList? nds2 = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'message/external-body'] | //xm:SingleBody[translate(xm:OtherMimeHeader/xm:Name,'{UPPER}','{LOWER}') = 'x-mozilla-external-attachment-url']", xmlns);
-                    if (nds2 != null)
-                    {
-                        foreach (XmlElement nd in nds2)
-                        {
-                            //check that there is a PhantomBody element
-                            var phantom = nd.SelectSingleNode("xm:PhantomBody", xmlns);
-                            Assert.IsNotNull(phantom);
-                        }
-                    }
-
-                    if (relInPath == "MozillaThunderbird\\Drafts")
-                    {
-                        //make sure each message is marked as draft
-                        TestHelpers.CheckThatAllMessagesAreDraft(xDoc, xmlns);
-                    }
-
-                    xRdr.Close();
-
-                }
+                ValidateXmlFiles(logger, expectedXmlFiles, outFolder, settings, hashAlg, expectedErrors, expectedWarnings, validMessageCount, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, relInPath);
 
             }
             else
@@ -594,7 +181,499 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
+        private long ConvertMessagesAndCheckCounts(EmailToEaxsProcessor eProc, MimeFormat format, string sampleFile, string outFolder, long expectedCounts)
+        {
+            long validMessageCount = 0;
+            if (format == MimeFormat.Mbox && Directory.Exists(sampleFile))
+            {
+                validMessageCount = eProc.ConvertFolderOfMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                if (expectedCounts == -1)
+                    Assert.IsTrue(validMessageCount > 0, "Expected some valid messages");
+                else
+                    Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
+            }
+            else if (format == MimeFormat.Mbox && File.Exists(sampleFile))
+            {
+                validMessageCount = eProc.ConvertMboxToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                if (expectedCounts == -1)
+                    Assert.IsTrue(validMessageCount > 0);
+                else
+                    Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
+            }
+            else if (format == MimeFormat.Entity && Directory.Exists(sampleFile))
+            {
+                validMessageCount = eProc.ConvertFolderOfEmlToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                if (expectedCounts == -1)
+                    Assert.IsTrue(validMessageCount > 0, "Expected some valid messages");
+                else
+                    Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
+            }
+            else if (format == MimeFormat.Entity && File.Exists(sampleFile))
+            {
+                validMessageCount = eProc.ConvertEmlToEaxs(sampleFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                if (expectedCounts == -1)
+                    Assert.IsTrue(validMessageCount > 0);
+                else
+                    Assert.AreEqual(expectedCounts, validMessageCount, "Expected valid message count does not match");
+            }
+            else
+            {
+                Assert.Fail($"Sample file or folder '{sampleFile}' does not exist");
+            }
 
+            return validMessageCount;
+        }
+
+        private List<string> CheckOutputFolderAndGetXmlFiles(string expectedOutFolder, string outFolder, string sampleFile, bool oneFilePerMbox)
+        {
+            //make sure output folders and files exist
+            Assert.AreEqual(expectedOutFolder, outFolder);
+            Assert.IsTrue(Directory.Exists(outFolder));
+
+            string csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
+            Assert.IsTrue(File.Exists(csvPathStr));
+
+            List<string> expectedXmlFiles = TestHelpers.GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
+
+            return expectedXmlFiles;
+        }
+
+        private void ValidateXmlFiles(ILogger logger,
+            List<string> expectedXmlFiles,
+            string outFolder,
+            EmailToEaxsProcessorSettings settings,
+            string hashAlg,
+            long expectedErrors,
+            long expectedWarnings,
+            long validMessageCount,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            string relInPath
+            )
+        {
+            //make sure the xml files are valid
+            foreach (var xmlFile in expectedXmlFiles)
+            {
+                logger.LogDebug($"Validating xml file '{xmlFile}'");
+
+                //use an XmlReader to validate with line numbers as soon as the Xml document is loaded
+                XmlReaderSettings rdrSettings = new()
+                {
+                    Schemas = new XmlSchemaSet()
+                };
+                rdrSettings.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
+                rdrSettings.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
+
+                rdrSettings.ValidationType = ValidationType.Schema;
+                rdrSettings.ValidationEventHandler += XmlValidationEventHandler;
+                rdrSettings.ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings;
+
+                validXml = true;
+                using var xRdr = XmlReader.Create(xmlFile, rdrSettings);
+                var xDoc = new XmlDocument(); //this will validate the XML
+                try
+                {
+                    xDoc.Load(xRdr);
+                }
+                catch (XmlException xex)
+                {
+                    validXml = false;
+                    Assert.Fail(xex.Message);
+                }
+                catch (Exception ex)
+                {
+                    Assert.Fail(ex.Message);
+                }
+                Assert.IsTrue(validXml, "XML Schema Validation");
+
+                var xmlns = new XmlNamespaceManager(xDoc.NameTable);
+                xmlns.AddNamespace(EmailToEaxsProcessor.XM, EmailToEaxsProcessor.XM_NS);
+
+                //make sure the localId values in a each xml file all increase by 1
+                ValidateLocalIds(xDoc, xmlns);
+
+                //make sure hash values and sizes are correct for folder-level mbox files
+                XmlNodeList? msgFilePropNodes = xDoc.SelectNodes("//xm:Folder/xm:MessageFileProperties[xm:RelPath]", xmlns);
+                if (msgFilePropNodes != null)
+                {
+                    foreach (XmlElement msgFilePropElem in msgFilePropNodes)
+                    {
+                        ValidateHash(msgFilePropElem, xmlns, outFolder, settings, hashAlg);
+                    }
+                }
+
+                //make sure hash values and sizes are correct for message-level eml files
+                msgFilePropNodes = xDoc.SelectNodes("//xm:Message/xm:MessageFileProperties[xm:RelPath]", xmlns);
+                if (msgFilePropNodes != null)
+                {
+                    foreach (XmlElement msgFilePropElem in msgFilePropNodes)
+                    {
+                        ValidateHash(msgFilePropElem, xmlns, outFolder, settings, hashAlg);
+                    }
+                }
+
+                ValidateErrorAndWarningCounts(expectedErrors, expectedWarnings);
+
+                //if there are no messages in the file, we can skip the rest of the tests
+                if (validMessageCount == 0)
+                    return;
+
+                //if there are multiple xml files, need to check each one for content, it might be the case that one file has content and the other doesn't because of an error or warning condition
+                var message = xDoc.SelectSingleNode("/xm:Account//xm:Folder/xm:Message", xmlns);
+                if (message == null)
+                {
+                    //if there are no messages in the file make sure there is a warning or error comment
+                    var comment = xDoc.SelectSingleNode("/xm:Account//xm:Folder/comment()[starts-with(. , 'WARNING') or starts-with(. , 'ERROR')]", xmlns);
+                    Assert.IsNotNull(comment);
+                    return;
+                }
+
+                if (extContent)
+                {
+                    ValidateExternalContent(xDoc, xmlns, outFolder, settings, hashAlg, wrapExtInXml, preserveBinaryEnc, preserveTextEnc);
+                }
+                else
+                {
+                    ValidateInternalContent(xDoc, xmlns, preserveBinaryEnc, preserveTextEnc);
+                }
+
+                ValidateRfc822Nodes(xDoc, xmlns);
+
+                ValidatePhantomBodies(xDoc, xmlns);
+
+                if (relInPath == "MozillaThunderbird\\Drafts")
+                {
+                    //make sure each message is marked as draft
+                    TestHelpers.CheckThatAllMessagesAreDraft(xDoc, xmlns);
+                }
+
+                xRdr.Close();
+
+            }
+
+        }
+
+        private void ValidatePhantomBodies(XmlDocument xDoc, XmlNamespaceManager xmlns)
+        {
+            //check that any PhantomBody elements are valid
+            XmlNodeList? nds = xDoc.SelectNodes("//xm:SingleBody[xm:PhantomBody]", xmlns);
+            if (nds != null)
+            {
+                foreach (XmlElement nd in nds)
+                {
+                    //check that the content-type is message/external-body or that there are X-Mozilla-* headers
+                    var contentType = nd.SelectSingleNode("xm:ContentType", xmlns)?.InnerText;
+                    var xMozillaExternal = nd.SelectSingleNode("xm:OtherMimeHeader/xm:Name['X-Mozilla-External-Attachment-URL']", xmlns);
+                    Assert.IsTrue((!string.IsNullOrWhiteSpace(contentType) && contentType.Equals("message/external-body", StringComparison.OrdinalIgnoreCase)) || (xMozillaExternal != null));
+                }
+            }
+            XmlNodeList? nds2 = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'message/external-body'] | //xm:SingleBody[translate(xm:OtherMimeHeader/xm:Name,'{UPPER}','{LOWER}') = 'x-mozilla-external-attachment-url']", xmlns);
+            if (nds2 != null)
+            {
+                foreach (XmlElement nd in nds2)
+                {
+                    //check that there is a PhantomBody element
+                    var phantom = nd.SelectSingleNode("xm:PhantomBody", xmlns);
+                    Assert.IsNotNull(phantom);
+                }
+            }
+
+        }
+
+        private void ValidateRfc822Nodes(XmlDocument xDoc, XmlNamespaceManager xmlns)
+        {
+            //If mime type is message/rfc822 or text/rfc822-headers, make sure there is a ChildMessage 
+            var rfc822Nds = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'text/rfc822-headers' or translate(xm:ContentType,'{UPPER}','{LOWER}') = 'message/rfc822']", xmlns);
+            if (rfc822Nds != null)
+            {
+                foreach (XmlElement nd in rfc822Nds)
+                {
+                    var id = nd.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
+
+                    //logger.LogDebug($"RFC822 Message Id: {id}");
+
+                    var encoding = nd.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText ?? "";
+                    if (!new[] { "7bit", "8bit", "binary", "" }.Contains(encoding))
+                    {
+                        //if the encoding is anything other than 7bit, 8bit, or binary, it is treated as normal BodyContent
+                        Assert.IsNotNull(nd.SelectSingleNode("xm:BodyContent", xmlns));
+                        continue;
+                    }
+
+                    var childNds = nd.SelectNodes("xm:ChildMessage", xmlns);
+                    Assert.IsNotNull(childNds);
+                    Assert.AreEqual(1, childNds.Count);
+
+                    //if the mime type is text/rfc822-headers, make sure the ChildMessage has no content, it might have a body but it should be empty
+                    if (nd.SelectSingleNode("xm:ContentType", xmlns)?.InnerText.ToLower() == "text/rfc822-headers")
+                    {
+                        if (childNds[0] is XmlElement childMsg)
+                        {
+                            Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:BodyContent", xmlns));
+                            Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:ExtBodyContent", xmlns));
+                            Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:ChildMessage", xmlns));
+                            Assert.IsNull(childMsg.SelectSingleNode("xm:SingleBody/xm:DeliveryStatus", xmlns));
+
+                            Assert.IsNull(childMsg.SelectSingleNode("xm:MultiBody/xm:MultiBody", xmlns));
+                            Assert.IsNull(childMsg.SelectSingleNode("xm:MultiBody/xm:SingleBody", xmlns));
+
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ValidateInternalContent(XmlDocument xDoc, XmlNamespaceManager xmlns, bool preserveBinaryEnc, bool preserveTextEnc)
+        {
+            //make sure all content is saved in the XML 
+            XmlNodeList? nodes = xDoc.SelectNodes("/xm:Account//xm:Folder/xm:Message//xm:SingleBody", xmlns);
+            Assert.IsTrue(nodes != null && nodes.Count > 0);
+            foreach (XmlElement node in nodes)
+            {
+
+                var id = node.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
+
+                //logger.LogDebug($"RFC822 Message Id: {id}");
+
+                Assert.IsNull(node.SelectSingleNode("xm:ExtBodyContent", xmlns));
+
+                //unless this is a 'text/rfc822-headers', make sure there is a body
+                if (node.SelectSingleNode($"ancestor::xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'text/rfc822-headers']", xmlns) == null)
+                {
+                    Assert.IsNotNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage | xm:DeliveryStatus | xm:PhantomBody", xmlns));
+                }
+                else
+                {
+                    Assert.IsNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage | xm:DeliveryStatus | xm:PhantomBody", xmlns));
+                }
+
+
+                //Test the preserve transfer encoding setting
+                var enc = node.SelectSingleNode("xm:BodyContent/xm:TransferEncoding", xmlns)?.InnerText;
+                var origEnc = node.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText;
+                if (preserveBinaryEnc && MimeKitHelpers.BinaryContentEncodings.Contains(origEnc, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (enc != null)
+                        Assert.AreEqual(origEnc, enc);
+                }
+                else if (preserveTextEnc && MimeKitHelpers.TextContentEncodings.Contains(origEnc, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (enc != null)
+                        Assert.AreEqual(origEnc, enc);
+                }
+                else
+                {
+                    //quoted-printable will be used if the content is text but has XML invalid control chars 
+                    //otherwise it should be base64
+                    if (enc != null)
+                    {
+                        var contentType = node.SelectSingleNode("xm:ContentType", xmlns)?.InnerText;
+
+                        Assert.IsTrue(enc == "base64" || (enc == "quoted-printable" && contentType != null && contentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)));
+                    }
+                }
+
+            }
+        }
+
+
+        private void ValidateExternalContent(
+            XmlDocument xDoc, 
+            XmlNamespaceManager xmlns, 
+            string outFolder, 
+            EmailToEaxsProcessorSettings settings, 
+            string hashAlg, 
+            bool wrapExtInXml, 
+            bool preserveBinaryEnc, 
+            bool preserveTextEnc)
+        {
+            //make sure all attachments or binary content are external and that the file exists and hashes match
+            //get all SingleBody elements that don't have a child element ChildMessage or child element DeliveryStatus and are attachments or not text/... or message/... mime types
+            XmlNodeList? extNodes = xDoc.SelectNodes($"/xm:Account//xm:Folder/xm:Message//xm:SingleBody[not(xm:ChildMessage) and not(xm:DeliveryStatus) and (xm:Disposition='attachment' or (not(starts-with(translate(xm:ContentType,'{UPPER}','{LOWER}'),'text/')) and not(starts-with(translate(xm:ContentType,'{UPPER}','{LOWER}'),'message/'))))]", xmlns);
+
+            if (extNodes != null)
+            {
+                var extdoc = new XmlDocument();
+                extdoc.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
+                extdoc.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
+
+                foreach (XmlElement singleBodyNd in extNodes)
+                {
+
+                    Assert.IsNull(singleBodyNd.SelectSingleNode("xm:BodyContent", xmlns));
+                    XmlElement? extNode = singleBodyNd.SelectSingleNode("xm:ExtBodyContent", xmlns) as XmlElement;
+                    XmlElement? phantomNode = singleBodyNd.SelectSingleNode("xm:PhantomBody", xmlns) as XmlElement;
+
+
+                    string? id = null;
+                    if (extNode == null)
+                    {
+                        var msgIdNd = singleBodyNd.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns) as XmlElement;
+                        id = msgIdNd?.InnerText;
+                    }
+
+                    Assert.IsTrue(extNode != null || phantomNode != null, $"Message Id: {id} should have external body content and/or phantom content");
+
+                    if (extNode == null) //no need for further checks
+                        continue;
+
+                    string? extPath = extNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText;
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(extPath));
+                    var extFilepath = Path.Combine(outFolder, settings.ExternalContentFolder, extPath);
+                    Assert.IsTrue(File.Exists(extFilepath));
+
+                    //make sure the hash values match
+                    var extHash = TestHelpers.CalculateHash(hashAlg, extFilepath);
+                    if (string.IsNullOrEmpty(extHash))
+                    {
+                        logger?.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
+                    }
+                    else
+                    {
+                        string? calcHash = extNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText;
+                        Assert.AreEqual(calcHash, extHash);
+                    }
+                    string? calcHashAlg = extNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText;
+                    Assert.AreEqual(hashAlg, calcHashAlg);
+
+                    //make sure the size values match
+                    FileInfo fi = new(extFilepath);
+                    long expectedSize = fi.Length;
+                    long actualSize = long.Parse(extNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
+                    Assert.AreEqual(expectedSize, actualSize);
+
+                    //get the actual wrapped in xml indicator
+                    var xmlWrappedStr = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
+                    bool actualWrapExtInXml = false;
+                    if (bool.TryParse(xmlWrappedStr, out bool b))
+                        actualWrapExtInXml = b;
+
+                    if (actualWrapExtInXml != wrapExtInXml && wrapExtInXml)
+                    {
+                        var msg = $"External file: {extFilepath} is not wrapped in xml as expected";
+                        logger?.LogDebug(msg);
+                        Assert.Fail(msg); //shouldn't be any exceptions to this
+                    }
+                    else if (actualWrapExtInXml != wrapExtInXml && !wrapExtInXml)
+                    {
+                        var msg = $"External file: {extFilepath} is wrapped in xml when it shouldn't be";
+                        logger?.LogDebug(msg);
+                        //Assert.Inconclusive(msg); //inconclusive since it might be wrapped in XML because of a virus or other file IO problem
+                    }
+
+                    if (actualWrapExtInXml)
+                    {
+                        //make sure external content is wrapped in XML
+                        var wrapped = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
+                        Assert.IsTrue(wrapped.Equals("true", StringComparison.OrdinalIgnoreCase));
+
+                        Assert.IsTrue(Path.GetExtension(extFilepath) == ".xml");
+
+                        //make sure external file is valid xml
+                        validXml = true;
+                        extdoc.Load(extFilepath);
+                        Assert.IsTrue(extdoc.DocumentElement?.LocalName == "BodyContent");
+                        Assert.IsTrue(extdoc.DocumentElement?.NamespaceURI == EmailToEaxsProcessor.XM_NS);
+                        extdoc.Validate(XmlValidationEventHandler, extdoc.DocumentElement);
+                        Assert.IsTrue(validXml);
+
+                        //Test the preserve transfer encoding setting
+                        var enc = extdoc.SelectSingleNode("/xm:BodyContent/xm:TransferEncoding", xmlns)?.InnerText;
+                        var origEnc = singleBodyNd.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText;
+                        if (preserveBinaryEnc && MimeKitHelpers.BinaryContentEncodings.Contains(origEnc))
+                        {
+                            if (enc != null)
+                                Assert.AreEqual(origEnc, enc);
+                        }
+                        else if (preserveTextEnc && MimeKitHelpers.TextContentEncodings.Contains(origEnc))
+                        {
+                            if (enc != null)
+                                Assert.AreEqual(origEnc, enc);
+                        }
+                        else
+                        {
+                            if (enc != null)
+                                Assert.AreEqual("base64", enc);
+                        }
+
+                    }
+                    else
+                    {
+                        //make sure is not wrapped
+                        var wrapped = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
+                        Assert.IsTrue(wrapped.Equals("false", StringComparison.OrdinalIgnoreCase));
+                        //Test that file is not XML
+                        validXml = true;
+                        try
+                        {
+                            extdoc.Load(extFilepath);
+                            //must be well formed XML, so make sure it is not a wrapped email content xml
+                            Assert.IsFalse(extdoc.DocumentElement?.LocalName == "BodyContent");
+                            Assert.IsFalse(extdoc.DocumentElement?.NamespaceURI == EmailToEaxsProcessor.XM_NS);
+                            validXml = false;  //if it gets here, it is XML but not a wrapped email content, so it is invalid
+                        }
+                        catch (XmlException)
+                        {
+                            //probably not even XML
+                            validXml = false;
+                        }
+                        catch (IOException ioex)
+                        {
+                            //file might be a virus or have some other problem, assume it is not valid XML
+                            logger?.LogDebug(ioex.Message);
+                            validXml = false;
+                        }
+                        Assert.IsFalse(validXml);
+
+
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Make sure we have the expected number of error or warning messages  
+        /// Negative numbers mean the count should be greater than the absolute value of the number, i.e. -1 means at least 1 error
+        /// </summary>
+        /// <param name="expectedErrors"></param>
+        /// <param name="expectedWarnings"></param>
+        private void ValidateErrorAndWarningCounts(long expectedErrors, long expectedWarnings)
+        {
+            if (expectedErrors <= -1)
+                Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count() >= -expectedErrors, "Expected some errors");
+            else
+                Assert.AreEqual(expectedErrors, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count(), "Expected error count does not match");
+
+            if (expectedWarnings <= -1)
+                Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count() >= -expectedWarnings, "Expected some warnings");
+            else
+                Assert.AreEqual(expectedWarnings, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count(), "Expected warning count does not match");
+        }
+
+        private void ValidateHash(XmlElement msgFilePropElem, XmlNamespaceManager xmlns, string outFolder, EmailToEaxsProcessorSettings settings, string hashAlg)
+        {
+            //get the hash values from the xml
+            XmlNode? hashValueNd = msgFilePropElem.SelectSingleNode("xm:Hash/xm:Value", xmlns);
+            XmlNode? hashFuncNd = msgFilePropElem.SelectSingleNode("xm:Hash/xm:Function", xmlns);
+            XmlNode? sizeNd = msgFilePropElem.SelectSingleNode("xm:Size", xmlns);
+            XmlNode? relPath = msgFilePropElem.SelectSingleNode("xm:RelPath", xmlns);
+            string absPath = Path.Combine(outFolder, relPath?.InnerText ?? "");
+
+            //make sure hashes match
+            Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
+            Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
+
+            var expectedHash = TestHelpers.CalculateHash(hashAlg, absPath);
+            Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
+
+            //make sure size match
+            FileInfo fi = new(absPath);
+            long expectedSize = fi.Length;
+            long actualSize = long.Parse(sizeNd?.InnerText ?? "-1");
+            Assert.AreEqual(expectedSize, actualSize);
+        }
 
         //An EML file without the 'From ' header should not work if parsed with the Mbox parser
         [DataRow("Gmail\\eml_without_mbox_header\\2016-06-23 135245 d87d0cbbd2.eml", "d87d0cbbd2", "SHA256", false, false, false, false, false, false, 0, 1, 0, DisplayName = "gmail-eml-wo-from-header")] //EML file without the mbox 'From ' line
