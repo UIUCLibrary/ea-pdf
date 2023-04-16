@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--TODO: Need to find permanent external URL for this XSD -->
 <schema xmlns="http://www.w3.org/2001/XMLSchema"
-        xmlns:xm="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
-        targetNamespace="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
-		xmlns:xhtml="http://www.w3.org/1999/xhtml"
-        elementFormDefault="qualified">
+	xmlns:xm="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
+	targetNamespace="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
+	xmlns:xhtml="http://www.w3.org/1999/xhtml" 
+	elementFormDefault="qualified">
 	<annotation>
 		<documentation>This is a modification of the original XML Schema located here:  https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs</documentation>
 		<documentation>Modified by Tom Habing (TGH), thabing@illinois.edu, for the IMLS-funded "Email Archiving in PDF: From Initial Specification to Community of Practice" project.  See the change log below:</documentation>
@@ -46,6 +46,10 @@
 			2023-01-19
 			* Add a FileExt element to Mbox.  This is the extension to be used for the source filename.  It should match the actual extension used on the source filename, of it the source filename doesn't have an actual extension, it should be whatever matches the file type
 			  This is used whenever a filename needs to be constructed for the file, such as if the file hash is used as a filename.  It must not include the leading period.
+			  
+			2023-04-13
+			* Replace the Mbox element with a MessageFileProperties element that contains the same elements, but now this new element can be used at either the folder level for MBOX files or the message level for EML files; it will contain several of the elements at the 
+			  message level used for describing file properties
 
 		</documentation>
 	</annotation>
@@ -137,8 +141,13 @@
 			<element name="Name" type="string"/>
 			<element name="Message" type="xm:message-type" minOccurs="0" maxOccurs="unbounded"/>
 			<element name="Folder" type="xm:folder-type" minOccurs="0" maxOccurs="unbounded"/>
-			<element name="Mbox" type="xm:mbox-type" minOccurs="0">
+			<element name="MessageFileProperties" type="xm:file-props-type" minOccurs="0">
 				<annotation>
+					<documentation>
+						TGH 2023-04-13
+						If all the messages in this folder originated from a single file, usually an mbox file,
+						this element will contain some of the useful properties of that file.
+					</documentation>
 					<documentation>
 						All of the messages in the archive that belong to this folder of this account are
 						stored in an mbox file. This mbox file must use the mboxrd format and must use
@@ -195,32 +204,22 @@
 				<element name="MultiBody" type="xm:multi-body-type"/>
 			</choice>
 
-			<element name="Incomplete" type="xm:incomplete-parse-type" minOccurs="0" maxOccurs="unbounded"/>
-			<element name="Eol" type="xm:eol-type"/>
-			<element name="Hash" type="xm:hash-type" minOccurs="0">
+			<element name="Incomplete" type="xm:incomplete-parse-type" minOccurs="0"
+				maxOccurs="unbounded"/>
+			<element name="MessageFileProperties" type="xm:file-props-type" minOccurs="0">
 				<annotation>
 					<documentation>
-						This is the result of calculating the hash on the text string
-						that begins with the F of the From_ line and includes the
-						last eol character of the message. All messages end with a
-						single eol marker. Before creating the hash, if the message
-						ends with two or more eol markers, all but the first must
-						be removed. If the message does not end with an eol marker,
-						one must be added.
-					</documentation>
-					<documentation>
-						TODO: Calculating the hash starting with the first header right after the From_ line would
-						make this a bit more extensible for MIME messages not in mbox files.
+						TGH 2023-04-13
+						If this message originated from a single file, usually an EML file,
+						this element will contain some of the useful properties of that file.
+						
+						If the message originated from an aggregate file, like an mbox, this 
+						element will still contain some properties like Eol, Hash, or Size that apply to just this
+						message if it was treated as a single file.
 					</documentation>
 				</annotation>
 			</element>
-			<element name="Size" type="long" minOccurs="0">
-				<annotation>
-					<documentation>
-						TGH 2022-11-30 This is the size of the message, counting the same bytes that were used to calculate the Hash.
-					</documentation>
-				</annotation>
-			</element>
+
 		</sequence>
 	</complexType>
 
@@ -471,7 +470,7 @@
 					<complexType>
 						<sequence minOccurs="1" maxOccurs="1">
 							<element ref="xhtml:html" minOccurs="1" maxOccurs="1"/>
-						</sequence> 
+						</sequence>
 					</complexType>
 				</element>
 			</choice>
@@ -638,7 +637,7 @@
 			</choice>
 		</sequence>
 	</complexType>
-	
+
 	<simpleType name="message-status-flag">
 		<restriction base="string">
 			<enumeration value="Seen"/>
@@ -679,17 +678,17 @@
 		</sequence>
 	</complexType>
 
-	<complexType name="mbox-type">
+	<complexType name="file-props-type">
 		<sequence>
-			<element name="RelPath" type="string">
+			<element name="RelPath" type="string"  minOccurs="0">
 				<annotation>
 					<documentation>
 						URI component that when added to the path from which this XML file
-						was accessed will give the URI from which the mbox full of original messages may be retrieved.
+						was accessed will give the URI from which the original messages file may be retrieved.
 					</documentation>
 				</annotation>
 			</element>
-			<element name="FileExt" type="string">
+			<element name="FileExt" type="string" minOccurs="0">
 				<annotation>
 					<documentation>
 						TGH_2023-01-19: This is the extension to be used for the source filename.  It should match the actual 
@@ -704,7 +703,8 @@
 			<element name="Size" type="long" minOccurs="0">
 				<annotation>
 					<documentation>
-						TGH 2022-11-30 This is the size of the mbox file, counting the same bytes that were used to calculate the Hash
+						TGH 2023-04-13 This is the size of the mbox file, or the size of an individual message.
+						The size of the message must count the same bytes that were used to calculate the Hash.
 					</documentation>
 				</annotation>
 			</element>
@@ -732,6 +732,20 @@
 				<annotation>
 					<documentation>
 						Values of hash-type must be computed by the hash algorithm specified. Please use the canonical form: only upper case letters should be used.)
+					</documentation>
+					<documentation>
+						TGH 2023-04-13 
+						If the hash is for a message contained in an MBOX file
+						it must be the result of calculating the hash on the text string
+						that begins with the F of the From_ line and includes the
+						last eol character of the message. All messages end with a
+						single eol marker. Before creating the hash, if the message
+						ends with two or more eol markers, all but the first must
+						be removed. If the message does not end with an eol marker,
+						one must be added.
+						
+						TODO: Calculating the hash starting with the first header right after the From_ line would
+						make this a bit more extensible for MIME messages not in mbox files.
 					</documentation>
 				</annotation>
 			</element>

@@ -275,5 +275,32 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public MimeFormat MessageFormat { get; set; } = MimeFormat.Mbox;
 
+        public string RelativePath
+        {
+            get
+            {
+                var ret = new Uri(Path.GetRelativePath(OutDirectoryName, MessageFilePath), UriKind.Relative);
+                return ret.ToString().Replace('\\', '/');
+            }
+        }
+
+        public string Extension
+        {
+            get
+            {
+                return Path.GetExtension(MessageFilePath).TrimStart('.');
+            }
+        }
+
+        public long FileSize
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(MessageFilePath) && File.Exists(MessageFilePath))
+                    return new FileInfo(MessageFilePath).Length;
+                else 
+                    return -1;
+            }
+        }
     }
 }
