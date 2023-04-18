@@ -1114,6 +1114,7 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteAllMessageHeaders(XmlWriter xwriter, MimeMessage message)
         {
+            xwriter.WriteStartElement("Headers", XM_NS);
             foreach (var hdr in message.Headers.Where(h => !string.IsNullOrWhiteSpace(h.Value))) //All headers that have values even if already covered above
             {
                 xwriter.WriteStartElement("Header", XM_NS);
@@ -1128,6 +1129,7 @@ namespace UIUCLibrary.EaPdf
 
                 xwriter.WriteEndElement();
             }
+            xwriter.WriteEndElement(); //Headers
         }
 
         private void WriteStandardMessageHeaders(XmlWriter xwriter, MimeMessage message)

@@ -50,6 +50,9 @@
 			2023-04-13
 			* Replace the Mbox element with a MessageFileProperties element that contains the same elements, but now this new element can be used at either the folder level for MBOX files or the message level for EML files; it will contain several of the elements at the 
 			  message level used for describing file properties
+			  
+			2023-04-18
+			* Added new Headers element as the wrapper parent for all Header elements, to make it easier to navigate through the XML
 
 		</documentation>
 	</annotation>
@@ -187,7 +190,7 @@
 				</annotation>
 			</element>
 			<group ref="xm:message-headers"/>
-			<element name="Header" type="xm:header-type" minOccurs="0" maxOccurs="unbounded">
+			<element name="Headers">
 				<annotation>
 					<documentation>
 						All header values found in the message should be placed here.
@@ -195,7 +198,15 @@
 						The minimum amount of transformation should be preformed on the original values.
 						Any encoded words (as per RFC 2047) should be left as-is and not converted to Unicode.
 					</documentation>
+					<documentation>
+						TGH 2023-04-18 Added the Headers element to the schema to hold all the headers found in the message.
+					</documentation>
 				</annotation>
+				<complexType>
+					<sequence>
+						<element name="Header" type="xm:header-type" minOccurs="0" maxOccurs="unbounded"/>
+					</sequence>
+				</complexType>
 			</element>
 			<element name="StatusFlag" type="xm:message-status-flag" minOccurs="0" maxOccurs="unbounded"/>
 
@@ -432,7 +443,24 @@
 				</annotation>
 			</element>
 			<group ref="xm:message-headers"/>
-			<element name="Header" type="xm:header-type" minOccurs="1" maxOccurs="unbounded"/>
+			<element name="Headers">
+				<annotation>
+					<documentation>
+						All header values found in the message should be placed here.
+						Even those used to populate the contents of the standard messages headers.
+						The minimum amount of transformation should be preformed on the original values.
+						Any encoded words (as per RFC 2047) should be left as-is and not converted to Unicode.
+					</documentation>
+					<documentation>
+						TGH 2023-04-18 Added the Headers element to the schema to hold all the headers found in the message.
+					</documentation>
+				</annotation>
+				<complexType>
+					<sequence>
+						<element name="Header" type="xm:header-type" minOccurs="0" maxOccurs="unbounded"/>
+					</sequence>
+				</complexType>
+			</element>
 
 			<choice minOccurs="0">
 				<element name="SingleBody" type="xm:single-body-type"/>
