@@ -52,9 +52,9 @@ namespace UIUCLibrary.EaPdf
         public string ExternalContentFolder { get; set; } = "ExtBodyContent";
 
         /// <summary>
-        /// If true, each mbox will have its own output file
+        /// If true, each message file will have its own output file
         /// </summary>
-        public bool OneFilePerMbox { get; set; } = false;
+        public bool OneFilePerMessageFile { get; set; } = false;
 
         /// <summary>
         /// Approximate maximum allowable size for the output XML files, in bytes.  If the size of the XML file exceeds this value, it will be split into multiple files.
@@ -63,6 +63,7 @@ namespace UIUCLibrary.EaPdf
         public long MaximumXmlFileSize { get; set; } = 1024 * 1024 * 1024; // 1GB
 
         //TODO: This is just cruft, get rid of it, so what if files can be slightly larger than the MaximumXmlFileSize
+        //      See https://github.com/orgs/UIUCLibrary/projects/39/views/2?pane=issue&itemId=25984180
         /// <summary>
         /// When this output file size threshold is reached, the file will be split into multiple files
         /// It is within 5% of the <see cref="MaximumXmlFileSize"/>

@@ -1,4 +1,5 @@
 ﻿using CsvHelper;
+using iTextSharp.text.xml.xmp;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 using MimeKit.Tnef;
@@ -13,6 +14,7 @@ namespace UIUCLibrary.EaPdf
     public class EmailToEaxsProcessor
     {
         //TODO: Need to check for XML invalid characters almost anyplace I write XML string content, see the WriteElementStringReplacingInvalidChars function
+        //      See https://github.com/orgs/UIUCLibrary/projects/39/views/2?pane=issue&itemId=25980601
 
         //for LWSP (Linear White Space) detection, compaction, and trimming
         const byte CR = 13;
@@ -36,7 +38,7 @@ namespace UIUCLibrary.EaPdf
         const string EX_MBOX_FROM_MARKER = "Failed to find mbox From marker";
         const string EX_MBOX_PARSE_HEADERS = "Failed to parse message headers";
 
-        const int EPILOGUE_THRESHOLD = 200;
+        const int EPILOGUE_THRESHOLD = 200; //maximum number of characters before the epilogue is considered suspicious and a warning is logged
 
         public EmailToEaxsProcessorSettings Settings { get; }
 
@@ -104,15 +106,15 @@ namespace UIUCLibrary.EaPdf
         /// <returns></returns>
         public long ConvertEmlToEaxs(string emlFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
         {
-            (MessageFileProperties fileProps, Stream xstream, XmlWriter xwriter) = MessageFileSetup(emlFilePath, outFolderPath, globalId, accntEmails);
-            fileProps.MessageFormat = MimeFormat.Entity;
+            (MessageFileProperties msgFileProps, Stream xstream, XmlWriter xwriter) = MessageFileAndXmlStreamSetup(emlFilePath, outFolderPath, globalId, accntEmails);
+            msgFileProps.MessageFormat = MimeFormat.Entity;
 
             messageList ??= new List<MessageBrief>(); //used to create the CSV file
 
             long localId = startingLocalId;
 
-            WriteFolderOpen(xwriter, fileProps);
-            localId = ProcessEml(fileProps, ref xwriter, ref xstream, localId, messageList);
+            WriteFolderOpen(xwriter, msgFileProps);
+            localId = ProcessEml(msgFileProps, ref xwriter, ref xstream, localId, messageList);
             WriteFolderClose(xwriter);
 
             XmlStreamTeardown(xwriter, xstream);
@@ -122,10 +124,10 @@ namespace UIUCLibrary.EaPdf
             //write the csv file
             if (saveCsv)
             {
-                SaveCsvs(fileProps.OutDirectoryName, fileProps.MessageFilePath, messageList);
+                SaveCsvs(msgFileProps.OutDirectoryName, msgFileProps.MessageFilePath, messageList);
             }
 
-            _logger.LogInformation("Output XML File: {xmlFilePath}, ending: {endTime}", fileProps.OutFilePath, DateTime.Now.ToString("s"));
+            _logger.LogInformation("Output XML File: {xmlFilePath}, ending: {endTime}", msgFileProps.OutFilePath, DateTime.Now.ToString("s"));
 
             return localId;
         }
@@ -168,7 +170,7 @@ namespace UIUCLibrary.EaPdf
             xstream.Dispose();
         }
 
-        private (MessageFileProperties fileProps, Stream xstream, XmlWriter xwriter) MessageFileSetup(string inFilePath, string outFolderPath, string globalId, string accntEmails)
+        private (MessageFileProperties msgFileProps, Stream xstream, XmlWriter xwriter) MessageFileAndXmlStreamSetup(string inFilePath, string outFolderPath, string globalId, string accntEmails)
         {
             if (string.IsNullOrWhiteSpace(inFilePath))
             {
@@ -226,15 +228,26 @@ namespace UIUCLibrary.EaPdf
 
             long localId = startingLocalId;
 
-            if (Settings.OneFilePerMbox)
+            if (Settings.OneFilePerMessageFile)
             {
                 long filesWithMessagesCnt = 0;
                 long filesWithoutMessagesCnt = 0;
                 long prevLocalId = startingLocalId;
 
+                MessageFileProperties msgFileProps;
                 foreach (string emlFilePath in Directory.EnumerateFiles(emlFolderPath))
                 {
-                    localId = ConvertEmlToEaxs(emlFilePath, fullOutFolderPath, globalId, accntEmails, localId, messageList, false);
+                    var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(Path.ChangeExtension(fullEmlFolderPath, "xml")));
+                    (msgFileProps, Stream xstream, XmlWriter xwriter) = MessageFileAndXmlStreamSetup(emlFilePath, fullOutFolderPath, globalId, accntEmails);
+                    msgFileProps.MessageFormat = MimeFormat.Entity;
+
+                    WriteFolderOpeners(xwriter);
+                    WriteFolderOpen(xwriter, msgFileProps);
+                    localId = ProcessEml(msgFileProps, ref xwriter, ref xstream, localId, messageList);
+                    WriteFolderClose(xwriter);
+                    WriteFolderClosers(xwriter);
+
+                    XmlStreamTeardown(xwriter, xstream);
 
                     if (localId > prevLocalId)
                     {
@@ -245,6 +258,17 @@ namespace UIUCLibrary.EaPdf
                         filesWithoutMessagesCnt++;
                     }
                     prevLocalId = localId;
+                }
+
+                if (Settings.IncludeSubFolders)
+                {
+                    _folders.Push(Path.GetFileName(fullEmlFolderPath));
+                    foreach (string emlSubfolderPath in Directory.EnumerateDirectories(fullEmlFolderPath))
+                    {
+                        //TODO: Need to create the parent folder in the XML file
+                        localId = ConvertFolderOfEmlToEaxs(emlSubfolderPath, outFolderPath, globalId, accntEmails, localId, messageList, false);
+                    }
+
                 }
 
                 _logger.LogInformation("Files with messages: {filesWithMessagesCnt}, Files without messages: {filesWithoutMessagesCnt}, Total messages: {localId - startingLocalId}", filesWithMessagesCnt, filesWithoutMessagesCnt, localId - startingLocalId);
@@ -258,25 +282,32 @@ namespace UIUCLibrary.EaPdf
 
                 (XmlWriter xwriter, Stream xstream) = XmlStreamSetup(xmlFilePath, globalId, accntEmails);
 
-                var messageProps = new MessageFileProperties()
+                var msgFileProps = new MessageFileProperties()
                 {
                     GlobalId = globalId,
                     AccountEmails = accntEmails,
                     OutFilePath = xmlFilePath,
                     MessageFormat = MimeFormat.Entity,
-                    MessageFilePath = Path.Combine(fullEmlFolderPath, "folder.fldr") // this is a dummy file path that will be overwritten in the foreach loop below, but is needed to initialize the MessageFileProperties object with the correct file directory
+                    MessageFilePath = Path.Combine(fullEmlFolderPath, Guid.NewGuid().ToString()) // use Guid to ensure its not a real file; this is a dummy file path that will be overwritten in the foreach loop below, but is needed to initialize the MessageFileProperties object with the correct file directory
                 };
-                SetHashAlgorithm(messageProps, xwriter);
+                SetHashAlgorithm(msgFileProps, xwriter);
 
-                WriteFolderOpen(xwriter, messageProps);
+                WriteFolderOpen(xwriter, msgFileProps);
+
                 foreach (string emlFilePath in Directory.EnumerateFiles(fullEmlFolderPath))
                 {
                     WriteToLogInfoMessage(xwriter, $"Processing EML file: {emlFilePath}");
-                    messageProps.MessageFilePath = emlFilePath;
-                    messageProps.MessageCount = 0;
+                    msgFileProps.MessageFilePath = emlFilePath;
+                    msgFileProps.MessageCount = 0;
 
-                    localId = ProcessEml(messageProps, ref xwriter, ref xstream, localId, messageList);
+                    localId = ProcessEml(msgFileProps, ref xwriter, ref xstream, localId, messageList);
                 }
+
+                if (Settings.IncludeSubFolders)
+                {
+                    localId = ProcessEmlSubfolders(msgFileProps, ref xwriter, ref xstream, localId, messageList);
+                }
+
                 WriteFolderClose(xwriter);
 
                 XmlStreamTeardown(xwriter, xstream);
@@ -348,7 +379,7 @@ namespace UIUCLibrary.EaPdf
 
             long localId = startingLocalId;
 
-            if (Settings.OneFilePerMbox)
+            if (Settings.OneFilePerMessageFile)
             {
                 long filesWithMessagesCnt = 0;
                 long filesWithoutMessagesCnt = 0;
@@ -424,7 +455,7 @@ namespace UIUCLibrary.EaPdf
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
         public long ConvertMboxToEaxs(string mboxFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
         {
-            (MessageFileProperties fileProps, Stream xstream, XmlWriter xwriter) = MessageFileSetup(mboxFilePath, outFolderPath, globalId, accntEmails);
+            (MessageFileProperties fileProps, Stream xstream, XmlWriter xwriter) = MessageFileAndXmlStreamSetup(mboxFilePath, outFolderPath, globalId, accntEmails);
             fileProps.MessageFormat = MimeFormat.Mbox;
 
             messageList ??= new List<MessageBrief>(); //used to create the CSV file
@@ -490,11 +521,11 @@ namespace UIUCLibrary.EaPdf
                     $"PreserveTextAttachmentTransferEncoding: {Settings.PreserveTextAttachmentTransferEncoding}, " +
                     $"IncludeSubFolders: {Settings.IncludeSubFolders}, " +
                     $"ExternalContentFolder: {Settings.ExternalContentFolder}, " +
-                    $"OneFilePerMbox: {Settings.OneFilePerMbox}," +
+                    $"OneFilePerMessageFile: {Settings.OneFilePerMessageFile}," +
                     $"MaximumXmlFileSize: {Settings.MaximumXmlFileSize}, " +
                     $"SaveTextAsXhtml: {Settings.SaveTextAsXhtml}, " +
                     $"LogToXmlThreshold: {Settings.LogToXmlThreshold}, " +
-                    $"DefaultFileExtension: {Settings.DefaultFileExtension}"
+                    $"DefaultFileExtension: {Settings.DefaultFileExtension} "
                     );
 
                 xwriter.WriteProcessingInstruction("DateGenerated", DateTime.Now.ToString("u"));
@@ -509,28 +540,25 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        /// <summary>
-        /// Write nested folders as needed according the _folders stack
-        /// </summary>
-        /// <param name="xwriter"></param>
-        private void WriteFolders(XmlWriter xwriter)
-        {
-            foreach (var fld in _folders.Reverse())
-            {
-                xwriter.WriteStartElement("Folder", XM_NS);
-                xwriter.WriteElementString("Name", XM_NS, fld);
-            }
-        }
 
         private long ProcessEml(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
             //TODO: Instead of one Folder element per file, when processing a folder full of EML files, we only need a single Folder element representing the system folder
+
+            if (msgFileProps.MessageFormat != MimeFormat.Entity)
+            {
+                throw new Exception($"Unexpected MessageFormat '{msgFileProps.MessageFormat}'; skipping file ");
+            }
 
             return ProcessFile(msgFileProps, ref xwriter, ref xstream, localId, messageList);
         }
 
         private long ProcessMbox(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
+            if (msgFileProps.MessageFormat != MimeFormat.Mbox)
+            {
+                throw new Exception($"Unexpected MessageFormat '{msgFileProps.MessageFormat}'; skipping file ");
+            }
 
             WriteFolderOpen(xwriter, msgFileProps);
             long retId = ProcessFile(msgFileProps, ref xwriter, ref xstream, localId, messageList);
@@ -539,24 +567,11 @@ namespace UIUCLibrary.EaPdf
             return retId;
         }
 
-        private void WriteFolderOpen(XmlWriter xwriter, MessageFileProperties msgFileProps)
-        {
-            _folders.Push(msgFileProps.XmlFolderName);
-            xwriter.WriteStartElement("Folder", XM_NS);
-            xwriter.WriteElementString("Name", XM_NS, msgFileProps.XmlFolderName);
-        }
-
-        private void WriteFolderClose(XmlWriter xwriter)
-        {
-            xwriter.WriteEndElement(); //Folder
-            _folders.Pop();
-        }
-
         private long ProcessFile(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
 
             //Keep track of properties for an individual message, such as Eol and Hash
-            MimeMessageProperties msgProps = new();
+            MimeMessageProperties mimeMsgProps = new();
 
             //open filestream and wrap it in a cryptostream so that we can hash the file as we process it
             //TODO: Put inside try catch in case of IO error
@@ -569,7 +584,7 @@ namespace UIUCLibrary.EaPdf
 
                 using var mbxParser = new MbxParser(mboxStream, msgFileProps.HashAlgorithm);
 
-                mbxParser.MimeMessageEnd += (sender, e) => MimeMessageEndEventHandler(sender, e, mboxStream, msgFileProps, msgProps, true);
+                mbxParser.MimeMessageEnd += (sender, e) => MimeMessageEndEventHandler(sender, e, mboxStream, msgFileProps, mimeMsgProps, true);
 
                 MimeMessage? message = null;
 
@@ -606,8 +621,8 @@ namespace UIUCLibrary.EaPdf
                         }
 
                         //Need to include the mbxParser.CurrentHeader in the MimeMessageProperties, so we can use it later to determine the message statuses
-                        msgProps.MbxMessageHeader = mbxParser.CurrentHeader;
-                        localId = ProcessCurrentMessage(message, xwriter, localId, messageList, msgFileProps, msgProps);
+                        mimeMsgProps.MbxMessageHeader = mbxParser.CurrentHeader;
+                        localId = ProcessCurrentMessage(message, xwriter, localId, messageList, msgFileProps, mimeMsgProps);
                         msgFileProps.MessageCount++;
                     }
                     if (allDone)
@@ -620,13 +635,15 @@ namespace UIUCLibrary.EaPdf
                 //make sure to read to the end of the stream so the hash is correct
                 FilePathHelpers.ReadToEnd(mbxParser.CryptoStream);
 
-                if (Settings.IncludeSubFolders)
+                if (Settings.IncludeSubFolders && msgFileProps.MessageFormat == MimeFormat.Mbox)
                 {
                     localId = ProcessChildMboxes(msgFileProps, ref xwriter, ref xstream, localId, messageList);
                 }
 
                 if (msgFileProps.MessageFormat == MimeFormat.Mbox)
+                {
                     WriteMessageFileProperties(xwriter, msgFileProps);
+                }
 
             }
             else
@@ -635,7 +652,7 @@ namespace UIUCLibrary.EaPdf
 
                 var mboxParser = new MimeParser(cryptoStream, msgFileProps.MessageFormat);
 
-                mboxParser.MimeMessageEnd += (sender, e) => MimeMessageEndEventHandler(sender, e, mboxStream, msgFileProps, msgProps, false);
+                mboxParser.MimeMessageEnd += (sender, e) => MimeMessageEndEventHandler(sender, e, mboxStream, msgFileProps, mimeMsgProps, false);
 
                 //Need to record the previous message so we can defer writing it to the XML until the next message can be interogated for error conditions 
                 //and we can add the <Incomplete> tag if needed.
@@ -688,7 +705,7 @@ namespace UIUCLibrary.EaPdf
                         {
                             var msg = $"{fex2.Message} The content of the message is probably incomplete because of an unmangled 'From ' line in the message body. Content starting from offset {mboxParser.MboxMarkerOffset} to the beginning of the next message will be skipped.";
                             _logger.LogWarning(msg);
-                            msgProps.Incomplete(msg, $"Stream Position: {mboxParser.MboxMarkerOffset}");
+                            mimeMsgProps.Incomplete(msg, $"Stream Position: {mboxParser.MboxMarkerOffset}");
 
                             //FUTURE: Maybe try to recover lost message content when this happens.  This is probably very tricky except for the most basic cases of content-type: text/plain with no multipart messages or binary attachments
                         }
@@ -704,9 +721,9 @@ namespace UIUCLibrary.EaPdf
 
                     if (prevMessage != null)
                     {
-                        localId = ProcessCurrentMessage(prevMessage, xwriter, localId, messageList, msgFileProps, msgProps);
+                        localId = ProcessCurrentMessage(prevMessage, xwriter, localId, messageList, msgFileProps, mimeMsgProps);
                         msgFileProps.MessageCount++;
-                        msgProps.NotIncomplete();
+                        mimeMsgProps.NotIncomplete();
                     }
                     else if (msgFileProps.MessageCount > 0 && prevMessage == null)
                     {
@@ -725,19 +742,22 @@ namespace UIUCLibrary.EaPdf
                 if (message != null)
                 {
                     //process the last message
-                    localId = ProcessCurrentMessage(message, xwriter, localId, messageList, msgFileProps, msgProps);
+                    localId = ProcessCurrentMessage(message, xwriter, localId, messageList, msgFileProps, mimeMsgProps);
                     msgFileProps.MessageCount++;
                 }
 
                 //make sure to read to the end of the stream so the hash is correct
                 FilePathHelpers.ReadToEnd(cryptoStream);
 
-                if (Settings.IncludeSubFolders)
+                if (Settings.IncludeSubFolders && msgFileProps.MessageFormat == MimeFormat.Mbox)
                 {
                     localId = ProcessChildMboxes(msgFileProps, ref xwriter, ref xstream, localId, messageList);
                 }
+
                 if (msgFileProps.MessageFormat == MimeFormat.Mbox)
+                {
                     WriteMessageFileProperties(xwriter, msgFileProps);
+                }
             }
 
 
@@ -793,16 +813,79 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteEndElement(); //Mbox
         }
 
-        private long ProcessEmlSubfolders(MessageFileProperties messageProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
+        private long ProcessEmlSubfolders(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
-            //UNDONE: When processing EML files, process all subfolders whether they match the filename or not.
+            if (msgFileProps.MessageFormat != MimeFormat.Entity)
+            {
+                throw new Exception($"Unexpected MessageFormat '{msgFileProps.MessageFormat}'; skipping file ");
+            }
 
-            throw new NotImplementedException();
+            //When processing EML files, process all subfolders whether they match the filename or not.
+
+            string[]? dirs = null;
+            try
+            {
+                dirs = Directory.GetDirectories(msgFileProps.MessageDirectoryName);
+            }
+            catch (Exception ex)
+            {
+                WriteToLogErrorMessage(xwriter, $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}");
+                dirs = null;
+            }
+
+            if (dirs != null)
+            {
+                foreach (var dir in dirs)
+                {
+                    _logger.LogInformation("Processing Subfolder: {subfolderName}", dir);
+
+                    //copy the message file properties into new class instance so we can change the file path
+                    MessageFileProperties msgProps2 = new(msgFileProps);
+                    msgProps2.MessageFilePath = Path.Combine(dir, Guid.NewGuid().ToString()); // use Guid to ensure its not a real file; this is a dummy file path that will be overwritten in the foreach loop below, but is needed to initialize the MessageFileProperties object with the correct file directory
+
+                    WriteFolderOpen(xwriter, msgProps2);
+
+                    string[]? files = null;
+                    try
+                    {
+                        files = Directory.GetFiles(dir);
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteToLogErrorMessage(xwriter, $"Skipping this subfolder. {ex.GetType().Name}: {ex.Message}");
+                    }
+
+                    if (files != null && files.Length > 0)
+                    {
+
+                        //this is all the files, so need to determine which ones are mbox files or not
+                        foreach (var file in files)
+                        {
+                            WriteToLogInfoMessage(xwriter, $"Processing EML file: {file}");
+                            msgProps2.MessageFilePath = file;
+                            msgProps2.MessageCount = 0;
+                            localId = ProcessEml(msgProps2, ref xwriter, ref xstream, localId, messageList);
+                        }
+                    }
+
+                    localId = ProcessEmlSubfolders(msgProps2, ref xwriter, ref xstream, localId, messageList);
+
+                    WriteFolderClose(xwriter);
+                }
+            }
+
+            return localId;
         }
 
-        private long ProcessChildMboxes(MessageFileProperties messageProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
+        private long ProcessChildMboxes(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
-            //TODO: Add accomodations for OneFilePerMbox and use the ReferencesAccount xml element
+            if (msgFileProps.MessageFormat != MimeFormat.Mbox)
+            {
+                throw new Exception($"Unexpected MessageFormat '{msgFileProps.MessageFormat}'; skipping file ");
+            }
+
+            //TODO: Add accomodations for OneFilePerMessageFile and use the ReferencesAccount xml element
+            //      See https://github.com/orgs/UIUCLibrary/projects/39/views/2?pane=issue&itemId=25979741
             //TODO: May want to modify the XML Schema to allow for references to child folders instead of embedding child folders in the same mbox, see account-ref-type.  Maybe add ParentFolder type
 
 
@@ -811,11 +894,11 @@ namespace UIUCLibrary.EaPdf
             string? subfolderName;
             try
             {
-                subfolderName = Directory.GetDirectories(messageProps.MessageDirectoryName, $"{messageProps.MessageFileName}.*").SingleOrDefault();
+                subfolderName = Directory.GetDirectories(msgFileProps.MessageDirectoryName, $"{msgFileProps.MessageFileName}.*").SingleOrDefault();
             }
             catch (InvalidOperationException)
             {
-                WriteToLogErrorMessage(xwriter, $"There is more than one folder that matches '{messageProps.MessageFileName}.*'; skipping all subfolders");
+                WriteToLogErrorMessage(xwriter, $"There is more than one folder that matches '{msgFileProps.MessageFileName}.*'; skipping all subfolders");
                 subfolderName = null;
             }
             catch (Exception ex)
@@ -844,7 +927,7 @@ namespace UIUCLibrary.EaPdf
                     foreach (var childMbox in childMboxes)
                     {
                         //create new MessageFileProperties which is copy of parent MessageFileProperties except for the MessageFilePath and the checksum hash
-                        MessageFileProperties childMboxProps = new(messageProps)
+                        MessageFileProperties childMboxProps = new(msgFileProps)
                         {
                             MessageFilePath = childMbox
                         };
@@ -860,20 +943,64 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void StartNewXmlFile(ref XmlWriter xwriter, ref Stream xstream, MessageFileProperties mboxProps)
+        /// <summary>
+        /// Write a single Folder open tag and push it on the stack for later use
+        /// </summary>
+        /// <param name="xwriter"></param>
+        /// <param name="msgFileProps"></param>
+        private void WriteFolderOpen(XmlWriter xwriter, MessageFileProperties msgFileProps)
         {
-            var origXmlFilePath = mboxProps.OutFilePath;
+            _folders.Push(msgFileProps.XmlFolderName);
+            xwriter.WriteStartElement("Folder", XM_NS);
+            xwriter.WriteElementString("Name", XM_NS, msgFileProps.XmlFolderName);
+        }
 
-            //increment the file number; this also updates the OutFilePath
-            _ = mboxProps.IncrementOutFileNumber();
+        /// <summary>
+        /// Write a single Folder close tag and pop it off the stack
+        /// </summary>
+        /// <param name="xwriter"></param>
+        private void WriteFolderClose(XmlWriter xwriter)
+        {
+            xwriter.WriteEndElement(); //Folder
+            _folders.Pop();
+        }
 
-            var newXmlFilePath = mboxProps.OutFilePath;
 
-            //close any opened folder elements
+        /// <summary>
+        /// Write all nested folders as needed according the _folders stack
+        /// </summary>
+        /// <param name="xwriter"></param>
+        private void WriteFolderOpeners(XmlWriter xwriter)
+        {
+            foreach (var fld in _folders.Reverse())
+            {
+                xwriter.WriteStartElement("Folder", XM_NS);
+                xwriter.WriteElementString("Name", XM_NS, fld);
+            }
+        }
+        /// <summary>
+        /// Close any open folder tags based on the _folders stack
+        /// Do not pop or clear the stack though; it is still needed later
+        /// </summary>
+        /// <param name="xwriter"></param>
+        private void WriteFolderClosers(XmlWriter xwriter)
+        {
             for (int c = 0; c < _folders.Count; c++)
             {
                 xwriter.WriteEndElement(); //Folder
             }
+        }
+
+        private void StartNewXmlFile(ref XmlWriter xwriter, ref Stream xstream, MessageFileProperties msgFileProps)
+        {
+            var origXmlFilePath = msgFileProps.OutFilePath;
+
+            //increment the file number; this also updates the OutFilePath
+            _ = msgFileProps.IncrementOutFileNumber();
+
+            var newXmlFilePath = msgFileProps.OutFilePath;
+
+            WriteFolderClosers(xwriter);
 
             xwriter.WriteProcessingInstruction("ContinuedIn", $"'{Path.GetFileName(newXmlFilePath)}'");
 
@@ -899,9 +1026,9 @@ namespace UIUCLibrary.EaPdf
             WriteDocType(xwriter);
             xwriter.WriteProcessingInstruction("ContinuedFrom", $"'{Path.GetFileName(origXmlFilePath)}'");
 
-            WriteAccountHeaderFields(xwriter, mboxProps.GlobalId, mboxProps.AccountEmails);
-            WriteToLogInfoMessage(xwriter, $"Processing mbox file: {mboxProps.MessageFilePath}");
-            WriteFolders(xwriter);
+            WriteAccountHeaderFields(xwriter, msgFileProps.GlobalId, msgFileProps.AccountEmails);
+            WriteToLogInfoMessage(xwriter, $"Processing mbox file: {msgFileProps.MessageFilePath}");
+            WriteFolderOpeners(xwriter);
         }
 
         /// <summary>

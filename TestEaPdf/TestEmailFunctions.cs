@@ -84,7 +84,8 @@ namespace UIUCLibrary.TestEaPdf
         //Mozilla special files
         [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, false, false, 0, 0, 26, DisplayName = "moz-drafts")]
         [DataRow("MozillaThunderbird\\Inbox", "", "SHA256", false, false, false, false, false, false, 0, 0, 21, DisplayName = "moz-inbox")]
-
+        //Mozilla include subs and one file per file
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext--oneper-includeSubs", "SHA256", true, false, false, false, true, true, 0, 9, 852, DisplayName = "moz-dlf-sha256-ext--oneper-includeSubs")]
 
         //Pine mbox folder
         [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 114, 20799, DisplayName = "pine-folder-one-file")]
@@ -107,7 +108,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Weird\\virus_payload.mbox", "out_virus_payload", "SHA256", true, false, false, false, false, false, 0, 1, 2, DisplayName = "weird-virus-payload-mbox")] //message from very large mbox which contains a virus payload
 
         [DataTestMethod]
-        public void TestSampleFiles
+        public void TestSampleMboxFiles
             (
             string relInPath,
             string relOutPath,
@@ -146,7 +147,7 @@ namespace UIUCLibrary.TestEaPdf
                     PreserveBinaryAttachmentTransferEncodingIfPossible = preserveBinaryEnc,
                     PreserveTextAttachmentTransferEncoding = preserveTextEnc,
                     IncludeSubFolders = includeSub,
-                    OneFilePerMbox = oneFilePerMbox,
+                    OneFilePerMessageFile = oneFilePerMbox,
                     MaximumXmlFileSize = maxOutFileSize,
                     SaveTextAsXhtml = xhtml,
                     SkipUntilMessageId = skipUntilMessageId,
@@ -180,6 +181,319 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.Fail("Logger was not initialized");
             }
         }
+
+        //An EML file without the 'From ' header should not work if parsed with the Mbox parser
+        [DataRow("Gmail\\true_eml_files\\2016-06-23 135245 d87d0cbbd2.eml", "..\\eml_out_as_mbox", "SHA256", false, false, false, false, false, false, 0, 1, 0, DisplayName = "parse-eml-as-mbox")] //EML file without the mbox 'From ' line
+
+        [DataTestMethod]
+        public void TestEmlAsMbox(
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false, //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
+            )
+        {
+            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Mbox);
+
+            var wrn = loggedLines.Where(l => l.Contains("Failed to find mbox From marker"));
+            Assert.IsNotNull(wrn);
+            Assert.AreEqual(1, wrn.Count());
+        }
+
+        //An mbox file with the 'From ' header should not work if parsed with the Entity parser
+        //The Entity parser will correctly parse the first message in the file, but will fail to parse the second message, instead the Epilogue of the first messages body will contain all the text from the remaining messages
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "DLF_ENTITY", "SHA256", false, false, false, false, false, false, 1, 0, 1, DisplayName = "parse-mbox-as-eml")] //mbox file with the 'From ' lines separating the messages
+
+        [DataTestMethod]
+        public void TestMboxAsEml(
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false, //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
+            )
+        {
+            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Entity);
+
+            var err = loggedLines.Where(l => l.Contains("The file may be corrupt"));
+            Assert.IsNotNull(err);
+            Assert.AreEqual(1, err.Count());
+        }
+
+
+        //A single normal EML file 
+        [DataRow("Gmail\\true_eml_files\\2016-06-23 135245 d87d0cbbd2.eml", "..\\eml_out_one", "SHA256", false, false, false, false, false, false, 0, 0, 1, DisplayName = "gmail-eml")] //EML file 
+
+        //A folder of normal EML files 
+        [DataRow("Gmail\\true_eml_files", "eml_out", "SHA256", false, false, false, false, false, false, 0, 0, 10, DisplayName = "gmail-folder-eml")] //Folder of EML files, one output file
+        [DataRow("Gmail\\true_eml_files", "eml_out_ext_wrap", "SHA256", true, true, false, false, false, false, 0, 0, 10, DisplayName = "gmail-folder-eml-ext-wrap")] //Folder of EML files, one output file, with external content wrapped in XML
+        [DataRow("Gmail\\true_eml_files", "eml_out_one_per", "SHA256", false, false, false, false, false, true, 0, 0, 10, DisplayName = "gmail-folder-eml-one-per")] //Folder of EML files, one output file per input file
+
+        //A folder of normal EML files including sub folders
+        [DataRow("Gmail\\true_eml_files", "eml_out_subs", "SHA256", false, false, false, false, true, false, 0, 0, 20, DisplayName = "gmail-folder-subs-eml")] //Folder of EML files, one output file
+        [DataRow("Gmail\\true_eml_files", "eml_out_subs_ext_wrap", "SHA256", true, true, false, false, true, false, 0, 0, 20, DisplayName = "gmail-folder-subs-eml-ext-wrap")] //Folder of EML files, one output file, with external content wrapped in XML
+        [DataRow("Gmail\\true_eml_files", "eml_out_subs_one_per", "SHA256", false, false, false, false, true, true, 0, 0, 20, DisplayName = "gmail-folder-subs-eml-one-per")] //Folder of EML files, one output file per input file
+
+        [DataTestMethod]
+        public void TestSampleEmlFile(
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false, //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
+            )
+        {
+            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Entity);
+
+        }
+
+
+        //The expected error, warning, and message counts were set by running the test scripts as of 2022-12-08
+
+        //Gmail Exports
+        [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, false, 0, 71, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
+        [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness
+        [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
+        [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, false, 0, 71, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
+
+        //Mozilla mbox with child mboxes, different combinations of settings
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha1")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha256")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, false, true, false, 0, 38, 852, DisplayName = "xhtml-moz-dlf-sha256-ext---includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap--includeSubs", "SHA256", true, true, false, false, true, false, 0, 38, 852, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap--includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEnc", "SHA256", true, true, true, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap-presvEnc")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, false, true, false, 0, 38, 705, DisplayName = "xhtml-moz-dlf-sha256----includeSubs")]
+        //Test maximum output file size
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000", "SHA256", false, false, false, false, true, false, 0, 38, 705, false, 10000000, DisplayName = "xhtml-moz-dlf-sha256----includeSubs-10000000")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEnc", "SHA256", false, false, true, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha256---presvEnc")]
+        //Mozilla special files
+        [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, false, false, 0, 0, 26, DisplayName = "xhtml-moz-drafts")]
+        [DataRow("MozillaThunderbird\\Inbox", "", "SHA256", false, false, false, false, false, false, 0, 15, 21, DisplayName = "xhtml-moz-inbox")]
+
+
+        //Pine mbox folder
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 623, 20799, DisplayName = "xhtml-pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 623, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 568, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
+        //Pine mbox files with special properties
+        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 274, 1301, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
+        [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, false, 0, 1, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
+        [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, false, 0, 1, 418, DisplayName = "xhtml-pine-sent-mail-jun-2004")] //not an mbox file
+        [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, false, 0, 1, 100, DisplayName = "xhtml-pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
+
+
+        //Weird Emails
+        [DataRow("Weird\\missing_ext2.mbox", "out_missing_ext2", "SHA256", true, false, false, false, false, false, 0, 0, 2, DisplayName = "xhtml-weird-missing-ext2-mbox")] //message from very large mbox seems to be missing external files
+        [DataRow("Weird\\missing_ext.mbox", "out_missing_ext", "SHA256", true, false, false, false, false, false, 0, 0, 3, DisplayName = "xhtml-weird-missing-ext-mbox")] //message from very large mbox seems to be missing external files
+        [DataRow("Weird\\rfc822headers2.mbox", "out_rfc822headers2", "SHA256", true, false, false, false, false, false, 0, 0, 2, DisplayName = "xhtml-weird-rfc822headers2-mbox")] //message from very large mbox which contains txt/rfc822-headers
+        [DataRow("Weird\\rfc822headers.mbox", "out_rfc822headers", "SHA256", true, false, false, false, false, false, 0, 0, 2, DisplayName = "xhtml-weird-rfc822headers-mbox")] //message from very large mbox which contains txt/rfc822-headers
+        [DataRow("Weird\\spam_hexa.mbox", "", "SHA256", false, false, false, false, false, false, 0, 4, 1, DisplayName = "xhtml-weird-spam-hexa-mbox")] //weird spam email with 'hexa' encoded content
+        [DataRow("Weird\\virus_notif.mbox", "", "SHA256", false, false, false, false, false, false, 0, 1, 2, DisplayName = "xhtml-weird-virus-notif-mbox")] //weird virus notification with multipart/report, message/delivery-report. and text/rfc822-headers content types
+        [DataRow("Weird\\virus_payload.mbox", "out_virus_payload", "SHA256", true, false, false, false, false, false, 0, 2, 2, DisplayName = "xhtml-weird-virus-payload-mbox")] //message from very large mbox which contains a virus payload
+
+
+        [DataTestMethod]
+        public void TestSampleMboxFilesOutputXhtml
+            (
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false,
+            long maxOutFileSize = 0,
+            bool xhtml = true, //default to not creating the xhtml content
+            string? oneMsgId = null
+            )
+        {
+            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId);
+        }
+
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "allx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
+            true, 0, true, DisplayName = "xhtml-gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "splitx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
+            true, 10000000, true, DisplayName = "xhtml-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
+
+        //messages with specific problems
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 0, 1,
+            false, 10000000, true, "d5c1fc93-14b1-48ef-985d-0fbb38878f7e@las1s04mta936.xt.local", DisplayName = "xhtml-skip1-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB, just one message
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 10000000, true, "1E.44.44510.680AEB06@aj.mta1vrest.cc.prd.sparkpost", DisplayName = "xhtml-skip2-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB, just one message
+
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 2, 1,
+            false, 0, true, "2010051415093467A03C1ACC$945C3759F1@COMPUTER", DisplayName = "xhtml-xmlns-gmail-ext-big-mbox")] //invalid namespace declaration
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "4313980.1156434894479.JavaMail.root@fac1010", DisplayName = "xhtml-QUOT-gmail-ext-big-mbox")] //undefined character entity &QUOT; -- all upper case
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 0, 1,
+            false, 0, true, "ee4ca1ce-f044-4536-85d3-553b088bb1dc@las1s04mta905.xt.local", DisplayName = "xhtml-2head-gmail-ext-big-mbox")] //two head elements
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "A5.52.33171.CC105236@gx.mta2vrest.cc.prd.sparkpost", DisplayName = "xhtml-body-text-gmail-ext-big-mbox")] //text content in the body
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "0.1.BE.4E2.1D77914FC5A11B8.0@omptrans.mail.synchronybank.com", DisplayName = "xhtml-head-xmlns-gmail-ext-big-mbox")] //head element has an invalid xmlns attribute
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "4b3ed4f78bcaae4d31caac7d6c4c22c5884b5b09-20081988-110484621@google.com", DisplayName = "xhtml-head-text-xmlns-gmail-ext-big-mbox")] //head element has text
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
+            false, 0, true, "FredricPaulEditor-in-Chief.665xjq1q0.dshl@cmp-subscriptions.p0.com", DisplayName = "xhtml-html-text-xmlns-gmail-ext-big-mbox")] //html element has text
+
+
+
+        [DataTestMethod]
+        public void TestHugeFilesOutputXhtml
+            (
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false, //if true, it skips the xml validation
+            long maxOutFileSize = 0,
+            bool xhtml = true, //default to not creating the xhtml content
+            string? oneMsgId = null
+            )
+        {
+            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId);
+
+            if (quick) //do the xml validation separately and store results in different outputfile
+            {
+                testFilesBaseDirectory = Path.GetDirectoryName(Path.Combine(testFilesBaseDirectory, relInPath)) ?? testFilesBaseDirectory;
+                string testFileName = Path.GetFileName(relInPath);
+                var sampleFile = Path.Combine(testFilesBaseDirectory, testFileName);
+                (_, string outFolder) = GetOutFolder(sampleFile, relOutPath);
+
+                validXml = ValidateXmlDocuments(oneFilePerMbox, sampleFile, outFolder);
+
+                Assert.IsTrue(validXml, "Invalid XML file.");
+
+            }
+        }
+
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
+            false, 0, false, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
+        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
+            false, 10000000, false, DisplayName = "gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
+
+        [DataTestMethod]
+        public void TestHugeFiles
+            (
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool quick = false,
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null
+            )
+        {
+            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId);
+        }
+
+
+        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\folder", false, DisplayName = "path_check_drafts_folder")]
+        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\\\Drafts.out", true, DisplayName = "path_check_drafts_out")]
+        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\\\Drafts.out\\test", true, DisplayName = "path_check_drafts_out_test")]
+        [DataTestMethod]
+        public void TestPathErrorChecks(string inFilePath, string outFolderPath, bool shouldFail)
+        {
+
+            if (logger != null)
+            {
+                var settings = new EmailToEaxsProcessorSettings();
+                var eProc = new EmailToEaxsProcessor(logger, settings);
+
+                var inFile = Path.Combine(testFilesBaseDirectory, inFilePath);
+                var outFolder = Path.Combine(testFilesBaseDirectory, outFolderPath);
+
+                try
+                {
+                    var validMessageCount = eProc.ConvertMboxToEaxs(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                    if (shouldFail)
+                    {
+                        Assert.Fail("Expected an ArgumentException");
+                    }
+                }
+                catch (ArgumentException aex)
+                {
+                    if (!shouldFail)
+                    {
+                        Assert.Fail(aex.Message);
+                    }
+                }
+                finally
+                {
+                    //cleanup
+                    if (Directory.Exists(outFolder))
+                    {
+                        Directory.Delete(outFolder, true);
+                    }
+                }
+            }
+        }
+
 
         private long ConvertMessagesAndCheckCounts(EmailToEaxsProcessor eProc, MimeFormat format, string sampleFile, string outFolder, long expectedCounts)
         {
@@ -480,13 +794,13 @@ namespace UIUCLibrary.TestEaPdf
 
 
         private void ValidateExternalContent(
-            XmlDocument xDoc, 
-            XmlNamespaceManager xmlns, 
-            string outFolder, 
-            EmailToEaxsProcessorSettings settings, 
-            string hashAlg, 
-            bool wrapExtInXml, 
-            bool preserveBinaryEnc, 
+            XmlDocument xDoc,
+            XmlNamespaceManager xmlns,
+            string outFolder,
+            EmailToEaxsProcessorSettings settings,
+            string hashAlg,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
             bool preserveTextEnc)
         {
             //make sure all attachments or binary content are external and that the file exists and hashes match
@@ -673,316 +987,6 @@ namespace UIUCLibrary.TestEaPdf
             long expectedSize = fi.Length;
             long actualSize = long.Parse(sizeNd?.InnerText ?? "-1");
             Assert.AreEqual(expectedSize, actualSize);
-        }
-
-        //An EML file without the 'From ' header should not work if parsed with the Mbox parser
-        [DataRow("Gmail\\eml_without_mbox_header\\2016-06-23 135245 d87d0cbbd2.eml", "d87d0cbbd2", "SHA256", false, false, false, false, false, false, 0, 1, 0, DisplayName = "gmail-eml-wo-from-header")] //EML file without the mbox 'From ' line
-
-        [DataTestMethod]
-        public void TestEmlFileWithoutFromHeader(
-            string relInPath,
-            string relOutPath,
-            string hashAlg,
-            bool extContent,
-            bool wrapExtInXml,
-            bool preserveBinaryEnc,
-            bool preserveTextEnc,
-            bool includeSub,
-            bool oneFilePerMbox,
-            int expectedErrors,
-            int expectedWarnings,
-            int expectedCounts, //default to check everything
-            bool quick = false, //default to no max
-            long maxOutFileSize = 0,
-            bool xhtml = false, //default to not creating the xhtml content
-            string? oneMsgId = null //just process the one message with this id 
-            )
-        {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Mbox);
-
-            var wrn = loggedLines.Where(l => l.Contains("Failed to find mbox From marker"));
-            Assert.IsNotNull(wrn);
-            Assert.AreEqual(1, wrn.Count());
-        }
-
-        //An mbox file with the 'From ' header should not work if parsed with the Entity parser
-        //The Entity parser will correctly parse the first message in the file, but will fail to parse the second message, instead the Epilogue of the first messages body will contain all the text from the remaining messages
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "DLF_ENTITY", "SHA256", false, false, false, false, false, false, 1, 0, 1, DisplayName = "mbox-using-entity-format")] //mbox file with the 'From ' lines separating the messages
-
-        [DataTestMethod]
-        public void TestMboxFileUsingMimeFormatEntity(
-            string relInPath,
-            string relOutPath,
-            string hashAlg,
-            bool extContent,
-            bool wrapExtInXml,
-            bool preserveBinaryEnc,
-            bool preserveTextEnc,
-            bool includeSub,
-            bool oneFilePerMbox,
-            int expectedErrors,
-            int expectedWarnings,
-            int expectedCounts, //default to check everything
-            bool quick = false, //default to no max
-            long maxOutFileSize = 0,
-            bool xhtml = false, //default to not creating the xhtml content
-            string? oneMsgId = null //just process the one message with this id 
-            )
-        {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Entity);
-
-            var err = loggedLines.Where(l => l.Contains("The file may be corrupt"));
-            Assert.IsNotNull(err);
-            Assert.AreEqual(1, err.Count());
-        }
-
-        //A normal EML file 
-        [DataRow("Gmail\\eml_without_mbox_header\\2016-06-23 135245 d87d0cbbd2.eml", "d87d0cbbd2", "SHA256", false, false, false, false, false, false, 0, 0, 1, DisplayName = "gmail-eml")] //EML file 
-
-        //A folder of normal EML files 
-        [DataRow("Gmail\\eml_without_mbox_header", "eml_out", "SHA256", false, false, false, false, false, false, 0, 0, 11, DisplayName = "gmail-folder-eml")] //Folder of EML files, one output file
-
-        //A folder of normal EML files 
-        [DataRow("Gmail\\eml_without_mbox_header", "eml_out_ext_wrap", "SHA256", true, true, false, false, false, false, 0, 0, 11, DisplayName = "gmail-folder-eml-ext-wrap")] //Folder of EML files, one output file, with external content wrapped in XML
-
-        //A folder of normal EML file 
-        [DataRow("Gmail\\eml_without_mbox_header", "eml_out_one_per", "SHA256", false, false, false, false, false, true, 0, 0, 11, DisplayName = "gmail-folder-eml-one-per")] //Folder of EML files, one output file per input file
-
-        [DataTestMethod]
-        public void TestEmlFile(
-            string relInPath,
-            string relOutPath,
-            string hashAlg,
-            bool extContent,
-            bool wrapExtInXml,
-            bool preserveBinaryEnc,
-            bool preserveTextEnc,
-            bool includeSub,
-            bool oneFilePerMbox,
-            int expectedErrors,
-            int expectedWarnings,
-            int expectedCounts, //default to check everything
-            bool quick = false, //default to no max
-            long maxOutFileSize = 0,
-            bool xhtml = false, //default to not creating the xhtml content
-            string? oneMsgId = null //just process the one message with this id 
-            )
-        {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Entity);
-
-        }
-
-
-        //The expected error, warning, and message counts were set by running the test scripts as of 2022-12-08
-
-        //Gmail Exports
-        [DataRow("Gmail\\Eml\\Inbox", "Inbox.out", "SHA256", false, false, false, false, false, false, 0, 71, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
-        [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "d3eb274969", "SHA256", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness
-        [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "57b3136fd3", "SHA256", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
-        [DataRow("Gmail\\account.mbox", "", "SHA256", false, false, false, false, false, false, 0, 71, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
-
-        //Mozilla mbox with child mboxes, different combinations of settings
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha1")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha256")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, false, true, false, 0, 38, 852, DisplayName = "xhtml-moz-dlf-sha256-ext---includeSubs")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap--includeSubs", "SHA256", true, true, false, false, true, false, 0, 38, 852, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap--includeSubs")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEnc", "SHA256", true, true, true, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap-presvEnc")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, false, true, false, 0, 38, 705, DisplayName = "xhtml-moz-dlf-sha256----includeSubs")]
-        //Test maximum output file size
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000", "SHA256", false, false, false, false, true, false, 0, 38, 705, false, 10000000, DisplayName = "xhtml-moz-dlf-sha256----includeSubs-10000000")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEnc", "SHA256", false, false, true, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha256---presvEnc")]
-        //Mozilla special files
-        [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, false, false, 0, 0, 26, DisplayName = "xhtml-moz-drafts")]
-        [DataRow("MozillaThunderbird\\Inbox", "", "SHA256", false, false, false, false, false, false, 0, 15, 21, DisplayName = "xhtml-moz-inbox")]
-
-
-        //Pine mbox folder
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 623, 20799, DisplayName = "xhtml-pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 623, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
-        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 568, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
-        //Pine mbox files with special properties
-        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 274, 1301, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
-        [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, false, 0, 1, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
-        [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, false, 0, 1, 418, DisplayName = "xhtml-pine-sent-mail-jun-2004")] //not an mbox file
-        [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, false, 0, 1, 100, DisplayName = "xhtml-pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
-
-
-        //Weird Emails
-        [DataRow("Weird\\missing_ext2.mbox", "out_missing_ext2", "SHA256", true, false, false, false, false, false, 0, 0, 2, DisplayName = "xhtml-weird-missing-ext2-mbox")] //message from very large mbox seems to be missing external files
-        [DataRow("Weird\\missing_ext.mbox", "out_missing_ext", "SHA256", true, false, false, false, false, false, 0, 0, 3, DisplayName = "xhtml-weird-missing-ext-mbox")] //message from very large mbox seems to be missing external files
-        [DataRow("Weird\\rfc822headers2.mbox", "out_rfc822headers2", "SHA256", true, false, false, false, false, false, 0, 0, 2, DisplayName = "xhtml-weird-rfc822headers2-mbox")] //message from very large mbox which contains txt/rfc822-headers
-        [DataRow("Weird\\rfc822headers.mbox", "out_rfc822headers", "SHA256", true, false, false, false, false, false, 0, 0, 2, DisplayName = "xhtml-weird-rfc822headers-mbox")] //message from very large mbox which contains txt/rfc822-headers
-        [DataRow("Weird\\spam_hexa.mbox", "", "SHA256", false, false, false, false, false, false, 0, 4, 1, DisplayName = "xhtml-weird-spam-hexa-mbox")] //weird spam email with 'hexa' encoded content
-        [DataRow("Weird\\virus_notif.mbox", "", "SHA256", false, false, false, false, false, false, 0, 1, 2, DisplayName = "xhtml-weird-virus-notif-mbox")] //weird virus notification with multipart/report, message/delivery-report. and text/rfc822-headers content types
-        [DataRow("Weird\\virus_payload.mbox", "out_virus_payload", "SHA256", true, false, false, false, false, false, 0, 2, 2, DisplayName = "xhtml-weird-virus-payload-mbox")] //message from very large mbox which contains a virus payload
-
-
-        [DataTestMethod]
-        public void TestSampleFilesOutputXhtml
-            (
-            string relInPath,
-            string relOutPath,
-            string hashAlg,
-            bool extContent,
-            bool wrapExtInXml,
-            bool preserveBinaryEnc,
-            bool preserveTextEnc,
-            bool includeSub,
-            bool oneFilePerMbox,
-            int expectedErrors,
-            int expectedWarnings,
-            int expectedCounts, //default to check everything
-            bool quick = false,
-            long maxOutFileSize = 0,
-            bool xhtml = true, //default to not creating the xhtml content
-            string? oneMsgId = null
-            )
-        {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId);
-        }
-
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "allx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
-            true, 0, true, DisplayName = "xhtml-gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "splitx.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
-            true, 10000000, true, DisplayName = "xhtml-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
-
-        //messages with specific problems
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 0, 1,
-            false, 10000000, true, "d5c1fc93-14b1-48ef-985d-0fbb38878f7e@las1s04mta936.xt.local", DisplayName = "xhtml-skip1-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB, just one message
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
-            false, 10000000, true, "1E.44.44510.680AEB06@aj.mta1vrest.cc.prd.sparkpost", DisplayName = "xhtml-skip2-gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB, just one message
-
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 2, 1,
-            false, 0, true, "2010051415093467A03C1ACC$945C3759F1@COMPUTER", DisplayName = "xhtml-xmlns-gmail-ext-big-mbox")] //invalid namespace declaration
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
-            false, 0, true, "4313980.1156434894479.JavaMail.root@fac1010", DisplayName = "xhtml-QUOT-gmail-ext-big-mbox")] //undefined character entity &QUOT; -- all upper case
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 0, 1,
-            false, 0, true, "ee4ca1ce-f044-4536-85d3-553b088bb1dc@las1s04mta905.xt.local", DisplayName = "xhtml-2head-gmail-ext-big-mbox")] //two head elements
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
-            false, 0, true, "A5.52.33171.CC105236@gx.mta2vrest.cc.prd.sparkpost", DisplayName = "xhtml-body-text-gmail-ext-big-mbox")] //text content in the body
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
-            false, 0, true, "0.1.BE.4E2.1D77914FC5A11B8.0@omptrans.mail.synchronybank.com", DisplayName = "xhtml-head-xmlns-gmail-ext-big-mbox")] //head element has an invalid xmlns attribute
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
-            false, 0, true, "4b3ed4f78bcaae4d31caac7d6c4c22c5884b5b09-20081988-110484621@google.com", DisplayName = "xhtml-head-text-xmlns-gmail-ext-big-mbox")] //head element has text
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "skipx.out", "SHA256", true, false, false, false, false, false, 0, 1, 1,
-            false, 0, true, "FredricPaulEditor-in-Chief.665xjq1q0.dshl@cmp-subscriptions.p0.com", DisplayName = "xhtml-html-text-xmlns-gmail-ext-big-mbox")] //html element has text
-
-
-
-        [DataTestMethod]
-        public void TestHugeFilesOutputXhtml
-            (
-            string relInPath,
-            string relOutPath,
-            string hashAlg,
-            bool extContent,
-            bool wrapExtInXml,
-            bool preserveBinaryEnc,
-            bool preserveTextEnc,
-            bool includeSub,
-            bool oneFilePerMbox,
-            int expectedErrors,
-            int expectedWarnings,
-            int expectedCounts, //default to check everything
-            bool quick = false, //if true, it skips the xml validation
-            long maxOutFileSize = 0,
-            bool xhtml = true, //default to not creating the xhtml content
-            string? oneMsgId = null
-            )
-        {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId);
-
-            if (quick) //do the xml validation separately and store results in different outputfile
-            {
-                testFilesBaseDirectory = Path.GetDirectoryName(Path.Combine(testFilesBaseDirectory, relInPath)) ?? testFilesBaseDirectory;
-                string testFileName = Path.GetFileName(relInPath);
-                var sampleFile = Path.Combine(testFilesBaseDirectory, testFileName);
-                (_, string outFolder) = GetOutFolder(sampleFile, relOutPath);
-
-                validXml = ValidateXmlDocuments(oneFilePerMbox, sampleFile, outFolder);
-
-                Assert.IsTrue(validXml, "Invalid XML file.");
-
-            }
-        }
-
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "all.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
-            false, 0, false, DisplayName = "gmail-ext-big-mbox")] //very large gmail mbox export file, save external content
-        [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "split.out", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
-            false, 10000000, false, DisplayName = "gmail-ext-big-mbox-10000000")] //very large gmail mbox export file, save external content, split at 10MB
-
-        [DataTestMethod]
-        public void TestHugeFiles
-            (
-            string relInPath,
-            string relOutPath,
-            string hashAlg,
-            bool extContent,
-            bool wrapExtInXml,
-            bool preserveBinaryEnc,
-            bool preserveTextEnc,
-            bool includeSub,
-            bool oneFilePerMbox,
-            int expectedErrors,
-            int expectedWarnings,
-            int expectedCounts, //default to check everything
-            bool quick = false,
-            long maxOutFileSize = 0,
-            bool xhtml = false, //default to not creating the xhtml content
-            string? oneMsgId = null
-            )
-        {
-            TestSampleFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId);
-        }
-
-
-        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\folder", false, DisplayName = "path_check_drafts_folder")]
-        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\\\Drafts.out", true, DisplayName = "path_check_drafts_out")]
-        [DataRow("MozillaThunderbird\\Drafts", "MozillaThunderbird\\\\Drafts.out\\test", true, DisplayName = "path_check_drafts_out_test")]
-        [DataTestMethod]
-        public void TestPathErrorChecks(string inFilePath, string outFolderPath, bool shouldFail)
-        {
-
-            if (logger != null)
-            {
-                var settings = new EmailToEaxsProcessorSettings();
-                var eProc = new EmailToEaxsProcessor(logger, settings);
-
-                var inFile = Path.Combine(testFilesBaseDirectory, inFilePath);
-                var outFolder = Path.Combine(testFilesBaseDirectory, outFolderPath);
-
-                try
-                {
-                    var validMessageCount = eProc.ConvertMboxToEaxs(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
-                    if (shouldFail)
-                    {
-                        Assert.Fail("Expected an ArgumentException");
-                    }
-                }
-                catch (ArgumentException aex)
-                {
-                    if (!shouldFail)
-                    {
-                        Assert.Fail(aex.Message);
-                    }
-                }
-                finally
-                {
-                    //cleanup
-                    if (Directory.Exists(outFolder))
-                    {
-                        Directory.Delete(outFolder, true);
-                    }
-                }
-            }
         }
 
         void XmlValidationEventHandler(object? sender, ValidationEventArgs e)
