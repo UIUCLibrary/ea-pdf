@@ -119,8 +119,6 @@ namespace UIUCLibrary.EaPdf
 
             XmlStreamTeardown(xwriter, xstream);
 
-            //TODO: Open the XML file and do some post processing to make sure that all html id attributes are unique across the whole document
-
             //write the csv file
             if (saveCsv)
             {
@@ -220,8 +218,6 @@ namespace UIUCLibrary.EaPdf
 
         public long ConvertFolderOfEmlToEaxs(string emlFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
         {
-            //TODO: May want to modify the XML Schema to allow for references to child folders instead of embedding child folders in the same mbox, see account-ref-type.  Maybe add ParentFolder type
-
             (string fullEmlFolderPath, string fullOutFolderPath) = MessageFolderSetup(emlFolderPath, outFolderPath, globalId);
 
             messageList ??= new List<MessageBrief>(); //used to create the CSV file
@@ -265,7 +261,6 @@ namespace UIUCLibrary.EaPdf
                     _folders.Push(Path.GetFileName(fullEmlFolderPath));
                     foreach (string emlSubfolderPath in Directory.EnumerateDirectories(fullEmlFolderPath))
                     {
-                        //TODO: Need to create the parent folder in the XML file
                         localId = ConvertFolderOfEmlToEaxs(emlSubfolderPath, outFolderPath, globalId, accntEmails, localId, messageList, false);
                     }
 
@@ -311,8 +306,6 @@ namespace UIUCLibrary.EaPdf
                 WriteFolderClose(xwriter);
 
                 XmlStreamTeardown(xwriter, xstream);
-
-                //TODO: Open the XML file and do some post processing to make sure that all html id attributes are unique across the whole document
 
                 _logger.LogInformation("Output XML File: {xmlFilePath}, Total messages: {messageCount}", xmlFilePath, localId - startingLocalId);
             }
@@ -371,8 +364,6 @@ namespace UIUCLibrary.EaPdf
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
         public long ConvertFolderOfMboxToEaxs(string mboxFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
         {
-            //TODO: May want to modify the XML Schema to allow for references to child folders instead of embedding child folders in the same mbox, see account-ref-type.  Maybe add ParentFolder type
-
             (string fullMboxFolderPath, string fullOutFolderPath) = MessageFolderSetup(mboxFolderPath, outFolderPath, globalId);
 
             messageList ??= new List<MessageBrief>(); //used to create the CSV file
@@ -431,8 +422,6 @@ namespace UIUCLibrary.EaPdf
 
                 XmlStreamTeardown(xwriter, xstream);
 
-                //TODO: Open the XML file and do some post processing to make sure that all html id attributes are unique across the whole document
-
                 _logger.LogInformation("Output XML File: {xmlFilePath}, Total messages: {messageCount}", xmlFilePath, localId - startingLocalId);
             }
 
@@ -465,8 +454,6 @@ namespace UIUCLibrary.EaPdf
             localId = ProcessMbox(fileProps, ref xwriter, ref xstream, localId, messageList);
 
             XmlStreamTeardown(xwriter, xstream);
-
-            //TODO: Open the XML file and do some post processing to make sure that all html id attributes are unique across the whole document
 
             //write the csv file
             if (saveCsv)
@@ -543,8 +530,6 @@ namespace UIUCLibrary.EaPdf
 
         private long ProcessEml(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
-            //TODO: Instead of one Folder element per file, when processing a folder full of EML files, we only need a single Folder element representing the system folder
-
             if (msgFileProps.MessageFormat != MimeFormat.Entity)
             {
                 throw new Exception($"Unexpected MessageFormat '{msgFileProps.MessageFormat}'; skipping file ");
@@ -886,7 +871,6 @@ namespace UIUCLibrary.EaPdf
 
             //TODO: Add accomodations for OneFilePerMessageFile and use the ReferencesAccount xml element
             //      See https://github.com/orgs/UIUCLibrary/projects/39/views/2?pane=issue&itemId=25979741
-            //TODO: May want to modify the XML Schema to allow for references to child folders instead of embedding child folders in the same mbox, see account-ref-type.  Maybe add ParentFolder type
 
 
             //look for a subfolder named the same as the mbox file ignoring extensions
@@ -1010,8 +994,6 @@ namespace UIUCLibrary.EaPdf
             xwriter.Close(); //this should close the underlying stream
             xwriter.Dispose();
             xstream.Dispose();
-
-            //TODO: Open the XML file and do some post processing to make sure that all html id attributes are unique across the whole document
 
             xstream = new FileStream(newXmlFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
             var xset = new XmlWriterSettings()
@@ -1488,7 +1470,7 @@ namespace UIUCLibrary.EaPdf
             {
                 if (mimeEntity is TnefPart tnefPart)
                 {
-                    //TODO: Instead of treating TNEF as a ChildMessage, maybe treat the same as a multipart mime type
+                    //FUTURE: Instead of treating TNEF as a ChildMessage, maybe treat the same as a multipart mime type
                     var tnefMsg = tnefPart.ConvertToMessage();
                     localId = WriteSingleBodyChildMessage(xwriter, tnefMsg, localId, expectingBodyContent, mboxProps, msgProps);
                 }
@@ -1633,7 +1615,7 @@ namespace UIUCLibrary.EaPdf
         private long WriteSingleBodyContent(XmlWriter xwriter, MimePart part, long localId, bool expectingBodyContent, MessageFileProperties mboxProps)
         {
             //if it is text and not an attachment, save embedded in the XML
-            //TODO: Maybe accomodate txtPart.IsEnriched || txtPart.IsRichText instead of treating them as non-text
+            //FUTURE: Maybe accomodate txtPart.IsEnriched || txtPart.IsRichText instead of treating them as non-text
             if (part is TextPart txtPart && (txtPart.IsPlain || txtPart.IsHtml) && !part.IsAttachment)
             {
                 var (text, encoding, warning) = MimeKitHelpers.GetContentText(part);

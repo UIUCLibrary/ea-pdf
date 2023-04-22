@@ -281,7 +281,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                         // this is an improperly nested list item, so wrap it in an li
                         // this works well if the element is another list, ul or ol, but if the other item is a font, span, etc., it will be wrapped in an li
                         // and the nested items will be lost
-                        //TODO: Not sure what a good generic solution would be???  Maybe the solution belongs in the XSLT instead of here
+                        //FUTURE: Not sure what a good generic solution would be???  Maybe the solution belongs in the XSLT instead of here
                         var newLi = htmlNode.OwnerDocument.CreateElement("li");
                         toBeReplaced.Add((newLi, li));
                         if (!ignoreHtmlIssues)
@@ -347,7 +347,6 @@ namespace UIUCLibrary.EaPdf.Helpers
         public static string FixCharacterEntities(string htmlStr)
         {
             //TODO: probably need to be a bit selective to avoid decoding CDATA sections
-            //TODO: how can I fix already double encoded entities, like &amp;nbsp;?
 
             //replace named character entities with the characters
 
@@ -859,9 +858,9 @@ namespace UIUCLibrary.EaPdf.Helpers
 
                 foreach (ICssStyleRule rule in sSheetTask.Rules.Where(r => r is ICssStyleRule sr && sr.Selector != null).OrderByDescending(sr => ((ICssStyleRule)sr).Selector.Specificity).Cast<ICssStyleRule>())
                 {
-                    //TODO: Add support for ListSelectors, so that the separate specificity of its selectors can be determined.
-                    //TODO: Add support for the shorthand property "all"
-                    //TODO: Add support for the !important modifier.
+                    //FUTURE: Add support for ListSelectors, so that the separate specificity of its selectors can be determined.
+                    //FUTURE: Add support for the shorthand property "all"
+                    //FUTURE: Add support for the !important modifier.
 
                     var selectorText = rule.Selector.Text;
                     var styleText = rule.Style.CssText;

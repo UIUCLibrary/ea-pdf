@@ -687,8 +687,6 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 //Use the MimeKit converters to convert plain/text, fixed to html,
                 var converter = new TextToHtml();
-                //TODO: This will double-encode any html entities, &zwnj; becomes &amp;zwnj; -- need to fix this
-                //      Run the HtmlEntity.DeEntitize before passing to the converter
                 htmlText = converter.Convert(htmlText);
                 //clean up the html so it is valid-ish xhtml, ignoring any issues since this was already derived from plain text
                 htmlText = HtmlHelpers.ConvertHtmlToXhtml(htmlText, ref messages, true);
