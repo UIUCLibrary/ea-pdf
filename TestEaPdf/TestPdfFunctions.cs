@@ -12,7 +12,7 @@ using UIUCLibrary.EaPdf.Helpers.Pdf;
 namespace UIUCLibrary.TestEaPdf
 {
     [TestClass]
-    public class TesPdfFunctions
+    public class TestPdfFunctions
     {
         private readonly bool OPEN_PDFS = false;  //set to true to open the PDFs in the default PDF viewer
 
