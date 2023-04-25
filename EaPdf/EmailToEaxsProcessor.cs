@@ -862,6 +862,21 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
+        /// <summary>
+        /// Child mbox files are contained in a subfolder with the same name as the parent mbox file (ignoring any file extension)
+        /// Any mbox files in the subfolder are considered to be children folders of the parent mbox folder.
+        /// 
+        /// NOTE: The above is true for Mozilla Thunderbird mbox files.  Other mbox files may have different folder structures.
+        /// For alternatives see: https://doc.dovecot.org/configuration_manual/mail_location/mbox/mboxchildfolders/ or https://access.redhat.com/articles/6167512
+        /// TODO: Add accommodations for alternative mbox folder structures, see https://github.com/orgs/UIUCLibrary/projects/39/views/2?pane=issue&itemId=26477769
+        /// </summary>
+        /// <param name="msgFileProps"></param>
+        /// <param name="xwriter"></param>
+        /// <param name="xstream"></param>
+        /// <param name="localId"></param>
+        /// <param name="messageList"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         private long ProcessChildMboxes(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
             if (msgFileProps.MessageFormat != MimeFormat.Mbox)
