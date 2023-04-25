@@ -40,6 +40,8 @@ namespace UIUCLibrary.EaPdf
 
         const int EPILOGUE_THRESHOLD = 200; //maximum number of characters before the epilogue is considered suspicious and a warning is logged
 
+        const double MAX_FILE_SIZE_THRESHOLD = 0.95;
+
         public EmailToEaxsProcessorSettings Settings { get; }
 
         //stats used for development and debuging
@@ -575,7 +577,7 @@ namespace UIUCLibrary.EaPdf
 
                 while (!mbxParser.IsEndOfStream)
                 {
-                    if (Settings.MaximumXmlFileSizeThreshold > 0 && xstream.Position >= Settings.MaximumXmlFileSizeThreshold)
+                    if (Settings.MaximumXmlFileSize > 0 && xstream.Position >= Settings.MaximumXmlFileSize * MAX_FILE_SIZE_THRESHOLD)
                     {
                         //close the current xml file and open a new one
                         StartNewXmlFile(ref xwriter, ref xstream, msgFileProps);
@@ -646,7 +648,7 @@ namespace UIUCLibrary.EaPdf
 
                 while (!mboxParser.IsEndOfStream)
                 {
-                    if (Settings.MaximumXmlFileSizeThreshold > 0 && xstream.Position >= Settings.MaximumXmlFileSizeThreshold)
+                    if (Settings.MaximumXmlFileSize > 0 && xstream.Position >= Settings.MaximumXmlFileSize * MAX_FILE_SIZE_THRESHOLD)
                     {
                         //close the current xml file and open a new one
                         StartNewXmlFile(ref xwriter, ref xstream, msgFileProps);

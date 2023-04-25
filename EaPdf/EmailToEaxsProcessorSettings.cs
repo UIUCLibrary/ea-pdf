@@ -58,23 +58,9 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// Approximate maximum allowable size for the output XML files, in bytes.  If the size of the XML file exceeds this value, it will be split into multiple files.
-        /// A value less than or equal to zero means no limit. The actual threshold for splitting will be with 5% of this value, <see cref="MaximumXmlFileSizeThreshold"/>
+        /// A value less than or equal to zero means no limit. The actual file size for splitting will be with 5% of this value.  Output is always split at message boundaries.
         /// </summary>
         public long MaximumXmlFileSize { get; set; } = 1024 * 1024 * 1024; // 1GB
-
-        //TODO: This is just cruft, get rid of it, so what if files can be slightly larger than the MaximumXmlFileSize
-        //      See https://github.com/orgs/UIUCLibrary/projects/39/views/2?pane=issue&itemId=25984180
-        /// <summary>
-        /// When this output file size threshold is reached, the file will be split into multiple files
-        /// It is within 5% of the <see cref="MaximumXmlFileSize"/>
-        /// </summary>
-        public long MaximumXmlFileSizeThreshold
-        {
-            get
-            {
-                return (long)(MaximumXmlFileSize * 0.95);
-            }
-        }
 
         /// <summary>
         /// If true, all plain and html text will be converted to Xhtml when serialized into the XML
