@@ -160,9 +160,12 @@ namespace UIUCLibrary.EaPdf
 
         private void XmlStreamTeardown(XmlWriter xwriter, Stream xstream)
         {
-            xwriter.WriteEndElement(); //Account
-
-            xwriter.WriteEndDocument();
+            //TODO:  This 'if' smells bad, might want to do some refactoring
+            if(xwriter.WriteState != WriteState.Closed) //Might have been closed if the OneFilePerMessageFile == true
+            {
+                xwriter.WriteEndElement(); //Account
+                xwriter.WriteEndDocument();
+            }
 
             xwriter.Flush();
             xwriter.Close(); //this should close the underlying stream
@@ -741,7 +744,8 @@ namespace UIUCLibrary.EaPdf
                     localId = ProcessChildMboxes(msgFileProps, ref xwriter, ref xstream, localId, messageList);
                 }
 
-                if (msgFileProps.MessageFormat == MimeFormat.Mbox)
+                //TODO:  The 'xwriter.WriteState != WriteState.Closed' smells bad, might want to do some refactoring
+                if (xwriter.WriteState != WriteState.Closed && msgFileProps.MessageFormat == MimeFormat.Mbox) //might have been closed already in the ProcessChildMboxes if the OneFilePerMessageFile==true
                 {
                     WriteMessageFileProperties(xwriter, msgFileProps);
                 }
@@ -924,19 +928,39 @@ namespace UIUCLibrary.EaPdf
 
                 if (childMboxes != null && childMboxes.Length > 0)
                 {
+
+                    if (Settings.OneFilePerMessageFile)
+                    {
+                        //close out the current file
+                        WriteMessageFileProperties(xwriter, msgFileProps);
+                        WriteFolderClosers(xwriter);
+                        XmlStreamTeardown(xwriter, xstream);
+                    }
+
                     //this is all the files, so need to determine which ones are mbox files or not
+                    //we just try to process it, invalid mbox files are logged as such in the output and skipped
                     foreach (var childMbox in childMboxes)
                     {
-                        //create new MessageFileProperties which is copy of parent MessageFileProperties except for the MessageFilePath and the checksum hash
-                        MessageFileProperties childMboxProps = new(msgFileProps)
-                        {
-                            MessageFilePath = childMbox
-                        };
-                        SetHashAlgorithm(childMboxProps, xwriter);
 
-                        //just try to process it, if no errors thrown, its probably an mbox file
-                        WriteToLogInfoMessage(xwriter, $"Processing Child Mbox: {childMbox}");
-                        localId = ProcessMbox(childMboxProps, ref xwriter, ref xstream, localId, messageList);
+                        if (Settings.OneFilePerMessageFile)
+                        {
+                            //TODO: Add subfolders for the output directory
+                            //TODO: Add nested <Folder> tags in the output XML
+                            localId = ConvertMboxToEaxs(childMbox, msgFileProps.OutDirectoryName, msgFileProps.GlobalId, msgFileProps.AccountEmails, localId, messageList, false);
+                        }
+                        else
+                        {
+                            //create new MessageFileProperties which is copy of parent MessageFileProperties except for the MessageFilePath and the checksum hash
+                            MessageFileProperties childMboxProps = new(msgFileProps)
+                            {
+                                MessageFilePath = childMbox
+                            };
+                            SetHashAlgorithm(childMboxProps, xwriter);
+
+                            //just try to process it, if no errors thrown, its probably an mbox file
+                            WriteToLogInfoMessage(xwriter, $"Processing Child Mbox: {childMbox}");
+                            localId = ProcessMbox(childMboxProps, ref xwriter, ref xstream, localId, messageList);
+                        }
                     }
                 }
 
@@ -962,8 +986,12 @@ namespace UIUCLibrary.EaPdf
         /// <param name="xwriter"></param>
         private void WriteFolderClose(XmlWriter xwriter)
         {
-            xwriter.WriteEndElement(); //Folder
-            _folders.Pop();
+            //TODO:  This 'if' smells bad, might want to do some refactoring
+            if (xwriter.WriteState != WriteState.Closed) //Might have been closed if the OneFilePerMessageFile == true
+            {
+                xwriter.WriteEndElement(); //Folder
+                _folders.Pop();
+            }
         }
 
 
