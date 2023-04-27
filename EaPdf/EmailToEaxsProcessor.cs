@@ -160,7 +160,7 @@ namespace UIUCLibrary.EaPdf
 
         private void XmlStreamTeardown(XmlWriter xwriter, Stream xstream)
         {
-            //FUTURE:  This 'if' smells bad, might want to do some refactoring
+            //TODO:  This 'if' smells bad, might want to do some refactoring
             if (xwriter.WriteState != WriteState.Closed) //Might have been closed if the OneFilePerMessageFile == true
             {
                 xwriter.WriteEndElement(); //Account
