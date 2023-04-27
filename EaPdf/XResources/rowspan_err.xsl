@@ -38,7 +38,7 @@
          -->
         <xsl:message terminate="no">
             <xsl:text>Error: </xsl:text>
-            <xsl:text> [Folder: </xsl:text><xsl:value-of select="ancestor::eaxs:Folder/eaxs:Mbox/eaxs:RelPath"/><xsl:text> Message Id: </xsl:text><xsl:value-of select="ancestor::eaxs:Message/eaxs:MessageId"/><xsl:text>] </xsl:text>
+            <xsl:text> [Folder: </xsl:text><xsl:value-of select="ancestor::eaxs:Folder/eaxs:FolderProperties/eaxs:RelPath"/><xsl:text> Message Id: </xsl:text><xsl:value-of select="ancestor::eaxs:Message/eaxs:MessageId"/><xsl:text>] </xsl:text>
             <xsl:call-template name="xpath">
                 <xsl:with-param name="location" select="$location"/>
             </xsl:call-template>

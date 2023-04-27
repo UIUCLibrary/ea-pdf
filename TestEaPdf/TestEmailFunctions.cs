@@ -609,7 +609,7 @@ namespace UIUCLibrary.TestEaPdf
                 ValidateLocalIds(xDoc, xmlns);
 
                 //make sure hash values and sizes are correct for folder-level mbox files
-                XmlNodeList? msgFilePropNodes = xDoc.SelectNodes("//xm:Folder/xm:MessageFileProperties[xm:RelPath]", xmlns);
+                XmlNodeList? msgFilePropNodes = xDoc.SelectNodes("//xm:Folder/xm:FolderProperties[xm:RelPath]", xmlns);
                 if (msgFilePropNodes != null)
                 {
                     foreach (XmlElement msgFilePropElem in msgFilePropNodes)
@@ -619,7 +619,7 @@ namespace UIUCLibrary.TestEaPdf
                 }
 
                 //make sure hash values and sizes are correct for message-level eml files
-                msgFilePropNodes = xDoc.SelectNodes("//xm:Message/xm:MessageFileProperties[xm:RelPath]", xmlns);
+                msgFilePropNodes = xDoc.SelectNodes("//xm:Message/xm:MessageProperties[xm:RelPath]", xmlns);
                 if (msgFilePropNodes != null)
                 {
                     foreach (XmlElement msgFilePropElem in msgFilePropNodes)

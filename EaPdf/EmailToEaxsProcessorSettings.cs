@@ -57,6 +57,7 @@ namespace UIUCLibrary.EaPdf
         public bool OneFilePerMessageFile { get; set; } = false;
 
         //TODO:  Add a OneFilePerMessage option, or maybe use an enum: OneFile, OneFilePerMessage, OneFilePerMessageFile
+        //       See https://github.com/UIUCLibrary/ea-pdf/issues/6
 
         /// <summary>
         /// Approximate maximum allowable size for the output XML files, in bytes.  If the size of the XML file exceeds this value, it will be split into multiple files.

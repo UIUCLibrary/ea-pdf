@@ -127,7 +127,7 @@
 		</fo:block>
 		<fo:block xsl:use-attribute-sets="h2">Source Email Files</fo:block>
 		<fo:block xsl:use-attribute-sets="dl">
-			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
+			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties">
 				<fo:block xsl:use-attribute-sets="dt" font-weight="bold">
 					<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
 					<fox:destination><xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
@@ -391,7 +391,7 @@
 	</xsl:template>
 	
 	<xsl:template name="declarations-attachments">
-		<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:Mbox">
+		<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties">
 			<pdf:embedded-file>
 				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
 				<xsl:attribute name="description">Source file for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
@@ -489,13 +489,13 @@
 								<xsl:choose>
 									<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
 										<fo:basic-link>
-											<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+											<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:FolderProperties/eaxs:FileExt"/>)</xsl:attribute>
 											<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Go To Source File</fo:inline>)</fo:inline>
 										</fo:basic-link>										
 									</xsl:when>
 									<xsl:otherwise>
 										<fo:basic-link>
-											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/></xsl:attribute>
 											<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link"  font-size="small">Go To Source File</fo:inline>
 										</fo:basic-link>
 									</xsl:otherwise>
@@ -503,15 +503,15 @@
 							</xsl:when>
 							<xsl:when test="$fo-processor='xep'">
 								<fo:basic-link>
-									<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Mbox/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+									<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/></xsl:attribute>
 									<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link"  font-size="small">Go To Source File</fo:inline>
 								</fo:basic-link>
 								<fo:inline font-size="small">&nbsp;&nbsp;  
 									<rx:pdf-comment>
-										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:RelPath"/></xsl:attribute>
+										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:FolderProperties/eaxs:RelPath"/></xsl:attribute>
 										<rx:pdf-file-attachment icon-type="paperclip">
-											<xsl:attribute name="filename"><xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:FileExt"/></xsl:attribute>
-											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(/eaxs:Account/eaxs:Folder/eaxs:Mbox/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+											<xsl:attribute name="filename"><xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:FolderProperties/eaxs:FileExt"/></xsl:attribute>
+											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(/eaxs:Account/eaxs:Folder/eaxs:FolderProperties/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 										</rx:pdf-file-attachment>
 									</rx:pdf-comment>
 								</fo:inline>
@@ -536,13 +536,13 @@
 								<xsl:choose>
 									<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
 										<fo:basic-link>
-											<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/>)</xsl:attribute>
+											<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FolderProperties/eaxs:FileExt"/>)</xsl:attribute>
 											<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
 										</fo:basic-link>
 									</xsl:when>
 									<xsl:otherwise>
 										<fo:basic-link>
-											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/></xsl:attribute>
 											<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Attachment</fo:inline>
 										</fo:basic-link>
 									</xsl:otherwise>
@@ -552,10 +552,10 @@
 								<fo:inline font-size="small">
 									<xsl:text>(Open Source File&nbsp;</xsl:text>
 									<rx:pdf-comment>
-										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:Mbox/eaxs:RelPath"/></xsl:attribute>
+										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:FolderProperties/eaxs:RelPath"/></xsl:attribute>
 										<rx:pdf-file-attachment icon-type="paperclip">
-											<xsl:attribute name="filename"><xsl:value-of select="eaxs:Mbox/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:Mbox/eaxs:FileExt"/></xsl:attribute>
-											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:Mbox/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+											<xsl:attribute name="filename"><xsl:value-of select="eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FolderProperties/eaxs:FileExt"/></xsl:attribute>
+											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:FolderProperties/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 										</rx:pdf-file-attachment>
 									</rx:pdf-comment>
 									<xsl:text>&nbsp;&nbsp;&nbsp;&nbsp;)</xsl:text>
@@ -595,7 +595,7 @@
 	
 	<xsl:template name="MessageHeaderTocAndContent">
 		<xsl:param name="RenderToc">true</xsl:param>
-		<xsl:message><xsl:value-of select="parent::eaxs:Folder/eaxs:Mbox/eaxs:RelPath"/> -- <xsl:value-of select="eaxs:MessageId"/></xsl:message>
+		<xsl:message><xsl:value-of select="parent::eaxs:Folder/eaxs:FolderProperties/eaxs:RelPath"/> -- <xsl:value-of select="eaxs:MessageId"/></xsl:message>
 		<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:MessageId"/>
 			<xsl:apply-templates select="eaxs:OrigDate[not('0001-01-01T00:00:00Z')]"/> <!-- MimeKit seems to use this as the default value if there is no date -->

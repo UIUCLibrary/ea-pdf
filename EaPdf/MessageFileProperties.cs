@@ -302,5 +302,7 @@ namespace UIUCLibrary.EaPdf
                     return -1;
             }
         }
+
+        public bool AlreadySerialized { get; set; } = false;
     }
 }
