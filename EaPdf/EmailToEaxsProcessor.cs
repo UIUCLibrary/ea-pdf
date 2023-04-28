@@ -746,8 +746,11 @@ namespace UIUCLibrary.EaPdf
 
                 //make sure to read to the end of the stream so the hash is correct
                 FilePathHelpers.ReadToEnd(cryptoStream);
+
+                cryptoStream.Close();
             }
 
+            mboxStream.Close();
 
             return localId;
         }
