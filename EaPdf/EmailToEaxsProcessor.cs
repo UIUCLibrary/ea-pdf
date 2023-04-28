@@ -575,6 +575,7 @@ namespace UIUCLibrary.EaPdf
 
         private long ProcessFile(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
+            msgFileProps.ResetEolCounts(); //reset counts to zero for each file
 
             //Keep track of properties for an individual message, such as Eol and Hash
             MimeMessageProperties mimeMsgProps = new();
@@ -653,6 +654,8 @@ namespace UIUCLibrary.EaPdf
                 //Need to record the previous message so we can defer writing it to the XML until the next message can be interogated for error conditions 
                 //and we can add the <Incomplete> tag if needed.
                 MimeMessage? prevMessage = null;
+                MessageFileProperties? prevMsgFileProps = null;
+                MimeMessageProperties? prevMimeMsgProps = null;
                 MimeMessage? message = null;
 
                 while (!mboxParser.IsEndOfStream)
@@ -715,9 +718,9 @@ namespace UIUCLibrary.EaPdf
                         break; //some error we probably can't recover from, so just bail
                     }
 
-                    if (prevMessage != null)
+                    if (prevMessage != null && prevMsgFileProps != null && prevMimeMsgProps != null)
                     {
-                        localId = ProcessCurrentMessage(prevMessage, xwriter, localId, messageList, msgFileProps, mimeMsgProps);
+                        localId = ProcessCurrentMessage(prevMessage, xwriter, localId, messageList, prevMsgFileProps, prevMimeMsgProps);
                         msgFileProps.MessageCount++;
                         mimeMsgProps.NotIncomplete();
                     }
@@ -725,7 +728,10 @@ namespace UIUCLibrary.EaPdf
                     {
                         WriteToLogErrorMessage(xwriter, "Message is null");
                     }
+
                     prevMessage = message;
+                    prevMsgFileProps = (MessageFileProperties?)msgFileProps.Clone();
+                    prevMimeMsgProps = (MimeMessageProperties?)mimeMsgProps.Clone();
 
                     if (allDone)
                     {

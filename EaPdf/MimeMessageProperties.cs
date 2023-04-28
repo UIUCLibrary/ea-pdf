@@ -3,12 +3,21 @@
     /// <summary>
     /// Properties that need to be persisted while processing an email message
     /// </summary>
-    public class MimeMessageProperties
+    public class MimeMessageProperties : ICloneable
     {        
         public const string EOL_TYPE_CR = "CR";
         public const string EOL_TYPE_LF = "LF";
         public const string EOL_TYPE_CRLF = "CRLF";
         public const string EOL_TYPE_UNK = "UNKNOWN";
+
+        /// <summary>
+        /// Return a shallow copy of the object
+        /// </summary>
+        /// <returns></returns>
+        public object Clone()
+        {
+            return this.MemberwiseClone();
+        }
 
         //Include the mbx message header so it can be used for other purposes if needed, like message statuses
         public MbxMessageHeader? MbxMessageHeader { get; set; } 

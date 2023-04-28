@@ -96,7 +96,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, false, 0, 1, 100, DisplayName = "pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
         [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, false, 0, 0, 466, DisplayName = "pine-sent-mail-jul-2006")] //not an mbox file
         [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, false, 0, 1, 418, DisplayName = "pine-sent-mail-jun-2004")] //not an mbox file
-
+        [DataRow("Pine\\sent-mail-jun-2000", "pine-sent-mail-jun-2000", "SHA256", false, false, false, false, false, false, 0, 0, 122, DisplayName = "pine-sent-mail-jun-2000")] //LF and UNKNOWN Eols
 
         //Weird Emails
         [DataRow("Weird\\missing_ext2.mbox", "out_missing_ext2", "SHA256", true, false, false, false, false, false, 0, 0, 2, DisplayName = "weird-missing-ext2-mbox")] //message from very large mbox seems to be missing external files
@@ -319,6 +319,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, false, 0, 1, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
         [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004", "SHA256", false, false, false, false, false, false, 0, 1, 418, DisplayName = "xhtml-pine-sent-mail-jun-2004")] //not an mbox file
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, false, 0, 1, 100, DisplayName = "xhtml-pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
+        [DataRow("Pine\\sent-mail-jun-2000", "pine-sent-mail-jun-2000", "SHA256", false, false, false, false, false, false, 0, 0, 122, DisplayName = "xhtml-pine-sent-mail-jun-2000")] //LF and UNKNOWN Eols
 
 
         //Weird Emails

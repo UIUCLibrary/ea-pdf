@@ -7,7 +7,7 @@ namespace UIUCLibrary.EaPdf
     /// <summary>
     /// Properties that need to be persisted while processing an email message file (mbox or eml)
     /// </summary>
-    internal class MessageFileProperties
+    internal class MessageFileProperties : ICloneable
     {
 
         /// <summary>
@@ -21,7 +21,7 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
-        /// Create new MessageFileProperties from an existing MessageFileProperties 
+        /// Create new MessageFileProperties from an existing MessageFileProperties, copy just select properties 
         /// </summary>
         /// <param name="source"></param>
         public MessageFileProperties(MessageFileProperties source) : this()
@@ -32,6 +32,15 @@ namespace UIUCLibrary.EaPdf
             this.AccountEmails = source.AccountEmails;
             this.GlobalId = source.GlobalId;
             this.MessageFormat = source.MessageFormat;
+        }
+
+        /// <summary>
+        /// Return a shallow copy of the object
+        /// </summary>
+        /// <returns></returns>
+        public object Clone()
+        {
+            return this.MemberwiseClone();
         }
 
         /// <summary>
@@ -190,6 +199,11 @@ namespace UIUCLibrary.EaPdf
         /// EOLs which do not appear in the file will not appear in the dictionary
         /// </summary>
         public Dictionary<string, int> EolCounts { get; } = new Dictionary<string, int>();
+
+        public void ResetEolCounts()
+        {
+            EolCounts.Clear();
+        }
 
         /// <summary>
         /// This will return the most common line ending style used in the file.
