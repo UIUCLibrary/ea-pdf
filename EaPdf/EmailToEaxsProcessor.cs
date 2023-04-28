@@ -805,7 +805,8 @@ namespace UIUCLibrary.EaPdf
 
                 xwriter.WriteEndElement(); //wrapperElement
 
-                msgFileProps.AlreadySerialized = true;
+                if(Settings.OneFilePerMessageFile)
+                    msgFileProps.AlreadySerialized = true;
             }
         }
 
