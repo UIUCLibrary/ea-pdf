@@ -160,12 +160,8 @@ namespace UIUCLibrary.EaPdf
 
         private void XmlStreamTeardown(XmlWriter xwriter, Stream xstream)
         {
-            //TODO:  This 'if' smells bad, might want to do some refactoring
-            if (xwriter.WriteState != WriteState.Closed) //Might have been closed if the OneFilePerMessageFile == true
-            {
-                xwriter.WriteEndElement(); //Account
-                xwriter.WriteEndDocument();
-            }
+            xwriter.WriteEndElement(); //Account
+            xwriter.WriteEndDocument();
 
             xwriter.Flush();
             xwriter.Close(); //this should close the underlying stream
@@ -805,7 +801,7 @@ namespace UIUCLibrary.EaPdf
 
                 xwriter.WriteEndElement(); //wrapperElement
 
-                if(Settings.OneFilePerMessageFile)
+                if (Settings.OneFilePerMessageFile)
                     msgFileProps.AlreadySerialized = true;
             }
         }

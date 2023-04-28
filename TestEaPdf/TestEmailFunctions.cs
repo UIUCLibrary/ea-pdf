@@ -88,8 +88,8 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext--oneper-includeSubs", "SHA256", true, false, false, false, true, true, 0, 9, 852, DisplayName = "moz-dlf-sha256-ext--oneper-includeSubs")]
 
         //Pine mbox folder
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 114, 20799, DisplayName = "pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 114, 20799, DisplayName = "pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 59, 20799, DisplayName = "pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 59, 20799, DisplayName = "pine-folder-one-file-in-subfolder")]
         [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 59, 20799, DisplayName = "pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 6, 1301, DisplayName = "pine-sent-mail-aug-2007")] //not an mbox file
@@ -311,8 +311,8 @@ namespace UIUCLibrary.TestEaPdf
 
 
         //Pine mbox folder
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 623, 20799, DisplayName = "xhtml-pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 623, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 568, 20799, DisplayName = "xhtml-pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 568, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
         [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 568, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 274, 1301, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
