@@ -12,9 +12,239 @@
 				<rdf:Bag>
 					<rdf:li>
 						<rdf:Description>
+							<pdfaSchema:schema>
+								Elements from the "Describing Archives: A Content Standard" (DACS) maintained by the Society of American Archivists (SAA). For 
+								details see https://saa-ts-dacs.github.io/dacs/.  This schema includes all the 'multilevel optimum' elements described in the DACS;
+								the DACS standard requires all of these elements except for administrativeBiographicalHistory, custodialHistory, and 
+								immediateSourceOfAcquisition which are considered optimum or value added. The elements may be used at the email account or email folder level.  
+								Multiple levels of description are inferred by the PDF DPart hierarchy. The DPart root represents the email account and the nested email 
+								folders are represented by DPart branch nodes. Elements left off of a folder level are assumed to be inherited from the parent folder or 
+								from the email account level.  Some of these elements are internal and can be automatically derived from the email messages contained in the 
+								document.
+							</pdfaSchema:schema>
+							<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/dacs/</pdfaSchema:namespaceURI>
+							<pdfaSchema:prefix>dacs</pdfaSchema:prefix>
+							<pdfaSchema:property>
+								<rdf:Seq>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element provides a unique identifier for the unit being described. 
+											</pdfaProperty:description>
+											<pdfaProperty:name>referenceCode</pdfaProperty:name>
+											<pdfaProperty:valueType>ArchivalIdentifier</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element identifies the name and location of the repository that holds the materials being described.
+											</pdfaProperty:description>
+											<pdfaProperty:name>repository</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element provides a word or phrase by which the material being described is known or can be identified. 
+												A title may be devised or formal.
+											</pdfaProperty:description>
+											<pdfaProperty:name>title</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<!-- the following correspond to the DACS Date element -->
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>internal</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element identifies and records the date of the earliest email in the unit.  
+												For PDF/mail this is an internal property and should be derived from the origination date of the 
+												earliest message contained at this level in the document.
+											</pdfaProperty:description>
+											<pdfaProperty:name>dateCreatedEarliest</pdfaProperty:name>
+											<pdfaProperty:valueType>Date</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>internal</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element identifies and records the date of the latest email in the unit.
+												For PDF/mail this is an internal property and should be derived from the origination date of the 
+												latest message contained at this level in the document.
+											</pdfaProperty:description>
+											<pdfaProperty:name>dateCreatedLatest</pdfaProperty:name>
+											<pdfaProperty:valueType>Date</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<!-- Note that the dates associated with the creation or maintenance of the PDF/mail document are recorded in document Dublin Core and/or XML Basic metadata-->
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>internal</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element indicates the extent and the physical nature of the materials being described. This is handled in two parts, 
+												a number (quantity) and an expression of the extent or material type. For an email archive these can be the number of emails
+												and attachments contained in the account or folder, and may include the total size in bytes.  For PDF/mail this is an internal property 
+												and should be derived from the messages contained at this level in the document.
+											</pdfaProperty:description>
+											<pdfaProperty:name>extent</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element identifies the corporate bodies, persons, and families associated with the creation, assembly, accumulation, 
+												and/or maintenance and use of the materials being described so that they might be appropriately documented and used to 
+												create access points by which users can search for and retrieve descriptive records.  For PDF/mail this will be the owner(s)
+												of the email account identified by an Agent type with a name and mbox.
+											</pdfaProperty:description>
+											<pdfaProperty:name>creator</pdfaProperty:name>
+											<pdfaProperty:valueType>bag Agent</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element provides information about the nature of the materials and activities reflected in the unit being described to 
+												enable users to judge its potential relevance. 
+											</pdfaProperty:description>
+											<pdfaProperty:name>scopeAndContent</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element provides information about access restrictions due to the nature of the information in the materials being described, 
+												such as those imposed by the donor, by the repository, or by statutory/regulatory requirements.
+											</pdfaProperty:description>
+											<pdfaProperty:name>conditionsGoverningAccess</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element identifies the language(s), script(s), and symbol systems employed in the materials being described, particularly as 
+												they may affect its use.  For PDF/mail this could be automatically derived from the message and MIME properties of the messages
+												contained at this level in the document, such as Content-Type, Content-Disposition, Content-Language, etc.
+											</pdfaProperty:description>
+											<pdfaProperty:name>languagesAndScripts</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element identifies the conditions under which the archival description itself is available for use and reuse. 
+												Repositories should establish a consistent policy about the rights granted.
+											</pdfaProperty:description>
+											<pdfaProperty:name>rightsStatement</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												The purpose of this element is to describe the required elements of a biographical or administrative history note 
+												about creators embedded in the description of materials. The administrative/biographical history provides relevant 
+												information about corporate bodies, persons, or families who are identified using the Name of Creator(s) Element 
+												and who therefore function as nominal access points. This element also describes the relationship of creators to 
+												archival materials by providing information about the context in which those materials were created.  This is an
+												optional element.
+											</pdfaProperty:description>
+											<pdfaProperty:name>administrativeBiographicalHistory</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element provides information on changes of ownership or custody of the material being described, from the time 
+												it left the possession of the creator until it was acquired by the repository, that is significant for its authenticity, 
+												integrity, and interpretation.
+											</pdfaProperty:description>
+											<pdfaProperty:name>custodialHistory</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaProperty:category>external</pdfaProperty:category>
+											<pdfaProperty:description>
+												This element identifies the source from which the repository directly acquired the materials being described, as well as the 
+												date of acquisition, the method of acquisition, and other relevant information.
+											</pdfaProperty:description>
+											<pdfaProperty:name>immediateSourceOfAcquisition</pdfaProperty:name>
+											<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										</rdf:Description>										
+									</rdf:li>
+								</rdf:Seq>
+							</pdfaSchema:property>
+							<pdfaSchema:valueType>
+								<rdf:Seq>
+									<rdf:li>
+										<rdf:Description>
+											<pdfaType:description>An archival identifier may consist of three subelements: a local identifier, a code for the repository, and a code for the country.</pdfaType:description>
+											<pdfaType:namespaceURI>http://www.pdfa.org/eapdf/ns/dacs/</pdfaType:namespaceURI>
+											<pdfaType:prefix>dacs</pdfaType:prefix>
+											<pdfaType:type>ArchivalIdentifier</pdfaType:type>
+											<pdfaType:field>
+												<rdf:Seq>
+													<rdf:li>
+														<rdf:Description>
+															<pdfaField:description>
+																This typically alphanumeric identifier frequently serves as a succinct local means of referring to the materials.
+															</pdfaField:description>
+															<pdfaField:name>localIdentifier</pdfaField:name>
+															<pdfaField:valueType>Text</pdfaField:valueType>															
+														</rdf:Description>
+													</rdf:li>
+													<rdf:li>
+														<rdf:Description>
+															<pdfaField:description>
+																When delivering a descriptive record outside of the repository holding the materials, this element should contain a nationally sanctioned code for the repository.
+															</pdfaField:description>
+															<pdfaField:name>repositoryCode</pdfaField:name>
+															<pdfaField:valueType>Text</pdfaField:valueType>															
+														</rdf:Description>
+													</rdf:li>
+													<rdf:li>
+														<rdf:Description>
+															<pdfaField:description>
+																When delivering a descriptive record outside of the repository holding the materials, this element should contain an internationally standardized code for 
+																the country in which the repository is located.
+															</pdfaField:description>
+															<pdfaField:name>countryCode</pdfaField:name>
+															<pdfaField:valueType>Text</pdfaField:valueType>															
+														</rdf:Description>
+													</rdf:li>
+												</rdf:Seq>
+											</pdfaType:field>
+										</rdf:Description>
+									</rdf:li>
+								</rdf:Seq>
+							</pdfaSchema:valueType>
+						</rdf:Description>
+					</rdf:li>
+					<rdf:li>
+						<rdf:Description>
 							<pdfaSchema:schema>Email header fields from RFC5322 (originally RFC822) which are deemed signifcant by the PDF/mail specification</pdfaSchema:schema>
-							<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/meta/</pdfaSchema:namespaceURI>
-							<pdfaSchema:prefix>eapdf</pdfaSchema:prefix>
+							<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/rfc5322/</pdfaSchema:namespaceURI>
+							<pdfaSchema:prefix>rfc5322</pdfaSchema:prefix>
 							<pdfaSchema:property>
 								<rdf:Seq>
 									<rdf:li>
@@ -280,23 +510,4 @@
 
 	</rdf:RDF>
 </x:xmpmeta>
-<?xpacket end="w"?>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <?xpacket end="w"?>
