@@ -2,11 +2,11 @@
 {
     public  class EaxsToEaPdfProcessorSettings
     {
-        public string XsltFoFilePath { get; set; } = "XResources\\eaxs_to_fo.xslt";
+        public string XsltFoFilePath { get; set; } = "XResources\\eaxs_to_fo.xsl";
 
-        public string XsltXmpFilePath { get; set; } = "XResources\\eaxs_to_xmp.xslt";
+        public string XsltXmpFilePath { get; set; } = "XResources\\eaxs_to_xmp.xsl";
 
-        public string XmpSchemaExtension { get; set; } = "XResources\\EaPdfXmpSchema.xmp";
+        public string XsltRootXmpFilePath { get; set; } = "XResources\\eaxs_to_root_xmp.xsl";
 
     }
 }

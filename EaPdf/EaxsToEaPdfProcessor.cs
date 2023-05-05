@@ -1,5 +1,4 @@
-﻿using System.Xml;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
 
@@ -85,7 +84,7 @@ namespace UIUCLibrary.EaPdf
             var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
             var dparts = GetXmpMetadataForMessages(eaxsFilePath);
-            var docXmp = GetDocumentXmp(eaxsFilePath);
+            var docXmp = GetRootXmpForAccount(eaxsFilePath);
 
             using var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, tempOutFilePath);
 
@@ -133,39 +132,43 @@ namespace UIUCLibrary.EaPdf
                 throw new Exception("EAXS transformation to XMP failed; review log details.");
             }
 
-            //Delete the intermediate FO file
+            //Delete the intermediate XMP file
             File.Delete(xmpFilePath);
 
             return ret;
         }
 
-        private string GetDocumentXmp(string eaxsFilePath)
+        private string GetRootXmpForAccount(string eaxsFilePath)
         {
-            //open the eaxs and get values from it
-            var xdoc = new XmlDocument();
-            xdoc.Load(eaxsFilePath);
-            var xmlns = new XmlNamespaceManager(xdoc.NameTable);
-            xmlns.AddNamespace(EmailToEaxsProcessor.XM, EmailToEaxsProcessor.XM_NS);
+            string ret;
 
-            var globalId = xdoc.SelectSingleNode("/xm:Account/xm:GlobalId", xmlns)?.InnerText;
-            var accounts = xdoc.SelectNodes("/xm:Account/xm:EmailAddress", xmlns);
-            var folder = xdoc.SelectSingleNode("/xm:Account/xm:Folder/xm:Name", xmlns)?.InnerText;
-            var accntStrs = new List<string>();
-            if (accounts != null)
-                foreach (XmlElement account in accounts)
-                {
-                    accntStrs.Add(account.InnerText);
-                }
+            Dictionary<string,object> parms = new();
 
-            var xmp = File.ReadAllText(Settings.XmpSchemaExtension);
+            parms.Add("producer", GetType().Namespace ?? "UIUCLibrary");
 
-            //Fill in the missing placeholders
-            xmp = xmp.Replace("$description$", $"PDF Email Archive for Account '{string.Join(", ", accntStrs)}' for Folder '{folder}'");
-            xmp = xmp.Replace("$global-id$", globalId);
-            xmp = xmp.Replace("$datetime-string$", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"));
-            xmp = xmp.Replace("$producer$", GetType().Namespace);
 
-            return xmp;
+            var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
+
+            List<(LogLevel level, string message)> messages = new();
+            var status = _xslt.Transform(eaxsFilePath, Settings.XsltRootXmpFilePath, xmpFilePath, parms, ref messages);
+            foreach (var (level, message) in messages)
+            {
+                _logger.Log(level, message);
+            }
+
+            if (status == 0)
+            {
+                ret = File.ReadAllText(xmpFilePath);
+            }
+            else
+            {
+                throw new Exception("EAXS transformation to XMP failed; review log details.");
+            }
+
+            //Delete the intermediate XMP file
+            File.Delete(xmpFilePath);
+
+            return ret;
         }
 
     }

@@ -58,7 +58,7 @@ namespace UIUCLibrary.TestEaPdf
             if (logger != null)
             {
                 var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
-                var xsltFile = "XResources\\eaxs_to_fo.xslt";
+                var xsltFile = "XResources\\eaxs_to_fo.xsl";
                 var foFile = Path.ChangeExtension(xmlFile, "fop");
 
                 File.Delete(foFile);
@@ -138,7 +138,7 @@ namespace UIUCLibrary.TestEaPdf
             if (logger != null)
             {
                 var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
-                var xsltFile = "XResources\\eaxs_to_fo.xslt";
+                var xsltFile = "XResources\\eaxs_to_fo.xsl";
                 var foFile = Path.ChangeExtension(xmlFile, ".xep");
 
                 File.Delete(foFile);

@@ -5,6 +5,7 @@
 	targetNamespace="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
 	xmlns:xhtml="http://www.w3.org/1999/xhtml"
 	elementFormDefault="qualified">
+
 	<annotation>
 		<documentation>This is a modification of the original XML Schema located here:  https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs</documentation>
 		<documentation>Modified by Tom Habing (TGH), thabing@illinois.edu, for the IMLS-funded "Email Archiving in PDF: From Initial Specification to Community of Practice" project.  See the change log below:</documentation>
@@ -57,7 +58,10 @@
 			2023-04-27
 			* Added a new element, 'MessageCount', to to the MessageFileProperties element to record the number of valid messages in the file
 			* Renamed the MessageFileProperties at the folder level to FolderProperties, and renamed the MessageFileProperties at the message level to MessageProperties
-			mostly just tom make it easier to read the XML at a glance
+			mostly just to make it easier to read the XML at a glance
+			
+			2023-05-03
+			* Add SAA DACS metadata to the metadata at the account level and the folder level
 
 		</documentation>
 	</annotation>
@@ -65,6 +69,8 @@
 	<import namespace="http://www.w3.org/1999/xhtml" schemaLocation="eaxs_xhtml_mini.xsd" />
 	<!-- minimal xhtml schema only requires html, head, and body elements -->
 
+	<include schemaLocation="CountryCodes.xsd" />
+	
 	<element name="BodyContent" type="xm:int-body-content-type">
 		<annotation>
 			<documentation>
@@ -87,9 +93,179 @@
 				</element>
 				<element name="ReferencesAccount" type="xm:ref-account-type" minOccurs="0" maxOccurs="unbounded"/>
 				<element name="Folder" type="xm:folder-type" minOccurs="0" maxOccurs="unbounded"/>
+				<element name="DACS" type="xm:dacs-type" minOccurs="0" maxOccurs="1">
+					<annotation>
+						<documentation>
+							Archival description of the email account using elements from the "Describing Archives: A Content Standard" (DACS) maintained by the Society of American Archivists (SAA).
+							For details see https://saa-ts-dacs.github.io/dacs/.  This schema includes all the 'multilevel optimum' elements described in the DACS.										
+						</documentation>
+					</annotation>
+				</element>
 			</sequence>
 		</complexType>
 	</element>
+	
+	<complexType name="dacs-type">
+		<annotation>
+			<documentation>
+				Elements from the "Describing Archives: A Content Standard" (DACS) maintained by the Society of American Archivists (SAA). For
+				details see https://saa-ts-dacs.github.io/dacs/.  This schema includes all the 'multilevel optimum' elements described in the DACS.				
+			</documentation>
+		</annotation>
+		<sequence>
+			<element name="ReferenceCode" type="xm:dacs-reference-code" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element provides a unique identifier for the unit being described. The identifier may consist of three subelements: a local identifier, a code for the repository, and a code for the country.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="Repository" type="string" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element identifies the name and location of the repository that holds the materials being described.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="Title" type="string" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element provides a word or phrase by which the material being described is known or can be identified.
+						A title may be devised or formal.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="DateCreatedEarliest" type="dateTime" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element identifies and records the date of the earliest email in the unit.
+						For PDF/mail this is an internal property and should be derived from the origination date of the
+						earliest message contained at this level in the document.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="DateCreatedLatest" type="dateTime" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element identifies and records the date of the latest email in the unit.
+						For PDF/mail this is an internal property and should be derived from the origination date of the
+						latest message contained at this level in the document.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="Extent" type="string" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element indicates the extent and the physical nature of the materials being described. This is handled in two parts,
+						a number (quantity) and an expression of the extent or material type. For an email archive these can be the number of emails
+						and attachments contained in the account or folder, and may include the total size in bytes.  For PDF/mail this is an internal property
+						and should be derived from the messages contained at this level in the document.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="Creator" type="xm:address" minOccurs="1" maxOccurs="unbounded">
+				<annotation>
+					<documentation>
+						This element identifies the corporate bodies, persons, and families associated with the creation, assembly, accumulation,
+						and/or maintenance and use of the materials being described so that they might be appropriately documented and used to
+						create access points by which users can search for and retrieve descriptive records.  For PDF/mail this will be the owner(s)
+						of the email account identified by a name and email address.						
+					</documentation>
+				</annotation>
+			</element>
+			<element name="ScopeAndContent" type="string" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element provides information about the nature of the materials and activities reflected in the unit being described to
+						enable users to judge its potential relevance.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="ConditionsGoverningAccess" type="string" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element provides information about access restrictions due to the nature of the information in the materials being described,
+						such as those imposed by the donor, by the repository, or by statutory/regulatory requirements.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="LanguagesAndScripts" type="string" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element identifies the language(s), script(s), and symbol systems employed in the materials being described, particularly as
+						they may affect its use.  For PDF/mail this could be automatically derived from the message and MIME properties of the messages
+						contained at this level in the document, such as Content-Type, Content-Disposition, Content-Language, etc.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="RightsStatement" type="string" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element identifies the conditions under which the archival description itself is available for use and reuse.
+						Repositories should establish a consistent policy about the rights granted.
+					</documentation>
+				</annotation>
+			</element>
+			
+			<element name="AdministrativeBiographicalHistory" type="string" minOccurs="0" maxOccurs="1">
+				<annotation>
+					<documentation>
+						The purpose of this element is to describe the required elements of a biographical or administrative history note
+						about creators embedded in the description of materials. The administrative/biographical history provides relevant
+						information about corporate bodies, persons, or families who are identified using the Name of Creator(s) Element
+						and who therefore function as nominal access points. This element also describes the relationship of creators to
+						archival materials by providing information about the context in which those materials were created.  This is an
+						optional element.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="CustodialHistory" type="string" minOccurs="0" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element provides information on changes of ownership or custody of the material being described, from the time
+						it left the possession of the creator until it was acquired by the repository, that is significant for its authenticity,
+						integrity, and interpretation.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="ImmediateSourceOfAcquisition" type="string" minOccurs="0" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This element identifies the source from which the repository directly acquired the materials being described, as well as the
+						date of acquisition, the method of acquisition, and other relevant information.
+					</documentation>
+				</annotation>
+			</element>
+		</sequence>
+	</complexType>
+	
+	<complexType name="dacs-reference-code">
+		<sequence>
+			<element name="LocalIdentifier" type="token" minOccurs="1" maxOccurs="1">
+				<annotation>
+					<documentation>
+						This typically alphanumeric identifier frequently serves as a succinct local means of referring to the materials.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="RepositoryCode" type="token" minOccurs="0" maxOccurs="1">
+				<annotation>
+					<documentation>
+						When delivering a descriptive record outside of the repository holding the materials, this element should contain a nationally sanctioned code for the repository.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="CountryCode" type="xm:iso-3166-1-code" minOccurs="0" maxOccurs="1">
+				<annotation>
+					<documentation>
+						When delivering a descriptive record outside of the repository holding the materials, this element should contain an internationally standardized code for
+						the country in which the repository is located.  This schema allows the use of an ISO-3166-1, alpha-2, alpha-3, or numeric-3 country code.  One of these
+						three options should be used consistently throughout the records.
+					</documentation>
+				</annotation>
+			</element>			
+		</sequence>
+	</complexType>
 
 	<complexType name="ref-account-type">
 		<sequence>
@@ -171,6 +347,15 @@
 						creating a hash for each message. Once this index has been created, the
 						hash stored along with the message in this file can be used to locate the
 						original message.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="DACS" type="xm:dacs-type" minOccurs="0" maxOccurs="1">
+				<annotation>
+					<documentation>
+						Archival description of the folder using elements from the "Describing Archives: A Content Standard" (DACS) maintained by the Society of American Archivists (SAA).
+						For details see https://saa-ts-dacs.github.io/dacs/.  This schema includes all the 'multilevel optimum' elements described in the DACS. Missing element values will
+						inherit values from either the higher level folder or from the account level.
 					</documentation>
 				</annotation>
 			</element>
@@ -862,6 +1047,6 @@
 
 		</restriction>
 	</simpleType>
-
+	
 
 </schema>

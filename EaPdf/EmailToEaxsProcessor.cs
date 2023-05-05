@@ -26,6 +26,8 @@ namespace UIUCLibrary.EaPdf
         public const string XM = "xm";
         public const string XM_NS = "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2";
         public const string XM_XSD = "XResources/eaxs_schema_v2.xsd";
+        public const string XM_CC_XSD = "XResources/CountryCodes.xsd";
+
 
         public const string XHTML = "xhtml";
         public const string XHTML_NS = "http://www.w3.org/1999/xhtml";

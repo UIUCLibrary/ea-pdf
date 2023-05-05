@@ -24,17 +24,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="XResources\CountryCodes.xsd">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="XResources\EaPdfXmpSchema.xmp">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="XResources\eaxs_schema_v2.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="XResources\eaxs_to_xmp.xslt">
+    <None Update="XResources\eaxs_to_root_xmp.xsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="XResources\eaxs_to_xmp.xsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <SubType>Designer</SubType>
     </None>
-    <None Update="XResources\eaxs_to_fo.xslt">
+    <None Update="XResources\eaxs_to_fo.xsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="XResources\eaxs_xhtml2fo.xsl">

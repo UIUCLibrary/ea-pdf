@@ -579,11 +579,13 @@ namespace UIUCLibrary.TestEaPdf
                     Schemas = new XmlSchemaSet()
                 };
                 rdrSettings.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
+                rdrSettings.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_CC_XSD);
                 rdrSettings.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
 
                 rdrSettings.ValidationType = ValidationType.Schema;
                 rdrSettings.ValidationEventHandler += XmlValidationEventHandler;
                 rdrSettings.ValidationFlags = XmlSchemaValidationFlags.ReportValidationWarnings;
+
 
                 validXml = true;
                 using var xRdr = XmlReader.Create(xmlFile, rdrSettings);
@@ -812,6 +814,7 @@ namespace UIUCLibrary.TestEaPdf
             {
                 var extdoc = new XmlDocument();
                 extdoc.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
+                extdoc.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_CC_XSD);
                 extdoc.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
 
                 foreach (XmlElement singleBodyNd in extNodes)
@@ -1059,6 +1062,7 @@ namespace UIUCLibrary.TestEaPdf
                     Schemas = new XmlSchemaSet()
                 };
                 rdrSettings.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_XSD);
+                rdrSettings.Schemas.Add(EmailToEaxsProcessor.XM_NS, EmailToEaxsProcessor.XM_CC_XSD);
                 rdrSettings.Schemas.Add(EmailToEaxsProcessor.XHTML_NS, EmailToEaxsProcessor.XHTML_XSD);
 
                 rdrSettings.ValidationType = ValidationType.Schema;
