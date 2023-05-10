@@ -73,6 +73,8 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
+                TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
             }
@@ -104,6 +106,8 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.IsTrue(File.Exists(pdfFile));
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
+
+                TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });

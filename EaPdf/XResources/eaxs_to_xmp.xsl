@@ -6,16 +6,12 @@
 	xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	xmlns:xs="http://www.w3.org/2001/XMLSchema"
 	xmlns:fn="http://www.w3.org/2005/xpath-functions"
-	
-	xmlns:x="adobe:ns:meta/"
-	
-	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-	
-	xmlns:dc="http://purl.org/dc/elements/1.1/"
-	xmlns:dcterms="http://purl.org/dc/terms/"
 	xmlns:foaf="http://xmlns.com/foaf/0.1/"
-	xmlns:eapdf="http://www.pdfa.org/eapdf/ns/"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:rfc5322="http://www.pdfa.org/eapdf/ns/rfc5322/"
+	xmlns:dcterms="http://purl.org/dc/terms/"
+	
+	exclude-result-prefixes="eaxs xsl xs fn foaf rdf rfc5322 dcterms"
 	>
 
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="yes" omit-xml-declaration="no" />
@@ -41,9 +37,14 @@
 			<xsl:attribute name="LocalId"><xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="MessageId"><xsl:value-of select="eaxs:MessageId"/></xsl:attribute>
 			<xsl:processing-instruction name="xpacket">begin="&#xFEFF;" id="W5M0MpCehiHzreSzNTczkc9d"</xsl:processing-instruction>
-			<x:xmpmeta>
-				<rdf:RDF>
-					<rdf:Description rdf:about="">
+			<x:xmpmeta xmlns:x="adobe:ns:meta/">
+				<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+					<rdf:Description rdf:about=""
+						xmlns:dc="http://purl.org/dc/elements/1.1/"
+						xmlns:dcterms="http://purl.org/dc/terms/"
+						xmlns:foaf="http://xmlns.com/foaf/0.1/"
+						xmlns:rfc5322="http://www.pdfa.org/eapdf/ns/rfc5322/"
+						>
 						
 						<dc:identifier><xsl:value-of select="eaxs:MessageId"/></dc:identifier>
 						
@@ -71,13 +72,13 @@
 						</xsl:if>
 						
 						<xsl:if test="eaxs:Sender">
-							<eapdf:sender>
+							<rfc5322:sender>
 								<xsl:apply-templates select="eaxs:Sender"/>
-							</eapdf:sender>
+							</rfc5322:sender>
 						</xsl:if>
 						
 						<xsl:if test="eaxs:From">
-							<eapdf:from>
+							<rfc5322:from>
 								<rdf:Seq>
 									<xsl:for-each select="eaxs:From/*">
 										<rdf:li>
@@ -85,11 +86,11 @@
 										</rdf:li>
 									</xsl:for-each>
 								</rdf:Seq>
-							</eapdf:from>							
+							</rfc5322:from>							
 						</xsl:if>
 						
 						<xsl:if test="eaxs:To">
-							<eapdf:to>
+							<rfc5322:to>
 								<rdf:Seq>
 									<xsl:for-each select="eaxs:To/*">
 										<rdf:li>
@@ -97,11 +98,11 @@
 										</rdf:li>
 									</xsl:for-each>
 								</rdf:Seq>
-							</eapdf:to>
+							</rfc5322:to>
 						</xsl:if>
 						
 						<xsl:if test="eaxs:Cc">
-							<eapdf:cc>
+							<rfc5322:cc>
 								<rdf:Seq>
 									<xsl:for-each select="eaxs:Cc/*">
 										<rdf:li>
@@ -109,11 +110,11 @@
 										</rdf:li>
 									</xsl:for-each>
 								</rdf:Seq>
-							</eapdf:cc>
+							</rfc5322:cc>
 						</xsl:if>
 						
 						<xsl:if test="eaxs:Bcc">
-							<eapdf:bcc>
+							<rfc5322:bcc>
 								<rdf:Seq>
 									<xsl:for-each select="eaxs:Bcc/*">
 										<rdf:li>
@@ -121,7 +122,7 @@
 										</rdf:li>
 									</xsl:for-each>
 								</rdf:Seq>
-							</eapdf:bcc>
+							</rfc5322:bcc>
 						</xsl:if>
 						
 						<xsl:apply-templates select="eaxs:InReplyTo"/>
@@ -168,7 +169,7 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:InReplyTo">
-		<eapdf:inReplyTo><xsl:value-of select="."/></eapdf:inReplyTo>
+		<rfc5322:inReplyTo><xsl:value-of select="."/></rfc5322:inReplyTo>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:References">

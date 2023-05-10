@@ -6,11 +6,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.Text;
 
 namespace UIUCLibrary.TestEaPdf
 {
     internal class TestHelpers
     {
+        const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf\\verapdf.bat";
 
         public static string CalculateHash(string algName, string filePath)
         {
@@ -88,6 +92,101 @@ namespace UIUCLibrary.TestEaPdf
                 }
             }
         }
+
+        public static int RunCmd(string cmdExec, string arguments, string workingDir, out string stdOut, out string stdErr)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = cmdExec,
+                Arguments = arguments,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+
+            if (!string.IsNullOrWhiteSpace(workingDir))
+                psi.WorkingDirectory = workingDir;
+
+            using var proc = new Process
+            {
+                StartInfo = psi
+            };
+            proc.Start();
+
+            StringBuilder stdOutBldr = new();
+
+            proc.OutputDataReceived += (object sender, DataReceivedEventArgs e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data)) stdOutBldr.AppendLine(e.Data);
+            };
+
+            proc.BeginOutputReadLine();
+
+            StringBuilder stdErrBldr = new();
+
+            proc.ErrorDataReceived += (object sender, DataReceivedEventArgs e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data)) stdErrBldr.AppendLine(e.Data);
+            };
+
+            proc.BeginErrorReadLine();
+
+            proc.WaitForExit();
+
+            stdOut = stdOutBldr.ToString();
+            stdErr = stdErrBldr.ToString();
+
+            return proc.ExitCode;
+
+        }
+
+        public static void ValidatePdfAUsingVeraPdf(string pdfFilePath)
+        {
+            string args = $"\"{pdfFilePath}\"";
+            string workDir = Path.GetDirectoryName(pdfFilePath) ?? ".";
+
+            int ret = RunCmd(VERAPDF_PATH, args, workDir, out string stdOut, out string stdErr);
+
+            if(ret != 0) 
+            {
+                Debug.WriteLine(stdOut);
+                Debug.WriteLine(stdErr);
+            }
+
+            Assert.AreEqual(0, ret);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(stdOut));
+            Assert.IsTrue(string.IsNullOrWhiteSpace(stdErr));
+
+            XmlDocument xresult = new();
+            xresult.LoadXml(stdOut);
+
+            XmlElement? reports = (XmlElement?)xresult.SelectSingleNode("/report/batchSummary/validationReports");
+
+            if (reports != null)
+            {
+                var nonCompliant = reports.GetAttribute("nonCompliant");
+                var failedJobs = reports.GetAttribute("failedJobs");
+
+                Assert.AreEqual("0", nonCompliant);
+                Assert.AreEqual("0", failedJobs);
+            }
+
+            var validationReports = xresult.SelectNodes("/report/jobs/job/validationReport");
+
+            if (validationReports != null)
+            {
+                foreach(XmlElement validationReport in validationReports)
+                {
+                    var profileName = validationReport.GetAttribute("profileName");
+                    var isCompliant = validationReport.GetAttribute("isCompliant");
+
+                    Assert.IsTrue(profileName.StartsWith("PDF/A-3U",StringComparison.OrdinalIgnoreCase));
+                    Assert.AreEqual("true", isCompliant.ToLowerInvariant());
+                }
+            }
+
+        }
+
 
     }
 }

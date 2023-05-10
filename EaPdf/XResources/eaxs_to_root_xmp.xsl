@@ -7,25 +7,8 @@
 	xmlns:xs="http://www.w3.org/2001/XMLSchema"
 	xmlns:fn="http://www.w3.org/2005/xpath-functions"
 	
-	xmlns:x="adobe:ns:meta/"
-	
-	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-	
-	xmlns:dc="http://purl.org/dc/elements/1.1/"
-	xmlns:dcterms="http://purl.org/dc/terms/"
-	xmlns:foaf="http://xmlns.com/foaf/0.1/"
-	xmlns:eapdf="http://www.pdfa.org/eapdf/ns/"
-
-	xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
-	xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/"
-	xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-					
-	xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
-					
-	xmlns:pdfmail="http://www.pdfa.org/eapdf/"
-	xmlns:pdfmailid="http://www.pdfa.org/eapdf/ns/id/"
->
+	exclude-result-prefixes="eaxs xsl xs fn"
+	>
 
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="yes" omit-xml-declaration="yes" />
 
@@ -43,10 +26,28 @@
 	<xsl:template match="/">
 		<xsl:processing-instruction name="xpacket">begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"</xsl:processing-instruction><xsl:text xml:space="preserve">
 </xsl:text>
-		<x:xmpmeta>
-			<rdf:RDF>
-				<xsl:copy-of select="document('EaPdfXmpSchema.xmp')/rdf:RDF/rdf:Description"/>
-				<rdf:Description rdf:about="">
+		<x:xmpmeta xmlns:x="adobe:ns:meta/">
+			<rdf:RDF 
+				xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
+				>
+				
+				<xsl:copy-of select="document('EaPdfXmpSchema.xmp')/rdf:RDF/rdf:Description"  />
+				
+				<rdf:Description rdf:about="" 	
+					xmlns:dc="http://purl.org/dc/elements/1.1/"
+					xmlns:dcterms="http://purl.org/dc/terms/"
+					xmlns:foaf="http://xmlns.com/foaf/0.1/"
+					xmlns:eapdf="http://www.pdfa.org/eapdf/ns/"
+					
+					xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+					xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/"
+					xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+					
+					xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+					
+					xmlns:pdfmail="http://www.pdfa.org/eapdf/"
+					xmlns:pdfmailid="http://www.pdfa.org/eapdf/ns/id/"
+					>
 					<dc:description>
 						<rdf:Alt>
 							<rdf:li xml:lang="en"><xsl:value-of select="$description"/></rdf:li>

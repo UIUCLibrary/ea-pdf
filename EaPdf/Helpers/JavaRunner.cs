@@ -99,7 +99,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             if(!string.IsNullOrWhiteSpace(workingDir))
                 psi.WorkingDirectory = workingDir ;
 
-            var proc = new Process
+            using var proc = new Process
             {
                 StartInfo = psi
             };
