@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Xml;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -102,5 +103,26 @@ namespace UIUCLibrary.EaPdf
         /// Extra non-standard HTML character entities to add to the list of entities that are converted to their Unicode equivalent
         /// </summary>
         public Dictionary<string, int>? ExtraHtmlCharacterEntities { get; set; } = new Dictionary<string, int>(){ { "QUOT", 0x22} };
+
+        public void WriteSettings(XmlWriter xwriter)
+        {
+            xwriter.WriteComment("Settings for the mbox to XML conversion:");
+            xwriter.WriteProcessingInstruction("HashAlgorithmName", HashAlgorithmName);
+            xwriter.WriteProcessingInstruction("SaveAttachmentsAndBinaryContentExternally", SaveAttachmentsAndBinaryContentExternally.ToString());
+            xwriter.WriteProcessingInstruction("WrapExternalContentInXml", WrapExternalContentInXml.ToString());
+            xwriter.WriteProcessingInstruction("PreserveBinaryAttachmentTransferEncodingIfPossible", PreserveBinaryAttachmentTransferEncodingIfPossible.ToString());
+            xwriter.WriteProcessingInstruction("PreserveTextAttachmentTransferEncoding", PreserveTextAttachmentTransferEncoding.ToString());
+            xwriter.WriteProcessingInstruction("IncludeSubFolders", IncludeSubFolders.ToString());
+            xwriter.WriteProcessingInstruction("ExternalContentFolder", ExternalContentFolder);
+            xwriter.WriteProcessingInstruction("OneFilePerMessageFile", OneFilePerMessageFile.ToString());
+            xwriter.WriteProcessingInstruction("MaximumXmlFileSize", MaximumXmlFileSize.ToString());
+            xwriter.WriteProcessingInstruction("SaveTextAsXhtml", SaveTextAsXhtml.ToString());
+            xwriter.WriteProcessingInstruction("LogToXmlThreshold", LogToXmlThreshold.ToString());
+            xwriter.WriteProcessingInstruction("DefaultFileExtension", DefaultFileExtension);
+            if (SkipUntilMessageId != null)
+                xwriter.WriteProcessingInstruction("SkipUntilMessageId", SkipUntilMessageId);
+            if (SkipAfterMessageId != null)
+                xwriter.WriteProcessingInstruction("SkipAfterMessageId", SkipAfterMessageId);
+        }
     }
 }

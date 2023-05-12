@@ -510,20 +510,7 @@ namespace UIUCLibrary.EaPdf
         private void WriteAccountHeaderFields(XmlWriter xwriter, string globalId, string accntEmails = "")
         {
             {
-                xwriter.WriteProcessingInstruction("Settings",
-                    $"HashAlgorithmName: {Settings.HashAlgorithmName}, " +
-                    $"SaveAttachmentsAndBinaryContentExternally: {Settings.SaveAttachmentsAndBinaryContentExternally}, " +
-                    $"WrapExternalContentInXml: {Settings.WrapExternalContentInXml}, " +
-                    $"PreserveBinaryAttachmentTransferEncodingIfPossible: {Settings.PreserveBinaryAttachmentTransferEncodingIfPossible}, " +
-                    $"PreserveTextAttachmentTransferEncoding: {Settings.PreserveTextAttachmentTransferEncoding}, " +
-                    $"IncludeSubFolders: {Settings.IncludeSubFolders}, " +
-                    $"ExternalContentFolder: {Settings.ExternalContentFolder}, " +
-                    $"OneFilePerMessageFile: {Settings.OneFilePerMessageFile}," +
-                    $"MaximumXmlFileSize: {Settings.MaximumXmlFileSize}, " +
-                    $"SaveTextAsXhtml: {Settings.SaveTextAsXhtml}, " +
-                    $"LogToXmlThreshold: {Settings.LogToXmlThreshold}, " +
-                    $"DefaultFileExtension: {Settings.DefaultFileExtension} "
-                    );
+                Settings.WriteSettings( xwriter );
 
                 xwriter.WriteProcessingInstruction("DateGenerated", DateTime.Now.ToString("u"));
 
