@@ -86,10 +86,11 @@ namespace UIUCLibrary.EaPdf
             var dparts = GetXmpMetadataForMessages(eaxsFilePath);
             var docXmp = GetRootXmpForAccount(eaxsFilePath);
 
+            //add docXmp to the DPart root node
+            dparts.DpmXmpString = docXmp;
+
             using var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, tempOutFilePath);
 
-            enhancer.SetDocumentXmp(docXmp);
-            // enhancer.AddXmpToPages(dparts); //Associate XMP with first PDF page of the message
             enhancer.AddXmpToDParts(dparts); //Associate XMP with the PDF DPart of the message
 
             //dispose of the enhancer to make sure files are closed
@@ -125,7 +126,7 @@ namespace UIUCLibrary.EaPdf
 
             if (status == 0)
             {
-                ret.DParts.Add(DPartNode.Create(xmpFilePath));
+                ret.DParts.Add(DPartNode.Create(ret, xmpFilePath));
             }
             else
             {

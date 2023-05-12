@@ -1,5 +1,59 @@
 # Code Removed from the Project, but still available for reference
 
+## Function to add XMP metadata to specific pages
+
+        /// <summary>
+        /// Set the Xmp metadata to the starting page for each message
+        /// <see cref="https://stackoverflow.com/questions/28427100/how-do-i-add-xmp-metadata-to-each-page-of-an-existing-pdf-using-itextsharp"/>
+        /// </summary>
+        /// <param name="dparts">The root DPart node containing all the metadata for the folders and messages in the file</param>
+        /// <exception cref="Exception"></exception>
+        public void AddXmpToPages(DPartInternalNode dparts)
+        {
+            foreach (var dpartLeaf in dparts.GetAllLeafNodesAsFlattenedList())
+            {
+                var page = GetPageDataForNamedDestination(dpartLeaf.StartNamedDestination);
+                byte[] meta = Encoding.Default.GetBytes(dpartLeaf.DpmXmpString);
+
+                if (page != null)
+                {
+                    PrStream stream = (PrStream)page.PageDictionary.GetAsStream(PdfName.Metadata);
+                    if (stream == null)
+                    {
+                        // We add the XMP bytes to the writer
+                        PdfIndirectObject ind = _stamper.Writer.AddToBody(new PdfStream(meta));
+                        // We add a reference to the XMP bytes to the page dictionary
+                        page.PageDictionary.Put(PdfName.Metadata, ind.IndirectReference);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Page for message (Named Destination: {NamedDestination}) already had metadata; it was replaced.", dpartLeaf.StartNamedDestination);
+                        byte[] xmpBytes = PdfReader.GetStreamBytes(stream);
+                        stream.SetData(meta);
+                    }
+
+                }
+                else
+                {
+                    throw new Exception($"Page for message (Named Destination: {dpartLeaf.StartNamedDestination}) was not found.");
+                }
+            }
+        }
+
+## Function to add set the document level XMP metdata
+
+        /// <summary>
+        /// Set the document level XMP metadata to the given string
+        /// </summary>
+        /// <param name="xmp"></param>
+        public void SetDocumentXmp(string xmp)
+        {
+            var xmpByt = Encoding.Default.GetBytes(xmp);
+            _stamper.XmpMetadata = xmpByt;
+        }
+
+
+
 ## Function to remove empty tables
         private static void RemoveEmptyTables(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {

@@ -35,43 +35,6 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
-        /// <summary>
-        /// Set the Xmp metadata to the starting page for each message
-        /// <see cref="https://stackoverflow.com/questions/28427100/how-do-i-add-xmp-metadata-to-each-page-of-an-existing-pdf-using-itextsharp"/>
-        /// </summary>
-        /// <param name="dparts">The root DPart node containing all the metadata for the folders and messages in the file</param>
-        /// <exception cref="Exception"></exception>
-        public void AddXmpToPages(DPartInternalNode dparts)
-        {
-            foreach (var dpartLeaf in dparts.GetAllLeafNodesAsFlattenedList())
-            {
-                var page = GetPageDataForNamedDestination(dpartLeaf.StartNamedDestination);
-                byte[] meta = Encoding.Default.GetBytes(dpartLeaf.DpmXmpString);
-
-                if (page != null)
-                {
-                    PrStream stream = (PrStream)page.PageDictionary.GetAsStream(PdfName.Metadata);
-                    if (stream == null)
-                    {
-                        // We add the XMP bytes to the writer
-                        PdfIndirectObject ind = _stamper.Writer.AddToBody(new PdfStream(meta));
-                        // We add a reference to the XMP bytes to the page dictionary
-                        page.PageDictionary.Put(PdfName.Metadata, ind.IndirectReference);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Page for message (Named Destination: {NamedDestination}) already had metadata; it was replaced.", dpartLeaf.StartNamedDestination);
-                        byte[] xmpBytes = PdfReader.GetStreamBytes(stream);
-                        stream.SetData(meta);
-                    }
-
-                }
-                else
-                {
-                    throw new Exception($"Page for message (Named Destination: {dpartLeaf.StartNamedDestination}) was not found.");
-                }
-            }
-        }
 
         /// <summary>
         /// Add Xmp metadata to a DPart range of pages for each message
@@ -104,7 +67,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// Recursively create the DPart hierarchy
         /// </summary>
         /// <param name="dpartNode"></param>
-        /// <param name="parentIndRef"></param>
+        /// <param name="parentIndRef">Indirect reference to parent DPart node</param>
+        /// <param name="metaIndRef">Indirect reference to XMP metadata to associate with DPart node</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="Exception"></exception>
@@ -118,11 +82,21 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             var newDPartDict = new PdfDictionary();
             newDPartDict.Put(new PdfName("Type"), new PdfName("DPart"));
             newDPartDict.Put(new PdfName("Parent"), parentIndRef);
+
             if (!string.IsNullOrWhiteSpace(dpartNode.DpmXmpString))
             {
                 byte[] metaBytes = Encoding.Default.GetBytes(dpartNode.DpmXmpString);
-                PdfIndirectObject metaIndObj = _stamper.Writer.AddToBody(new PdfStream(metaBytes));
+                var newStrm = new PdfStream(metaBytes);
+                newStrm.Put(new PdfName("Type"), new PdfName("Metadata"));
+                newStrm.Put(new PdfName("Subtype"), new PdfName("XML"));
+                PdfIndirectObject metaIndObj = _stamper.Writer.AddToBody(newStrm);
                 newDPartDict.Put(new PdfName("DPM"), metaIndObj.IndirectReference);
+                if(dpartNode.Parent == null)
+                {
+                    //this is the root DPart node, so replace the catalog metadata with this
+                    _reader.Catalog.Remove(PdfName.Metadata);
+                    _reader.Catalog.Put(PdfName.Metadata, metaIndObj.IndirectReference);
+                }
             }
 
             if (dpartNode is DPartInternalNode dpartInternal)
@@ -181,16 +155,6 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         }
 
         /// <summary>
-        /// Set the document level XMP metadata to the given string
-        /// </summary>
-        /// <param name="xmp"></param>
-        public void SetDocumentXmp(string xmp)
-        {
-            var xmpByt = Encoding.Default.GetBytes(xmp);
-            _stamper.XmpMetadata = xmpByt;
-        }
-
-        /// <summary>
         /// Return the page dictionary, page number, and page indirect reference containing the named destination
         /// </summary>
         /// <param name="name">the name of the destination</param>
@@ -217,6 +181,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 if (disposing)
                 {
+                    _reader.RemoveUnusedObjects(); //this gets rid of orphaned XMP metadata objects, maybe among others
+
                     _stamper.Close();
                     _reader.Close();
                     _stamper.Dispose();

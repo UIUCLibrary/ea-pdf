@@ -8,9 +8,12 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
     {
         public string DpmXmpString { get; set; } = "";
 
-        public static DPartInternalNode Create(string xmlFilePath)
+        public DPartNode? Parent { get; set; } = null;
+
+        public static DPartInternalNode Create(DPartNode parent, string xmlFilePath)
         {
             DPartInternalNode ret = new(); //this is the root node that refers to the first-level folders of the account
+            ret.Parent = parent;
 
             XmlDocument xdoc = new();
             xdoc.Load(xmlFilePath);
@@ -37,7 +40,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 {
                     DPartLeafNode msgNode = new(xmlMsgElem.GetAttribute("NamedDestination"), xmlMsgElem.GetAttribute("NamedDestinationEnd"))
                     {
-                        DpmXmpString = xmlMsgElem.InnerXml
+                        DpmXmpString = xmlMsgElem.InnerXml,
+                        Parent = parentNode
                     };
                     parentNode.DParts.Add(msgNode);
                 }
@@ -51,6 +55,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     DPartInternalNode fldrNode = new()
                     {
                         Name = xmlFldrElem.GetAttribute("Name"),
+                        Parent = parentNode
                     };
                     parentNode.DParts.Add(fldrNode);
                     ProcessFolder(fldrNode, xmlFldrElem);
