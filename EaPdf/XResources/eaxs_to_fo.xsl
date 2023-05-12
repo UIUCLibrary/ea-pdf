@@ -38,7 +38,6 @@
 	
 	<!-- Applied to FOP processor -->
 	<xsl:param name="use-embedded-file-link">false</xsl:param>
-	<!-- TODO: Instead of embedded-file links, provide a list of attachments at bottom of file along with instructions on how to open attachment list -->
 	
 	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadatat -->
 	

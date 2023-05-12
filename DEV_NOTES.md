@@ -10,8 +10,8 @@ https://www.codeproject.com/Tips/5255423/Linux-on-Windows
  * Docs: https://afterlogic.com/mailbee-net/docs-itextsharp/
 
 # _Conversion Notes_
-If the the RenderX XEP processor is used, attached files must be base64 encoded and if external, wrapped in XML.  XEP will fail when attaching a slightly malformed PDF file.
-By wrapping them, we can trick the processor inot treating them as arbitrary binary attachments which it can handle just fine.
+If the RenderX XEP processor is used, attached files must be base64 encoded and if external, wrapped in XML.  XEP will fail when attaching a slightly malformed PDF file.
+By wrapping them, we can trick the processor into treating them as arbitrary binary attachments which it can handle just fine.
 
 # Fonts
 FOP: https://xmlgraphics.apache.org/fop/2.1/fonts.html

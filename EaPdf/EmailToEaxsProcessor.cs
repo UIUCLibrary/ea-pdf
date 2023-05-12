@@ -64,7 +64,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="settings"></param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
-        public EmailToEaxsProcessor(ILogger<EmailToEaxsProcessor> logger, EmailToEaxsProcessorSettings settings)
+        public EmailToEaxsProcessor(ILogger logger, EmailToEaxsProcessorSettings settings)
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 

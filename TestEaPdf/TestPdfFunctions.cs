@@ -50,13 +50,15 @@ namespace UIUCLibrary.TestEaPdf
             loggerFactory?.Dispose();
         }
 
-
         [TestMethod]
         public void TestEaxsToPdfProcessorFop()
         {
             if (logger != null)
             {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                string inPath = "MozillaThunderbird\\short-test\\short-test.mbox";
+                ConvertMBoxToEaxs(inPath);
+
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(inPath,"xml"));
                 var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
                 var configFile = Path.GetFullPath("XResources\\fop.xconf");
 
@@ -90,7 +92,10 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                string inPath = "MozillaThunderbird\\short-test\\short-test.mbox";
+                ConvertMBoxToEaxs(inPath);
+
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(inPath, "xml"));
                 var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
                 var configFile = Path.GetFullPath("XResources\\xep.xml");
 
@@ -119,6 +124,28 @@ namespace UIUCLibrary.TestEaPdf
             }
 
         }
+
+        private void ConvertMBoxToEaxs(string filePath)
+        {
+            if (logger != null)
+            {
+                var inFile = Path.Combine(testFilesBaseDirectory, filePath);
+                var outFolder = Path.GetDirectoryName(inFile);
+
+                if (outFolder == null)
+                    Assert.Fail("Could not get directory name from " + inFile);
+
+                var settings = new EmailToEaxsProcessorSettings();
+
+                settings.WrapExternalContentInXml = true;  //required for XEP to properly attach external PDFs
+                settings.SaveTextAsXhtml = true; //required to render html inside the PDF
+
+                var eProc = new EmailToEaxsProcessor(logger, settings);
+
+                var count = eProc.ConvertMboxToEaxs(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+            }
+        }
+
 
         private bool IsPdfValid(string pdfFile)
         {
