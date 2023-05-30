@@ -77,6 +77,10 @@ namespace UIUCLibrary.EaPdf.Helpers
             //Normalize style properties and remove any inline style properties that are not supported by the HTML
             NormalizeStyleProperties(htmlNode, ref messages, ignoreHtmlIssues);
 
+            //The rgba function is not supported by the XSL-FO processor, so convert it to rgb
+            //This must occur after the inlining process, because that will move rgba values from stylesheets to inline style attributes
+            ConvertStylesRgbaToRgb(hdoc, ref messages, ignoreHtmlIssues);
+
             //Fix improperly nested lists
             FixImproprerlyNestedLists(htmlNode, ref messages, ignoreHtmlIssues);
 
@@ -100,6 +104,81 @@ namespace UIUCLibrary.EaPdf.Helpers
             ret = FixCData(ret);
 
             return ret;
+        }
+
+        const string RGBA_REGEX = @"rgba\(\s*(?<r>[^,]+?)\s*,\s*(?<g>[^,]+?)\s*,\s*(?<b>[^,]+?)\s*,\s*(?<a>[^,]+?)\s*\)";
+
+        private static void ConvertStylesRgbaToRgb(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        {
+            var styleNodes = hdoc.DocumentNode.SelectNodes("//*/@style[contains(translate(.,'RGBA','rgba'), 'rgba')]");
+            if (styleNodes == null || styleNodes.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var node in styleNodes)
+            {
+                var style = node.Attributes["style"];
+                var styleValue = style.Value;
+                var msgs = new List<(LogLevel level, string message)>();
+                var newStyle = Regex.Replace(styleValue, RGBA_REGEX, new MatchEvaluator(delegate (Match match) { return ConvertRgbaToRgb(match, ref msgs); }), RegexOptions.IgnoreCase);
+                messages.AddRange(msgs);
+                style.Value = newStyle;
+            }
+        }
+
+        private static string ConvertRgbaToRgb(Match match, ref List<(LogLevel level, string message)> messages)
+        {
+            string rgb = match.Value;
+
+            (string r, string g, string b, float a) = ParseRgbaMatch(match, ref messages);
+
+            if (string.IsNullOrWhiteSpace(r) || string.IsNullOrWhiteSpace(g) || string.IsNullOrWhiteSpace(b))
+            {
+                messages.Add((LogLevel.Warning, $"The color '{rgb}' value does not appear to be valid; leaving it as is."));
+            }
+            else
+            {
+                rgb = $"rgb({r},{g},{b})";
+                if (a < 1.0)
+                {
+                    messages.Add((LogLevel.Warning, $"For color '{match.Value}' the alpha value '{a}' is less than 1.  XSL FO does not support transparency; the alpha channel was dropped."));
+                }
+                messages.Add((LogLevel.Debug, $"Color '{match.Value}' was converted to color '{rgb}'; the alpha channel was dropped."));
+            }
+
+            return rgb;
+        }
+
+        private static (string r, string g, string b, float a) ParseRgbaMatch(Match match, ref List<(LogLevel level, string message)> messages)
+        {
+            var r = match.Groups["r"].Value;
+            var g = match.Groups["g"].Value;
+            var b = match.Groups["b"].Value;
+            var a = match.Groups["a"].Value;
+
+            if (!Regex.IsMatch(r, "\\d{1,3}%?"))
+            {
+                messages.Add((LogLevel.Warning, $"For '{match.Value}' the red value '{r}' is not a valid percentage or integer value"));
+            }
+            if (!Regex.IsMatch(g, "\\d{1,3}%?"))
+            {
+                messages.Add((LogLevel.Warning, $"For '{match.Value}' the green value '{g}' is not a valid percentage or integer value"));
+            }
+            if (!Regex.IsMatch(b, "\\d{1,3}%?"))
+            {
+                messages.Add((LogLevel.Warning, $"For '{match.Value}' the blue value '{b}' is not a valid percentage or integer value"));
+            }
+            float alpha = 1.0f;
+            if (float.TryParse(a, out alpha))
+            {
+                if (alpha < 0 || alpha > 1)
+                {
+                    messages.Add((LogLevel.Warning, $"For '{match.Value}' the alpha value '{a}' is not between 0 and 1"));
+                }
+
+            }
+            return (r, g, b, alpha);
         }
 
         /// <summary>
@@ -604,13 +683,13 @@ namespace UIUCLibrary.EaPdf.Helpers
             var bodyTextNodes = head.ChildNodes.Where(n => n.NodeType == HtmlNodeType.Text);
             foreach (HtmlTextNode node in bodyTextNodes.Cast<HtmlTextNode>())
             {
-                if(!XmlHelpers.IsValidXmlWhitespace(node.Text))
+                if (!XmlHelpers.IsValidXmlWhitespace(node.Text))
                 {
                     var newText = Regex.Replace(node.Text, "[^ \t\r\n]", " ");
                     if (!ignoreHtmlIssues)
                         messages.Add((LogLevel.Information, $"The head element does not allow mixed content, so text content '{node.Text}' was converted to all spaces '{newText}'."));
                     node.Text = newText;
-                  }
+                }
             }
         }
 
