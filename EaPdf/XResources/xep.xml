@@ -31,220 +31,379 @@
 			<option name="PDF_A" value="pdf-a-3b"/>
 		</generator-options>
 
-		<generator-options format="PostScript">
-			<!-- <option name="LANGUAGE_LEVEL" value="2"/> -->
-			<!-- <option name="CLONE_EPS" value="true"/> -->
-		</generator-options>
-
-		<generator-options format="SVG">
-			<!-- <option name="EMBED_IMAGES" value="true"/> -->
-		</generator-options>
-
-		<generator-options format="HTML">
-			<!-- <option name="EMBED_IMAGES" value="true"/> -->
-		</generator-options>
-
-		<generator-options format="PPML">
-			<!-- <option name="TARGET_FORMAT" value="PDF"/> -->
-			<!-- <option name="GA_LEVEL" value="2"/> -->
-		</generator-options>
-
-		<generator-options format="AFP">
-			<!-- Blank, Ignore, Question -->
-			<option name="UNKNOWN_SYMBOL" value="Question"/>
-			<option name="AFPLogLevel" value="0"/>
-
-			<option name="USE_PTOCA_LEVEL" value="3"/>
-			<option name="USE_BCOCA_LEVEL" value="1"/>
-			<option name="USE_GOCA_LEVEL" value="1"/>
-
-			<option name="RESOLUTION" value="1440"/>
-			<option name="USE_SHADING_PATTERNS" value="yes"/>
-			<option name="USE_REPLICATE_AND_TRIM" value="yes"/>
-			<option name="SHADING_PATTERN_RESOLUTION" value="0.25"/>
-			<option name="TRY_USING_TIFF_COMPRESSION" value="yes"/>
-
-			<option name="AFPFont,Helvetica" value="C0H200.0, C0H300.0, C0H400.0, C0H500.0, C0H201.0, C0H301.0, C0H401.0, C0H501.0, 278"/>
-			<option name="AFPFont,Times" value="C0N200.0, C0N300.0, C0N400.0, C0N500.0, C0N201.0, C0N301.0, C0N401.0, C0N501.0, 250"/>
-			<option name="AFPFont,Courier" value="C04200.0, C04300.0, C04400.0, C04500.0, C04201.0, C04301.0, C04401.0, C04501.0, 600"/>
-			<option name="AFPFont,Arial" value="C0H200.0, C0H300.0, C0H400.0, C0H500.0, C0H201.0, C0H301.0, C0H401.0, C0H501.0, 278"/>
-			<option name="AFPFont,Times New Roman" value="C0N200.0, C0N300.0, C0N400.0, C0N500.0, C0N201.0, C0N301.0, C0N401.0, C0N501.0, 250"/>
-			<option name="AFPFont,Verdana" value="C0VE0.0,  C0VEI.0,  C0VEB.0,  C0VEZ.0,  C0H201.0, C0H301.0, C0H401.0, C0H501.0,278"/>
-			<option name="AFPFont,Interstate" value="C0IS0.0, C0ISB.0, C0IS0.0, C0ISB.0, C0H201.0, C0H301.0, C0H401.0, C0H501.0, 278"/>
-			<data-types default-name="G4MMR">
-				<data-type name="Uncompressed" allow-instream="true" compression-code="0x03" recording-code="0x01">
-				</data-type>
-				<data-type name="G4MMR" allow-instream="true" compression-code="0x82" recording-code="0x01">
-				</data-type>
-				<data-type name="JPEG" allow-instream="true" compression-code="0x83" recording-code="0x01">
-					<mime-type code="image/jpeg" />
-					<mime-type code="jpeg" />
-				</data-type>
-			</data-types>
-			<charsets>
-				<!--languages-->
-				<charset name="Latin">
-					<code-range from="0x0000" to="0x007F"/>
-					<codepage name="Cp500" ibm-name="T1V10500" forcelatin="true" desc="Base Latin"/>
-				</charset>
-				<charset name="Latin_1">
-					<code-range from="0x0080" to="0x00FF"/>
-					<codepage name="Cp819" ibm-name="T1000819" forcelatin="true" desc="Latin_1"/>
-				</charset>
-				<charset name="Cyrillic">
-					<code-range from="0x0400" to="0x04FF"/>
-					<codepage name="Cp866" ibm-name="T1000866" forcelatin="true" desc="ANSI Cyrillic"/>
-				</charset>
-				<charset name="Chinese">
-					<code-range from="0x4E00" to="0x9FFF"/>
-					<codepage name="Cp950" ibm-name="T1094700" forcelatin="false" desc="Chinese"/>
-				</charset>
-				<charset name="Hebrew">
-					<code-ranges>
-						<code-range from="0x0590" to="0x05FF"/>
-					</code-ranges>
-					<codepage name="Cp424" ibm-name="T1000424" forcelatin="true" desc="Hebrew"/>
-				</charset>
-				<charset name="Greek">
-					<code-ranges>
-						<code-range from="0x0370" to="0x03ff"/>
-					</code-ranges>
-					<codepage name="Cp875" ibm-name="T1000875" forcelatin="false"/>
-				</charset>
-				<!--symbol-->
-				<charset name="Symbols00259">
-					<code-ranges>
-						<code-range from="0x03C0" to="0x03C0"/>
-						<code-range from="0x2020" to="0x2020"/>
-						<code-range from="0x003C" to="0x003C"/>
-						<code-range from="0x02C6" to="0x02C6"/>
-						<code-range from="0x00B0" to="0x00B0"/>
-						<code-range from="0x25CF" to="0x25CF"/>
-						<code-range from="0x25A1" to="0x25A1"/>
-					</code-ranges>
-					<character-mapping>
-						<character unicode="0x03C0" afp="0x46" desc="pi small"/>
-						<character unicode="0x2020" afp="0x4b" desc="dagger"/>
-						<character unicode="0x003C" afp="0x4c" desc="less"/>
-						<character unicode="0x02C6" afp="0x5f" desc="circumflex accent"/>
-						<character unicode="0x00B0" afp="0x7c" desc="degree symbol"/>
-						<character unicode="0x25CF" afp="0xbc" desc="large bullet"/>
-						<character unicode="0x25A1" afp="0xda" desc="open square"/>
-					</character-mapping>
-					<codepage name="Cp259" ibm-name="T1000259" forcelatin="false"/>
-				</charset>
-				<charset name="Cp437">
-					<code-ranges>
-						<code-range from="0x2022" to="0x2022"/>
-						<code-range from="0x266A" to="0x266A"/>
-					</code-ranges>
-					<character-mapping>
-						<character unicode="0x266a" afp="0x0d" desc="musical note"/>
-						<character unicode="0x2022" afp="0x07" desc="bullet"/>
-					</character-mapping>
-					<codepage name="Cp437" ibm-name="T1000437" forcelatin="false"/>
-				</charset>
-				<charset name="Cp423">
-					<code-ranges>
-						<code-range from="0x03CA" to="0x03CA"/>
-					</code-ranges>
-					<character-mapping>
-						<character unicode="0x03CA" afp="0xb4" desc="acute accent"/>
-					</character-mapping>
-					<codepage name="Cp423" ibm-name="T1000423" forcelatin="false"/>
-				</charset>
-				<charset name="APL Graphic Escape">
-					<code-ranges>
-						<code-range from="0x25CA" to="0x25CA"/>
-						<code-range from="0x25A0"  to="0x25A0"/>
-						<code-range from="0x203E"  to="0x203E"/>
-					</code-ranges>
-					<character-mapping>
-						<character unicode="0x25CA" afp="0x70" desc="acute accent"/>
-						<character unicode="0x25A0" afp="0xC3" desc="down caret"/>
-						<character unicode="0x203E" afp="0xA0" desc="overbar"/>
-					</character-mapping>
-					<codepage name="Cp310" ibm-name="T1000310" forcelatin="false"/>
-				</charset>
-			</charsets>
-		</generator-options>
 	</options>
 
 	<!-- ======================================================= -->
 	<!-- Fonts                                                   -->
 	<!-- ======================================================= -->
-
-	<fonts xmlns="http://www.renderx.com/XEP/config"
-		   default-family="Helvetica">
-
-		<!-- Base Adobe fonts Using Windows TrueType Fonts. -->
-		<font-group xml:base="file:/C:/Windows/Fonts/" label="Base 14 TTF" embed="true" subset="true" initial-encoding="standard">
-			<font-family name="Courier">
-				<font>
-					<font-data ttf="Cour.ttf"/>
-				</font>
-				<font style="oblique">
-					<font-data ttf="CourI.ttf"/>
-				</font>
+	<fonts default-family="Kurinto Text">
+		<font-group xml:base="../Fonts/" label="Fonts" embed="true" subset="true" initial-encoding="standard">
+			<font-family name="Kurinto Mono">
 				<font weight="bold">
-					<font-data ttf="CourBD.ttf"/>
-				</font>
-				<font weight="bold" style="oblique">
-					<font-data ttf="CourBI.ttf"/>
-				</font>
-			</font-family>
-
-			<font-family name="Helvetica">
-				<font>
-					<font-data ttf="Arial.ttf"/>
-				</font>
-				<font style="oblique">
-					<font-data ttf="ArialI.ttf"/>
-				</font>
-				<font weight="bold">
-					<font-data ttf="ArialBD.ttf"/>
-				</font>
-				<font weight="bold" style="oblique">
-					<font-data ttf="ArialBI.ttf"/>
-				</font>
-			</font-family>
-
-			<font-family name="Times" ligatures="&#xFB01; &#xFB02;">
-				<font>
-					<font-data ttf="Times.ttf"/>
-				</font>
-				<font style="italic">
-					<font-data ttf="TimesI.ttf"/>
-				</font>
-				<font weight="bold">
-					<font-data ttf="TimesBD.ttf"/>
+					<font-data ttf="Kurinto\Fonts\KurintoMono-Bd.ttf" />
 				</font>
 				<font weight="bold" style="italic">
-					<font-data ttf="TimesBI.ttf"/>
+					<font-data ttf="Kurinto\Fonts\KurintoMono-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts\KurintoMono-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts\KurintoMono-Rg.ttf" />
 				</font>
 			</font-family>
-
+			<font-family name="Kurinto Sans">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts\KurintoSans-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts\KurintoSans-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts\KurintoSans-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts\KurintoSans-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts\KurintoText-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts\KurintoText-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts\KurintoText-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts\KurintoText-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Mono CJK">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoCJK-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoCJK-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoCJK-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoCJK-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Mono HK">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoHK-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoHK-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoHK-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoHK-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Mono JP">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoJP-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoJP-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoJP-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoJP-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Mono KR">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoKR-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoKR-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoKR-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoKR-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Mono SC">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoSC-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoSC-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoSC-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoSC-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Mono TC">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoTC-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoTC-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoTC-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoMonoTC-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Sans CJK">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansCJK-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansCJK-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansCJK-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansCJK-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Sans HK">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansHK-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansHK-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansHK-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansHK-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Sans JP">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansJP-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansJP-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansJP-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansJP-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Sans KM">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansKM-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansKM-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansKM-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansKM-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Sans KR">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansKR-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansKR-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansKR-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansKR-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Sans SC">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansSC-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansSC-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansSC-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansSC-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Sans TB">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansTB-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansTB-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansTB-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansTB-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Sans TC">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansTC-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansTC-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansTC-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoSansTC-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text CJK">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextCJK-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextCJK-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextCJK-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextCJK-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text HK">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextHK-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextHK-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextHK-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextHK-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text JP">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextJP-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextJP-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextJP-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextJP-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text KM">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextKM-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextKM-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextKM-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextKM-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text KR">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextKR-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextKR-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextKR-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextKR-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text SC">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextSC-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextSC-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextSC-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextSC-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text TB">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextTB-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextTB-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextTB-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextTB-Rg.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Kurinto Text TC">
+				<font weight="bold">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextTC-Bd.ttf" />
+				</font>
+				<font weight="bold" style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextTC-BdIt.ttf" />
+				</font>
+				<font style="italic">
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextTC-It.ttf" />
+				</font>
+				<font>
+					<font-data ttf="Kurinto\Fonts_Lang\KurintoTextTC-Rg.ttf" />
+				</font>
+			</font-family>
 		</font-group>
-
-		<!-- Required aliases -->
-		<font-alias name="monospace" value="Courier"/>
-		<font-alias name="Monospaced" value="Courier"/>
-		<font-alias name="Courier New" value="Courier"/>
-
-		<font-alias name="sans-serif" value="Helvetica"/>
-		<font-alias name="SansSerif" value="Helvetica"/>
-		<font-alias name="Arial" value="Helvetica"/>
-
-		<font-alias name="serif" value="Times"/>
-		<font-alias name="Times Roman" value="Times"/>
-		<font-alias name="Times-Roman" value="Times"/>
-		<font-alias name="Times New Roman" value="Times"/>
-
-		<font-alias name="cursive" value="Times"/>
-		<font-alias name="fantasy" value="Times"/>
-
+		<font-alias name="serif" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
+		<font-alias name="Times" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
+		<font-alias name="Times Roman" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
+		<font-alias name="Times New Roman" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
+		<font-alias name="Times-Roman" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
+		<font-alias name="sans-serif" value="Kurinto Sans,Kurinto Sans KM,Kurinto Sans TB,Kurinto Sans KR,Kurinto Sans JP,Kurinto Sans HK,Kurinto Sans TC,Kurinto Sans SC,Kurinto Sans CJK" />
+		<font-alias name="Helvetica" value="Kurinto Sans,Kurinto Sans KM,Kurinto Sans TB,Kurinto Sans KR,Kurinto Sans JP,Kurinto Sans HK,Kurinto Sans TC,Kurinto Sans SC,Kurinto Sans CJK" />
+		<font-alias name="Arial" value="Kurinto Sans,Kurinto Sans KM,Kurinto Sans TB,Kurinto Sans KR,Kurinto Sans JP,Kurinto Sans HK,Kurinto Sans TC,Kurinto Sans SC,Kurinto Sans CJK" />
+		<font-alias name="SansSerif" value="Kurinto Sans,Kurinto Sans KM,Kurinto Sans TB,Kurinto Sans KR,Kurinto Sans JP,Kurinto Sans HK,Kurinto Sans TC,Kurinto Sans SC,Kurinto Sans CJK" />
+		<font-alias name="monospace" value="Kurinto Mono,Kurinto Mono SC,Kurinto Mono HK,Kurinto Mono TC,Kurinto Mono JP,Kurinto Mono KR,Kurinto Mono CJK" />
+		<font-alias name="Courier" value="Kurinto Mono,Kurinto Mono SC,Kurinto Mono HK,Kurinto Mono TC,Kurinto Mono JP,Kurinto Mono KR,Kurinto Mono CJK" />
+		<font-alias name="Courier New" value="Kurinto Mono,Kurinto Mono SC,Kurinto Mono HK,Kurinto Mono TC,Kurinto Mono JP,Kurinto Mono KR,Kurinto Mono CJK" />
+		<font-alias name="Monospaced" value="Kurinto Mono,Kurinto Mono SC,Kurinto Mono HK,Kurinto Mono TC,Kurinto Mono JP,Kurinto Mono KR,Kurinto Mono CJK" />
 	</fonts>
-
+	
 	<!-- ======================================================= -->
 	<!-- Language-specific data: hyphenation, line breaking, etc -->
 	<!-- ======================================================= -->

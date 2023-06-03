@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fop version="1.0">
 	<strict-configuration>true</strict-configuration>
-	
-	<base>.</base>
-	
-	<font-base>file:/C:/Windows/Fonts/</font-base>
 
-	<source-resolution>120</source-resolution>
+	<base>.</base>
+
+	<font-base>../Fonts</font-base>
+
+	<source-resolution>120</source-resolution> 
 	<target-resolution>120</target-resolution>
 
 	<default-page-settings height="11in" width="8.26in"/>
@@ -20,7 +20,7 @@
 			<!--<filterList>
 				<value>flate</value>
 			</filterList>-->
-			
+
 			<filterList>
 				<value>null</value>
 			</filterList>
@@ -28,85 +28,313 @@
 				<value>flate</value>
 				<value>ascii-85</value>
 			</filterList>
-			
+
 			<output-profile>sRGB2014.icc</output-profile>
 
-			<!-- embed the primary PDF base14 fonts (expect Symbol and DingBats) -->
+			<!-- Embed the primary PDF base14 fonts (expect Symbol and DingBats whose characters should already be included one of the Unicode fonts) -->
 			<fonts>
-				<font embed-url="Arial.ttf" embedding-mode="full">
-					<font-triplet name="Helvetica" style="normal" weight="normal"/>
-					<font-triplet name="sans-serif" style="normal" weight="normal"/>
-					<font-triplet name="SansSerif" style="normal" weight="normal"/>
+				<font embed-url="Kurinto\Fonts\KurintoMono-Bd.ttf">
+					<font-triplet name="Kurinto Mono" weight="bold" style="normal" />
 				</font>
-				<font embed-url="ArialI.ttf"  embedding-mode="full">
-					<font-triplet name="Helvetica" style="italic" weight="normal"/>
-					<font-triplet name="sans-serif" style="italic" weight="normal"/>
-					<font-triplet name="SansSerif" style="italic" weight="normal"/>
+				<font embed-url="Kurinto\Fonts\KurintoMono-BdIt.ttf">
+					<font-triplet name="Kurinto Mono" weight="bold" style="italic" />
 				</font>
-				<font embed-url="ArialBD.ttf" embedding-mode="full" >
-					<font-triplet name="Helvetica" style="normal" weight="bold"/>
-					<font-triplet name="sans-serif" style="normal" weight="bold"/>
-					<font-triplet name="SansSerif" style="normal" weight="bold"/>
+				<font embed-url="Kurinto\Fonts\KurintoMono-It.ttf">
+					<font-triplet name="Kurinto Mono" weight="normal" style="italic" />
 				</font>
-				<font embed-url="ArialBI.ttf" embedding-mode="full" >
-					<font-triplet name="Helvetica" style="italic" weight="bold"/>
-					<font-triplet name="sans-serif" style="italic" weight="bold"/>
-					<font-triplet name="SansSerif" style="italic" weight="bold"/>
+				<font embed-url="Kurinto\Fonts\KurintoMono-Rg.ttf">
+					<font-triplet name="Kurinto Mono" weight="normal" style="normal" />
 				</font>
-
-				<font embed-url="Times.ttf"  embedding-mode="full">
-					<font-triplet name="Times" style="normal" weight="normal"/>
-					<font-triplet name="Times Roman" style="normal" weight="normal"/>
-					<font-triplet name="Times-Roman" style="normal" weight="normal"/>
-					<font-triplet name="serif" style="normal" weight="normal"/>
-					<font-triplet name="any" style="normal" weight="normal"/>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoCJK-Bd.ttf">
+					<font-triplet name="Kurinto Mono CJK" weight="bold" style="normal" />
 				</font>
-				<font embed-url="TimesI.ttf" embedding-mode="full" >
-					<font-triplet name="Times" style="italic" weight="normal"/>
-					<font-triplet name="Times Roman" style="italic" weight="normal"/>
-					<font-triplet name="Times-Roman" style="italic" weight="normal"/>
-					<font-triplet name="serif" style="italic" weight="normal"/>
-					<font-triplet name="any" style="italic" weight="normal"/>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoCJK-BdIt.ttf">
+					<font-triplet name="Kurinto Mono CJK" weight="bold" style="italic" />
 				</font>
-				<font embed-url="TimesBD.ttf" embedding-mode="full" >
-					<font-triplet name="Times" style="normal" weight="bold"/>
-					<font-triplet name="Times Roman" style="normal" weight="bold"/>
-					<font-triplet name="Times-Roman" style="normal" weight="bold"/>
-					<font-triplet name="serif" style="normal" weight="bold"/>
-					<font-triplet name="any" style="normal" weight="bold"/>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoCJK-It.ttf">
+					<font-triplet name="Kurinto Mono CJK" weight="normal" style="italic" />
 				</font>
-				<font embed-url="TimesBI.ttf" embedding-mode="full" >
-					<font-triplet name="Times" style="italic" weight="bold"/>
-					<font-triplet name="Times Roman" style="italic" weight="bold"/>
-					<font-triplet name="Times-Roman" style="italic" weight="bold"/>
-					<font-triplet name="serif" style="italic" weight="bold"/>
-					<font-triplet name="any" style="italic" weight="bold"/>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoCJK-Rg.ttf">
+					<font-triplet name="Kurinto Mono CJK" weight="normal" style="normal" />
 				</font>
-
-				<font embed-url="Cour.ttf" embedding-mode="full" >
-					<font-triplet name="Courier" style="normal" weight="normal"/>
-					<font-triplet name="monospace" style="normal" weight="normal"/>
-					<font-triplet name="Monospaced" style="normal" weight="normal"/>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoHK-Bd.ttf">
+					<font-triplet name="Kurinto Mono HK" weight="bold" style="normal" />
 				</font>
-				<font embed-url="CourI.ttf" embedding-mode="full" >
-					<font-triplet name="Courier" style="italic" weight="normal"/>
-					<font-triplet name="monospace" style="italic" weight="normal"/>
-					<font-triplet name="Monospaced" style="italic" weight="normal"/>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoHK-BdIt.ttf">
+					<font-triplet name="Kurinto Mono HK" weight="bold" style="italic" />
 				</font>
-				<font embed-url="CourBD.ttf" embedding-mode="full" >
-					<font-triplet name="Courier" style="normal" weight="bold"/>
-					<font-triplet name="monospace" style="normal" weight="bold"/>
-					<font-triplet name="Monospaced" style="normal" weight="bold"/>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoHK-It.ttf">
+					<font-triplet name="Kurinto Mono HK" weight="normal" style="italic" />
 				</font>
-				<font embed-url="CourBI.ttf" embedding-mode="full"  >
-					<font-triplet name="Courier" style="italic" weight="bold"/>
-					<font-triplet name="monospace" style="italic" weight="bold"/>
-					<font-triplet name="Monospaced" style="italic" weight="bold"/>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoHK-Rg.ttf">
+					<font-triplet name="Kurinto Mono HK" weight="normal" style="normal" />
 				</font>
-
-				<!-- any other fonts just get them from the default spot -->
-				<!--<auto-detect/>--><!-- Auto-detect interferes with PDF/A compliance -->
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoJP-Bd.ttf">
+					<font-triplet name="Kurinto Mono JP" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoJP-BdIt.ttf">
+					<font-triplet name="Kurinto Mono JP" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoJP-It.ttf">
+					<font-triplet name="Kurinto Mono JP" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoJP-Rg.ttf">
+					<font-triplet name="Kurinto Mono JP" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoKR-Bd.ttf">
+					<font-triplet name="Kurinto Mono KR" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoKR-BdIt.ttf">
+					<font-triplet name="Kurinto Mono KR" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoKR-It.ttf">
+					<font-triplet name="Kurinto Mono KR" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoKR-Rg.ttf">
+					<font-triplet name="Kurinto Mono KR" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoSC-Bd.ttf">
+					<font-triplet name="Kurinto Mono SC" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoSC-BdIt.ttf">
+					<font-triplet name="Kurinto Mono SC" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoSC-It.ttf">
+					<font-triplet name="Kurinto Mono SC" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoSC-Rg.ttf">
+					<font-triplet name="Kurinto Mono SC" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoTC-Bd.ttf">
+					<font-triplet name="Kurinto Mono TC" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoTC-BdIt.ttf">
+					<font-triplet name="Kurinto Mono TC" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoTC-It.ttf">
+					<font-triplet name="Kurinto Mono TC" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoTC-Rg.ttf">
+					<font-triplet name="Kurinto Mono TC" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts\KurintoSans-Bd.ttf">
+					<font-triplet name="Kurinto Sans" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts\KurintoSans-BdIt.ttf">
+					<font-triplet name="Kurinto Sans" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts\KurintoSans-It.ttf">
+					<font-triplet name="Kurinto Sans" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts\KurintoSans-Rg.ttf">
+					<font-triplet name="Kurinto Sans" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansCJK-Bd.ttf">
+					<font-triplet name="Kurinto Sans CJK" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansCJK-BdIt.ttf">
+					<font-triplet name="Kurinto Sans CJK" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansCJK-It.ttf">
+					<font-triplet name="Kurinto Sans CJK" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansCJK-Rg.ttf">
+					<font-triplet name="Kurinto Sans CJK" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansHK-Bd.ttf">
+					<font-triplet name="Kurinto Sans HK" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansHK-BdIt.ttf">
+					<font-triplet name="Kurinto Sans HK" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansHK-It.ttf">
+					<font-triplet name="Kurinto Sans HK" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansHK-Rg.ttf">
+					<font-triplet name="Kurinto Sans HK" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansJP-Bd.ttf">
+					<font-triplet name="Kurinto Sans JP" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansJP-BdIt.ttf">
+					<font-triplet name="Kurinto Sans JP" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansJP-It.ttf">
+					<font-triplet name="Kurinto Sans JP" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansJP-Rg.ttf">
+					<font-triplet name="Kurinto Sans JP" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansKM-Bd.ttf">
+					<font-triplet name="Kurinto Sans KM" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansKM-BdIt.ttf">
+					<font-triplet name="Kurinto Sans KM" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansKM-It.ttf">
+					<font-triplet name="Kurinto Sans KM" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansKM-Rg.ttf">
+					<font-triplet name="Kurinto Sans KM" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansKR-Bd.ttf">
+					<font-triplet name="Kurinto Sans KR" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansKR-BdIt.ttf">
+					<font-triplet name="Kurinto Sans KR" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansKR-It.ttf">
+					<font-triplet name="Kurinto Sans KR" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansKR-Rg.ttf">
+					<font-triplet name="Kurinto Sans KR" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansSC-Bd.ttf">
+					<font-triplet name="Kurinto Sans SC" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansSC-BdIt.ttf">
+					<font-triplet name="Kurinto Sans SC" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansSC-It.ttf">
+					<font-triplet name="Kurinto Sans SC" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansSC-Rg.ttf">
+					<font-triplet name="Kurinto Sans SC" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTB-Bd.ttf">
+					<font-triplet name="Kurinto Sans TB" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTB-BdIt.ttf">
+					<font-triplet name="Kurinto Sans TB" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTB-It.ttf">
+					<font-triplet name="Kurinto Sans TB" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTB-Rg.ttf">
+					<font-triplet name="Kurinto Sans TB" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTC-Bd.ttf">
+					<font-triplet name="Kurinto Sans TC" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTC-BdIt.ttf">
+					<font-triplet name="Kurinto Sans TC" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTC-It.ttf">
+					<font-triplet name="Kurinto Sans TC" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTC-Rg.ttf">
+					<font-triplet name="Kurinto Sans TC" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts\KurintoText-Bd.ttf">
+					<font-triplet name="Kurinto Text" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts\KurintoText-BdIt.ttf">
+					<font-triplet name="Kurinto Text" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts\KurintoText-It.ttf">
+					<font-triplet name="Kurinto Text" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts\KurintoText-Rg.ttf">
+					<font-triplet name="Kurinto Text" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextCJK-Bd.ttf">
+					<font-triplet name="Kurinto Text CJK" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextCJK-BdIt.ttf">
+					<font-triplet name="Kurinto Text CJK" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextCJK-It.ttf">
+					<font-triplet name="Kurinto Text CJK" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextCJK-Rg.ttf">
+					<font-triplet name="Kurinto Text CJK" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextHK-Bd.ttf">
+					<font-triplet name="Kurinto Text HK" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextHK-BdIt.ttf">
+					<font-triplet name="Kurinto Text HK" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextHK-It.ttf">
+					<font-triplet name="Kurinto Text HK" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextHK-Rg.ttf">
+					<font-triplet name="Kurinto Text HK" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextJP-Bd.ttf">
+					<font-triplet name="Kurinto Text JP" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextJP-BdIt.ttf">
+					<font-triplet name="Kurinto Text JP" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextJP-It.ttf">
+					<font-triplet name="Kurinto Text JP" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextJP-Rg.ttf">
+					<font-triplet name="Kurinto Text JP" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextKM-Bd.ttf">
+					<font-triplet name="Kurinto Text KM" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextKM-BdIt.ttf">
+					<font-triplet name="Kurinto Text KM" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextKM-It.ttf">
+					<font-triplet name="Kurinto Text KM" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextKM-Rg.ttf">
+					<font-triplet name="Kurinto Text KM" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextKR-Bd.ttf">
+					<font-triplet name="Kurinto Text KR" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextKR-BdIt.ttf">
+					<font-triplet name="Kurinto Text KR" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextKR-It.ttf">
+					<font-triplet name="Kurinto Text KR" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextKR-Rg.ttf">
+					<font-triplet name="Kurinto Text KR" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextSC-Bd.ttf">
+					<font-triplet name="Kurinto Text SC" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextSC-BdIt.ttf">
+					<font-triplet name="Kurinto Text SC" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextSC-It.ttf">
+					<font-triplet name="Kurinto Text SC" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextSC-Rg.ttf">
+					<font-triplet name="Kurinto Text SC" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextTB-Bd.ttf">
+					<font-triplet name="Kurinto Text TB" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextTB-BdIt.ttf">
+					<font-triplet name="Kurinto Text TB" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextTB-It.ttf">
+					<font-triplet name="Kurinto Text TB" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextTB-Rg.ttf">
+					<font-triplet name="Kurinto Text TB" weight="normal" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextTC-Bd.ttf">
+					<font-triplet name="Kurinto Text TC" weight="bold" style="normal" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextTC-BdIt.ttf">
+					<font-triplet name="Kurinto Text TC" weight="bold" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextTC-It.ttf">
+					<font-triplet name="Kurinto Text TC" weight="normal" style="italic" />
+				</font>
+				<font embed-url="Kurinto\Fonts_Lang\KurintoTextTC-Rg.ttf">
+					<font-triplet name="Kurinto Text TC" weight="normal" style="normal" />
+				</font>
 			</fonts>
+		
 		</renderer>
 	</renderers>
 </fop>

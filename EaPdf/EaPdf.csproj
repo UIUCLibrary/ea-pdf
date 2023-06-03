@@ -19,11 +19,312 @@
     <PackageReference Include="MimeKit" Version="4.0.0" />
     <PackageReference Include="NDepend.Path" Version="2.0.0" />
     <PackageReference Include="PdfTemplating.XslFO.Render.ApacheFOP.Serverless" Version="3.2.1" />
+    <PackageReference Include="RoyT.TrueType" Version="0.2.0" />
     <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
     <PackageReference Include="Wiry.Base32" Version="1.1.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Fonts\Kurinto\Fonts\KurintoMono-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoMono-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoMono-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoMono-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoSans-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoSans-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoSans-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoSans-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoText-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoText-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoText-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts\KurintoText-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoCJK-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoCJK-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoCJK-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoCJK-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoHK-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoHK-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoHK-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoHK-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoJP-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoJP-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoJP-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoJP-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoKR-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoKR-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoKR-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoKR-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoSC-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoSC-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoSC-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoSC-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoTC-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoTC-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoTC-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoMonoTC-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansCJK-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansCJK-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansCJK-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansCJK-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansHK-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansHK-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansHK-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansHK-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansJP-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansJP-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansJP-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansJP-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansKM-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansKM-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansKM-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansKM-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansKR-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansKR-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansKR-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansKR-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansSC-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansSC-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansSC-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansSC-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansTB-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansTB-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansTB-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansTB-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansTC-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansTC-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansTC-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoSansTC-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextCJK-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextCJK-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextCJK-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextCJK-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextHK-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextHK-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextHK-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextHK-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextJP-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextJP-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextJP-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextJP-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextKM-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextKM-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextKM-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextKM-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextKR-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextKR-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextKR-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextKR-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextSC-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextSC-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextSC-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextSC-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTB-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTB-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTB-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTB-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTC-Bd.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTC-BdIt.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTC-It.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTC-Rg.ttf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="XResources\CountryCodes.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -109,6 +410,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Fonts\" />
     <Folder Include="Properties\" />
   </ItemGroup>
 

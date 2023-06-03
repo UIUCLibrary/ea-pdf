@@ -73,6 +73,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   <!-- TGH For increased performance and also security set this to false -->
   <xsl:param name="load-external-images">false</xsl:param>
   
+  <xsl:param name="SerifFont" select="'Times'"/><!-- Used as the default -->
+  <xsl:param name="SansSerifFont" select="'Helvetica'"/>
+  <xsl:param name="MonospaceFont" select="'Courier'"/>
+  
+  <xsl:variable name="DefaultFont" select="$SerifFont"/>
   <!--======================================================================
       Attribute Sets
   =======================================================================-->
@@ -196,7 +201,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <xsl:attribute-set name="pre">
     <xsl:attribute name="font-size">0.83em</xsl:attribute>
-    <xsl:attribute name="font-family">monospace</xsl:attribute>
+    <xsl:attribute name="font-family"><xsl:value-of select="$MonospaceFont"/></xsl:attribute>
     <xsl:attribute name="white-space">pre</xsl:attribute>
     <xsl:attribute name="space-before">1em</xsl:attribute>
     <xsl:attribute name="space-after">1em</xsl:attribute>
@@ -272,18 +277,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <xsl:param name="ul-label-1">&#x2022;</xsl:param>
   <xsl:attribute-set name="ul-label-1">
-    <xsl:attribute name="font">1em serif</xsl:attribute>
+    <xsl:attribute name="font">1em <xsl:value-of select="$SerifFont"/></xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:param name="ul-label-2">o</xsl:param>
   <xsl:attribute-set name="ul-label-2">
-    <xsl:attribute name="font">0.67em monospace</xsl:attribute>
+    <xsl:attribute name="font">0.67em <xsl:value-of select="$MonospaceFont"/></xsl:attribute>
     <xsl:attribute name="baseline-shift">0.25em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:param name="ul-label-3">-</xsl:param>
   <xsl:attribute-set name="ul-label-3">
-    <xsl:attribute name="font">bold 0.9em sans-serif</xsl:attribute>
+    <xsl:attribute name="font">bold 0.9em <xsl:value-of select="$SansSerifFont"/></xsl:attribute>
     <xsl:attribute name="baseline-shift">0.05em</xsl:attribute>
   </xsl:attribute-set>
 
@@ -397,16 +402,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:attribute-set>
 
   <xsl:attribute-set name="tt">
-    <xsl:attribute name="font-family">monospace</xsl:attribute>
+    <xsl:attribute name="font-family"><xsl:value-of select="$MonospaceFont"/></xsl:attribute>
   </xsl:attribute-set>
   <xsl:attribute-set name="code">
-    <xsl:attribute name="font-family">monospace</xsl:attribute>
+    <xsl:attribute name="font-family"><xsl:value-of select="$MonospaceFont"/></xsl:attribute>
   </xsl:attribute-set>
   <xsl:attribute-set name="kbd">
-    <xsl:attribute name="font-family">monospace</xsl:attribute>
+    <xsl:attribute name="font-family"><xsl:value-of select="$MonospaceFont"/></xsl:attribute>
   </xsl:attribute-set>
   <xsl:attribute-set name="samp">
-    <xsl:attribute name="font-family">monospace</xsl:attribute>
+    <xsl:attribute name="font-family"><xsl:value-of select="$MonospaceFont"/></xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="big">
@@ -744,6 +749,20 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
               </xsl:attribute>                          
             </xsl:otherwise>
           </xsl:choose>
+        </xsl:when>
+        <xsl:when test="$name = 'font-family'">
+          <!-- TGH Map font family to one of the passed in parameters for fonts -->
+          <xsl:attribute name="font-family">
+            <xsl:call-template name="map-font-family">
+              <xsl:with-param name="font-family" select="$value"/>
+            </xsl:call-template>
+          </xsl:attribute>
+        </xsl:when>
+        <xsl:when test="$name = 'font'">
+          <!-- TGH Map font family to one of the passed in parameters for fonts -->
+          <xsl:call-template name="append-font-family">
+            <xsl:with-param name="font" select="$value"/>
+          </xsl:call-template>          
         </xsl:when>
         <xsl:otherwise>
           <xsl:choose>
@@ -1589,8 +1608,39 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       </xsl:when>
     </xsl:choose>
     <xsl:if test="@face">
-      <xsl:attribute name="font-family"><xsl:value-of select="@face"/></xsl:attribute>
+      <xsl:attribute name="font-family">
+        <xsl:call-template name="map-font-family">
+          <xsl:with-param name="font-family" select="@face"/>
+        </xsl:call-template>
+      </xsl:attribute>
     </xsl:if>
+  </xsl:template>
+  
+  <!-- TGH Map font-family or face into one of the predefined values for SerifFont, SansSerifFont, or MonospaceFont -->
+  <xsl:template name="map-font-family">
+    <xsl:param name='font-family' select="''"/>
+    <xsl:choose>
+      <!-- Sans-Serif -->
+      <xsl:when test="contains($font-family,'sans','http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive')"><xsl:value-of select="$SansSerifFont"/></xsl:when>
+      <xsl:when test="contains($font-family,'helvetic','http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive')"><xsl:value-of select="$SansSerifFont"/></xsl:when>
+      <xsl:when test="contains($font-family,'arial','http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive')"><xsl:value-of select="$SansSerifFont"/></xsl:when>
+
+      <!-- Serif -->
+      <xsl:when test="contains($font-family,'serif','http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive')"><xsl:value-of select="$SerifFont"/></xsl:when>
+      <xsl:when test="contains($font-family,'times','http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive')"><xsl:value-of select="$SerifFont"/></xsl:when>
+
+      <!-- Monospace -->
+      <xsl:when test="contains($font-family,'mono','http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive')"><xsl:value-of select="$MonospaceFont"/></xsl:when>
+      <xsl:when test="contains($font-family,'courier','http://www.w3.org/2005/xpath-functions/collation/html-ascii-case-insensitive')"><xsl:value-of select="$MonospaceFont"/></xsl:when>
+      
+      <xsl:otherwise><xsl:value-of select="$DefaultFont"/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+  
+  <!-- TGH Append the mapped font-family onto the passed in font value -->
+  <xsl:template name="append-font-family">
+    <xsl:param name='font' select="''"/>
+    <xsl:value-of select="$font"/>,<xsl:call-template name="map-font-family"><xsl:with-param name="font-family" select="$font"></xsl:with-param></xsl:call-template>
   </xsl:template>
   
   <xsl:template match="html:b">

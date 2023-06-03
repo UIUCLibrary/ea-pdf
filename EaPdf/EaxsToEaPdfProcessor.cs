@@ -39,11 +39,16 @@ namespace UIUCLibrary.EaPdf
 
         public void ConvertEaxsToPdf(string eaxsFilePath, string pdfFilePath)
         {
+            var fontFamilies = FontHelper.GetDictionaryOfFonts(Settings.FontsFolder, Settings.BaseFontMapping);
+
             var foFilePath = Path.ChangeExtension(eaxsFilePath, ".fo");
 
             var xsltParams = new Dictionary<string, object>
             {
-                { "fo-processor-version", _xslfo.ProcessorVersion }
+                { "fo-processor-version", _xslfo.ProcessorVersion },
+                { "SerifFont", string.Join(",", fontFamilies[FontHelper.BaseFontFamily.Serif]) },
+                { "SansSerifFont", string.Join(",", fontFamilies[FontHelper.BaseFontFamily.SansSerif]) },
+                { "MonospaceFont", string.Join(",", fontFamilies[FontHelper.BaseFontFamily.Monospace]) },
             };
 
             List<(LogLevel level, string message)> messages = new();
@@ -63,12 +68,12 @@ namespace UIUCLibrary.EaPdf
                 }
                 if (status2 != 0)
                 {
-                    throw new Exception("FO transformation to PDF failed; review log details.");
+                    throw new Exception($"FO transformation to PDF failed, status-{status2}; review log details.");
                 }
             }
             else
             {
-                throw new Exception("EAXS transformation to FO failed; review log details.");
+                throw new Exception($"EAXS transformation to FO failed, status-{status}; review log details.");
             }
 
             //Delete the intermediate FO file
@@ -143,7 +148,7 @@ namespace UIUCLibrary.EaPdf
         {
             string ret;
 
-            Dictionary<string,object> parms = new();
+            Dictionary<string, object> parms = new();
 
             parms.Add("producer", GetType().Namespace ?? "UIUCLibrary");
 

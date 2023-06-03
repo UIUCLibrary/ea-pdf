@@ -6,7 +6,7 @@
 		xmlns:pdfaField="http://www.aiim.org/pdfa/ns/field#">
 		<!--
 			PDF/A extension schema for use with PDF/mail (EA_PDF) documents.
-			Created by: thabing@illinois.edu, 20123-05-10, for grant-funded project: https://www.library.illinois.edu/news/university-library-receives-imls-national-leadership-grant-to-preserve-email/
+			Created by: thabing@illinois.edu, 2023-05-10, for grant-funded project: https://www.library.illinois.edu/news/university-library-receives-imls-national-leadership-grant-to-preserve-email/
 			
 			This schema has been validated by the free PDFlib validator, https://www.pdflib.com/pdf-knowledge-base/xmp/free-xmp-validator/, and also by the 
 			VeraPDF validator, https://verapdf.org/.  However, Adobe Preflight will flag it as invalid because it contains the Agent valueType twice, once for the DACS schema 
@@ -118,7 +118,7 @@
 											owner(s) of the email account identified by an Agent
 											type with a name and mbox. </pdfaProperty:description>
 										<pdfaProperty:name>creator</pdfaProperty:name>
-										<pdfaProperty:valueType>bag Agent</pdfaProperty:valueType>
+										<pdfaProperty:valueType>bag Agent2</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 								<rdf:li>
@@ -271,7 +271,7 @@
 											of agents; things that do stuff.</pdfaType:description>
 										<pdfaType:namespaceURI>http://xmlns.com/foaf/0.1/</pdfaType:namespaceURI>
 										<pdfaType:prefix>foaf</pdfaType:prefix>
-										<pdfaType:type>Agent</pdfaType:type>
+										<pdfaType:type>Agent2</pdfaType:type>
 										<pdfaType:field>
 											<rdf:Seq>
 												<rdf:li>

@@ -3,8 +3,11 @@ using iTextSharp.text.pdf;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Xml;
 using UIUCLibrary.EaPdf;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
@@ -51,6 +54,171 @@ namespace UIUCLibrary.TestEaPdf
         }
 
         [TestMethod]
+        public void TestFontList()
+        {
+            Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping = new()
+            {
+                { new Regex("^Kurinto Mono.*") , FontHelper.BaseFontFamily.Monospace },
+                { new Regex("^Kurinto Sans.*") , FontHelper.BaseFontFamily.SansSerif },
+                { new Regex("^Kurinto Text.*") , FontHelper.BaseFontFamily.Serif }
+            };
+
+            var fonts = FontHelper.GetDictionaryOfFonts("Fonts", baseFontMapping);
+
+            Assert.IsNotNull(fonts);
+            Assert.IsTrue(fonts.Count > 0);
+            Assert.IsTrue(fonts.ContainsKey(FontHelper.BaseFontFamily.Serif));
+        }
+
+        [TestMethod]
+        public void TestXepFontConfig()
+        {
+            Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping = new()
+            {
+                { new Regex("^Kurinto Mono.*") , FontHelper.BaseFontFamily.Monospace },
+                { new Regex("^Kurinto Sans.*") , FontHelper.BaseFontFamily.SansSerif },
+                { new Regex("^Kurinto Text.*") , FontHelper.BaseFontFamily.Serif }
+            };
+
+            var fonts = FontHelper.GenerateXepFontsConfig(@"Fonts", baseFontMapping);
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(fonts));
+
+            Debug.Print(fonts);
+
+            var xdoc = new XmlDocument();
+            xdoc.LoadXml(fonts);
+
+            var node = xdoc.SelectSingleNode("/fonts");
+            Assert.IsNotNull(node);
+
+            node = xdoc.SelectSingleNode("/fonts/font-group");
+            Assert.IsNotNull(node);
+
+            node = xdoc.SelectSingleNode("/fonts/font-group/font-family");
+            Assert.IsNotNull(node);
+
+            node = xdoc.SelectSingleNode("/fonts/font-group/font-family/font");
+            Assert.IsNotNull(node);
+
+            node = xdoc.SelectSingleNode("/fonts/font-alias");
+            Assert.IsNotNull(node);
+
+        }
+
+        [TestMethod]
+        public void TestFopFontConfig()
+        {
+            Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping = new()
+            {
+                { new Regex("^Kurinto Mono.*") , FontHelper.BaseFontFamily.Monospace },
+                { new Regex("^Kurinto Sans.*") , FontHelper.BaseFontFamily.SansSerif },
+                { new Regex("^Kurinto Text.*") , FontHelper.BaseFontFamily.Serif }
+            };
+
+            var fonts = FontHelper.GenerateFopFontsConfig(@"Fonts", baseFontMapping);
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(fonts));
+
+            Debug.Print(fonts);
+
+            var xdoc = new XmlDocument();
+            xdoc.LoadXml(fonts);
+
+            var node = xdoc.SelectSingleNode("/fonts");
+            Assert.IsNotNull(node);
+
+            node = xdoc.SelectSingleNode("/fonts/font");
+            Assert.IsNotNull(node);
+            node = xdoc.SelectSingleNode("/fonts/font/@embed-url");
+            Assert.IsNotNull(node);
+
+            node = xdoc.SelectSingleNode("/fonts/font/font-triplet");
+            Assert.IsNotNull(node);
+            node = xdoc.SelectSingleNode("/fonts/font/font-triplet/@name");
+            Assert.IsNotNull(node);
+            node = xdoc.SelectSingleNode("/fonts/font/font-triplet/@style");
+            Assert.IsNotNull(node);
+            node = xdoc.SelectSingleNode("/fonts/font/font-triplet/@weight");
+            Assert.IsNotNull(node);
+
+        }
+
+        [TestMethod]
+        public void TestChineseEmailsFop()
+        {
+            if (logger != null)
+            {
+                string inPath = "Non-Western\\Chinese";
+                ConvertEmlFolderToEaxs(inPath);
+
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(inPath) ?? ".", Path.GetFileName(inPath) + "Out", Path.ChangeExtension(Path.GetFileName(inPath), "xml"));
+                var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
+                var configFile = Path.GetFullPath("XResources\\fop.xconf");
+
+                var xslt = new SaxonXsltTransformer();
+                var fop = new FopToPdfTransformer(configFile);
+                var iText = new ITextSharpPdfEnhancerFactory();
+                var set = new EaxsToEaPdfProcessorSettings();
+
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
+
+                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
+
+                Assert.IsTrue(File.Exists(pdfFile));
+
+                Assert.IsTrue(IsPdfValid(pdfFile));
+
+                TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+
+                if (OPEN_PDFS)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
+        [TestMethod]
+        public void TestChineseEmailsXep()
+        {
+            if (logger != null)
+            {
+                string inPath = "Non-Western\\Chinese";
+                ConvertEmlFolderToEaxs(inPath);
+
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(inPath) ?? ".", Path.GetFileName(inPath) + "Out", Path.ChangeExtension(Path.GetFileName(inPath), "xml"));
+                var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
+                var configFile = Path.GetFullPath("XResources\\xep.xml");
+
+                var xslt = new SaxonXsltTransformer();
+                var xep = new XepToPdfTransformer(configFile);
+                var iText = new ITextSharpPdfEnhancerFactory();
+                var set = new EaxsToEaPdfProcessorSettings();
+
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, xep, iText, set);
+
+                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
+
+                Assert.IsTrue(File.Exists(pdfFile));
+
+                Assert.IsTrue(IsPdfValid(pdfFile));
+
+                TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+
+                if (OPEN_PDFS)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
+        [TestMethod]
         public void TestEaxsToPdfProcessorFop()
         {
             if (logger != null)
@@ -58,7 +226,7 @@ namespace UIUCLibrary.TestEaPdf
                 string inPath = "MozillaThunderbird\\short-test\\short-test.mbox";
                 ConvertMBoxToEaxs(inPath);
 
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(inPath,"xml"));
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(inPath, "xml"));
                 var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
                 var configFile = Path.GetFullPath("XResources\\fop.xconf");
 
@@ -100,11 +268,11 @@ namespace UIUCLibrary.TestEaPdf
                 var configFile = Path.GetFullPath("XResources\\xep.xml");
 
                 var xslt = new SaxonXsltTransformer();
-                var fop = new XepToPdfTransformer(configFile);
+                var xep = new XepToPdfTransformer(configFile);
                 var iText = new ITextSharpPdfEnhancerFactory();
                 var set = new EaxsToEaPdfProcessorSettings();
 
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, xep, iText, set);
 
                 proc.ConvertEaxsToPdf(xmlFile, pdfFile);
 
@@ -146,6 +314,24 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
+        private void ConvertEmlFolderToEaxs(string folderPath)
+        {
+            if (logger != null)
+            {
+                var inFolder = Path.Combine(testFilesBaseDirectory, folderPath);
+                var outFolder = Path.Combine(Path.GetDirectoryName(inFolder) ?? ".", Path.GetFileName(inFolder) + "Out");
+
+                var settings = new EmailToEaxsProcessorSettings();
+
+                settings.WrapExternalContentInXml = true;  //required for XEP to properly attach external PDFs
+                settings.SaveTextAsXhtml = true; //required to render html inside the PDF
+
+                var eProc = new EmailToEaxsProcessor(logger, settings);
+
+                var count = eProc.ConvertFolderOfEmlToEaxs(inFolder, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+            }
+        }
+
 
         private bool IsPdfValid(string pdfFile)
         {
@@ -153,13 +339,13 @@ namespace UIUCLibrary.TestEaPdf
 
             using var reader = new PdfReader(pdfFile);
 
-            if(!reader.Catalog.Contains(new PdfName("DPartRoot")))
+            if (!reader.Catalog.Contains(new PdfName("DPartRoot")))
             {
                 logger?.LogDebug("Catalog is missing DPartRoot");
                 ret = false;
             }
 
-            if(reader.PdfVersion != '7')
+            if (reader.PdfVersion != '7')
             {
                 logger?.LogDebug("Pdf version is not is not 1.7");
                 ret = false;

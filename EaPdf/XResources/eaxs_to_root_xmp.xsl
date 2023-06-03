@@ -24,7 +24,7 @@
 	<xsl:param name="datetime-string" select="fn:format-dateTime(fn:adjust-dateTime-to-timezone(fn:current-dateTime(),xs:dayTimeDuration('P0D')),'[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
 
 	<xsl:template match="/">
-		<xsl:processing-instruction name="xpacket">begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"</xsl:processing-instruction><xsl:text xml:space="preserve">
+		<xsl:processing-instruction name="xpacket">begin="&#xFEFF;" id="W5M0MpCehiHzreSzNTczkc9d"</xsl:processing-instruction><xsl:text xml:space="preserve">
 </xsl:text>
 		<x:xmpmeta xmlns:x="adobe:ns:meta/">
 			<rdf:RDF 

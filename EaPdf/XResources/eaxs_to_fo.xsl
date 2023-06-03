@@ -24,10 +24,11 @@
 
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no" cdata-section-elements="rx:custom-meta"/>
 	
-	
-	<xsl:param name="SerifFont" select="'Times New Roman'"/>
-	<xsl:param name="SansSerifFont" select="'Arial'"/><!-- Used as the default at the root level of the document -->
-	<xsl:param name="MonospaceFont" select="'Courier New'"/>
+	<!-- The font-family values to use for serif, sans-serif, and monospace fonts repsectively -->
+	<xsl:param name="SerifFont" select="'Times'"/>
+	<xsl:param name="SansSerifFont" select="'Helvetica'"/>
+	<xsl:param name="MonospaceFont" select="'Courier'"/>
+	<xsl:variable name="DefaultFont" select="$SerifFont"/><!-- Used as the default at the root level of the document, and anywhere else that needs a font which can't be definitely determined -->
 	
 	<xsl:param name="icc-profile" select="'file:/C:/Program Files/RenderX/XEP/sRGB2014.icc'"/>
 
@@ -58,15 +59,12 @@
 		<xsl:call-template name="check-params"/>
 		
 		<xsl:if test="$fo-processor='xep'">
-			<!-- Add XEP PIs to set version and PDF/A profile level -->
-			<xsl:processing-instruction name="xep-pdf-pdf-a">pdf-a-3b</xsl:processing-instruction><!-- '3u' is not supported by XEP-->
-			<xsl:processing-instruction name="xep-pdf-pdf-version">1.4</xsl:processing-instruction><!-- 1.7 is not supported by XEP -->
 			<!-- Add ICC color profile -->
 			<xsl:processing-instruction name="xep-pdf-icc-profile">url(<xsl:value-of select="$icc-profile"/>)</xsl:processing-instruction>
 		</xsl:if>
 		
 		<fo:root xml:lang="en">
-			<xsl:attribute name="font-family"><xsl:value-of select="$SansSerifFont"/></xsl:attribute>
+			<xsl:attribute name="font-family"><xsl:value-of select="$DefaultFont"/></xsl:attribute>
 			<xsl:if test="$fo-processor='xep'">
 				<xsl:call-template name="xep-metadata"/>
 			</xsl:if>

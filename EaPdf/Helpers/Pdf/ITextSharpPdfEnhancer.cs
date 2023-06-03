@@ -85,12 +85,15 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             if (!string.IsNullOrWhiteSpace(dpartNode.DpmXmpString))
             {
-                byte[] metaBytes = Encoding.Default.GetBytes(dpartNode.DpmXmpString);
+                byte[] metaBytes = Encoding.UTF8.GetBytes(dpartNode.DpmXmpString);
                 var newStrm = new PdfStream(metaBytes);
                 newStrm.Put(new PdfName("Type"), new PdfName("Metadata"));
                 newStrm.Put(new PdfName("Subtype"), new PdfName("XML"));
                 PdfIndirectObject metaIndObj = _stamper.Writer.AddToBody(newStrm);
-                newDPartDict.Put(new PdfName("DPM"), metaIndObj.IndirectReference);
+                PdfDictionary metaDict = new PdfDictionary();
+                metaDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference);
+                newDPartDict.Put(new PdfName("DPM"), metaDict);
+                //Maybe use this instead: newDPartDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference); 
                 if(dpartNode.Parent == null)
                 {
                     //this is the root DPart node, so replace the catalog metadata with this
