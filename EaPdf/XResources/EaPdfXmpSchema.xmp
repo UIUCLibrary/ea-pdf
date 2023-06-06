@@ -9,8 +9,9 @@
 			Created by: thabing@illinois.edu, 2023-05-10, for grant-funded project: https://www.library.illinois.edu/news/university-library-receives-imls-national-leadership-grant-to-preserve-email/
 			
 			This schema has been validated by the free PDFlib validator, https://www.pdflib.com/pdf-knowledge-base/xmp/free-xmp-validator/, and also by the 
-			VeraPDF validator, https://verapdf.org/.  However, Adobe Preflight will flag it as invalid because it contains the Agent valueType twice, once for the DACS schema 
-			and once for the RFC5322 schema; this seems to be a bug with Adobe.
+			VeraPDF validator, https://verapdf.org/.  
+			
+			Note: Adobe Preflight does not seem to allow the reuse of a valueType in two different schemas.
 		-->
 		<pdfaExtension:schemas>
 			<rdf:Bag>
@@ -118,7 +119,7 @@
 											owner(s) of the email account identified by an Agent
 											type with a name and mbox. </pdfaProperty:description>
 										<pdfaProperty:name>creator</pdfaProperty:name>
-										<pdfaProperty:valueType>bag Agent2</pdfaProperty:valueType>
+										<pdfaProperty:valueType>bag Text</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 								<rdf:li>
@@ -232,9 +233,9 @@
 												<rdf:li>
 													<rdf:Description>
 														<pdfaField:description> This typically
-														alphanumeric identifier frequently serves as a
-														succinct local means of referring to the
-														materials. </pdfaField:description>
+															alphanumeric identifier frequently serves as a
+															succinct local means of referring to the
+															materials. </pdfaField:description>
 														<pdfaField:name>localIdentifier</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
 													</rdf:Description>
@@ -242,9 +243,9 @@
 												<rdf:li>
 													<rdf:Description>
 														<pdfaField:description> When delivering a
-														descriptive record outside of the repository
-														holding the materials, this element should contain
-														a nationally sanctioned code for the repository. </pdfaField:description>
+															descriptive record outside of the repository
+															holding the materials, this element should contain
+															a nationally sanctioned code for the repository. </pdfaField:description>
 														<pdfaField:name>repositoryCode</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
 													</rdf:Description>
@@ -252,44 +253,12 @@
 												<rdf:li>
 													<rdf:Description>
 														<pdfaField:description> When delivering a
-														descriptive record outside of the repository
-														holding the materials, this element should contain
-														an internationally standardized code for the
-														country in which the repository is located. </pdfaField:description>
+															descriptive record outside of the repository
+															holding the materials, this element should contain
+															an internationally standardized code for the
+															country in which the repository is located. </pdfaField:description>
 														<pdfaField:name>countryCode</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
-													</rdf:Description>
-												</rdf:li>
-											</rdf:Seq>
-										</pdfaType:field>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaType:description>An agent (eg. person, group, software
-											or physical artifact). The foaf:Agent class is the class
-											of agents; things that do stuff.</pdfaType:description>
-										<pdfaType:namespaceURI>http://xmlns.com/foaf/0.1/</pdfaType:namespaceURI>
-										<pdfaType:prefix>foaf</pdfaType:prefix>
-										<pdfaType:type>Agent2</pdfaType:type>
-										<pdfaType:field>
-											<rdf:Seq>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>A name for some
-															thing</pdfaField:description>
-														<pdfaField:name>name</pdfaField:name>
-														<pdfaField:valueType>Text</pdfaField:valueType>
-													</rdf:Description>
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>A personal mailbox, ie. an
-															Internet mailbox associated with exactly one
-															owner, the first owner of this
-															mailbox.</pdfaField:description>
-														<pdfaField:name>mbox</pdfaField:name>
-														<pdfaField:valueType>URI</pdfaField:valueType>
 													</rdf:Description>
 												</rdf:li>
 											</rdf:Seq>
@@ -300,7 +269,7 @@
 						</pdfaSchema:valueType>
 					</rdf:Description>
 				</rdf:li>
-				<rdf:li>
+				<rdf:li>				
 					<rdf:Description>
 						<pdfaSchema:schema>Email header fields from RFC5322 (originally RFC822)
 							which are deemed signifcant by the PDF/mail
@@ -361,7 +330,7 @@
 										<pdfaProperty:category>external</pdfaProperty:category>
 										<pdfaProperty:description/>
 										<pdfaProperty:name>inReplyTo</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										<pdfaProperty:valueType>seq Text</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 							</rdf:Seq>
@@ -471,7 +440,7 @@
 											referenced, cited, or otherwise pointed to by the
 											described resource.</pdfaProperty:description>
 										<pdfaProperty:name>references</pdfaProperty:name>
-										<pdfaProperty:valueType>URI</pdfaProperty:valueType>
+										<pdfaProperty:valueType>seq Text</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 								<rdf:li>

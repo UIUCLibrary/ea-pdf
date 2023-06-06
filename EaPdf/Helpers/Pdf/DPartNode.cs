@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using SkiaSharp;
+using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
@@ -16,6 +17,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             ret.Parent = parent;
 
             XmlDocument xdoc = new();
+            xdoc.PreserveWhitespace = true;
             xdoc.Load(xmlFilePath);
 
             var xmlFolderNodes = xdoc.SelectNodes("/root/folder");

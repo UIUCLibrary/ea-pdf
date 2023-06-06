@@ -157,7 +157,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.IsFalse(string.IsNullOrWhiteSpace(stdOut));
             Assert.IsTrue(string.IsNullOrWhiteSpace(stdErr));
 
-            XmlDocument xresult = new();
+            XmlDocument xresult = new();  
             xresult.LoadXml(stdOut);
 
             XmlElement? reports = (XmlElement?)xresult.SelectSingleNode("/report/batchSummary/validationReports");

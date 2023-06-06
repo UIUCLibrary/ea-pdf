@@ -24,14 +24,12 @@
 	<xsl:param name="datetime-string" select="fn:format-dateTime(fn:adjust-dateTime-to-timezone(fn:current-dateTime(),xs:dayTimeDuration('P0D')),'[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
 
 	<xsl:template match="/">
-		<xsl:processing-instruction name="xpacket">begin="&#xFEFF;" id="W5M0MpCehiHzreSzNTczkc9d"</xsl:processing-instruction><xsl:text xml:space="preserve">
+		<xsl:processing-instruction name="xpacket">begin="" id="W5M0MpCehiHzreSzNTczkc9d" </xsl:processing-instruction><xsl:text xml:space="preserve">
 </xsl:text>
 		<x:xmpmeta xmlns:x="adobe:ns:meta/">
 			<rdf:RDF 
 				xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
 				>
-				
-				<xsl:copy-of select="document('EaPdfXmpSchema.xmp')/rdf:RDF/rdf:Description"  />
 				
 				<rdf:Description rdf:about="" 	
 					xmlns:dc="http://purl.org/dc/elements/1.1/"
@@ -83,9 +81,12 @@
 					<xmp:CreateDate><xsl:value-of select="$datetime-string"/></xmp:CreateDate>
 					<xmp:ModifyDate><xsl:value-of select="$datetime-string"/></xmp:ModifyDate>
 				</rdf:Description>
+				
+				<xsl:copy-of select="document('EaPdfXmpSchema.xmp')/rdf:RDF/rdf:Description"  />
+				
 			</rdf:RDF>
 		</x:xmpmeta>
-		<xsl:processing-instruction name="xpacket">end="w"</xsl:processing-instruction>	
+		<xsl:processing-instruction name="xpacket">end="r"</xsl:processing-instruction>	
 	</xsl:template>
 
 

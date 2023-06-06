@@ -6,12 +6,11 @@
 	xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	xmlns:xs="http://www.w3.org/2001/XMLSchema"
 	xmlns:fn="http://www.w3.org/2005/xpath-functions"
+	
 	xmlns:foaf="http://xmlns.com/foaf/0.1/"
 	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rfc5322="http://www.pdfa.org/eapdf/ns/rfc5322/"
-	xmlns:dcterms="http://purl.org/dc/terms/"
-	
-	exclude-result-prefixes="eaxs xsl xs fn foaf rdf rfc5322 dcterms"
+
+    exclude-result-prefixes="eaxs xsl xs fn"
 	>
 
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="yes" omit-xml-declaration="no" />
@@ -36,7 +35,7 @@
 			<xsl:attribute name="NamedDestinationEnd">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="LocalId"><xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="MessageId"><xsl:value-of select="eaxs:MessageId"/></xsl:attribute>
-			<xsl:processing-instruction name="xpacket">begin="&#xFEFF;" id="W5M0MpCehiHzreSzNTczkc9d"</xsl:processing-instruction>
+			<xsl:processing-instruction name="xpacket">begin="" id="W5M0MpCehiHzreSzNTczkc9d" </xsl:processing-instruction>
 			<x:xmpmeta xmlns:x="adobe:ns:meta/">
 				<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 					<rdf:Description rdf:about=""
@@ -125,15 +124,25 @@
 							</rfc5322:bcc>
 						</xsl:if>
 						
-						<xsl:apply-templates select="eaxs:InReplyTo"/>
-						
-						<xsl:apply-templates select="eaxs:References"/>
+						<xsl:if test="eaxs:InReplyTo">
+							<rfc5322:inReplyTo>
+								<rdf:Seq>
+									<xsl:apply-templates select="eaxs:InReplyTo"/>
+								</rdf:Seq>
+							</rfc5322:inReplyTo>
+						</xsl:if>
+						<xsl:if test="eaxs:References">
+							<dcterms:references>
+								<rdf:Seq>
+									<xsl:apply-templates select="eaxs:References"/>
+								</rdf:Seq>
+							</dcterms:references>							
+						</xsl:if>
 						
 					</rdf:Description>
 				</rdf:RDF>
 			</x:xmpmeta>
-			
-			<xsl:processing-instruction name="xpacket">end="w"</xsl:processing-instruction>
+			<xsl:processing-instruction name="xpacket">end="r"</xsl:processing-instruction>
 		</message>
 	</xsl:template>
 
@@ -151,7 +160,7 @@
 		</foaf:Agent>
 	</xsl:template>
 	
-	<xsl:template match="eaxs:Group">
+	<xsl:template match="eaxs:Group" >
 		<foaf:Group>
 			<foaf:name><xsl:value-of select="eaxs:Name"/></foaf:name>
 			<xsl:if test="eaxs:Group | eaxs:Mailbox">
@@ -168,19 +177,19 @@
 		</foaf:Group>
 	</xsl:template>
 	
-	<xsl:template match="eaxs:InReplyTo">
-		<rfc5322:inReplyTo><xsl:value-of select="."/></rfc5322:inReplyTo>
-	</xsl:template>
-	
-	<xsl:template match="eaxs:References">
-		<dcterms:references><xsl:value-of select="."/></dcterms:references>
-	</xsl:template>
-	
-	<xsl:template match="eaxs:Keywords">
+	<xsl:template match="eaxs:InReplyTo" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 		<rdf:li><xsl:value-of select="."/></rdf:li>
 	</xsl:template>
 	
-	<xsl:template match="eaxs:Comments">
+	<xsl:template match="eaxs:References" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+		<rdf:li><xsl:value-of select="."/></rdf:li>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Keywords" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+		<rdf:li><xsl:value-of select="."/></rdf:li>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Comments" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 		<rdf:li xml:lang="x-default"><xsl:value-of select="."/></rdf:li>
 	</xsl:template>
 	
