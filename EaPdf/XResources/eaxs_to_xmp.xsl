@@ -146,7 +146,7 @@
 		</message>
 	</xsl:template>
 
-	<xsl:template match="eaxs:Mailbox">
+	<xsl:template match="eaxs:Mailbox | eaxs:Sender">
 		<foaf:Agent>
 			<xsl:if test="@name">
 				<foaf:name><xsl:value-of select="@name"/></foaf:name>												

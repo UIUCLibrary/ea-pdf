@@ -13,6 +13,7 @@
 	xmlns:html="http://www.w3.org/1999/xhtml"
 	xmlns:xs="http://www.w3.org/2001/XMLSchema"
 	xmlns:fn="http://www.w3.org/2005/xpath-functions"
+	xmlns:my="http://library.illinois.edu/myFunctions"
 	
 	xmlns:pdf="http://xmlgraphics.apache.org/fop/extensions/pdf"
 	xmlns:fox="http://xmlgraphics.apache.org/fop/extensions"
@@ -37,7 +38,7 @@
 	<xsl:variable name="fo-processor" select="fn:lower-case(fn:tokenize($fo-processor-version)[1])"/>
 	<xsl:variable name="producer">UIUCLibrary.EaPdf; <xsl:value-of select="$fo-processor-version"/></xsl:variable>
 	
-	<!-- Applied to FOP processor -->
+	<!-- Applied to FOP processor; if true FOP will use JavaScript to embed link to open the attachment; JavaScript is not allowed in PDF/A files -->
 	<xsl:param name="use-embedded-file-link">false</xsl:param>
 	
 	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadatat -->
@@ -124,11 +125,23 @@
 		</fo:block>
 		<fo:block xsl:use-attribute-sets="h2">Source Email Files</fo:block>
 		<fo:block xsl:use-attribute-sets="dl">
-			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties">
+			<!-- Source MBOX files are referenced in FolderProperties -->
+			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties[eaxs:RelPath]">
 				<fo:block xsl:use-attribute-sets="dt" font-weight="bold">
 					<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
 					<fox:destination><xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
 					<xsl:value-of select="../eaxs:Name"/>
+				</fo:block>
+				<fo:block xsl:use-attribute-sets="dd">
+					<xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/>
+				</fo:block>
+			</xsl:for-each>
+			<!-- Source EML files are referenced in MessageProperties -->
+			<xsl:for-each select="//eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
+				<fo:block xsl:use-attribute-sets="dt" font-weight="bold">
+					<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
+					<fox:destination><xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
+					<xsl:value-of select="../eaxs:MessageId"/>
 				</fo:block>
 				<fo:block xsl:use-attribute-sets="dd">
 					<xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/>
@@ -161,10 +174,13 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Folder" mode="RenderBookmarks">
-		<fo:bookmark>
-			<xsl:attribute name="internal-destination">CoverPage</xsl:attribute>
-			<fo:bookmark-title>Cover Page</fo:bookmark-title>
-		</fo:bookmark>
+		<xsl:param name="topfolder">true</xsl:param>
+		<xsl:if test="$topfolder='true'">
+			<fo:bookmark>
+				<xsl:attribute name="internal-destination">CoverPage</xsl:attribute>
+				<fo:bookmark-title>Cover Page</fo:bookmark-title>
+			</fo:bookmark>
+		</xsl:if>
 		<fo:bookmark>
 			<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
 			<fo:bookmark-title><xsl:value-of select="eaxs:Name"/></fo:bookmark-title>
@@ -177,14 +193,16 @@
 				<fo:bookmark starting-state="hide">
 					<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
 					<fo:bookmark-title><xsl:value-of select="count(eaxs:Folder[eaxs:Message])"/> Sub-folders</fo:bookmark-title>
-					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]" mode="RenderBookmarks"/>
+					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]" mode="RenderBookmarks"><xsl:with-param name="topfolder">false</xsl:with-param></xsl:apply-templates>
 				</fo:bookmark>
 			</xsl:if>
 		</fo:bookmark>
-		<fo:bookmark>
-			<xsl:attribute name="internal-destination">AttachmentList</xsl:attribute>
-			<fo:bookmark-title>List of All Attachments</fo:bookmark-title>
-		</fo:bookmark>
+		<xsl:if test="$topfolder='true'">
+			<fo:bookmark>
+				<xsl:attribute name="internal-destination">AttachmentList</xsl:attribute>
+				<fo:bookmark-title>List of All Attachments</fo:bookmark-title>
+			</fo:bookmark>
+		</xsl:if>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Message" mode="RenderBookmarks">
@@ -388,16 +406,29 @@
 	</xsl:template>
 	
 	<xsl:template name="declarations-attachments">
-		<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties">
+		<!-- if the source is an MBOX file, it is referenced in Folder/FolderProperties -->
+		<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties[eaxs:RelPath]">
 			<pdf:embedded-file>
 				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
 				<xsl:attribute name="description">Source file for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
 				<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 			</pdf:embedded-file>				
 		</xsl:for-each>
-		<xsl:for-each select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+		<!-- if the source is an EML file, it is referenced in Folder/Message/MessageProperties -->
+		<xsl:for-each select="//eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
 			<pdf:embedded-file>
-				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
+				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
+				<xsl:attribute name="description">Source file for message '<xsl:value-of select="../eaxs:MessageId"/>'</xsl:attribute>
+				<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+			</pdf:embedded-file>				
+		</xsl:for-each>
+		<!-- inline attachments which are not text -->
+		<xsl:for-each select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+			<xsl:variable name="filename">
+				<xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:text>.</xsl:text><xsl:call-template name="GetFileExtension"/>
+			</xsl:variable>
+			<pdf:embedded-file>
+				<xsl:attribute name="filename"><xsl:value-of select="$filename"/></xsl:attribute>
 				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
 				<xsl:attribute name="src">
 					<xsl:call-template name="data-uri">
@@ -408,6 +439,7 @@
 				</xsl:attribute>
 			</pdf:embedded-file>								
 		</xsl:for-each>
+		<!-- external attachments -->
 		<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent">
 			<xsl:variable name="rel-path">
 				<xsl:call-template name="concat-path">
@@ -415,8 +447,11 @@
 					<xsl:with-param name="path2" select="normalize-space(eaxs:RelPath)"/>
 				</xsl:call-template>
 			</xsl:variable>
+			<xsl:variable name="filename">
+				<xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:text>.</xsl:text><xsl:call-template name="GetFileExtension"/>
+			</xsl:variable>
 			<pdf:embedded-file>
-				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></xsl:attribute>
+				<xsl:attribute name="filename"><xsl:value-of select="$filename"/></xsl:attribute>
 				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
 				<xsl:choose>
 					<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'false'">
@@ -472,54 +507,12 @@
 			<fo:block xsl:use-attribute-sets="h2">Message Count: <xsl:value-of select="count(//eaxs:Message)"/></fo:block>
 			<!-- QUESTION: Only count distinct attachments, based on the hash? -->
 			<fo:block xsl:use-attribute-sets="h2">Attachment Count: <xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block>
-			
-			<xsl:choose>
-				<xsl:when test="count(//eaxs:Folder[eaxs:Message]) > 1">
-					<fo:block xsl:use-attribute-sets="h2">Folders: <xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message])"/></fo:block>
-					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]" mode="RenderToc"/>
-				</xsl:when>	
-				<xsl:when test="count(//eaxs:Folder[eaxs:Message]) = 1">
-					<fo:block xsl:use-attribute-sets="h2">
-						Folder: <xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Name"/>
-						<xsl:choose>
-							<xsl:when test="$fo-processor='fop'">
-								<xsl:choose>
-									<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
-										<fo:basic-link>
-											<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:FolderProperties/eaxs:FileExt"/>)</xsl:attribute>
-											<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Go To Source File</fo:inline>)</fo:inline>
-										</fo:basic-link>										
-									</xsl:when>
-									<xsl:otherwise>
-										<fo:basic-link>
-											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/></xsl:attribute>
-											<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link"  font-size="small">Go To Source File</fo:inline>
-										</fo:basic-link>
-									</xsl:otherwise>
-								</xsl:choose>
-							</xsl:when>
-							<xsl:when test="$fo-processor='xep'">
-								<fo:basic-link>
-									<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/></xsl:attribute>
-									<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link"  font-size="small">Go To Source File</fo:inline>
-								</fo:basic-link>
-								<fo:inline font-size="small">&nbsp;&nbsp;  
-									<rx:pdf-comment>
-										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:FolderProperties/eaxs:RelPath"/></xsl:attribute>
-										<rx:pdf-file-attachment icon-type="paperclip">
-											<xsl:attribute name="filename"><xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:FolderProperties/eaxs:FileExt"/></xsl:attribute>
-											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(/eaxs:Account/eaxs:Folder/eaxs:FolderProperties/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
-										</rx:pdf-file-attachment>
-									</rx:pdf-comment>
-								</fo:inline>
-							</xsl:when>
-						</xsl:choose>
-					</fo:block>					
-				</xsl:when>
-			</xsl:choose>
+			<fo:block xsl:use-attribute-sets="h2">Folders: <xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message])"/></fo:block>
+			<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]" mode="RenderToc"/>
 		</fo:block>
 	</xsl:template>
 	
+	<!-- TODO: Need to handle the case where the source is multiple EML files -->
 	<xsl:template match="eaxs:Folder" mode="RenderToc">
 		<fo:list-block>
 			<fo:list-item>
@@ -530,20 +523,22 @@
 						<fo:inline font-size="small"> (<xsl:value-of select="count(eaxs:Message)"/> Messages)</fo:inline>
 						<xsl:choose>
 							<xsl:when test="$fo-processor='fop'">
-								<xsl:choose>
-									<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
-										<fo:basic-link>
-											<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FolderProperties/eaxs:FileExt"/>)</xsl:attribute>
-											<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
-										</fo:basic-link>
-									</xsl:when>
-									<xsl:otherwise>
-										<fo:basic-link>
-											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/></xsl:attribute>
-											<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Attachment</fo:inline>
-										</fo:basic-link>
-									</xsl:otherwise>
-								</xsl:choose>
+								<xsl:for-each select="eaxs:FolderProperties[eaxs:RelPath] | eaxs:Message[1]/eaxs:MessageProperties[eaxs:RelPath]">
+									<xsl:choose>
+										<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
+											<fo:basic-link>
+												<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/>)</xsl:attribute>
+												<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
+											</fo:basic-link>
+										</xsl:when>
+										<xsl:otherwise>
+											<fo:basic-link>
+												<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
+												<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Source</fo:inline>
+											</fo:basic-link>
+										</xsl:otherwise>
+									</xsl:choose>
+								</xsl:for-each>
 							</xsl:when>
 							<xsl:when test="$fo-processor='xep'">
 								<fo:inline font-size="small">
@@ -592,7 +587,6 @@
 	
 	<xsl:template name="MessageHeaderTocAndContent">
 		<xsl:param name="RenderToc">true</xsl:param>
-		<xsl:message><xsl:value-of select="parent::eaxs:Folder/eaxs:FolderProperties/eaxs:RelPath"/> -- <xsl:value-of select="eaxs:MessageId"/></xsl:message>
 		<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:MessageId"/>
 			<xsl:apply-templates select="eaxs:OrigDate[not('0001-01-01T00:00:00Z')]"/> <!-- MimeKit seems to use this as the default value if there is no date -->
@@ -1264,4 +1258,62 @@
 		</xsl:if>
 	</xsl:template>
 
+	<!-- Functions for filepath manipulation, inspired by https://stackoverflow.com/questions/3116942/doing-file-path-manipulations-in-xslt-->
+	<!-- Tried to accomodate both Windows and Linux and URL path separators, probably not as robust as it could be -->
+	
+	<!-- Given a full path, return just the file name or last path segment component -->
+	<xsl:function name="my:GetFileName" as="xs:string">
+		<xsl:param name="pfile" as="xs:string"/>
+		<xsl:variable name="separator" select="my:GetPathSepartor($pfile)"/>
+		<xsl:sequence select="my:ReverseString(substring-before(my:ReverseString($pfile), $separator))" />								
+	</xsl:function>
+	
+	<!-- Given a full path, return just the directory name or complete path minus the last segment, excluding path separator -->
+	<xsl:function name="my:GetDirectoryName" as="xs:string">
+		<xsl:param name="pfile" as="xs:string"/>
+		<xsl:variable name="separator" select="my:GetPathSepartor($pfile)"/>
+		<xsl:sequence select="my:ReverseString(substring-after(my:ReverseString($pfile), $separator))" />
+	</xsl:function>
+	
+	<!-- combine two path segments using the appropriate path separator, can accomodate segments having trailing or leading separators without duplicating separators -->
+	<xsl:function name="my:Combine" as="xs:string">
+		<xsl:param name="p1" as="xs:string"/>
+		<xsl:param name="p2" as="xs:string"/>
+		<xsl:variable name="separator" select="my:GetPathSepartor(fn:concat($p1,$p2))"/>
+		<xsl:variable name="p1x">
+			<xsl:choose>
+				<xsl:when test="fn:substring($p1, fn:string-length($p1), 1) = $separator"><xsl:value-of select="fn:substring($p1,1,fn:string-length($p1) - 1)"/></xsl:when>
+				<xsl:otherwise><xsl:value-of select="$p1"/></xsl:otherwise>
+			</xsl:choose>
+		</xsl:variable>
+		<xsl:variable name="p2x">
+			<xsl:choose>
+				<xsl:when test="fn:substring($p2,1,1) = $separator"><xsl:value-of select="fn:substring($p2,2)"/></xsl:when>
+				<xsl:otherwise><xsl:value-of select="$p2"/></xsl:otherwise>
+			</xsl:choose>
+		</xsl:variable>
+		<xsl:value-of select="fn:concat($p1x,$separator, $p2x)"/>
+	</xsl:function>
+	
+	<xsl:function name="my:ReverseString" as="xs:string">
+		<xsl:param name="pStr" as="xs:string"/>
+		<xsl:sequence select="codepoints-to-string(reverse(string-to-codepoints($pStr)))"/>
+	</xsl:function>
+	
+	<!-- looks at a path string and determines the appropriate separator, defaults to '/', assumes different separators will not be combined in the same path -->
+	<xsl:function name="my:GetPathSepartor" as="xs:string">
+		<xsl:param name="pfile" as="xs:string"/>
+		<xsl:choose>
+			<xsl:when test="fn:contains($pfile,'\')">\</xsl:when>
+			<xsl:otherwise>/</xsl:otherwise>
+		</xsl:choose>		
+	</xsl:function>
+	
+	<!-- Resolves a relative file path against the base file path, similar to the resolve-uri function, except non-western unicode characters are not URL Encoded -->
+	<xsl:function name="my:GetPathRelativeToBaseUri" as="xs:string">
+		<xsl:param name="pfile" as="xs:string" />
+		<xsl:param name="baseUri" as="xs:string"/>
+		<xsl:value-of select="my:Combine(my:GetDirectoryName($baseUri), $pfile)"/>
+	</xsl:function>
+		
 </xsl:stylesheet>

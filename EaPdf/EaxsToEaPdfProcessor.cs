@@ -76,9 +76,10 @@ namespace UIUCLibrary.EaPdf
                 throw new Exception($"EAXS transformation to FO failed, status-{status}; review log details.");
             }
 
+#if !DEBUG
             //Delete the intermediate FO file
             File.Delete(foFilePath);
-
+#endif
             //Do some post processing to add metadata
             AddXmp(eaxsFilePath, pdfFilePath);
         }
@@ -138,9 +139,11 @@ namespace UIUCLibrary.EaPdf
                 throw new Exception("EAXS transformation to XMP failed; review log details.");
             }
 
+#if !DEBUG
             //Delete the intermediate XMP file
             File.Delete(xmpFilePath);
-
+#endif
+            
             return ret;
         }
 
@@ -171,8 +174,10 @@ namespace UIUCLibrary.EaPdf
                 throw new Exception("EAXS transformation to XMP failed; review log details.");
             }
 
+#if !DEBUG
             //Delete the intermediate XMP file
             File.Delete(xmpFilePath);
+#endif
 
             return ret;
         }
