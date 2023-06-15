@@ -1459,7 +1459,7 @@ namespace UIUCLibrary.EaPdf
             var addrStr = addr.ToString();
             if (XmlHelpers.TryReplaceInvalidXMLChars(ref addrStr, out string msg))
             {
-                var warn = $"{localName} contains characters which are not allowed in XML; they have been replaced with \uFFFD.  {msg}";
+                var warn = $"{localName} contains characters which are not allowed in XML; {msg}";
                 WriteToLogWarningMessage(xwriter, warn);
             }
             xwriter.WriteStartElement(localName, XM_NS);
@@ -2280,7 +2280,7 @@ namespace UIUCLibrary.EaPdf
 
             if (XmlHelpers.TryReplaceInvalidXMLChars(ref value, out string msg))
             {
-                var warn = $"{localName} contains characters which are not allowed in XML; they have been replaced with \uFFFD.  {msg}";
+                var warn = $"{localName} contains characters which are not allowed in XML; {msg}";
                 WriteToLogWarningMessage(xwriter, warn);
             }
 

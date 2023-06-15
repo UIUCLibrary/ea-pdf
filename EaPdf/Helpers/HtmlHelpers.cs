@@ -97,7 +97,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             if (XmlHelpers.TryReplaceInvalidXMLChars(ref ret, out string msg))
             {
-                messages.Add((LogLevel.Warning, msg));
+                messages.Add((LogLevel.Warning, $"XHTML contains characters which are not allowed in XML; {msg}"));
             }
 
             //HAP does not correctly encode the CDATA sections, so we need to clean up their mess

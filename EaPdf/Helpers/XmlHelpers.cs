@@ -45,13 +45,10 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 return ret;
             }
-            try
+
+            if(_invalidXMLChars.IsMatch(value))
             {
-                value = XmlConvert.VerifyXmlChars(value);
-            }
-            catch (XmlException xex)
-            {
-                msg = xex.Message;
+                msg = "Invalid XML characters were replaced with the Unicode replacement character \uFFFD";
                 value = XmlHelpers.ReplaceInvalidXMLChars(value);
                 ret = true;
             }
@@ -74,13 +71,10 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 return ret;
             }
-            try
+
+            if (_invalidXMLChars.IsMatch(value))
             {
-                value = XmlConvert.VerifyXmlChars(value);
-            }
-            catch (XmlException xex)
-            {
-                msg = xex.Message;
+                msg = "Invalid XML characters were removed";
                 value = XmlHelpers.RemoveInvalidXMLChars(value);
                 ret = true;
             }
