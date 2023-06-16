@@ -127,6 +127,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
         }
 
+        //FUTURE: For FOP maybe we can use the fox-rgb-icc function to get transparency
         private static string ConvertRgbaToRgb(Match match, ref List<(LogLevel level, string message)> messages)
         {
             string rgb = match.Value;

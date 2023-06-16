@@ -38,10 +38,7 @@
 	<xsl:variable name="fo-processor" select="fn:lower-case(fn:tokenize($fo-processor-version)[1])"/>
 	<xsl:variable name="producer">UIUCLibrary.EaPdf; <xsl:value-of select="$fo-processor-version"/></xsl:variable>
 	
-	<!-- Applied to FOP processor; if true FOP will use JavaScript to embed link to open the attachment; JavaScript is not allowed in PDF/A files -->
-	<xsl:param name="use-embedded-file-link">false</xsl:param>
-	
-	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadatat -->
+	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadata -->
 	
 	<xsl:template name="check-params">
 		<xsl:choose>
@@ -231,178 +228,7 @@
 	</xsl:template>
 	
 	<xsl:template name="xmp">
-		<!-- NOTE:  This is actually replaced during a post-processing step in the EAXS to PDF processing step -->
-		
-		<!-- get current date time, converted to Zulu time, and formatted as ISO 8601 without fractional seconds -->
-		<xsl:variable name="datetime-string" select="fn:format-dateTime(fn:adjust-dateTime-to-timezone(fn:current-dateTime(),xs:dayTimeDuration('P0D')),'[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
-		
-		<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 9.0-c000 79.cca54b0, 2022/11/26-09:29:55        ">
-			<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-				
-				<xsl:if test="$fo-processor='xep'"><!-- This is required by PDF/A, but FOP can't seem to deal with extension schema, so will probably need to add these during post processing -->
-					<rdf:Description rdf:about=""
-						xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-						xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-						xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-						>
-						<pdfaExtension:schemas>
-							<rdf:Bag>
-								<rdf:li>
-									<rdf:Description 
-										xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-										xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-										xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-										>
-										<pdfaSchema:schema>Archival PDF (PDF/A) Profile Identification schema</pdfaSchema:schema>
-										<pdfaSchema:namespaceURI>http://www.aiim.org/pdfa/ns/id/</pdfaSchema:namespaceURI>
-										<pdfaSchema:prefix>pdfaid</pdfaSchema:prefix>
-										<pdfaSchema:property>
-											<rdf:Seq>
-												<rdf:li>
-													<rdf:Description 
-														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-														>
-														<pdfaProperty:category>internal</pdfaProperty:category>
-														<pdfaProperty:description>The PDF/A conformance level, a, b, u, to which the document complies.</pdfaProperty:description>
-														<pdfaProperty:name>conformance</pdfaProperty:name>
-														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-													</rdf:Description>
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description 
-														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-														>
-														<pdfaProperty:category>internal</pdfaProperty:category>
-														<pdfaProperty:description>The part of the PDF/A profile to which the document complies.</pdfaProperty:description>
-														<pdfaProperty:name>part</pdfaProperty:name>
-														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-													</rdf:Description>
-												</rdf:li>
-											</rdf:Seq>
-										</pdfaSchema:property>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description  
-										xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-										xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-										xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-										>
-										<pdfaSchema:schema>EA PDF (PDF/mail) Profile Identification schema</pdfaSchema:schema>
-										<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/id/</pdfaSchema:namespaceURI>
-										<pdfaSchema:prefix>pdfmailid</pdfaSchema:prefix>
-										<pdfaSchema:property>
-											<rdf:Seq>
-												<rdf:li>
-													<rdf:Description 
-														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-														>
-														<pdfaProperty:category>internal</pdfaProperty:category>
-														<pdfaProperty:description>The PDF/mail conformance level, s, m, or c, to which the document complies.</pdfaProperty:description>
-														<pdfaProperty:name>conformance</pdfaProperty:name>
-														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-													</rdf:Description>
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description 
-														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-														>
-														<pdfaProperty:category>internal</pdfaProperty:category>
-														<pdfaProperty:description>The part of the PDF/mail profile to which the document complies.</pdfaProperty:description>
-														<pdfaProperty:name>part</pdfaProperty:name>
-														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-													</rdf:Description>
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description 
-														xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-														xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-														xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-														>
-														<pdfaProperty:category>internal</pdfaProperty:category>
-														<pdfaProperty:description>The revision of the PDF/mail profile to which the document complies.</pdfaProperty:description>
-														<pdfaProperty:name>rev</pdfaProperty:name>
-														<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-													</rdf:Description>
-												</rdf:li>
-											</rdf:Seq>
-										</pdfaSchema:property>
-									</rdf:Description>
-								</rdf:li>
-							</rdf:Bag>
-						</pdfaExtension:schemas>
-					</rdf:Description>
-					
-				</xsl:if>
-				
-				<rdf:Description rdf:about=""
-					xmlns:dc="http://purl.org/dc/elements/1.1/"
-					
-					xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
-					xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/"
-					xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-					
-					xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
-					
-					xmlns:pdfmail="http://www.pdfa.org/eapdf/"
-					xmlns:pdfmailid="http://www.pdfa.org/eapdf/ns/id/"
-					
-					>
-					
-					<dc:description>
-						<rdf:Alt>
-							<rdf:li xml:lang="en">
-								<xsl:text>PDF Email Archive</xsl:text> 
-								<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
-									<xsl:text> for Account '</xsl:text><xsl:value-of select="fn:string-join(/eaxs:Account/eaxs:EmailAddress,', ')"/><xsl:text>'</xsl:text>
-								</xsl:if> 
-								<xsl:if test="/eaxs:Account/eaxs:Folder[eaxs:Message]">
-									<xsl:text> for Folder '</xsl:text><xsl:value-of select="/eaxs:Account/eaxs:Folder[eaxs:Message]/eaxs:Name"/><xsl:text>'</xsl:text>							
-								</xsl:if>								
-							</rdf:li>
-						</rdf:Alt>
-					</dc:description>
-					
-					<dc:identifier><xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></dc:identifier>
-					
-					<dc:format>application/pdf</dc:format>
-					<dc:language>
-						<rdf:Bag>
-							<rdf:li>x-unknown</rdf:li>
-						</rdf:Bag>
-					</dc:language>
-					<dc:date>
-						<rdf:Seq>
-							<rdf:li><xsl:value-of select="$datetime-string"/></rdf:li>
-						</rdf:Seq>
-					</dc:date>
-					
-					<pdf:Producer><xsl:value-of select="$producer"/></pdf:Producer>
-					<pdf:PDFVersion>1.7</pdf:PDFVersion>
-					
-					<pdfaid:part>3</pdfaid:part>
-					<pdfaid:conformance>U</pdfaid:conformance>
-					
-					<pdfmailid:part>1</pdfmailid:part>
-					<pdfmailid:rev>2022</pdfmailid:rev>
-					<pdfmailid:conformance>m</pdfmailid:conformance>
-					
-					<xmp:CreatorTool>UIUCLibrary.EaPdf</xmp:CreatorTool>
-					<xmp:MetadataDate><xsl:value-of select="$datetime-string"/></xmp:MetadataDate>
-					<xmp:CreateDate><xsl:value-of select="$datetime-string"/></xmp:CreateDate>
-					<xmp:ModifyDate><xsl:value-of select="$datetime-string"/></xmp:ModifyDate>
-				</rdf:Description>
-				
-			</rdf:RDF>
-		</x:xmpmeta>
+		<!-- NOTE:  This is just a placeholder for possible future use; the XMP is generated during a post-processing step in the EAXS to PDF processing step -->
 	</xsl:template>
 	
 	<xsl:template name="declarations-attachments">
@@ -521,39 +347,34 @@
 					<fo:block xsl:use-attribute-sets="h3">
 						<xsl:apply-templates select="eaxs:Name"/>
 						<fo:inline font-size="small"> (<xsl:value-of select="count(eaxs:Message)"/> Messages)</fo:inline>
-						<xsl:choose>
-							<xsl:when test="$fo-processor='fop'">
-								<xsl:for-each select="eaxs:FolderProperties[eaxs:RelPath] | eaxs:Message[1]/eaxs:MessageProperties[eaxs:RelPath]">
-									<xsl:choose>
-										<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
-											<fo:basic-link>
-												<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/>)</xsl:attribute>
-												<fo:inline font-size="small"> (<fo:inline xsl:use-attribute-sets="a-link" >Open Source File</fo:inline>)</fo:inline>
-											</fo:basic-link>
-										</xsl:when>
-										<xsl:otherwise>
+						<xsl:for-each select="eaxs:FolderProperties[eaxs:RelPath] | eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
+							<xsl:choose>
+								<xsl:when test="$fo-processor='fop' and fn:position()=1">
+										<fo:basic-link>
+											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
+											<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Source</fo:inline>
+										</fo:basic-link>
+								</xsl:when>
+								<xsl:when test="$fo-processor='xep'">
+									<fo:inline font-size="small">
+										<xsl:if test="fn:position()=1">
 											<fo:basic-link>
 												<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
-												<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Source</fo:inline>
+												<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Source</fo:inline><fo:inline>&nbsp;</fo:inline>
 											</fo:basic-link>
-										</xsl:otherwise>
-									</xsl:choose>
-								</xsl:for-each>
-							</xsl:when>
-							<xsl:when test="$fo-processor='xep'">
-								<fo:inline font-size="small">
-									<xsl:text>(Open Source File&nbsp;</xsl:text>
-									<rx:pdf-comment>
-										<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:FolderProperties/eaxs:RelPath"/></xsl:attribute>
-										<rx:pdf-file-attachment icon-type="paperclip">
-											<xsl:attribute name="filename"><xsl:value-of select="eaxs:FolderProperties/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FolderProperties/eaxs:FileExt"/></xsl:attribute>
-											<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:FolderProperties/eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
-										</rx:pdf-file-attachment>
-									</rx:pdf-comment>
-									<xsl:text>&nbsp;&nbsp;&nbsp;&nbsp;)</xsl:text>
-								</fo:inline>
-							</xsl:when>
-						</xsl:choose>
+										</xsl:if>
+										<rx:pdf-comment>
+											<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:RelPath"/></xsl:attribute>
+											<rx:pdf-file-attachment icon-type="paperclip">
+												<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
+												<xsl:attribute name="src">url(<xsl:value-of select="my:GetPathRelativeToBaseUri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
+											</rx:pdf-file-attachment>
+										</rx:pdf-comment>
+										<fo:inline>&nbsp;&nbsp;</fo:inline>
+									</fo:inline>
+								</xsl:when>
+							</xsl:choose>
+						</xsl:for-each>
 						<fo:basic-link>
 							<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
 							<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To First Message</fo:inline>
@@ -1192,20 +1013,10 @@
 		<xsl:if test="$single-body/eaxs:ExtBodyContent or lower-case(normalize-space($single-body/eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space($single-body/@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space($single-body/eaxs:ContentType)),'text/')))">
 			<xsl:choose>
 				<xsl:when test="$fo-processor='fop'">
-					<xsl:choose>
-						<xsl:when test="fn:lower-case(normalize-space($use-embedded-file-link))='true'">
-							<fo:basic-link>
-								<xsl:attribute name="external-destination">url(embedded-file:<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/>)</xsl:attribute>
-								<fo:inline> (<fo:inline xsl:use-attribute-sets="a-link" >Open Attachment</fo:inline>)</fo:inline>
-							</fo:basic-link>	
-						</xsl:when>
-						<xsl:otherwise>
 							<fo:basic-link>
 								<xsl:attribute name="internal-destination">ATT_<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/></xsl:attribute>
 								<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Attachment</fo:inline>	
 							</fo:basic-link>
-						</xsl:otherwise>
-					</xsl:choose>
 				</xsl:when>
 				<xsl:when test="$fo-processor='xep'">
 					<fo:basic-link>
