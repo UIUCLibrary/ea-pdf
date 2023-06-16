@@ -420,6 +420,7 @@
 			<xsl:apply-templates select="eaxs:Comments"/>
 			<xsl:apply-templates select="eaxs:Keywords"/>
 			<xsl:apply-templates select="eaxs:InReplyTo"/>
+			<xsl:apply-templates select="eaxs:References[not(../eaxs:InReplyTo = .)]"/><!-- only references which are not already reply to's -->
 		</fo:list-block>	
 		<xsl:if test="$RenderToc='true'">
 			<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black">Message Contents</fo:block>
@@ -446,10 +447,19 @@
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
 				<fo:block>
-					<xsl:apply-templates/>									
+					<xsl:call-template name="InsertZwspAfterNonWords"/>
 				</fo:block>
 			</fo:list-item-body>
 		</fo:list-item>
+	</xsl:template>
+	
+	<!-- insert zero-width space after non-word characters to facilitate line breaks -->
+	<xsl:template name="InsertZwspAfterNonWords">
+		<xsl:param name="string" select="."/>
+		<xsl:analyze-string select="$string" regex="\W">
+			<xsl:matching-substring><xsl:value-of select="."/><xsl:text>&#8203;</xsl:text></xsl:matching-substring>
+			<xsl:non-matching-substring><xsl:value-of select="."/></xsl:non-matching-substring>
+		</xsl:analyze-string>
 	</xsl:template>
 
 	<xsl:template match="eaxs:OrigDate">
@@ -576,7 +586,20 @@
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
 				<fo:block>
-					<xsl:apply-templates/>
+					<xsl:call-template name="InsertZwspAfterNonWords"/>						
+				</fo:block>
+			</fo:list-item-body>
+		</fo:list-item>
+	</xsl:template>
+
+	<xsl:template match="eaxs:References">
+		<fo:list-item>
+			<fo:list-item-label end-indent="label-end()">
+				<fo:block>References:</fo:block>
+			</fo:list-item-label>
+			<fo:list-item-body start-indent="body-start()">
+				<fo:block>
+					<xsl:call-template name="InsertZwspAfterNonWords"/>
 				</fo:block>
 			</fo:list-item-body>
 		</fo:list-item>
