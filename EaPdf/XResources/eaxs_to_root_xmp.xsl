@@ -35,7 +35,6 @@
 					xmlns:dc="http://purl.org/dc/elements/1.1/"
 					xmlns:dcterms="http://purl.org/dc/terms/"
 					xmlns:foaf="http://xmlns.com/foaf/0.1/"
-					xmlns:eapdf="http://www.pdfa.org/eapdf/ns/"
 					
 					xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
 					xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/"
@@ -45,6 +44,7 @@
 					
 					xmlns:pdfmail="http://www.pdfa.org/eapdf/"
 					xmlns:pdfmailid="http://www.pdfa.org/eapdf/ns/id/"
+					xmlns:pdfmailmeta="http://www.pdfa.org/eapdf/ns/meta/"
 					>
 					<dc:description>
 						<rdf:Alt>
