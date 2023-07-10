@@ -82,11 +82,13 @@
 			
 			<fo:page-sequence master-reference="message-page">
 				<fo:static-content flow-name="xsl-region-before">
+					<xsl:call-template name="tag-artifact"><xsl:with-param name="type" select="'Pagination'"/><xsl:with-param name="subtype" select="'Header'"/></xsl:call-template>
 					<fo:block text-align="center" margin-left="1in" margin-right="1in">Account:
 							<xsl:value-of select="/eaxs:Account/eaxs:EmailAddress[1]"/> Folder:
 							<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Name"/></fo:block>
 				</fo:static-content>
 				<fo:static-content flow-name="xsl-region-after">
+					<xsl:call-template name="tag-artifact"><xsl:with-param name="type" select="'Pagination'"/><xsl:with-param name="subtype" select="'Footer'"/></xsl:call-template>
 					<fo:block text-align="center" margin-left="1in" margin-right="1in">
 						<fo:page-number/>
 					</fo:block>

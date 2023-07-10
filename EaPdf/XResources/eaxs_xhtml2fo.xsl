@@ -114,7 +114,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <xsl:attribute name="font-size">small</xsl:attribute>
     <xsl:attribute name="text-align">center</xsl:attribute>
   </xsl:attribute-set>
-
+  
   <!--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
        Block-level
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
@@ -608,10 +608,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <xsl:variable name="tags" select="('P','H1','H2','H3','H4','H5','H6')"/>
     <xsl:choose>
       <xsl:when test="$tags = fn:upper-case(local-name())">
-        <xsl:attribute name="role"><xsl:value-of select="fn:upper-case(local-name())"/></xsl:attribute>
-        <xsl:if test="$fo-processor='xep'">
-          <xsl:attribute name="rx:pdf-structure-tag"><xsl:value-of select="fn:upper-case(local-name())"/></xsl:attribute>          
-        </xsl:if>
+        <xsl:call-template name="tag-element"><xsl:with-param name="tag" select="fn:upper-case(local-name())"/></xsl:call-template>
       </xsl:when>
     </xsl:choose>
 
@@ -869,6 +866,36 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     <fo:block xsl:use-attribute-sets="pre">
       <xsl:call-template name="process-pre"/>
     </fo:block>
+  </xsl:template>
+  
+  <!-- Add a tag attribute to the element --> 
+  <xsl:template name="tag-element">
+    <xsl:param name="tag">Div</xsl:param>
+    <xsl:attribute name="role"><xsl:value-of select="$tag"/></xsl:attribute>
+    <xsl:if test="$fo-processor='xep'">
+      <xsl:attribute name="rx:pdf-structure-tag"><xsl:value-of select="$tag"/></xsl:attribute>          
+    </xsl:if>
+  </xsl:template>
+  
+  <!-- Add an artifact tag to the element -->
+  <xsl:template name="tag-artifact">
+    <xsl:param name="type"></xsl:param>
+    <xsl:param name="subtype"></xsl:param>
+    <xsl:choose>
+      <xsl:when test="$fo-processor='xep'">
+        <xsl:attribute name="role"><xsl:value-of select="'Artifact'"/></xsl:attribute>          
+        <xsl:attribute name="rx:pdf-structure-tag"><xsl:value-of select="'Artifact'"/></xsl:attribute>          
+        <xsl:if test="$type"><!-- See RenderX docs:  "Pagination", "Page" or "Layout". -->
+          <xsl:attribute name="rx:pdf-artifact-type"><xsl:value-of select="$type"/></xsl:attribute>                    
+        </xsl:if>
+        <xsl:if test="$subtype"><!-- See RenderX docs:  Only applies to "Pagination": "Header", "Footer" or "Watermark". -->
+          <xsl:attribute name="rx:pdf-artifact-subtype"><xsl:value-of select="$subtype"/></xsl:attribute>                    
+        </xsl:if>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:attribute name="role"><xsl:value-of select="'artifact'"/></xsl:attribute>                  
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template name="process-pre">
@@ -1904,6 +1931,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </xsl:attribute>
     <xsl:if test="@alt">
       <xsl:attribute name="role">
+        <!-- TODO: This needs to use one of the custom FOP or XEP attributes, instead of role -->
         <xsl:value-of select="@alt"/>
       </xsl:attribute>
     </xsl:if>
@@ -1992,6 +2020,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </xsl:choose>
     <xsl:if test="@title">
       <xsl:attribute name="role">
+        <!-- TODO: This needs to use one of the custom FOP or XEP attributes instead of role -->
         <xsl:value-of select="@title"/>
       </xsl:attribute>
     </xsl:if>
@@ -2018,13 +2047,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                 space-before.conditionality="retain"
                 space-before="-1.1em"
                 space-after="0.1em"
-                role="html:rt">
+                role="html:rt"><!-- TODO: This role probably isn't needed -->
         <xsl:for-each select="html:rt | html:rtc[1]/html:rt">
           <xsl:call-template name="process-common-attributes"/>
           <xsl:apply-templates/>
         </xsl:for-each>
       </fo:block>
-      <fo:block wrap-option="no-wrap" line-height="1" role="html:rb">
+      <fo:block wrap-option="no-wrap" line-height="1" role="html:rb"> <!-- TODO: This role probably isn't needed -->
         <xsl:for-each select="html:rb | html:rbc[1]/html:rb">
           <xsl:call-template name="process-common-attributes"/>
           <xsl:apply-templates/>
@@ -2037,7 +2066,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   space-before="0.1em"
                   space-after.conditionality="retain"
                   space-after="-1.1em"
-                  role="html:rt">
+                  role="html:rt"> <!-- TODO: This role probably isn't needed -->
           <xsl:for-each select="html:rt | html:rtc[2]/html:rt">
             <xsl:call-template name="process-common-attributes"/>
             <xsl:apply-templates/>
