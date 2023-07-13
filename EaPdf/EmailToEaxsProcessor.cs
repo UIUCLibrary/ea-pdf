@@ -970,7 +970,7 @@ namespace UIUCLibrary.EaPdf
         {
             _folders.Push(msgFileProps.XmlFolderName);
             xwriter.WriteStartElement("Folder", XM_NS);
-            xwriter.WriteElementString("Name", XM_NS, msgFileProps.XmlFolderName);
+            xwriter.WriteElementString("Name", XM_NS, Path.GetFileNameWithoutExtension(msgFileProps.XmlFolderName));
         }
 
         /// <summary>
@@ -1003,7 +1003,7 @@ namespace UIUCLibrary.EaPdf
             foreach (var fld in nesting.Reverse())
             {
                 xwriter.WriteStartElement("Folder", XM_NS);
-                xwriter.WriteElementString("Name", XM_NS, fld);
+                xwriter.WriteElementString("Name", XM_NS, Path.GetFileNameWithoutExtension(fld));
             }
         }
 
