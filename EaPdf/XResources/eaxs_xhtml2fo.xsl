@@ -119,58 +119,95 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
        Block-level
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
 
-  <xsl:attribute-set name="h1">
+  <xsl:attribute-set name="h1" use-attribute-sets="h1-font h1-space">
+    <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
+    <xsl:attribute name="keep-together.within-column">always</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h1-font">
     <xsl:attribute name="font-size">2em</xsl:attribute>
     <xsl:attribute name="font-weight">bold</xsl:attribute>
+   </xsl:attribute-set>
+
+  <xsl:attribute-set name="h1-space" >
     <xsl:attribute name="space-before">0.67em</xsl:attribute>
     <xsl:attribute name="space-after">0.67em</xsl:attribute>
+  </xsl:attribute-set>
+  
+  
+  <xsl:attribute-set name="h2" use-attribute-sets="h2-font h2-space">
     <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
     <xsl:attribute name="keep-together.within-column">always</xsl:attribute>
   </xsl:attribute-set>
-
-  <xsl:attribute-set name="h2">
+  
+  <xsl:attribute-set name="h2-font">
     <xsl:attribute name="font-size">1.5em</xsl:attribute>
     <xsl:attribute name="font-weight">bold</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h2-space" >
     <xsl:attribute name="space-before">0.83em</xsl:attribute>
     <xsl:attribute name="space-after">0.83em</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h3" use-attribute-sets="h3-font h3-space">
     <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
     <xsl:attribute name="keep-together.within-column">always</xsl:attribute>
   </xsl:attribute-set>
 
-  <xsl:attribute-set name="h3">
+  <xsl:attribute-set name="h3-font">
     <xsl:attribute name="font-size">1.17em</xsl:attribute>
     <xsl:attribute name="font-weight">bold</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h3-space" >
     <xsl:attribute name="space-before">1em</xsl:attribute>
     <xsl:attribute name="space-after">1em</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h4" use-attribute-sets="h4-font h4-space">
     <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
     <xsl:attribute name="keep-together.within-column">always</xsl:attribute>
   </xsl:attribute-set>
 
-  <xsl:attribute-set name="h4">
+  <xsl:attribute-set name="h4-font">
     <xsl:attribute name="font-size">1em</xsl:attribute>
     <xsl:attribute name="font-weight">bold</xsl:attribute>
+  </xsl:attribute-set>
+
+  <xsl:attribute-set name="h4-space">
     <xsl:attribute name="space-before">1.17em</xsl:attribute>
     <xsl:attribute name="space-after">1.17em</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h5" use-attribute-sets="h5-font h5-space">
     <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
     <xsl:attribute name="keep-together.within-column">always</xsl:attribute>
   </xsl:attribute-set>
 
-  <xsl:attribute-set name="h5">
+  <xsl:attribute-set name="h5-font">
     <xsl:attribute name="font-size">0.83em</xsl:attribute>
     <xsl:attribute name="font-weight">bold</xsl:attribute>
+   </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h5-space">
     <xsl:attribute name="space-before">1.33em</xsl:attribute>
     <xsl:attribute name="space-after">1.33em</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h6" use-attribute-sets="h6-font h6-space">
     <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
     <xsl:attribute name="keep-together.within-column">always</xsl:attribute>
   </xsl:attribute-set>
 
-  <xsl:attribute-set name="h6">
+  <xsl:attribute-set name="h6-font">
     <xsl:attribute name="font-size">0.67em</xsl:attribute>
     <xsl:attribute name="font-weight">bold</xsl:attribute>
+  </xsl:attribute-set>
+  
+  <xsl:attribute-set name="h6-space">
     <xsl:attribute name="space-before">1.67em</xsl:attribute>
     <xsl:attribute name="space-after">1.67em</xsl:attribute>
-    <xsl:attribute name="keep-with-next.within-column">always</xsl:attribute>
-    <xsl:attribute name="keep-together.within-column">always</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="p">
@@ -604,11 +641,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:template>
 
   <xsl:template name="process-common-attributes">
-    <!-- TGH Add roles or tags as needed for PDF Accessability tagging -->
-    <xsl:variable name="tags" select="('P','H1','H2','H3','H4','H5','H6')"/>
+    <!-- TGH Add roles or tags as needed to define document structure; note that PDF tags are case-sensitive, unlike HTML tags -->
     <xsl:choose>
-      <xsl:when test="$tags = fn:upper-case(local-name())">
+      <xsl:when test="('P','H1','H2','H3','H4','H5','H6') = fn:upper-case(local-name())">
         <xsl:call-template name="tag-element"><xsl:with-param name="tag" select="fn:upper-case(local-name())"/></xsl:call-template>
+      </xsl:when>
+      <xsl:when test="'BLOCKQUOTE' = fn:upper-case(local-name())">
+        <xsl:call-template name="tag-element"><xsl:with-param name="tag" select="'BlockQuote'"/></xsl:call-template>
       </xsl:when>
     </xsl:choose>
 
@@ -897,6 +936,48 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
+  
+  <!-- Shortcuts for tagging elements -->
+  <xsl:template name="tag-L">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">L</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-LI">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">LI</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-Lbl">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">Lbl</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-LBody">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">LBody</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-H1">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">H1</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-H2">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">H2</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-H3">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">H3</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-H4">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">H4</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-H5">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">H5</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-H6">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">H6</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-P">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">P</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-Span">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">Span</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-Div">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">Div</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  
 
   <xsl:template name="process-pre">
     <xsl:call-template name="process-common-attributes"/>

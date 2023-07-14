@@ -11,7 +11,7 @@
 
 	<default-page-settings height="11in" width="8.26in"/>
 
-	<accessibility>true</accessibility>
+	<accessibility keep-empty-tags="false">true</accessibility>
 
 	<renderers>
 		<renderer mime="application/pdf">
