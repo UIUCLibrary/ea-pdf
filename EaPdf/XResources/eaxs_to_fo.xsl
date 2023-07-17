@@ -147,7 +147,7 @@
 		<fo:list-block font-size="{$font-size}">
 			<!-- Source MBOX files are referenced in FolderProperties -->
 			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties[eaxs:RelPath]">
-				<!-- TODO: Sort in original order -->
+				<xsl:sort select="fn:string-join(ancestor-or-self::eaxs:Folder/eaxs:Name)"/> 
 				<fo:list-item margin-top="5pt" >
 					<fo:list-item-label><fo:block font-weight="bold" ><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></fo:block></fo:list-item-label>
 					<fo:list-item-body keep-together.within-column="always">
@@ -156,7 +156,7 @@
 						<xsl:call-template name="file-list-2x2">
 							<xsl:with-param name="lbl-1">Folder name: </xsl:with-param>
 							<xsl:with-param name="body-1">
-								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="../eaxs:Name"/></xsl:call-template><xsl:text>"</xsl:text>
+								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="fn:string-join(ancestor-or-self::eaxs:Folder/eaxs:Name,'->')"/></xsl:call-template><xsl:text>"</xsl:text>
 							</xsl:with-param>
 							<xsl:with-param name="lbl-2">Source file: </xsl:with-param>
 							<xsl:with-param name="body-2">
@@ -171,23 +171,23 @@
 			</xsl:for-each>
 			<!-- Source EML files are referenced in MessageProperties -->
 			<xsl:for-each select="//eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
-				<!-- TODO: Sort in original order -->
+				<xsl:sort select="eaxs:RelPath"/>
 				<fo:list-item margin-top="5pt" >
 					<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></fo:block></fo:list-item-label>
 					<fo:list-item-body keep-together.within-column="always">
 						<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
 						<fox:destination><xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
 						<xsl:call-template name="file-list-2x2">
-							<xsl:with-param name="lbl-1">Message id: </xsl:with-param>
+							<xsl:with-param name="lbl-1">Source file: </xsl:with-param>
 							<xsl:with-param name="body-1">
-								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="../eaxs:MessageId"/></xsl:call-template><xsl:text>"</xsl:text>
-							</xsl:with-param>
-							<xsl:with-param name="lbl-2">Source file: </xsl:with-param>
-							<xsl:with-param name="body-2">
 								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template><xsl:text>"</xsl:text>
 								<xsl:if test="eaxs:Size">
 									<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'0,000')"/> bytes)</fo:inline>
 								</xsl:if>
+							</xsl:with-param>
+							<xsl:with-param name="lbl-2">Message id: </xsl:with-param>
+							<xsl:with-param name="body-2">
+								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="../eaxs:MessageId"/></xsl:call-template><xsl:text>"</xsl:text>
 							</xsl:with-param>
 						</xsl:call-template>
 					</fo:list-item-body>
@@ -199,7 +199,7 @@
 		
 		<fo:list-block font-size="{$font-size}">
 			<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
-				<!-- TODO: Sort in original order -->
+				<xsl:sort select="../eaxs:DispositionFile | ../eaxs:ContentName"/>
 				<fo:list-item margin-top="5pt">
 					<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></fo:block></fo:list-item-label>
 					<fo:list-item-body keep-together.within-column="always">
