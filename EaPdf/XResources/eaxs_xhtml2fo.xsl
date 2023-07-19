@@ -649,6 +649,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       <xsl:when test="'BLOCKQUOTE' = fn:upper-case(local-name())">
         <xsl:call-template name="tag-element"><xsl:with-param name="tag" select="'BlockQuote'"/></xsl:call-template>
       </xsl:when>
+      <xsl:when test="'DIV' = fn:upper-case(local-name())">
+        <xsl:call-template name="tag-element"><xsl:with-param name="tag" select="'Div'"/></xsl:call-template>
+      </xsl:when>
+      <xsl:when test="'SPAN' = fn:upper-case(local-name())">
+        <xsl:call-template name="tag-element"><xsl:with-param name="tag" select="'Span'"/></xsl:call-template>
+      </xsl:when>
+      <xsl:when test="'Q' = fn:upper-case(local-name())">
+        <xsl:call-template name="tag-element"><xsl:with-param name="tag" select="'Quote'"/></xsl:call-template>
+      </xsl:when>
     </xsl:choose>
 
     <xsl:choose>
@@ -938,6 +947,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:template>
   
   <!-- Shortcuts for tagging elements -->
+  <xsl:template name="tag-Sect">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">Sect</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-Art">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">Art</xsl:with-param></xsl:call-template>
+  </xsl:template>
   <xsl:template name="tag-L">
     <xsl:call-template name="tag-element"><xsl:with-param name="tag">L</xsl:with-param></xsl:call-template>
   </xsl:template>
@@ -1207,6 +1222,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </fo:list-item-body>
   </xsl:template>
 
+  <!-- TODO: Convert DL into an FO List -->
   <xsl:template match="html:dl">
     <fo:block xsl:use-attribute-sets="dl">
       <xsl:call-template name="process-common-attributes-and-children"/>

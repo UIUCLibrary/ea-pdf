@@ -170,7 +170,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if(VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -206,7 +206,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if(VALIDATE_PDFS)  TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -241,7 +241,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if(VALIDATE_PDFS)  TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -278,7 +278,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if(VALIDATE_PDFS)  TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -315,7 +315,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if(VALIDATE_PDFS)  TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -352,7 +352,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if(VALIDATE_PDFS)  TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -365,7 +365,7 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
-        private void ConvertMBoxToEaxs(string filePath)
+        private void ConvertMBoxToEaxs(string filePath, string? skipAfterMsgId = null)
         {
             if (logger != null)
             {
@@ -379,6 +379,8 @@ namespace UIUCLibrary.TestEaPdf
 
                 settings.WrapExternalContentInXml = true;  //required for XEP to properly attach external PDFs
                 settings.SaveTextAsXhtml = true; //required to render html inside the PDF
+                if (!string.IsNullOrWhiteSpace(skipAfterMsgId))
+                    settings.SkipAfterMessageId = skipAfterMsgId;
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);
 
@@ -408,7 +410,7 @@ namespace UIUCLibrary.TestEaPdf
         private bool IsPdfValid(string pdfFile)
         {
 
-            if(VALIDATE_PDFS==false) return true;
+            if (VALIDATE_PDFS == false) return true;
 
             bool ret = true;
 

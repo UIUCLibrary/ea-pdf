@@ -89,9 +89,16 @@
 			
 			<fo:page-sequence master-reference="message-page">
 				<xsl:call-template name="static-content"/>
-				<fo:flow flow-name="xsl-region-body">
-					<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]" mode="RenderContent"/>
-				</fo:flow>
+				<xsl:for-each select="/eaxs:Account/eaxs:Folder[eaxs:Message]">
+					<fo:flow flow-name="xsl-region-body">
+						<fo:block><!-- empty block just to use as link destination -->
+							<xsl:call-template name="tag-artifact"/>
+							<xsl:attribute name="id"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+							<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute></fox:destination>
+						</fo:block>
+						<xsl:apply-templates select="." mode="RenderContent"/>
+					</fo:flow>
+				</xsl:for-each>
 			</fo:page-sequence>
 			
 			<fo:page-sequence master-reference="message-page">
@@ -276,7 +283,7 @@
 			</fo:bookmark>
 			<xsl:if test="eaxs:Folder[eaxs:Message]">
 				<fo:bookmark starting-state="hide">
-					<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+					<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(eaxs:Folder[eaxs:Message][1])"/></xsl:attribute>
 					<fo:bookmark-title><xsl:value-of select="count(eaxs:Folder[eaxs:Message])"/> Sub-folders</fo:bookmark-title>
 					<xsl:apply-templates select="eaxs:Folder[eaxs:Message]" mode="RenderBookmarks"><xsl:with-param name="topfolder">false</xsl:with-param></xsl:apply-templates>
 				</fo:bookmark>
@@ -491,19 +498,21 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Folder" mode="RenderContent">
-		<fo:block>
-			<xsl:attribute name="id"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
-			<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute></fox:destination>
-			<xsl:apply-templates select="eaxs:Message" />	
-			<xsl:apply-templates select="eaxs:Folder" mode="RenderContent"/>	
-		</fo:block>
+		<xsl:apply-templates select="eaxs:Message" />
+		<xsl:for-each select="eaxs:Folder[eaxs:Message]">
+			<fo:block><xsl:call-template name="tag-Sect"/>
+				<xsl:attribute name="id"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+				<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute></fox:destination>
+				<xsl:apply-templates select="." mode="RenderContent"/>	
+			</fo:block>
+		</xsl:for-each>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Message">
-		<fo:block page-break-after="always">
+		<fo:block page-break-after="always"><xsl:call-template name="tag-Art"/>
 			<xsl:attribute name="id">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<fox:destination><xsl:attribute name="internal-destination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>
-			<fo:block xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
+			<fo:block xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H2"/><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
 			<xsl:call-template name="MessageHeaderTocAndContent"/>
 			<!-- Create named destination to the end of the message -->
 			<fo:inline><xsl:attribute name="id">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute><fox:destination><xsl:attribute name="internal-destination">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination></fo:inline>
@@ -527,7 +536,7 @@
 			<xsl:apply-templates select="eaxs:References[not(../eaxs:InReplyTo = .)]"/><!-- only references which are not already reply to's -->
 		</fo:list-block>	
 		<xsl:if test="$RenderToc='true'">
-			<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black">Message Contents</fo:block>
+			<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black"><xsl:call-template name="tag-H3"/>Message Contents</fo:block>
 			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>			
 		</xsl:if>
 		<xsl:call-template name="hr"/>
@@ -854,21 +863,26 @@
 	<xsl:template match="eaxs:BodyContent">
 		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/')">
 			<!-- only render content which is text and which is not an attachment -->
-			<fo:block>
-				<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
-				<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
-				<xsl:choose>
-					<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
-						<!-- Only put the header if there are multiple bodies -->
-						<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">Content Type: <xsl:value-of select="../eaxs:ContentType"/></fo:block>				
-					</xsl:when>
-					<xsl:otherwise>
-						<!-- don't put a header, but add an extra line above the content -->
-						<fo:block margin-top="1em"> </fo:block>
-					</xsl:otherwise>
-				</xsl:choose>
-				<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
-			</fo:block>
+			<xsl:choose>
+				<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
+					<!-- Only put the header if there are multiple bodies -->
+					<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">
+						<xsl:call-template name="tag-H3"/>
+						<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+						<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
+						<xsl:text>Content Type: </xsl:text><xsl:value-of select="../eaxs:ContentType"/>
+					</fo:block>				
+				</xsl:when>
+				<xsl:otherwise>
+					<!-- don't put a header, but add an extra line above the content -->
+					<fo:block margin-top="1em">
+						<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+						<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>	
+						<xsl:text> </xsl:text>
+					</fo:block>
+				</xsl:otherwise>
+			</xsl:choose>
+			<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
 		</xsl:if>
 	</xsl:template>
 	
@@ -896,8 +910,8 @@
 			<xsl:if test="../eaxs:ContentLanguage">
 				<xsl:attribute name="xml:lang"><xsl:value-of select="../eaxs:ContentLanguage"/></xsl:attribute>
 			</xsl:if>
-			<fo:block xsl:use-attribute-sets="h3">Delivery Status</fo:block>
-			<fo:block xsl:use-attribute-sets="h4">Per Message Fields</fo:block>
+			<fo:block xsl:use-attribute-sets="h3"><xsl:call-template name="tag-H3"/>Delivery Status</fo:block>
+			<fo:block xsl:use-attribute-sets="h4"><xsl:call-template name="tag-H4"/>Per Message Fields</fo:block>
 			<fo:list-block provisional-distance-between-starts="10em" provisional-label-separation="0.25em">
 				<xsl:for-each select="eaxs:MessageFields/eaxs:Field">
 					<fo:list-item>
@@ -906,7 +920,7 @@
 					</fo:list-item>					
 				</xsl:for-each>
 			</fo:list-block>
-			<fo:block xsl:use-attribute-sets="h4">Per Recipient Fields</fo:block>
+			<fo:block xsl:use-attribute-sets="h4"><xsl:call-template name="tag-H4"/>Per Recipient Fields</fo:block>
 			<fo:list-block provisional-distance-between-starts="10em" provisional-label-separation="0.25em">
 				<xsl:for-each select="eaxs:RecipientFields/eaxs:Field">
 					<fo:list-item>
@@ -945,7 +959,7 @@
 	<xsl:template match="eaxs:ContentAsXhtml">
 		<xsl:choose>
 			<xsl:when test="not(normalize-space(.) = '')">
-				<fo:block>
+				<fo:block><xsl:call-template name="tag-Div"></xsl:call-template>
 					<xsl:choose>
 						<xsl:when test="html:html/@xml:lang">
 							<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/@xml:lang"/></xsl:attribute>
