@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
@@ -44,11 +45,95 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
         public int Transform(string sourceFoFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages)
         {
-            var args = $"-c \"{ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+            List<(LogLevel level, string message)> tempMessages = new();
 
-            int status = RunExecutableJar(JarFilePath, args, ref messages);
+            //-q option to suppress output except warnings and errors; unfortunately doesn't seem to make a difference
+            var args = $" -q -c \"{ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+
+            int status = RunExecutableJar(JarFilePath, args, ref tempMessages);
+
+            messages.AddRange(ConvertLogLines(tempMessages));
 
             return status;
+        }
+
+        /// <summary>
+        /// Convert message lines to the correct log level and granularity 
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <returns></returns>
+        private List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
+        {
+
+            //FOP has one log message per multiple lines which could be infom warn, or error
+            //The first line of the message is the date and time, the second line is the log level, and the rest of the lines are the message
+
+            List<(LogLevel level, string message)> ret = new();
+
+            StringBuilder messageAccumulator = new();
+            LogLevel logLevel = LogLevel.None;
+
+            foreach ((LogLevel level, string message) message in messages)
+            {
+                //Date Format:  Jul 19, 2023 11:55:07 AM or Jul 19, 2023 1:55:07 AM (one-digit hour)
+                if (message.message.Length >=24 && DateTime.TryParseExact(message.message[..24], "MMM dd, yyyy h:mm:ss tt", null, System.Globalization.DateTimeStyles.AssumeLocal | System.Globalization.DateTimeStyles.AllowTrailingWhite, out DateTime dateTime))
+                {
+                    //start of new message
+                    if (messageAccumulator.Length > 0)
+                    {
+                        AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
+                    }
+
+                    messageAccumulator.AppendLine(message.message);
+                }
+                else if(messageAccumulator.Length > 0)
+                {
+                    if (logLevel == LogLevel.None)
+                    {
+                        if (message.message.StartsWith("INFO:"))
+                            logLevel = LogLevel.Information;
+                        else if (message.message.StartsWith("WARN:") || message.message.StartsWith("WARNING:"))
+                            logLevel = LogLevel.Warning;
+                        else if (message.message.StartsWith("ERROR:") || message.message.StartsWith("SEVERE:"))
+                            logLevel = LogLevel.Error;
+                        else if (message.message.StartsWith("FATAL:"))
+                            logLevel = LogLevel.Critical;
+                        else
+                            logLevel = LogLevel.Critical; //default to critical since the first line of the message doesn't indicate the log level
+                    }
+
+                    messageAccumulator.AppendLine(message.message);
+                }
+                else
+                {
+                    //ret.AddRange(messages);
+                    //logLevel= LogLevel.Critical;
+                    //messageAccumulator.AppendLine("Could not find start of log message");
+                    //break;
+                    throw new Exception("Could not find start of log message");
+                }
+            }
+
+            if(messageAccumulator.Length > 0)
+            {
+                AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
+            }
+
+            return ret;
+        }
+
+        private void AppendMessage(ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)> messages)
+        {
+            if (logLevel != LogLevel.None)
+            {
+                messages.Add((logLevel, messageAccumulator.ToString().Trim()));
+                messageAccumulator.Clear();
+                logLevel = LogLevel.None;
+            }
+            else
+            {
+                throw new Exception("Unable to determine log level");
+            }
         }
     }
 }

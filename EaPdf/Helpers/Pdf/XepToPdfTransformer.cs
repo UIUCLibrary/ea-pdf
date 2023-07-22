@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
@@ -41,12 +43,103 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
         public int Transform(string sourceFoFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages)
         {
-            var args = $"\"-DCONFIG={ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+            List<(LogLevel level, string message)> tempMessages = new();
 
-            int status = RunMainClass(MAIN_CLASS, args, ref messages);
+            //-quiet option to suppress output except warnings and errors
+            var args = $"\"-DCONFIG={ConfigFilePath}\" -quiet -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+
+            int status = RunMainClass(MAIN_CLASS, args, ref tempMessages);
+
+            messages.AddRange(ConvertLogLines(tempMessages));
 
             return status;
 
         }
+
+        /// <summary>
+        /// Convert message lines to the correct log level and granularity 
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <returns></returns>
+        private List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
+        {
+            //In quiet mode, XEP has one message per line which should all be errors or warnings
+            //Except for exceptions, which are multiple lines with the first line being "...something.somethingException" and subsequent lines beginning with tab and being the stack trace
+
+            List<(LogLevel level, string message)> ret = new();
+
+            StringBuilder messageAccumulator = new();
+            LogLevel logLevel = LogLevel.None;
+
+            foreach ((LogLevel level, string message) message in messages)
+            {
+                //Date Format:  Jul 19, 2023 11:55:07 AM or Jul 19, 2023 1:55:07 AM (one-digit hour)
+                if (!message.message.StartsWith('\t') && message.message.StartsWith("[warning]"))
+                {
+                    //start of new message
+                    if (messageAccumulator.Length > 0)
+                    {
+                        AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
+                    }
+                    logLevel= LogLevel.Warning;
+                    messageAccumulator.AppendLine(message.message);
+                }
+                else if (!message.message.StartsWith('\t') && (message.message.StartsWith("[error]") || message.message.StartsWith("error:") || message.message.StartsWith("Parse error:")))
+                {
+                    //start of new message
+                    if (messageAccumulator.Length > 0)
+                    {
+                        AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
+                    }
+                    logLevel = LogLevel.Error;
+                    messageAccumulator.AppendLine(message.message);
+                }
+                else if (!message.message.StartsWith('\t') && Regex.IsMatch(message.message, @"^[\w\.]+\.[\w]+Exception\s*$"))
+                {
+                    //start of new message
+                    if (messageAccumulator.Length > 0)
+                    {
+                        AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
+                    }
+                    logLevel = LogLevel.Error;
+                    messageAccumulator.AppendLine(message.message);
+                }
+                else if (message.message.StartsWith('\t'))
+                {
+                    //continuation of previous message
+                    messageAccumulator.AppendLine(message.message);
+                }
+                else
+                {
+                    //ret.AddRange(messages);
+                    //logLevel= LogLevel.Critical;
+                    //messageAccumulator.AppendLine("Could not find start of log message");
+                    //break;
+                    throw new Exception("Could not find start of log message");
+                }
+            }
+
+            if (messageAccumulator.Length > 0)
+            {
+                AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
+            }
+
+            return ret;
+        }
+
+        private void AppendMessage(ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)> messages)
+        {
+            if (logLevel != LogLevel.None)
+            {
+                messages.Add((logLevel, messageAccumulator.ToString().Trim()));
+                messageAccumulator.Clear();
+                logLevel = LogLevel.None;
+            }
+            else
+            {
+                throw new Exception("Unable to determine log level");
+            }
+        }
+
     }
 }
