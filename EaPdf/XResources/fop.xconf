@@ -13,6 +13,9 @@
 
 	<accessibility keep-empty-tags="false">true</accessibility>
 
+	<!-- this should be set to false or deleted for RTL or certain other langauges, see https://xmlgraphics.apache.org/fop/2.8/complexscripts.html -->
+	<complex-scripts disabled="true"/>
+
 	<renderers>
 		<renderer mime="application/pdf">
 			<pdf-a-mode>PDF/A-3u</pdf-a-mode>
