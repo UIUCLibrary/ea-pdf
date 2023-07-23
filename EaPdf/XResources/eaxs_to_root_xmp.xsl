@@ -70,7 +70,7 @@
 					<pdf:PDFVersion>1.7</pdf:PDFVersion>
 
 					<pdfaid:part>3</pdfaid:part>
-					<pdfaid:conformance>U</pdfaid:conformance>
+					<pdfaid:conformance>A</pdfaid:conformance>
 
 					<pdfmailid:part>1</pdfmailid:part>
 					<pdfmailid:rev>2022</pdfmailid:rev>

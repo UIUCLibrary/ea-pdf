@@ -26,9 +26,9 @@
 			<option name="COMPRESS" value="false"/><!-- false for debugging -->
 			<option name="DROP_UNUSED_DESTINATIONS" value="false"/><!-- must be false so that DPart logic works to find start and end pages of a message -->
 
-			<!-- Set to PDF/A-3.  XEP does not support any higher PDF version than 1.4 if using PDF/A-3. XEP does not support the '3u' compliance level. This can be overridden in the XMP metadata.-->
+			<!-- Set to PDF/A-3a.  XEP does not support any higher PDF version than 1.4 if using PDF/A-3. The version and PDF/A levels can be overridden in the XMP metadata during post-processing .-->
 			<option name="PDF_VERSION" value="1.4"/>
-			<option name="PDF_A" value="pdf-a-3b"/>
+			<option name="PDF_A" value="pdf-a-3a"/>
 		</generator-options>
 
 	</options>
