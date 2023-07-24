@@ -1221,14 +1221,25 @@ namespace UIUCLibrary.EaPdf
                 {
                     WriteToLogWarningMessage(xwriter, "The message does not have a From header.");
                 }
-                if (message.Headers[HeaderId.Date] == null)
-                {
-                    WriteToLogWarningMessage(xwriter, "The message does not have a Date header.");
-                }
+
                 if (message.Headers[HeaderId.To] == null && message.Headers[HeaderId.Cc] == null && message.Headers[HeaderId.Bcc] == null)
                 {
                     WriteToLogWarningMessage(xwriter, "The message does not have a To, Cc, or Bcc.");
                 }
+
+                if (message.Headers[HeaderId.Date] == null)
+                {
+                    WriteToLogWarningMessage(xwriter, "The message does not have a Date header.");
+                }
+                else if (message.Headers[HeaderId.Date] != null && string.IsNullOrWhiteSpace(message.Headers[HeaderId.Date])) //Date is set to blank value
+                {
+                    WriteToLogWarningMessage(xwriter, "The message has a blank or empty Date header.");
+                }
+                else if (message.Headers[HeaderId.Date] != null && message.Date == DateTimeOffset.MinValue) //Date is set to the min value if the date is missing or cannot be parsed
+                {
+                    WriteToLogWarningMessage(xwriter, $"Unable to parse invalid date: '{message.Headers[HeaderId.Date]}'");
+                }
+
             }
             else
             {
@@ -1338,7 +1349,7 @@ namespace UIUCLibrary.EaPdf
         private void WriteAllMessageHeaders(XmlWriter xwriter, MimeMessage message)
         {
             xwriter.WriteStartElement("Headers", XM_NS);
-            foreach (var hdr in message.Headers.Where(h => !string.IsNullOrWhiteSpace(h.Value))) //All headers that have values even if already covered above
+            foreach (var hdr in message.Headers.Where(h => h.Value != null)) //All headers that have values even if already covered above
             {
                 xwriter.WriteStartElement("Header", XM_NS);
 
