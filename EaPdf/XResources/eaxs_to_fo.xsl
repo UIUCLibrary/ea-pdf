@@ -60,6 +60,7 @@
 			<!-- Add ICC color profile -->
 			<xsl:processing-instruction name="xep-pdf-icc-profile">url(<xsl:value-of select="$icc-profile"/>)</xsl:processing-instruction>
 			<xsl:processing-instruction name="xep-pdf-view-mode">show-bookmarks</xsl:processing-instruction>
+			<!-- XEP doesn't seem to have support for /ViewerPreferences/NonFullScreenPageMode/UseOutlines -->
 		</xsl:if>
 		
 		<fo:root xml:lang="en">
@@ -313,6 +314,7 @@
 			<fo:declarations>
 				<pdf:catalog>
 					<pdf:name key="PageMode">UseOutlines</pdf:name>
+					<!-- TODO:  Maybe set /ViewerPreferences/NonFullScreenPageMode/UseOutlines -->
 				</pdf:catalog>
 				<xsl:call-template name="declarations-attachments"/>
 				<xsl:if test="fn:lower-case(normalize-space($generate-xmp)) = 'true'">
