@@ -876,20 +876,31 @@ namespace UIUCLibrary.EaPdf
                 throw new Exception($"Unexpected MessageFormat '{msgFileProps.MessageFormat}'; skipping file ");
             }
 
-            string? subfolderName;
-            try
+            string? subfolderName = null;
+
+            string[]? subfolders = Directory.GetDirectories(msgFileProps.MessageDirectoryName, $"{msgFileProps.MessageFileName}.*"); //first look for folders matching the parent name, including extension
+            if(subfolders == null || subfolders.Length == 0)
             {
-                subfolderName = Directory.GetDirectories(msgFileProps.MessageDirectoryName, $"{msgFileProps.MessageFileName}.*").SingleOrDefault();
+                //if not found, look for names matching the parent without extension
+                subfolders = Directory.GetDirectories(msgFileProps.MessageDirectoryName, $"{Path.GetFileNameWithoutExtension(msgFileProps.MessageFileName)}.*");
             }
-            catch (InvalidOperationException)
-            {
-                WriteToLogErrorMessage(xwriter, $"There is more than one folder that matches '{msgFileProps.MessageFileName}.*'; skipping all subfolders");
-                subfolderName = null;
-            }
-            catch (Exception ex)
-            {
-                WriteToLogErrorMessage(xwriter, $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}");
-                subfolderName = null;
+
+            if(subfolders != null)
+            { 
+                try
+                {
+                    subfolderName = subfolders.SingleOrDefault();
+                }
+                catch (InvalidOperationException)
+                {
+                    WriteToLogErrorMessage(xwriter, $"There is more than one folder that matches '{msgFileProps.MessageFileName}.*'; skipping all subfolders");
+                    subfolderName = null;
+                }
+                catch (Exception ex)
+                {
+                    WriteToLogErrorMessage(xwriter, $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}");
+                    subfolderName = null;
+                }
             }
 
             return subfolderName;
