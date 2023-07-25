@@ -59,6 +59,7 @@
 		<xsl:if test="$fo-processor='xep'">
 			<!-- Add ICC color profile -->
 			<xsl:processing-instruction name="xep-pdf-icc-profile">url(<xsl:value-of select="$icc-profile"/>)</xsl:processing-instruction>
+			<xsl:processing-instruction name="xep-pdf-view-mode">show-bookmarks</xsl:processing-instruction>
 		</xsl:if>
 		
 		<fo:root xml:lang="en">
@@ -310,6 +311,9 @@
 	<xsl:template name="declarations">
 		<xsl:if test="$fo-processor='fop'">
 			<fo:declarations>
+				<pdf:catalog>
+					<pdf:name key="PageMode">UseOutlines</pdf:name>
+				</pdf:catalog>
 				<xsl:call-template name="declarations-attachments"/>
 				<xsl:if test="fn:lower-case(normalize-space($generate-xmp)) = 'true'">
 					<xsl:call-template name="xmp"/>
