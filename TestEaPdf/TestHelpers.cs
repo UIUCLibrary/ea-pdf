@@ -36,6 +36,47 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
+        public static string CalculateHash(string algName, byte[] byts)
+        {
+            byte[] hash = Array.Empty<byte>();
+
+            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+
+            try
+            {
+                hash = alg.ComputeHash(byts);
+            }
+            catch
+            {
+                hash = Array.Empty<byte>();
+            }
+
+            return Convert.ToHexString(hash);
+
+        }
+
+        public static string CalculateHash(string algName, byte[] byts, int offset, int count)
+        {
+            byte[] hash = Array.Empty<byte>();
+
+            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+
+            try
+            {
+                hash = alg.ComputeHash(byts, offset, count);
+            }
+            catch
+            {
+                hash = Array.Empty<byte>();
+            }
+
+            return Convert.ToHexString(hash);
+
+        }
+
+
+
+
         public static List<string> GetExpectedFiles(bool oneFilePerMbox, string sampleFile, string outFolder)
         {
             List<string> expectedXmlFiles = new();
@@ -147,7 +188,7 @@ namespace UIUCLibrary.TestEaPdf
 
             int ret = RunCmd(VERAPDF_PATH, args, workDir, out string stdOut, out string stdErr);
 
-            if(ret != 0) 
+            if (ret != 0)
             {
                 Debug.WriteLine(stdOut);
                 Debug.WriteLine(stdErr);
@@ -157,7 +198,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.IsFalse(string.IsNullOrWhiteSpace(stdOut));
             Assert.IsTrue(string.IsNullOrWhiteSpace(stdErr));
 
-            XmlDocument xresult = new();  
+            XmlDocument xresult = new();
             xresult.LoadXml(stdOut);
 
             XmlElement? reports = (XmlElement?)xresult.SelectSingleNode("/report/batchSummary/validationReports");
@@ -175,12 +216,12 @@ namespace UIUCLibrary.TestEaPdf
 
             if (validationReports != null)
             {
-                foreach(XmlElement validationReport in validationReports)
+                foreach (XmlElement validationReport in validationReports)
                 {
                     var profileName = validationReport.GetAttribute("profileName");
                     var isCompliant = validationReport.GetAttribute("isCompliant");
 
-                    Assert.IsTrue(profileName.StartsWith("PDF/A-3A",StringComparison.OrdinalIgnoreCase));
+                    Assert.IsTrue(profileName.StartsWith("PDF/A-3A", StringComparison.OrdinalIgnoreCase));
                     Assert.AreEqual("true", isCompliant.ToLowerInvariant());
                 }
             }

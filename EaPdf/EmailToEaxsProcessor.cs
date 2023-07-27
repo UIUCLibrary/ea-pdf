@@ -1999,18 +1999,26 @@ namespace UIUCLibrary.EaPdf
             //set up hashing
             using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
             byte[]? hash;
-            long? fileSize = null; //FUTURE: Add support for file size
+            long? fileSize = null; 
+
+            //get the byte array of the decoded content, also the size of the decoded content, and the hash of the decoded content
+            byte[] byts;
+            using MemoryStream ms = new();
+            content.Open().CopyTo(ms); //get decoded stream and copy it to memory stream and then get an array
+            byts = ms.ToArray();
+            fileSize = byts.Length;  //actual length of decoded content
+            hash = cryptoHashAlg.ComputeHash(byts);
+
+            //reset stream positions to beginning
+            ms.Position= 0; 
+            content.Stream.Position = 0;
 
             string? encoding;
             //7bit and 8bit should be text content, so if preserving the encoding, decode it and use the streamreader with the contenttype charset, if any, to get the text and write it to the xml in a cdata section.  Default is the same as 7bit.
             if (Settings.PreserveTextAttachmentTransferEncoding && (content.Encoding == ContentEncoding.EightBit || content.Encoding == ContentEncoding.SevenBit || content.Encoding == ContentEncoding.Default))
             {
-                var baseStream = content.Open(); //get decoded stream
-                using CryptoStream cryptoStream = new(baseStream, cryptoHashAlg, CryptoStreamMode.Read);
-
-                using StreamReader reader = new(cryptoStream, part.ContentType.CharsetEncoding, true);
+                using StreamReader reader = new(ms, part.ContentType.CharsetEncoding, true);
                 xwriter.WriteCData(reader.ReadToEnd());
-                hash = cryptoHashAlg.Hash;
                 encoding = String.Empty;
                 if (content.Encoding == ContentEncoding.Default && !string.IsNullOrWhiteSpace(actualEncoding))
                 {
@@ -2022,23 +2030,14 @@ namespace UIUCLibrary.EaPdf
             //use the original content encoding in the XML
             {
                 var baseStream = content.Stream; //get un-decoded stream
-                using CryptoStream cryptoStream = new(baseStream, cryptoHashAlg, CryptoStreamMode.Read);
 
                 //treat the stream as ASCII because it is already encoded and just write it out using the same encoding
-                using StreamReader reader = new(cryptoStream, System.Text.Encoding.ASCII);
+                using StreamReader reader = new(baseStream, System.Text.Encoding.ASCII);
                 xwriter.WriteCData(reader.ReadToEnd());
-                hash = cryptoHashAlg.Hash;
                 encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
             }
             else //anything is treated as binary content, so copy to a memory stream and write it to the XML as base64
             {
-                byte[] byts;
-                using (MemoryStream ms = new())
-                {
-                    content.Open().CopyTo(ms); //get decoded stream and copy it to memory stream and then get an array
-                    byts = ms.ToArray();
-                }
-                hash = cryptoHashAlg.ComputeHash(byts);
                 xwriter.WriteBase64(byts, 0, byts.Length);
                 encoding = "base64";
             }
@@ -2050,14 +2049,14 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteElementString("TransferEncoding", XM_NS, encoding);
             }
 
-            if (fileSize != null) //FUTURE:  Add support for file size
-            {
-                xwriter.WriteElementString("FileSize", XM_NS, fileSize.ToString());
-            }
-
             if (hash != null)
             {
                 WriteHash(xwriter, hash, Settings.HashAlgorithmName);
+            }
+
+            if (fileSize != null) 
+            {
+                xwriter.WriteElementString("Size", XM_NS, fileSize.ToString());
             }
 
             xwriter.WriteEndElement(); //BodyContent

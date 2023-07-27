@@ -2,10 +2,12 @@ using Extensions.Logging.ListOfString;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MimeKit;
+using MimeKit.Encodings;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml;
 using System.Xml.Schema;
 using UIUCLibrary.EaPdf;
@@ -915,6 +917,45 @@ namespace UIUCLibrary.TestEaPdf
                         {
                             if (enc != null)
                                 Assert.AreEqual("base64", enc);
+                        }
+
+                        var hash = extdoc.SelectSingleNode("/xm:BodyContent/xm:Hash/xm:Value", xmlns)?.InnerText;
+                        var size = extdoc.SelectSingleNode("/xm:BodyContent/xm:Size", xmlns)?.InnerText;
+
+                        //Test that the hash and file size are correct in the wrapped xml
+                        IMimeDecoder? decoder = null;
+                        switch (enc)
+                        {
+                            case null:
+                            case "":
+                                decoder = new MimeKit.Encodings.PassThroughDecoder(ContentEncoding.Default); //don't really care about the encoding since we are just testing the hash and size
+                                break; 
+                            case "base64":
+                                decoder = new MimeKit.Encodings.Base64Decoder();
+                                break;
+                            case "quoted-printable":
+                                decoder = new MimeKit.Encodings.QuotedPrintableDecoder();
+                                break;
+                            case "uuencode":
+                                decoder = new MimeKit.Encodings.UUDecoder();
+                                break;
+                            case "7bit":
+                            case "8bit":
+                            case "binary":
+                                Assert.Fail($"Unexpected transfer encoding: {enc}");
+                                break;
+                            default:
+                                Assert.Fail($"Unknown transfer encoding: {enc}");
+                                break;
+                        }
+                        if(decoder != null)
+                        {
+                            var inBytes = Encoding.UTF8.GetBytes(extdoc.SelectSingleNode("/xm:BodyContent/xm:Content", xmlns)?.InnerText ?? "");
+                            int estCount = decoder.EstimateOutputLength(inBytes.Length);
+                            var outBytes = new byte[estCount];
+                            int count = decoder.Decode(inBytes, 0, inBytes.Length, outBytes);
+                            Assert.AreEqual(int.Parse(size ?? "0"), count);
+                            Assert.AreEqual(hash, TestHelpers.CalculateHash(hashAlg, outBytes, 0, count));
                         }
 
                     }

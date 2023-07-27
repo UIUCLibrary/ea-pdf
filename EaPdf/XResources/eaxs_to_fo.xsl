@@ -218,9 +218,23 @@
 							<xsl:with-param name="lbl-1">Original file: </xsl:with-param>
 							<xsl:with-param name="body-1">
 								<xsl:text>"</xsl:text><xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/><xsl:text>"</xsl:text>
-								<xsl:if test="eaxs:Size">
-									<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'0,000')"/> bytes)</fo:inline>
-								</xsl:if>
+								<xsl:choose>
+									<xsl:when test="eaxs:Size and fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='false'">
+										<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'0,000')"/> bytes)</fo:inline>
+									</xsl:when>
+									<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='true'">
+										<xsl:variable name="rel-path">
+											<xsl:call-template name="concat-path">
+												<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
+												<xsl:with-param name="path2" select="normalize-space(eaxs:RelPath)"/>
+											</xsl:call-template>
+										</xsl:variable>
+										<xsl:variable name="extSize" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Size"/>
+										<xsl:if test="$extSize">
+											<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number($extSize,'0,000')"/> bytes)</fo:inline>
+										</xsl:if>
+									</xsl:when>
+								</xsl:choose>
 							</xsl:with-param>
 							<xsl:with-param name="lbl-2">Message id: </xsl:with-param>
 							<xsl:with-param name="body-2">
