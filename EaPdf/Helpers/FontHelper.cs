@@ -26,6 +26,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             return GetDictionaryOfFonts(fontList);
         }
 
+        /// <summary>
+        /// Return a dictionary of fonts where the key is the base font family (serif, sans-serif, monospace) and the value is a list of font families in that family
+        /// This values are sorted so that the smallest font file is first in the list; this seems to make for smaller PDF files, especially for the RenderX XEP processor
+        /// </summary>
+        /// <param name="fontList"></param>
+        /// <returns></returns>
         private static Dictionary<BaseFontFamily, List<string>> GetDictionaryOfFonts(List<FontData> fontList)
         {
             var ret = new Dictionary<BaseFontFamily, List<string>>();
@@ -33,8 +39,9 @@ namespace UIUCLibrary.EaPdf.Helpers
             foreach (var group in grouped)
             {
                 var fontset = new List<string>();
-                //for a font set using unified naming scheme shorter family names usually indicate basic western fonts set, then smaller files size indicates more common languages (???)
-                foreach (var f in group.DistinctBy(g => g.Family).OrderBy(f => f.Family.Length).ThenBy(f => f.FileSize)) 
+
+                //for a font set, look in the smaller fonts first; this seems to minimize the PDF file size for RenderX XEP processor, and doesn't make much different for Apache FOP processor
+                foreach (var f in group.DistinctBy(g => g.Family).OrderBy(f => f.FileSize))
                 {
                     fontset.Add(f.Family);
                 }
@@ -176,7 +183,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
             WriteFopSubstitutions(xwriter, fontList);
                 
-                xwriter.WriteEndElement(); // fonts
+            xwriter.WriteEndElement(); // fonts
 
             xwriter.WriteEndDocument();
             xwriter.Flush();
