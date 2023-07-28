@@ -171,7 +171,7 @@
 							<xsl:with-param name="body-2">
 								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template><xsl:text>"</xsl:text>
 								<xsl:if test="eaxs:Size">
-									<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'0,000')"/> bytes)</fo:inline>
+									<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
 								</xsl:if>
 							</xsl:with-param>
 						</xsl:call-template>
@@ -191,7 +191,7 @@
 							<xsl:with-param name="body-1">
 								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template><xsl:text>"</xsl:text>
 								<xsl:if test="eaxs:Size">
-									<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'0,000')"/> bytes)</fo:inline>
+									<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
 								</xsl:if>
 							</xsl:with-param>
 							<xsl:with-param name="lbl-2">Message id: </xsl:with-param>
@@ -208,7 +208,8 @@
 		
 		<fo:list-block font-size="{$font-size}">
 			<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
-				<xsl:sort select="../eaxs:DispositionFile | ../eaxs:ContentName"/>
+				<xsl:sort select="../eaxs:DispositionFileName"/>
+				<xsl:sort select="../eaxs:ContentName"/>
 				<fo:list-item margin-top="5pt">
 					<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></fo:block></fo:list-item-label>
 					<fo:list-item-body keep-together.within-column="always">
@@ -217,10 +218,17 @@
 						<xsl:call-template name="file-list-2x2">
 							<xsl:with-param name="lbl-1">Original file: </xsl:with-param>
 							<xsl:with-param name="body-1">
-								<xsl:text>"</xsl:text><xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/><xsl:text>"</xsl:text>
+								<xsl:choose>
+									<xsl:when test="../eaxs:DispositionFileName | ../eaxs:ContentName">
+										<xsl:text>"</xsl:text><xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/><xsl:text>"</xsl:text>										
+									</xsl:when>
+									<xsl:otherwise>
+										<fo:inline xsl:use-attribute-sets="i">* No filename given *</fo:inline>
+									</xsl:otherwise>
+								</xsl:choose>
 								<xsl:choose>
 									<xsl:when test="eaxs:Size and fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='false'">
-										<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'0,000')"/> bytes)</fo:inline>
+										<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
 									</xsl:when>
 									<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='true'">
 										<xsl:variable name="rel-path">
@@ -231,7 +239,7 @@
 										</xsl:variable>
 										<xsl:variable name="extSize" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Size"/>
 										<xsl:if test="$extSize">
-											<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number($extSize,'0,000')"/> bytes)</fo:inline>
+											<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number($extSize,'#,###')"/> bytes)</fo:inline>
 										</xsl:if>
 									</xsl:when>
 								</xsl:choose>
@@ -370,7 +378,7 @@
 			</xsl:variable>
 			<pdf:embedded-file>
 				<xsl:attribute name="filename"><xsl:value-of select="$filename"/></xsl:attribute>
-				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
+				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/></xsl:attribute>
 				<xsl:attribute name="src">
 					<xsl:call-template name="data-uri">
 						<xsl:with-param name="content-type" select="../eaxs:ContentType"/>
@@ -393,7 +401,7 @@
 			</xsl:variable>
 			<pdf:embedded-file>
 				<xsl:attribute name="filename"><xsl:value-of select="$filename"/></xsl:attribute>
-				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFile | ../eaxs:ContentName"/></xsl:attribute>
+				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/></xsl:attribute>
 				<xsl:choose>
 					<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'false'">
 						<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri($rel-path, fn:base-uri())"/>)</xsl:attribute>								
@@ -1146,7 +1154,7 @@
 			<xsl:when test="fn:lower-case(normalize-space($single-body/eaxs:ContentType)) = 'text/rtf'">rtf</xsl:when>
 			
 			<!-- use the extension from the content name or disposition filename if there is one -->
-			<xsl:when test="fn:contains($single-body/eaxs:DispositionFilename,'.')"><xsl:value-of select="fn:tokenize($single-body/eaxs:DispositionFilename,'\.')[last()]"/></xsl:when>
+			<xsl:when test="fn:contains($single-body/eaxs:DispositionFileName,'.')"><xsl:value-of select="fn:tokenize($single-body/eaxs:DispositionFileName,'\.')[last()]"/></xsl:when>
 			<xsl:when test="fn:contains($single-body/eaxs:ContentName,'.')"><xsl:value-of select="fn:tokenize($single-body/eaxs:ContentName,'\.')[last()]"/></xsl:when>
 			
 			<!-- fallback to just 'bin' -->
