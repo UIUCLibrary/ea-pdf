@@ -204,55 +204,57 @@
 			</xsl:for-each>
 		</fo:list-block>
 
-		<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>File Attachments</fo:block>
-		
-		<fo:list-block font-size="{$font-size}">
-			<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
-				<xsl:sort select="../eaxs:DispositionFileName"/>
-				<xsl:sort select="../eaxs:ContentName"/>
-				<fo:list-item margin-top="5pt">
-					<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></fo:block></fo:list-item-label>
-					<fo:list-item-body keep-together.within-column="always">
-						<xsl:attribute name="id">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
-						<fox:destination><xsl:attribute name="internal-destination">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
-						<xsl:call-template name="file-list-2x2">
-							<xsl:with-param name="lbl-1">Original file: </xsl:with-param>
-							<xsl:with-param name="body-1">
-								<xsl:choose>
-									<xsl:when test="../eaxs:DispositionFileName | ../eaxs:ContentName">
-										<xsl:text>"</xsl:text><xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/><xsl:text>"</xsl:text>										
-									</xsl:when>
-									<xsl:otherwise>
-										<fo:inline xsl:use-attribute-sets="i">* No filename given *</fo:inline>
-									</xsl:otherwise>
-								</xsl:choose>
-								<xsl:choose>
-									<xsl:when test="eaxs:Size and fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='false'">
-										<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
-									</xsl:when>
-									<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='true'">
-										<xsl:variable name="rel-path">
-											<xsl:call-template name="concat-path">
-												<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
-												<xsl:with-param name="path2" select="normalize-space(eaxs:RelPath)"/>
-											</xsl:call-template>
-										</xsl:variable>
-										<xsl:variable name="extSize" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Size"/>
-										<xsl:if test="$extSize">
-											<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number($extSize,'#,###')"/> bytes)</fo:inline>
-										</xsl:if>
-									</xsl:when>
-								</xsl:choose>
-							</xsl:with-param>
-							<xsl:with-param name="lbl-2">Message id: </xsl:with-param>
-							<xsl:with-param name="body-2">
-								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="ancestor::*[eaxs:MessageId][1]/eaxs:MessageId"/></xsl:call-template><xsl:text>"</xsl:text>
-							</xsl:with-param>
-						</xsl:call-template>
-					</fo:list-item-body>
-				</fo:list-item>
-			</xsl:for-each>
-		</fo:list-block>
+		<xsl:if test="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+			<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>File Attachments</fo:block>
+			
+			<fo:list-block font-size="{$font-size}">
+				<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+					<xsl:sort select="../eaxs:DispositionFileName"/>
+					<xsl:sort select="../eaxs:ContentName"/>
+					<fo:list-item margin-top="5pt">
+						<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></fo:block></fo:list-item-label>
+						<fo:list-item-body keep-together.within-column="always">
+							<xsl:attribute name="id">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
+							<fox:destination><xsl:attribute name="internal-destination">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
+							<xsl:call-template name="file-list-2x2">
+								<xsl:with-param name="lbl-1">Original file: </xsl:with-param>
+								<xsl:with-param name="body-1">
+									<xsl:choose>
+										<xsl:when test="../eaxs:DispositionFileName | ../eaxs:ContentName">
+											<xsl:text>"</xsl:text><xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/><xsl:text>"</xsl:text>										
+										</xsl:when>
+										<xsl:otherwise>
+											<fo:inline xsl:use-attribute-sets="i">* No filename given *</fo:inline>
+										</xsl:otherwise>
+									</xsl:choose>
+									<xsl:choose>
+										<xsl:when test="eaxs:Size and fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='false'">
+											<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
+										</xsl:when>
+										<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='true'">
+											<xsl:variable name="rel-path">
+												<xsl:call-template name="concat-path">
+													<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
+													<xsl:with-param name="path2" select="normalize-space(eaxs:RelPath)"/>
+												</xsl:call-template>
+											</xsl:variable>
+											<xsl:variable name="extSize" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Size"/>
+											<xsl:if test="$extSize">
+												<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number($extSize,'#,###')"/> bytes)</fo:inline>
+											</xsl:if>
+										</xsl:when>
+									</xsl:choose>
+								</xsl:with-param>
+								<xsl:with-param name="lbl-2">Message id: </xsl:with-param>
+								<xsl:with-param name="body-2">
+									<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="ancestor::*[eaxs:MessageId][1]/eaxs:MessageId"/></xsl:call-template><xsl:text>"</xsl:text>
+								</xsl:with-param>
+							</xsl:call-template>
+						</fo:list-item-body>
+					</fo:list-item>
+				</xsl:for-each>
+			</fo:list-block>
+		</xsl:if>
 	</xsl:template>
 	
 	<!-- template for a 2-item list used for the attachments lists -->
