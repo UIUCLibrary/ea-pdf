@@ -755,6 +755,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         </xsl:choose>
       </xsl:variable>
       <xsl:choose>
+        <xsl:when test="fn:starts-with(fn:normalize-space($value),'var(') or fn:starts-with(fn:normalize-space($value),'var (')">
+          <!-- TGH Ignore any property with a var function -->
+          <xsl:message>The CSS var function is not supported; dropping '<xsl:value-of select="$name"/>: <xsl:value-of select="$value"/>'</xsl:message>
+        </xsl:when>
         <xsl:when test="$name = 'width' and (self::html:col or self::html:colgroup)">
           <xsl:attribute name="column-width">
             <xsl:value-of select="$value"/>
@@ -809,23 +813,55 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             <xsl:with-param name="font" select="$value"/>
           </xsl:call-template>          
         </xsl:when>
-        <xsl:otherwise>
+        <!-- TGH ignore some styles and transform some others -->
+        <xsl:when test="$name = 'border-radius'">
+          <!-- TGH Convert border-radius into the appropriate processor-specific extension property -->
           <xsl:choose>
-            <!-- TGH ignore some styles and transform some others -->
-            <xsl:when test="$name = 'list-style-type'"/>
-            <xsl:when test="$name = 'text-decoration-style'"/>
-            <xsl:when test="$name = 'text-decoration-color'"/>
-            <xsl:when test="$name = 'text-decoration-line'">
-              <xsl:attribute name="text-decoration">
-                <xsl:value-of select="$value"/>
-              </xsl:attribute>            
+            <xsl:when test="$fo-processor='fop'">
+              <xsl:attribute name="fox:border-radius"><xsl:value-of select="$value"/></xsl:attribute>
+            </xsl:when>
+            <xsl:when test="$fo-processor='xep'">
+              <xsl:attribute name="rx:border-radius"><xsl:value-of select="$value"/></xsl:attribute>              
             </xsl:when>
             <xsl:otherwise>
+              <xsl:message>Unexpected FO processor '<xsl:value-of select="$fo-processor"/>'; dropping '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>'</xsl:message>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:when>
+        <xsl:when test="$name = 'overflow-x' or $name = 'overflow-y'">
+          <!-- TGH Convert overflow-x and overflow-y into the just overflow -->
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it is converted to a plain 'overflow:<xsl:value-of select="$value"/>'</xsl:message>
+          <xsl:attribute name="overflow"><xsl:value-of select="$value"/></xsl:attribute>
+        </xsl:when>
+        <xsl:when test="$name = 'list-style-type'">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name = 'display'">
+          <!-- FUTURE:  May be able to convert some display property values, see the XEP xeponline-fo-translate-2.xsl stylesheet -->
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name = 'flex-wrap'">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name = 'text-decoration-style'">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name = 'text-decoration-color'">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name = 'align-items'">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name = 'text-decoration-line'">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was converted to 'text-decoration:<xsl:value-of select="$value"/>'.</xsl:message>
+          <xsl:attribute name="text-decoration">
+            <xsl:value-of select="$value"/>
+          </xsl:attribute>            
+        </xsl:when>
+        <xsl:otherwise>
               <xsl:attribute name="{$name}">
                 <xsl:value-of select="$value"/>
               </xsl:attribute>            
-            </xsl:otherwise>
-          </xsl:choose>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:if>
