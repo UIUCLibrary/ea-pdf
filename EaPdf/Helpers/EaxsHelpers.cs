@@ -1,0 +1,70 @@
+﻿using static UIUCLibrary.EaPdf.Helpers.FontHelper;
+using System.Xml;
+using SkiaSharp;
+
+namespace UIUCLibrary.EaPdf.Helpers
+{
+    class EaxsHelpers
+    {
+        private XmlDocument XDoc { get; init; } = new();
+        private string EaxsFilePath { get; init; } = string.Empty;
+
+        public EaxsHelpers(string eaxsFilePath)
+        {
+            EaxsFilePath = eaxsFilePath;
+            XDoc.Load(EaxsFilePath);
+        }
+
+        /// <summary>
+        /// Save the XSL-FO back to the same file as was opened
+        /// </summary>
+        public void SaveFoFile()
+        {
+            SaveFoFile(EaxsFilePath);
+        }
+
+        /// <summary>
+        /// Save the XSL-FO to the given file path
+        /// </summary>
+        /// <param name="eaxsFilePath"></param>
+        public void SaveFoFile(string eaxsFilePath)
+        {
+            XDoc.Save(eaxsFilePath);
+        }
+
+        /// <summary>
+        /// Based on the Unicode scripts used in the text in the EAXS file and the font settings, determine which fonts to use as the default fonts
+        /// </summary>
+        /// <param name="eaxsFilePath"></param>
+        /// <param name="settings"></param>
+        /// <returns></returns>
+        public (string serifFonts, string sansFonts, string monoFonts) GetBaseFontsToUse(EaxsToEaPdfProcessorSettings settings)
+        {
+            HashSet<string> serifFonts = new() { SERIF };
+            HashSet<string> sansSerifFonts = new() { SANS_SERIF };
+            HashSet<string> monospaceFonts = new() { MONOSPACE };
+
+
+            var text = XDoc.DocumentElement?.InnerText ?? string.Empty;
+
+            if (text != null)
+            {
+                //get the list of all scripts used in the text, ranked by how commonly they occur
+                var scripts = UnicodeScriptDetector.GetUsedScripts(text);
+
+                foreach (var script in scripts)
+                {
+                    if (script != null)
+                    {
+                        serifFonts.UnionWith((settings.GetFontFamily(script.ScriptNameShort ?? SERIF, BaseFontFamily.Serif) ?? SERIF).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                        sansSerifFonts.UnionWith((settings.GetFontFamily(script.ScriptNameShort ?? SANS_SERIF, BaseFontFamily.SansSerif) ?? SANS_SERIF).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                        monospaceFonts.UnionWith((settings.GetFontFamily(script.ScriptNameShort ?? MONOSPACE, BaseFontFamily.Monospace) ?? MONOSPACE).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    }
+                }
+            }
+
+            return (string.Join(',', serifFonts), string.Join(',', sansSerifFonts), string.Join(',', monospaceFonts));
+        }
+
+    }
+}

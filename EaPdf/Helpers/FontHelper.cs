@@ -1,9 +1,7 @@
-﻿using System.ComponentModel;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
-using Org.BouncyCastle.Ocsp;
 using RoyT.TrueType;
 using RoyT.TrueType.Helpers;
 using RoyT.TrueType.Tables.Name;
@@ -12,14 +10,26 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public class FontHelper
     {
+
+        public const string SERIF = "serif";
+        public const string SANS_SERIF = "sans-serif";
+        public const string MONOSPACE = "monospace";
+
+
         public enum BaseFontFamily
         {
-            [Description("Serif")] Serif = 0,
-            [Description("Sans-Serif")] SansSerif = 1,
-            [Description("Monospace")] Monospace = 2
+            Serif = 0,
+            SansSerif = 1,
+            Monospace = 2
         }
 
-
+        /// <summary>
+        /// Return a dictionary of fonts where the key is the base font family (serif, sans-serif, monospace) and the value is a list of font families in that family
+        /// The list of fonts is derived from a folder of font files
+        /// </summary>
+        /// <param name="fontFolder"></param>
+        /// <param name="baseFontMapping"></param>
+        /// <returns></returns>
         public static Dictionary<BaseFontFamily, List<string>> GetDictionaryOfFonts(string fontFolder, Dictionary<Regex, BaseFontFamily> baseFontMapping)
         {
             var fontList = FontData.GetList(fontFolder, baseFontMapping);
@@ -110,7 +120,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             var dict = GetDictionaryOfFonts(fonts);
 
             xwriter.WriteStartElement("font-alias");
-            xwriter.WriteAttributeString("name", BaseFontFamily.Serif.GetDescriptionLower());
+            xwriter.WriteAttributeString("name", SERIF);
             xwriter.WriteAttributeString("value", string.Join(",", dict[BaseFontFamily.Serif]));
             xwriter.WriteEndElement(); // font-alias
             xwriter.WriteStartElement("font-alias");
@@ -131,7 +141,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             xwriter.WriteEndElement(); // font-alias
 
             xwriter.WriteStartElement("font-alias");
-            xwriter.WriteAttributeString("name", BaseFontFamily.SansSerif.GetDescriptionLower());
+            xwriter.WriteAttributeString("name", SANS_SERIF);
             xwriter.WriteAttributeString("value", string.Join(",", dict[BaseFontFamily.SansSerif]));
             xwriter.WriteEndElement(); // font-alias
             xwriter.WriteStartElement("font-alias");
@@ -148,7 +158,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             xwriter.WriteEndElement(); // font-alias
 
             xwriter.WriteStartElement("font-alias");
-            xwriter.WriteAttributeString("name", BaseFontFamily.Monospace.GetDescriptionLower());
+            xwriter.WriteAttributeString("name", MONOSPACE);
             xwriter.WriteAttributeString("value", string.Join(",", dict[BaseFontFamily.Monospace]));
             xwriter.WriteEndElement(); // font-alias
             xwriter.WriteStartElement("font-alias");
@@ -249,7 +259,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             xwriter.WriteEndElement(); // font-triplet
         }
 
-        private static string GuessFontStyle(TrueTypeFont font)
+        protected internal static string GuessFontStyle(TrueTypeFont font)
         {
             var subfamily = NameHelper.GetName(NameId.FontSubfamilyName, CultureInfo.CurrentCulture, font);
 
@@ -263,7 +273,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             return style;
         }
 
-        private static string GuessFontWeight(TrueTypeFont font)
+        protected internal static string GuessFontWeight(TrueTypeFont font)
         {
             var subfamily = NameHelper.GetName(NameId.FontSubfamilyName, CultureInfo.CurrentCulture, font);
 
@@ -275,7 +285,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             return weight;
         }
 
-        private static BaseFontFamily GuessBaseFontFamily(TrueTypeFont font, Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping)
+        protected internal static BaseFontFamily GuessBaseFontFamily(TrueTypeFont font, Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping)
         {
             var family = NameHelper.GetName(NameId.FontFamilyName, CultureInfo.CurrentCulture, font);
 
@@ -297,51 +307,11 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
         }
 
-        public class FontData
+        public static bool FontContainsCharacter(TrueTypeFont font, char c)
         {
-            public string Family { get; set; } = string.Empty;
-            public string Subfamily { get; set; } = string.Empty;
-            public string Style { get; set; } = string.Empty;
-            public string Weight { get; set; } = string.Empty;
-            public string Path { get; set; } = string.Empty;
-            public BaseFontFamily BaseFamily { get; set; }
-            public long FileSize { get; set; }
-
-            public static List<FontData> GetList(string fontFolder, Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping)
-            {
-                List<FontData> fontDataList = new();
-
-                var ttfFiles = Directory.GetFiles(fontFolder, "*.ttf", SearchOption.AllDirectories);
-
-                foreach (var ttfFile in ttfFiles)
-                {
-                    var font = TrueTypeFont.FromFile(ttfFile);
-                    var family = NameHelper.GetName(NameId.FontFamilyName, CultureInfo.CurrentCulture, font);
-                    var subfamily = NameHelper.GetName(NameId.FontSubfamilyName, CultureInfo.CurrentCulture, font);
-
-                    var style = GuessFontStyle(font);
-                    var weight = GuessFontWeight(font);
-                    var bas = GuessBaseFontFamily(font, baseFontMapping);
-
-                    var fontData = new FontData
-                    {
-                        Family = family,
-                        Subfamily = subfamily,
-                        Style = style,
-                        Weight = weight,
-                        Path = ttfFile,
-                        BaseFamily = bas,
-                        FileSize = new FileInfo(ttfFile).Length
-                    };
-
-                    fontDataList.Add(fontData);
-                }
-
-                return fontDataList;
-            }
-
-
-        }
+            uint glyphIndex = GlyphHelper.GetGlyphIndex(c,font);
+            return glyphIndex != 0;
+        }   
     }
 
 }

@@ -1750,6 +1750,7 @@ namespace UIUCLibrary.EaPdf
 
         private long WriteSingleBodyContent(XmlWriter xwriter, MimePart part, long localId, bool expectingBodyContent, MessageFileProperties msgFileProps)
         {
+
             //if it is text and not an attachment, save embedded in the XML
             //FUTURE: Maybe accomodate txtPart.IsEnriched || txtPart.IsRichText instead of treating them as non-text
             if (part is TextPart txtPart && (txtPart.IsPlain || txtPart.IsHtml) && !part.IsAttachment)
@@ -1816,6 +1817,11 @@ namespace UIUCLibrary.EaPdf
                 WriteToLogWarningMessage(xwriter, warning);
             }
 
+            text = UnicodeHelpers.ReplacePuaChars(text, out List<(LogLevel level, string message)> messages);
+            WriteToLogMessages(xwriter, messages);
+
+            //text = FontHelper.PreventLigatures(text);
+
             xwriter.WriteStartElement("Content", XM_NS);
             xwriter.WriteCData(text);
             xwriter.WriteEndElement(); //Content
@@ -1831,6 +1837,11 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteContentAsXhtmlRaw(XmlWriter xwriter, string text)
         {
+            text = UnicodeHelpers.ReplacePuaChars(text, out List<(LogLevel level, string message)> messages);
+            WriteToLogMessages(xwriter, messages);
+
+            //text = FontHelper.PreventLigatures(text);
+
             xwriter.WriteStartElement("ContentAsXhtml", XM_NS);
             try
             {

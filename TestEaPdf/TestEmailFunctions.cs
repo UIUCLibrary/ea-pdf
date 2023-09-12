@@ -551,7 +551,7 @@ namespace UIUCLibrary.TestEaPdf
             string csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
             Assert.IsTrue(File.Exists(csvPathStr));
 
-            List<string> expectedXmlFiles = TestHelpers.GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
+            List<string> expectedXmlFiles = Helpers.GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
 
             return expectedXmlFiles;
         }
@@ -666,7 +666,7 @@ namespace UIUCLibrary.TestEaPdf
                 if (relInPath == "MozillaThunderbird\\Drafts")
                 {
                     //make sure each message is marked as draft
-                    TestHelpers.CheckThatAllMessagesAreDraft(xDoc, xmlns);
+                    Helpers.CheckThatAllMessagesAreDraft(xDoc, xmlns);
                 }
 
                 xRdr.Close();
@@ -846,7 +846,7 @@ namespace UIUCLibrary.TestEaPdf
                     Assert.IsTrue(File.Exists(extFilepath));
 
                     //make sure the hash values match
-                    var extHash = TestHelpers.CalculateHash(hashAlg, extFilepath);
+                    var extHash = Helpers.CalculateHash(hashAlg, extFilepath);
                     if (string.IsNullOrEmpty(extHash))
                     {
                         logger?.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
@@ -955,7 +955,7 @@ namespace UIUCLibrary.TestEaPdf
                             var outBytes = new byte[estCount];
                             int count = decoder.Decode(inBytes, 0, inBytes.Length, outBytes);
                             Assert.AreEqual(int.Parse(size ?? "0"), count);
-                            Assert.AreEqual(hash, TestHelpers.CalculateHash(hashAlg, outBytes, 0, count));
+                            Assert.AreEqual(hash, Helpers.CalculateHash(hashAlg, outBytes, 0, count));
                         }
 
                     }
@@ -1025,7 +1025,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
             Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
 
-            var expectedHash = TestHelpers.CalculateHash(hashAlg, absPath);
+            var expectedHash = Helpers.CalculateHash(hashAlg, absPath);
             Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
 
             //make sure size match
@@ -1092,7 +1092,7 @@ namespace UIUCLibrary.TestEaPdf
         /// <returns></returns>
         private bool ValidateXmlDocuments(bool oneFilePerMbox, string sampleFile, string outFolder)
         {
-            List<string> expectedXmlFiles = TestHelpers.GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
+            List<string> expectedXmlFiles = Helpers.GetExpectedFiles(oneFilePerMbox, sampleFile, outFolder);
 
             validXml = true;
 

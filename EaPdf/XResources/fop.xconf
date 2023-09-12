@@ -14,7 +14,7 @@
 	<accessibility keep-empty-tags="false">true</accessibility>
 
 	<!-- this should be set to false or deleted for RTL or certain other langauges, see https://xmlgraphics.apache.org/fop/2.8/complexscripts.html -->
-	<complex-scripts disabled="true"/>
+	<complex-scripts disabled="false"/>
 
 	<renderers>
 		<renderer mime="application/pdf">
@@ -34,8 +34,23 @@
 
 			<output-profile>sRGB2014.icc</output-profile>
 
-			<!-- Embed the primary PDF base14 fonts (expect Symbol and DingBats whose characters should already be included one of the Unicode fonts) -->
 			<fonts>
+				<font embed-url="file:///C:/WINDOWS/FONTS/TRADO.TTF">
+					<font-triplet name="Traditional Arabic" weight="normal" style="normal" />
+				</font>
+				<font embed-url="file:///C:/WINDOWS/FONTS/TRADBDO.TTF">
+					<font-triplet name="Traditional Arabic" weight="bold" style="normal" />
+				</font>
+				<font embed-url="file:///C:/WINDOWS/FONTS/SIMPO.TTF">
+					<font-triplet name="Simplified Arabic" weight="normal" style="normal" />
+				</font>
+				<font embed-url="file:///C:/WINDOWS/FONTS/SIMPBDO.TTF">
+					<font-triplet name="Simplified Arabic" weight="bold" style="normal" />
+				</font>
+				<font embed-url="file:///C:/WINDOWS/FONTS/SIMPFXO.TTF">
+					<font-triplet name="Simplified Arabic Fixed" weight="normal" style="normal" />
+				</font>
+
 				<font embed-url="Kurinto\Fonts\KurintoMono-Bd.ttf">
 					<font-triplet name="Kurinto Mono" weight="bold" style="normal" />
 				</font>
@@ -120,6 +135,7 @@
 				<font embed-url="Kurinto\Fonts_Lang\KurintoMonoTC-Rg.ttf">
 					<font-triplet name="Kurinto Mono TC" weight="normal" style="normal" />
 				</font>
+
 				<font embed-url="Kurinto\Fonts\KurintoSans-Bd.ttf">
 					<font-triplet name="Kurinto Sans" weight="bold" style="normal" />
 				</font>
@@ -228,6 +244,7 @@
 				<font embed-url="Kurinto\Fonts_Lang\KurintoSansTC-Rg.ttf">
 					<font-triplet name="Kurinto Sans TC" weight="normal" style="normal" />
 				</font>
+
 				<font embed-url="Kurinto\Fonts\KurintoText-Bd.ttf">
 					<font-triplet name="Kurinto Text" weight="bold" style="normal" />
 				</font>
@@ -337,7 +354,66 @@
 					<font-triplet name="Kurinto Text TC" weight="normal" style="normal" />
 				</font>
 			</fonts>
-		
+			
 		</renderer>
 	</renderers>
+
+	<!-- Embed the fonts; this is parsed to create the font-family attribute in the XSL-FO, so put them in the order of preference for rendering -->
+	<fonts>
+		<!-- Note that for Apache FOP font families are case sensitive-->
+		<substitutions>
+			<substitution>
+				<from font-family="serif" font-weight="normal" font-style="normal"/>
+				<to font-family="Kurinto Text"  font-weight="normal" font-style="normal"/>
+			</substitution>
+			<substitution>
+				<from font-family="serif" font-weight="normal" font-style="italic"/>
+				<to font-family="Kurinto Text"  font-weight="normal" font-style="italic"/>
+			</substitution>
+			<substitution>
+				<from font-family="serif" font-weight="bold" font-style="normal"/>
+				<to font-family="Kurinto Text"  font-weight="bold" font-style="normal"/>
+			</substitution>
+			<substitution>
+				<from font-family="serif" font-weight="bold" font-style="italic"/>
+				<to font-family="Kurinto Text"  font-weight="bold" font-style="italic"/>
+			</substitution>
+
+			<substitution>
+				<from font-family="sans-serif" font-weight="normal" font-style="normal"/>
+				<to font-family="Kurinto Sans" font-weight="normal" font-style="normal"/>
+			</substitution>
+			<substitution>
+				<from font-family="sans-serif" font-weight="normal" font-style="italic"/>
+				<to font-family="Kurinto Sans" font-weight="normal" font-style="italic"/>
+			</substitution>
+			<substitution>
+				<from font-family="sans-serif" font-weight="bold" font-style="normal"/>
+				<to font-family="Kurinto Sans" font-weight="bold" font-style="normal"/>
+			</substitution>
+			<substitution>
+				<from font-family="sans-serif" font-weight="bold" font-style="italic"/>
+				<to font-family="Kurinto Sans" font-weight="bold" font-style="italic"/>
+			</substitution>
+
+			<substitution>
+				<from font-family="monospace" font-weight="normal" font-style="normal"/>
+				<to font-family="Kurinto Mono" font-weight="normal" font-style="normal"/>
+			</substitution>
+			<substitution>
+				<from font-family="monospace" font-weight="normal" font-style="italic"/>
+				<to font-family="Kurinto Mono" font-weight="normal" font-style="italic"/>
+			</substitution>
+			<substitution>
+				<from font-family="monospace" font-weight="bold" font-style="normal"/>
+				<to font-family="Kurinto Mono" font-weight="bold" font-style="normal"/>
+			</substitution>
+			<substitution>
+				<from font-family="monospace" font-weight="bold" font-style="italic"/>
+				<to font-family="Kurinto Mono" font-weight="bold" font-style="italic"/>
+			</substitution>
+		</substitutions>
+
+	</fonts>
+
 </fop>

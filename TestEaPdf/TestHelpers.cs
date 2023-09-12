@@ -1,233 +1,530 @@
-﻿using System.IO;
-using System;
-using System.Security.Cryptography;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using RoyT.TrueType;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Xml;
-using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using System.Text;
+using UIUCLibrary.EaPdf.Helpers;
+using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
 
 namespace UIUCLibrary.TestEaPdf
 {
-    internal class TestHelpers
+    [TestClass]
+    public class TestHelpers
     {
-        const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf\\verapdf.bat";
-
-        public static string CalculateHash(string algName, string filePath)
+        [TestMethod]
+        public void TestFontContainsCharacter()
         {
-            byte[] hash = Array.Empty<byte>();
+            var ttfFile = "C:\\WINDOWS\\FONTS\\ARIBLK.TTF"; //Arial Black
 
-            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+            var ttf = TrueTypeFont.FromFile(ttfFile);
+            Assert.IsNotNull(ttf);
 
-            try
-            {
-                using var fstream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                hash = alg.ComputeHash(fstream);
-            }
-            catch
-            {
-                hash = Array.Empty<byte>();
-            }
+            char latin_a = 'a'; 
+            Assert.IsTrue(FontHelper.FontContainsCharacter(ttf, latin_a));
 
-            return Convert.ToHexString(hash);
+            char arabic_comma = '\x060C'; //not in the Arial Black font
+            Assert.IsFalse(FontHelper.FontContainsCharacter(ttf, arabic_comma));
+        }
+
+        [TestMethod]
+        public void TestGetUsedScripts()
+        {
+            const string LATIN_CD = "Latn";
+            const string LATIN_TXT = "Latin";
+
+            const string ARABIC_CD = "Arab";
+            const string ARABIC_TXT = "العربية";
+            const string ADLAM_CD = "Adlm";
+
+            const string SP2 = "  ";
+
+            const string ARAB_COMMA = "\x060C"; //this character has the common (Zyyy) script property,
+                                                //but it has extended properties and applies to just the "Arab", "Rohg", "Syrc", or "Thaa" scripts (note: arab is first in the list)
+
+            const string ARAB_TATWEEL = "\x0640"; //this character has the common (Zyyy) script property,
+                                                  //but it has extended properties and applies to just the "Adlm", "Arab", "Mand", "Mani", "Phlp", "Rohg", "Sogd", "Syrc" scripts (note: arab is second in the list)
+
+            var text = LATIN_TXT;
+            var results = GetUsedScripts(text);
+            Assert.IsNotNull(results);
+            Assert.AreEqual(1, results.Count);
+            Assert.AreEqual(LATIN_CD, results[0].ScriptNameShort);
+            Assert.AreEqual(1, results[0].Probabilty);
+
+            text = ARABIC_TXT;
+            results = GetUsedScripts(text);
+            Assert.IsNotNull(results);
+            Assert.AreEqual(1, results.Count);
+            Assert.AreEqual(ARABIC_CD, results[0].ScriptNameShort);
+            Assert.AreEqual(1, results[0].Probabilty);
+
+            text = LATIN_TXT + ARABIC_TXT;
+            results = GetUsedScripts(text);
+            Assert.IsNotNull(results);
+            Assert.AreEqual(2, results.Count);
+            Assert.AreEqual(ARABIC_CD, results[0].ScriptNameShort); //this is first because there are more arabic characters than latin characters
+            Assert.AreEqual((float)ARABIC_TXT.Length / text.Length, results[0].Probabilty);
+            Assert.AreEqual(LATIN_CD, results[1].ScriptNameShort);
+            Assert.AreEqual((float)LATIN_TXT.Length / text.Length, results[1].Probabilty);
 
         }
 
-        public static string CalculateHash(string algName, byte[] byts)
+        [TestMethod]
+        public void TestUnicodeScriptsExtended()
         {
-            byte[] hash = Array.Empty<byte>();
+            
+            const string LATIN_CD = "Latn";
+            const string LATIN_TXT = "Latin";
 
-            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+            const string ARABIC_CD = "Arab";
+            const string ARABIC_TXT = "العربية";
+            const string ADLAM_CD = "Adlm";
 
-            try
-            {
-                hash = alg.ComputeHash(byts);
-            }
-            catch
-            {
-                hash = Array.Empty<byte>();
-            }
+            const string SP2 = "  ";
 
-            return Convert.ToHexString(hash);
+            const string ARAB_COMMA = "\x060C"; //this character has the common (Zyyy) script property,
+                                           //but it has extended properties and applies to just the "Arab", "Rohg", "Syrc", or "Thaa" scripts (note: arab is first in the list)
+
+            const string ARAB_TATWEEL = "\x0640"; //this character has the common (Zyyy) script property,
+                                             //but it has extended properties and applies to just the "Adlm", "Arab", "Mand", "Mani", "Phlp", "Rohg", "Sogd", "Syrc" scripts (note: arab is second in the list)
+
+            int codePoint = char.ConvertToUtf32(ARAB_COMMA, 0);
+
+            var cps = GetCodepointScripts().SingleOrDefault(cs => cs.RangeStart <= codePoint && cs.RangeEnd >= codePoint);
+            var cpsExt = GetCodepointScriptsExtended().SingleOrDefault(cs => cs.RangeStart <= codePoint && cs.RangeEnd >= codePoint);
+
+            Assert.IsNotNull(cps);
+            Assert.IsNotNull(cpsExt);
+
+            Assert.AreEqual(ScriptType.Common, cps.Script.Type);
+            Assert.IsTrue(cpsExt.ScriptNamesShort.Contains("Arab"));
+
+
+            var test = ARAB_COMMA;
+            var offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out List<(LogLevel, string)> messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(1, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(1, offsets[0].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName);
+
+            test = LATIN_TXT + ARAB_COMMA;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(2, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(LATIN_TXT.Length, offsets[0].range.End);
+            Assert.AreEqual(LATIN_CD, offsets[0].scriptName);
+            Assert.AreEqual(LATIN_TXT.Length, offsets[1].range.Start);
+            Assert.AreEqual(test.Length, offsets[1].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[1].scriptName); //should be Arab because arab is the first script in the list of extended properties
+
+            test = LATIN_TXT + ARAB_TATWEEL;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(2, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(LATIN_TXT.Length, offsets[0].range.End);
+            Assert.AreEqual(LATIN_CD, offsets[0].scriptName);
+            Assert.AreEqual(LATIN_TXT.Length, offsets[1].range.Start);
+            Assert.AreEqual(test.Length, offsets[1].range.End);
+            Assert.AreEqual(ADLAM_CD, offsets[1].scriptName); //should be Adlm because Adlam is the first script in the list of extended properties
+
+            test = ARABIC_TXT + ARAB_COMMA;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(1, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(test.Length, offsets[0].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName);
+
+            test = ARABIC_TXT + ARAB_TATWEEL;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(1, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(test.Length, offsets[0].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+
+            test = ARAB_COMMA + ARABIC_TXT;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(1, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(test.Length, offsets[0].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName);
+
+            test = ARAB_TATWEEL + ARABIC_TXT;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(1, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(test.Length, offsets[0].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+
+            test = ARAB_TATWEEL + ARABIC_TXT + ARAB_COMMA;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(1, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(test.Length, offsets[0].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+
+            test = ARAB_TATWEEL + ARABIC_TXT + ARAB_COMMA + SP2 + ARABIC_TXT;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(1, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(test.Length, offsets[0].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+
+            test = SP2 + ARAB_TATWEEL + ARABIC_TXT + ARAB_COMMA + SP2 + ARABIC_TXT + SP2;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(1, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual(test.Length, offsets[0].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+
+            test = SP2 + LATIN_TXT + SP2 + ARAB_TATWEEL + ARABIC_TXT + ARAB_COMMA + SP2 + ARABIC_TXT + SP2;
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(2, offsets.Count);
+            Assert.AreEqual(0, offsets[0].range.Start);
+            Assert.AreEqual((SP2 + LATIN_TXT + SP2).Length, offsets[0].range.End);
+            Assert.AreEqual(LATIN_CD, offsets[0].scriptName); 
+            Assert.AreEqual((SP2 + LATIN_TXT + SP2).Length, offsets[1].range.Start);
+            Assert.AreEqual(test.Length, offsets[1].range.End);
+            Assert.AreEqual(ARABIC_CD, offsets[1].scriptName); 
 
         }
 
-        public static string CalculateHash(string algName, byte[] byts, int offset, int count)
+        [TestMethod]
+        public void TestUnicodeGetUsedScriptOffsets()
         {
-            byte[] hash = Array.Empty<byte>();
+            const string LATIN_CD = "Latn";
+            const string LATIN_TXT = "Latin";
 
-            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+            const string ARABIC_CD = "Arab";
+            const string ARABIC_TXT = "العربية";
 
-            try
+            const string SP2 = "  ";
+            const string NUM12 = "12";
+            const string CRLF = "\r\n";
+
+            List<string> commons = new()
             {
-                hash = alg.ComputeHash(byts, offset, count);
-            }
-            catch
-            {
-                hash = Array.Empty<byte>();
-            }
-
-            return Convert.ToHexString(hash);
-
-        }
-
-
-
-
-        public static List<string> GetExpectedFiles(bool oneFilePerMbox, string sampleFile, string outFolder)
-        {
-            List<string> expectedXmlFiles = new();
-
-            if (!oneFilePerMbox)
-            {
-                string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
-                Assert.IsTrue(File.Exists(xmlPathStr));
-                expectedXmlFiles.Add(xmlPathStr);
-
-                //Output might be split into multiple files
-                var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                if (files != null)
-                {
-                    expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
-                }
-            }
-            else
-            {
-                if (Directory.Exists(sampleFile))
-                {
-                    //the input path is a directory, so make sure there is one xml output file for each input file
-                    foreach (var file in Directory.GetFiles(sampleFile))
-                    {
-                        string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(file), "xml"));
-                        Assert.IsTrue(File.Exists(xmlPathStr));
-                        expectedXmlFiles.Add(xmlPathStr);
-
-                        //Output might be split into multiple files
-                        var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                        if (files != null)
-                        {
-                            expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
-                        }
-                    }
-                }
-
-            }
-
-            return expectedXmlFiles;
-        }
-
-        public static void CheckThatAllMessagesAreDraft(XmlDocument xdoc, XmlNamespaceManager xmlns)
-        {
-            var messages = xdoc.SelectNodes("/xm:Account/xm:Folder/xm:Message", xmlns);
-            if (messages != null)
-            {
-                foreach (XmlElement message in messages)
-                {
-                    var draft = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Draft']", xmlns);
-                    var deleted = message.SelectSingleNode("xm:StatusFlag[normalize-space(text()) = 'Deleted']", xmlns);
-                    //if it is deleted, it may not be marked as draft even if it is in the draft folder
-                    Assert.IsTrue(draft != null || deleted != null);
-                }
-            }
-        }
-
-        public static int RunCmd(string cmdExec, string arguments, string workingDir, out string stdOut, out string stdErr)
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = cmdExec,
-                Arguments = arguments,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
+                SP2, NUM12, CRLF, SP2 + CRLF, SP2 + NUM12, NUM12 + SP2, NUM12 + CRLF, NUM12 + SP2 + CRLF
             };
 
-            if (!string.IsNullOrWhiteSpace(workingDir))
-                psi.WorkingDirectory = workingDir;
+            //emtpy strings 
+            string? test = null;  //null string
+            var offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out List<(LogLevel, string)> messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(0, offsets.Count);
 
-            using var proc = new Process
+            test = ""; //empty string
+            offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+            Assert.IsNotNull(messages);
+            Assert.AreEqual(0, messages.Count);
+            Assert.IsNotNull(offsets);
+            Assert.AreEqual(0, offsets.Count);
+
+            foreach (var common in commons) //test with different common chars
             {
-                StartInfo = psi
-            };
-            proc.Start();
+                test = common; //simple string all common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(UnicodeScriptDetector.ScriptShortCommon, offsets[0].scriptName);
 
-            StringBuilder stdOutBldr = new();
+                string text = LATIN_TXT;
+                string script = LATIN_CD;
 
-            proc.OutputDataReceived += (object sender, DataReceivedEventArgs e) =>
-            {
-                if (!string.IsNullOrWhiteSpace(e.Data)) stdOutBldr.AppendLine(e.Data);
-            };
+                //Latin text
+                test = text; //simple latin string
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
 
-            proc.BeginOutputReadLine();
+                test = common + text; //simple latin string with leading common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
 
-            StringBuilder stdErrBldr = new();
+                test = text + common; //simple latin string with trailing common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
 
-            proc.ErrorDataReceived += (object sender, DataReceivedEventArgs e) =>
-            {
-                if (!string.IsNullOrWhiteSpace(e.Data)) stdErrBldr.AppendLine(e.Data);
-            };
+                test = common + text + common; //simple latin string with leading and trailing common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
 
-            proc.BeginErrorReadLine();
+                test = text + common + text; //simple latin string with internal common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
 
-            proc.WaitForExit();
+                test = common + text + common + text; //simple latin string with leading and internal common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
 
-            stdOut = stdOutBldr.ToString();
-            stdErr = stdErrBldr.ToString();
 
-            return proc.ExitCode;
+                test = text + common + text + common; //simple latin string with trailing and internal common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
 
+
+                test = common + text + common + text + common; //simple latin string with leading, trailing and internal common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+                text = ARABIC_TXT;
+                script = ARABIC_CD;
+
+                //Latin text
+                test = text; //simple latin string
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+                test = common + text; //simple latin string with leading common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+                test = text + common; //simple latin string with trailing common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+                test = common + text + common; //simple latin string with leading and trailing common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+                test = text + common + text; //simple latin string with internal common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+                test = common + text + common + text; //simple latin string with leading and internal common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+
+                test = text + common + text + common; //simple latin string with trailing and internal common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+
+                test = common + text + common + text + common; //simple latin string with leading, trailing and internal common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(1, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(test.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+
+                //Mixed latin and arabic
+
+                text = LATIN_TXT;
+                string text2 = ARABIC_TXT;
+                script = LATIN_CD;
+                string script2 = ARABIC_CD;
+
+                test = text + text2; //latin and arabic, no common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(2, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(text.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+                Assert.AreEqual(text.Length, offsets[1].range.Start);
+                Assert.AreEqual(test.Length, offsets[1].range.End);
+                Assert.AreEqual(script2, offsets[1].scriptName);
+
+
+                test = text2 + text; //arabic and latin, no common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(2, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(text2.Length, offsets[0].range.End);
+                Assert.AreEqual(script2, offsets[0].scriptName);
+                Assert.AreEqual(text2.Length, offsets[1].range.Start);
+                Assert.AreEqual(test.Length, offsets[1].range.End);
+                Assert.AreEqual(script, offsets[1].scriptName);
+
+                test = text + common + text2; //latin and arabic separated by common chars, separating common chars attached to latin
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(2, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(text.Length + common.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+                Assert.AreEqual(text.Length + common.Length, offsets[1].range.Start);
+                Assert.AreEqual(test.Length, offsets[1].range.End);
+                Assert.AreEqual(script2, offsets[1].scriptName);
+
+                test = common + text + common + text2; //latin and arabic with leading common chars and separated by common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(2, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(text.Length + common.Length * 2, offsets[0].range.End); //the leading and separating common chars are attached to the latin
+                Assert.AreEqual(script, offsets[0].scriptName);
+                Assert.AreEqual(text.Length + common.Length * 2, offsets[1].range.Start);
+                Assert.AreEqual(test.Length, offsets[1].range.End);
+                Assert.AreEqual(script2, offsets[1].scriptName);
+
+                test = text + common + text2 + common; //latin and arabic with trailing common chars and separated by common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(2, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(text.Length + common.Length, offsets[0].range.End);
+                Assert.AreEqual(script, offsets[0].scriptName);
+                Assert.AreEqual(text.Length + common.Length, offsets[1].range.Start);
+                Assert.AreEqual(test.Length, offsets[1].range.End); //trailing common chars attached to arabic
+                Assert.AreEqual(script2, offsets[1].scriptName);
+
+                test = common + text + common + text2 + common; //latin and arabic with leading and trailing common chars and separated by common chars
+                offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
+                Assert.IsNotNull(messages);
+                Assert.AreEqual(0, messages.Count);
+                Assert.IsNotNull(offsets);
+                Assert.AreEqual(2, offsets.Count);
+                Assert.AreEqual(0, offsets[0].range.Start);
+                Assert.AreEqual(text.Length + common.Length * 2, offsets[0].range.End); //leadings and separating common chars attached to latin   
+                Assert.AreEqual(script, offsets[0].scriptName);
+                Assert.AreEqual(text.Length + common.Length * 2, offsets[1].range.Start);
+                Assert.AreEqual(test.Length, offsets[1].range.End); //trailing common chars attached to arabic
+                Assert.AreEqual(script2, offsets[1].scriptName);
+            }
         }
-
-        public static void ValidatePdfAUsingVeraPdf(string pdfFilePath)
-        {
-            string args = $"\"{pdfFilePath}\"";
-            string workDir = Path.GetDirectoryName(pdfFilePath) ?? ".";
-
-            int ret = RunCmd(VERAPDF_PATH, args, workDir, out string stdOut, out string stdErr);
-
-            if (ret != 0)
-            {
-                Debug.WriteLine(stdOut);
-                Debug.WriteLine(stdErr);
-            }
-
-            Assert.AreEqual(0, ret);
-            Assert.IsFalse(string.IsNullOrWhiteSpace(stdOut));
-            Assert.IsTrue(string.IsNullOrWhiteSpace(stdErr));
-
-            XmlDocument xresult = new();
-            xresult.LoadXml(stdOut);
-
-            XmlElement? reports = (XmlElement?)xresult.SelectSingleNode("/report/batchSummary/validationReports");
-
-            if (reports != null)
-            {
-                var nonCompliant = reports.GetAttribute("nonCompliant");
-                var failedJobs = reports.GetAttribute("failedJobs");
-
-                Assert.AreEqual("0", nonCompliant);
-                Assert.AreEqual("0", failedJobs);
-            }
-
-            var validationReports = xresult.SelectNodes("/report/jobs/job/validationReport");
-
-            if (validationReports != null)
-            {
-                foreach (XmlElement validationReport in validationReports)
-                {
-                    var profileName = validationReport.GetAttribute("profileName");
-                    var isCompliant = validationReport.GetAttribute("isCompliant");
-
-                    Assert.IsTrue(profileName.StartsWith("PDF/A-3A", StringComparison.OrdinalIgnoreCase));
-                    Assert.AreEqual("true", isCompliant.ToLowerInvariant());
-                }
-            }
-
-        }
-
-
     }
 }

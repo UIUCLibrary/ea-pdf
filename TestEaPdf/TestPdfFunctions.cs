@@ -170,7 +170,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -206,7 +206,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -241,7 +241,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -278,7 +278,81 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
+
+                if (OPEN_PDFS)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
+        [TestMethod]
+        public void TestArabicEmailsFop()
+        {
+            if (logger != null)
+            {
+                string inPath = "Non-Western\\Arabic";
+                ConvertEmlFolderToEaxs(inPath);
+
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(inPath) ?? ".", Path.GetFileName(inPath) + "Out", Path.ChangeExtension(Path.GetFileName(inPath), "xml"));
+                var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
+                var configFile = Path.GetFullPath("XResources\\fop.xconf");
+
+                var xslt = new SaxonXsltTransformer();
+                var fop = new FopToPdfTransformer(configFile);
+                var iText = new ITextSharpPdfEnhancerFactory();
+                var set = new EaxsToEaPdfProcessorSettings();
+
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
+
+                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
+
+                Assert.IsTrue(File.Exists(pdfFile));
+
+                Assert.IsTrue(IsPdfValid(pdfFile));
+
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
+
+                if (OPEN_PDFS)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
+        [TestMethod]
+        public void TestArabicEmailsXep()
+        {
+            if (logger != null)
+            {
+                string inPath = "Non-Western\\Arabic";
+                ConvertEmlFolderToEaxs(inPath);
+
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(inPath) ?? ".", Path.GetFileName(inPath) + "Out", Path.ChangeExtension(Path.GetFileName(inPath), "xml"));
+                var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
+                var configFile = Path.GetFullPath("XResources\\xep.xml");
+
+                var xslt = new SaxonXsltTransformer();
+                var xep = new XepToPdfTransformer(configFile);
+                var iText = new ITextSharpPdfEnhancerFactory();
+                var set = new EaxsToEaPdfProcessorSettings();
+
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, xep, iText, set);
+
+                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
+
+                Assert.IsTrue(File.Exists(pdfFile));
+
+                Assert.IsTrue(IsPdfValid(pdfFile));
+
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -315,7 +389,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
@@ -352,7 +426,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.IsTrue(IsPdfValid(pdfFile));
 
-                if (VALIDATE_PDFS) TestHelpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
 
                 if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });

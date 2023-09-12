@@ -39,18 +39,21 @@ namespace UIUCLibrary.EaPdf
 
         public void ConvertEaxsToPdf(string eaxsFilePath, string pdfFilePath)
         {
-            var fontFamilies = FontHelper.GetDictionaryOfFonts(Settings.FontsFolder, Settings.BaseFontMapping);
-
             var foFilePath = Path.ChangeExtension(eaxsFilePath, ".fo");
+
+            var eaxsHelpers = new EaxsHelpers(eaxsFilePath);
+            //get fonts based on the Unicode scripts used in the text in the EAXS file and the font settings
+            var defaultFonts = eaxsHelpers.GetBaseFontsToUse(Settings);
 
             var xsltParams = new Dictionary<string, object>
             {
                 { "fo-processor-version", _xslfo.ProcessorVersion },
-                { "SerifFont", string.Join(",", fontFamilies[FontHelper.BaseFontFamily.Serif]) },
-                { "SansSerifFont", string.Join(",", fontFamilies[FontHelper.BaseFontFamily.SansSerif]) },
-                { "MonospaceFont", string.Join(",", fontFamilies[FontHelper.BaseFontFamily.Monospace]) },
+                { "SerifFont", defaultFonts.serifFonts },
+                { "SansSerifFont", defaultFonts.sansFonts },
+                { "MonospaceFont", defaultFonts.monoFonts }
             };
 
+            //first transform the EAXS to FO using XSLT
             List<(LogLevel level, string message)> messages = new();
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltFoFilePath, foFilePath, xsltParams, ref messages);
             foreach (var (level, message) in messages)
@@ -58,9 +61,17 @@ namespace UIUCLibrary.EaPdf
                 _logger.Log(level, message);
             }
 
+            //if the first transform was successful, transform the FO to PDF using one of the XSL-FO processors
             if (status == 0)
             {
                 messages.Clear();
+
+                //do some post processing on the FO file to prevent ligatures and wrap text in font-family
+                var foHelper = new XslFoHelpers(foFilePath);
+                foHelper.PreventLigatures();
+                foHelper.WrapLanguagesInFontFamily( Settings);
+                foHelper.SaveFoFile();
+
                 var status2 = _xslfo.Transform(foFilePath, pdfFilePath, ref messages);
                 foreach (var (level, message) in messages)
                 {
@@ -80,6 +91,12 @@ namespace UIUCLibrary.EaPdf
             //Delete the intermediate FO file
             File.Delete(foFilePath);
 #endif
+
+#if DEBUG
+            //save intermediate version of the PDF before post processing
+            File.Copy(pdfFilePath, Path.ChangeExtension(pdfFilePath, "pre.pdf"), true);
+#endif
+
             //Do some post processing to add metadata
             AddXmp(eaxsFilePath, pdfFilePath);
         }
@@ -143,7 +160,7 @@ namespace UIUCLibrary.EaPdf
             //Delete the intermediate XMP file
             File.Delete(xmpFilePath);
 #endif
-            
+
             return ret;
         }
 

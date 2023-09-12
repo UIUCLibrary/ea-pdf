@@ -38,6 +38,28 @@
 	<!-- ======================================================= -->
 	<fonts default-family="Kurinto Text">
 		<font-group xml:base="../Fonts/" label="Fonts" embed="true" subset="true" initial-encoding="standard">
+			<font-family name="Traditional Arabic">
+				<font>
+					<font-data ttf="C:/WINDOWS/FONTS/TRADO.ttf" />
+				</font>
+				<font weight="bold">
+					<font-data ttf="C:/WINDOWS/FONTS/TRADBDO.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Simplified Arabic">
+				<font>
+					<font-data ttf="C:/WINDOWS/FONTS/SIMPO.ttf" />
+				</font>
+				<font weight="bold">
+					<font-data ttf="C:/WINDOWS/FONTS/SIMPBDO.ttf" />
+				</font>
+			</font-family>
+			<font-family name="Simplified Arabic Fixed">
+				<font>
+					<font-data ttf="C:/WINDOWS/FONTS/SIMPFXO.ttf" />
+				</font>
+			</font-family>
+
 			<font-family name="Kurinto Mono">
 				<font weight="bold">
 					<font-data ttf="Kurinto\Fonts\KurintoMono-Bd.ttf" />
@@ -389,19 +411,22 @@
 				</font>
 			</font-family>
 		</font-group>
-		<font-alias name="serif" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
-		<font-alias name="Times" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
-		<font-alias name="Times Roman" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
-		<font-alias name="Times New Roman" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
-		<font-alias name="Times-Roman" value="Kurinto Text,Kurinto Text KM,Kurinto Text TB,Kurinto Text HK,Kurinto Text TC,Kurinto Text JP,Kurinto Text KR,Kurinto Text SC,Kurinto Text CJK" />
-		<font-alias name="sans-serif" value="Kurinto Sans,Kurinto Sans KM,Kurinto Sans TB,Kurinto Sans KR,Kurinto Sans JP,Kurinto Sans HK,Kurinto Sans TC,Kurinto Sans SC,Kurinto Sans CJK" />
-		<font-alias name="Helvetica" value="Kurinto Sans,Kurinto Sans KM,Kurinto Sans TB,Kurinto Sans KR,Kurinto Sans JP,Kurinto Sans HK,Kurinto Sans TC,Kurinto Sans SC,Kurinto Sans CJK" />
-		<font-alias name="Arial" value="Kurinto Sans,Kurinto Sans KM,Kurinto Sans TB,Kurinto Sans KR,Kurinto Sans JP,Kurinto Sans HK,Kurinto Sans TC,Kurinto Sans SC,Kurinto Sans CJK" />
-		<font-alias name="SansSerif" value="Kurinto Sans,Kurinto Sans KM,Kurinto Sans TB,Kurinto Sans KR,Kurinto Sans JP,Kurinto Sans HK,Kurinto Sans TC,Kurinto Sans SC,Kurinto Sans CJK" />
-		<font-alias name="monospace" value="Kurinto Mono,Kurinto Mono SC,Kurinto Mono HK,Kurinto Mono TC,Kurinto Mono JP,Kurinto Mono KR,Kurinto Mono CJK" />
-		<font-alias name="Courier" value="Kurinto Mono,Kurinto Mono SC,Kurinto Mono HK,Kurinto Mono TC,Kurinto Mono JP,Kurinto Mono KR,Kurinto Mono CJK" />
-		<font-alias name="Courier New" value="Kurinto Mono,Kurinto Mono SC,Kurinto Mono HK,Kurinto Mono TC,Kurinto Mono JP,Kurinto Mono KR,Kurinto Mono CJK" />
-		<font-alias name="Monospaced" value="Kurinto Mono,Kurinto Mono SC,Kurinto Mono HK,Kurinto Mono TC,Kurinto Mono JP,Kurinto Mono KR,Kurinto Mono CJK" />
+		
+		<font-alias name="serif" value="Kurinto Text" />
+		<font-alias name="Times" value="Kurinto Text" />
+		<font-alias name="Times Roman" value="Kurinto Text" />
+		<font-alias name="Times New Roman" value="Kurinto Text" />
+		<font-alias name="Times-Roman" value="Kurinto Text" />
+		
+		<font-alias name="sans-serif" value="Kurinto Sans" />
+		<font-alias name="Helvetica" value="Kurinto Sans" />
+		<font-alias name="Arial" value="Kurinto Sans" />
+		<font-alias name="SansSerif" value="Kurinto Sans" />
+		
+		<font-alias name="monospace" value="Kurinto Mono" />
+		<font-alias name="Courier" value="Kurinto Mono" />
+		<font-alias name="Courier New" value="Kurinto Mono" />
+		<font-alias name="Monospaced" value="Kurinto Mono" />
 	</fonts>
 	
 	<!-- ======================================================= -->

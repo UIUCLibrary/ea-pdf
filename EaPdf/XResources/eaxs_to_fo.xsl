@@ -3,6 +3,7 @@
 [
 <!ENTITY mdash "&#8212;" >
 <!ENTITY nbsp "&#160;" >
+<!ENTITY zwnj "&#8204;" >
 ]>
 
 <xsl:stylesheet version="2.0" 
@@ -63,7 +64,7 @@
 			<!-- XEP doesn't seem to have support for /ViewerPreferences/NonFullScreenPageMode/UseOutlines -->
 		</xsl:if>
 		
-		<fo:root xml:lang="en">
+		<fo:root>
 			<xsl:attribute name="font-family"><xsl:value-of select="$DefaultFont"/></xsl:attribute>
 			<xsl:if test="$fo-processor='xep'">
 				<xsl:call-template name="xep-metadata"/>
@@ -82,7 +83,7 @@
 			
 			<xsl:call-template name="bookmarks"/>
 			
-			<fo:page-sequence master-reference="message-page">
+			<fo:page-sequence master-reference="message-page" xml:lang="en">
 				<xsl:call-template name="static-content"/>
 				<fo:flow flow-name="xsl-region-body">
 					<xsl:call-template name="CoverPage"/>
@@ -103,7 +104,7 @@
 				</xsl:for-each>
 			</fo:page-sequence>
 			
-			<fo:page-sequence master-reference="message-page">
+			<fo:page-sequence master-reference="message-page" xml:lang="en">
 				<xsl:call-template name="static-content"/>
 				<fo:flow flow-name="xsl-region-body">
 					<xsl:call-template name="AttachmentsList"/>
@@ -117,13 +118,13 @@
 	<xsl:template name="static-content">
 		<fo:static-content flow-name="xsl-region-before">
 			<xsl:call-template name="tag-artifact"><xsl:with-param name="type" select="'Pagination'"/><xsl:with-param name="subtype" select="'Header'"/></xsl:call-template>
-			<fo:block text-align="center" margin-left="1in" margin-right="1in">Account:
+			<fo:block xml:lang="und" text-align="center" margin-left="1in" margin-right="1in">Account:
 				<xsl:value-of select="/eaxs:Account/eaxs:EmailAddress[1]"/> Folder:
 				<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Name"/></fo:block>
 		</fo:static-content>
 		<fo:static-content flow-name="xsl-region-after">
 			<xsl:call-template name="tag-artifact"><xsl:with-param name="type" select="'Pagination'"/><xsl:with-param name="subtype" select="'Footer'"/></xsl:call-template>
-			<fo:block text-align="center" margin-left="1in" margin-right="1in">
+			<fo:block xml:lang="en" text-align="center" margin-left="1in" margin-right="1in">
 				<fo:page-number/>
 			</fo:block>
 		</fo:static-content>		
@@ -148,7 +149,7 @@
 		<fo:block id="AttachmentList" xsl:use-attribute-sets="h1"><xsl:call-template name="tag-H1"/><fox:destination internal-destination="AttachmentList"/>All Attachments</fo:block>
 		
 		<fo:block background-color="beige" border="1px solid brown" padding="0.125em">
-			You may need to open the PDF reader's attachments list to download or open these files. Look for the name that matches the long random-looking string of characters in bold.
+			You may need to open the PDF reader's attachments list to download or open these f&zwnj;iles. Look for the name that matches the long random-looking string of characters in bold.
 		</fo:block>
 		
 		<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>Source Email Files</fo:block>
@@ -167,7 +168,7 @@
 							<xsl:with-param name="body-1">
 								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="fn:string-join(ancestor-or-self::eaxs:Folder/eaxs:Name,'->')"/></xsl:call-template><xsl:text>"</xsl:text>
 							</xsl:with-param>
-							<xsl:with-param name="lbl-2">Source file: </xsl:with-param>
+							<xsl:with-param name="lbl-2">Source f&zwnj;ile: </xsl:with-param>
 							<xsl:with-param name="body-2">
 								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template><xsl:text>"</xsl:text>
 								<xsl:if test="eaxs:Size">
@@ -187,7 +188,7 @@
 						<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
 						<fox:destination><xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
 						<xsl:call-template name="file-list-2x2">
-							<xsl:with-param name="lbl-1">Source file: </xsl:with-param>
+							<xsl:with-param name="lbl-1">Source f&zwnj;ile: </xsl:with-param>
 							<xsl:with-param name="body-1">
 								<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template><xsl:text>"</xsl:text>
 								<xsl:if test="eaxs:Size">
@@ -217,14 +218,14 @@
 							<xsl:attribute name="id">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
 							<fox:destination><xsl:attribute name="internal-destination">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
 							<xsl:call-template name="file-list-2x2">
-								<xsl:with-param name="lbl-1">Original file: </xsl:with-param>
+								<xsl:with-param name="lbl-1">Original f&zwnj;ile: </xsl:with-param>
 								<xsl:with-param name="body-1">
 									<xsl:choose>
 										<xsl:when test="../eaxs:DispositionFileName | ../eaxs:ContentName">
 											<xsl:text>"</xsl:text><xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/><xsl:text>"</xsl:text>										
 										</xsl:when>
 										<xsl:otherwise>
-											<fo:inline xsl:use-attribute-sets="i">* No filename given *</fo:inline>
+											<fo:inline xsl:use-attribute-sets="i">* No f&zwnj;ilename given *</fo:inline>
 										</xsl:otherwise>
 									</xsl:choose>
 									<xsl:choose>
@@ -361,7 +362,7 @@
 		<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties[eaxs:RelPath]">
 			<pdf:embedded-file>
 				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
-				<xsl:attribute name="description">Source file for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
+				<xsl:attribute name="description">Source f&zwnj;ile for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
 				<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 			</pdf:embedded-file>				
 		</xsl:for-each>
@@ -369,7 +370,7 @@
 		<xsl:for-each select="//eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
 			<pdf:embedded-file>
 				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
-				<xsl:attribute name="description">Source file for message '<xsl:value-of select="../eaxs:MessageId"/>'</xsl:attribute>
+				<xsl:attribute name="description">Source f&zwnj;ile for message '<xsl:value-of select="../eaxs:MessageId"/>'</xsl:attribute>
 				<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 			</pdf:embedded-file>				
 		</xsl:for-each>
@@ -542,7 +543,7 @@
 		<fo:block page-break-after="always"><xsl:call-template name="tag-Art"/>
 			<xsl:attribute name="id">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<fox:destination><xsl:attribute name="internal-destination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>
-			<fo:block xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H2"/><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
+			<fo:block xml:lang="en" xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H2"/><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
 			<xsl:call-template name="MessageHeaderTocAndContent"/>
 			<!-- Create named destination to the end of the message -->
 			<fo:inline><xsl:attribute name="id">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute><fox:destination><xsl:attribute name="internal-destination">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination></fo:inline>
@@ -566,7 +567,7 @@
 			<xsl:apply-templates select="eaxs:References[not(../eaxs:InReplyTo = .)]"/><!-- only references which are not already reply to's -->
 		</fo:list-block>	
 		<xsl:if test="$RenderToc='true'">
-			<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black"><xsl:call-template name="tag-H3"/>Message Contents</fo:block>
+			<fo:block xml:lang="en" xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black"><xsl:call-template name="tag-H3"/>Message Contents</fo:block>
 			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>			
 		</xsl:if>
 		<xsl:call-template name="hr"/>
@@ -586,10 +587,10 @@
 	<xsl:template match="eaxs:MessageId">
 		<fo:list-item >
 			<fo:list-item-label end-indent="label-end()" >
-				<fo:block>Message Id:</fo:block>
+				<fo:block xml:lang="en">Message Id:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="zxx">
 					<xsl:call-template name="InsertZwspAfterNonWords"/>
 				</fo:block>
 			</fo:list-item-body>
@@ -608,10 +609,10 @@
 	<xsl:template match="eaxs:OrigDate">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>Date:</fo:block>
+				<fo:block xml:lang="en">Date:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="en-us">
 					<xsl:value-of select="fn:format-dateTime(., '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>									
 				</fo:block>
 			</fo:list-item-body>
@@ -621,10 +622,10 @@
 	<xsl:template match="eaxs:From">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>From:</fo:block>
+				<fo:block xml:lang="en">From:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
 				</fo:block>
 			</fo:list-item-body>
@@ -634,10 +635,10 @@
 	<xsl:template match="eaxs:Sender">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>Sender:</fo:block>
+				<fo:block  xml:lang="en">Sender:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:call-template name="mailbox"/>
 				</fo:block>
 			</fo:list-item-body>
@@ -647,10 +648,10 @@
 	<xsl:template match="eaxs:To">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>To:</fo:block>
+				<fo:block xml:lang="en">To:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
 				</fo:block>
 			</fo:list-item-body>
@@ -660,10 +661,10 @@
 	<xsl:template match="eaxs:Cc">
 		<fo:list-item>
 			<fo:list-item-label  end-indent="label-end()">
-				<fo:block>CC:</fo:block>
+				<fo:block xml:lang="en">CC:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
 				</fo:block>
 			</fo:list-item-body>
@@ -673,10 +674,10 @@
 	<xsl:template match="eaxs:Bcc">
 		<fo:list-item>
 			<fo:list-item-label  end-indent="label-end()">
-				<fo:block>BCC:</fo:block>
+				<fo:block xml:lang="en">BCC:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
 				</fo:block>
 			</fo:list-item-body>
@@ -686,10 +687,10 @@
 	<xsl:template match="eaxs:Subject">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>Subject:</fo:block>
+				<fo:block xml:lang="en">Subject:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates/>
 				</fo:block>
 			</fo:list-item-body>
@@ -699,10 +700,10 @@
 	<xsl:template match="eaxs:Comments">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>Comments:</fo:block>
+				<fo:block xml:lang="en">Comments:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates/>
 				</fo:block>
 			</fo:list-item-body>
@@ -712,10 +713,10 @@
 	<xsl:template match="eaxs:Keywords">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>Keywords:</fo:block>
+				<fo:block xml:lang="en">Keywords:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates/>
 				</fo:block>
 			</fo:list-item-body>
@@ -725,10 +726,10 @@
 	<xsl:template match="eaxs:InReplyTo">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>In Reply To:</fo:block>
+				<fo:block xml:lang="en">In Reply To:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="zxx">
 					<xsl:call-template name="InsertZwspAfterNonWords"/>						
 				</fo:block>
 			</fo:list-item-body>
@@ -738,10 +739,10 @@
 	<xsl:template match="eaxs:References">
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
-				<fo:block>References:</fo:block>
+				<fo:block xml:lang="en">References:</fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="zxx">
 					<xsl:call-template name="InsertZwspAfterNonWords"/>
 				</fo:block>
 			</fo:list-item-body>
@@ -817,7 +818,7 @@
 				<fo:block></fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates/>
 					<xsl:call-template name="AttachmentLink"/>
 					<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and (fn:lower-case(normalize-space(.)) = 'text/plain' or fn:lower-case(normalize-space(.)) = 'text/html')">
@@ -844,10 +845,10 @@
 				<fo:block></fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates/>
 					<xsl:if test="following-sibling::eaxs:DispositionFileName">
-						<xsl:text>; filename="</xsl:text>
+						<xsl:text>; f&zwnj;ilename="</xsl:text>
 						<xsl:call-template name="escape-specials">
 							<xsl:with-param name="text"><xsl:value-of select="following-sibling::eaxs:DispositionFileName"/></xsl:with-param>
 						</xsl:call-template>
@@ -864,7 +865,7 @@
 				<fo:block ></fo:block>
 			</fo:list-item-label>
 			<fo:list-item-body start-indent="body-start()">
-				<fo:block>
+				<fo:block xml:lang="und">
 					<xsl:apply-templates/>
 				</fo:block>
 			</fo:list-item-body>
@@ -896,7 +897,7 @@
 			<xsl:choose>
 				<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
 					<!-- Only put the header if there are multiple bodies -->
-					<fo:block xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">
+					<fo:block xml:lang="en" xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">
 						<xsl:call-template name="tag-H3"/>
 						<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
 						<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
@@ -970,9 +971,19 @@
 			<xsl:when test="not(normalize-space(.) = '')">
 				<!-- treat the same as the html <pre> tag -->
 				<fo:block xsl:use-attribute-sets="pre">
-					<xsl:if test="../../eaxs:ContentLanguage">
-						<xsl:attribute name="xml:lang"><xsl:value-of select="../../eaxs:ContentLanguage"/></xsl:attribute>
+					
+					<!-- NOTE:  Using the xml:lang (or language) attribute can interfer with Apache FOP's complex script functionality -->
+					<xsl:if test="$fo-processor!='fop'">
+						<xsl:choose>
+							<xsl:when test="ancestor::*/eaxs:ContentLanguage">
+								<xsl:attribute name="xml:lang"><xsl:value-of select="ancestor::*/eaxs:ContentLanguage"/></xsl:attribute>
+							</xsl:when>
+							<xsl:otherwise>
+								<xsl:attribute name="xml:lang">en</xsl:attribute>
+							</xsl:otherwise>
+						</xsl:choose>
 					</xsl:if>
+					
 					<xsl:call-template name="process-pre"/>
 				</fo:block>			
 			</xsl:when>	
@@ -990,21 +1001,29 @@
 		<xsl:choose>
 			<xsl:when test="not(normalize-space(.) = '')">
 				<fo:block><xsl:call-template name="tag-Div"></xsl:call-template>
-					<xsl:choose>
-						<xsl:when test="html:html/@xml:lang">
-							<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/@xml:lang"/></xsl:attribute>
-						</xsl:when>
-						<xsl:when test="html:html/@lang">
-							<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/@lang"/></xsl:attribute>
-						</xsl:when>
-						<xsl:when test="html:html/html:head/html:meta[fn:lower-case(@http-equiv)='content-language']">
-							<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/html:head/html:meta[fn:lower-case(@http-equiv)='content-language']/@content"/></xsl:attribute>							
-						</xsl:when>
-						<xsl:when test="../../eaxs:ContentLanguage">
-							<xsl:attribute name="xml:lang"><xsl:value-of select="../../eaxs:ContentLanguage"/></xsl:attribute>
-						</xsl:when>
-					</xsl:choose>
-					<!-- TODO: Also try to determine xml:lang attribute from html root or html head -->
+					
+					<!-- NOTE:  Using the xml:lang (or language) attribute can interfer with Apache FOP's complex script functionality -->
+					<xsl:if test="$fo-processor!='fop'">
+						<xsl:choose>
+							<xsl:when test="html:html/@xml:lang">
+								<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/@xml:lang"/></xsl:attribute>
+							</xsl:when>
+							<xsl:when test="html:html/@lang">
+								<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/@lang"/></xsl:attribute>
+							</xsl:when>
+							<xsl:when test="html:html/html:head/html:meta[fn:lower-case(@http-equiv)='content-language']">
+								<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/html:head/html:meta[fn:lower-case(@http-equiv)='content-language']/@content"/></xsl:attribute>							
+							</xsl:when>
+							<xsl:when test="ancestor::*/eaxs:ContentLanguage">
+								<xsl:attribute name="xml:lang"><xsl:value-of select="ancestor::*/eaxs:ContentLanguage"/></xsl:attribute>
+							</xsl:when>
+							<xsl:otherwise>
+								<xsl:attribute name="xml:lang">en</xsl:attribute>
+							</xsl:otherwise>
+						</xsl:choose>
+						<!-- TODO: Also try to determine xml:lang attribute from html root or html head -->
+					</xsl:if>
+					
 					<xsl:apply-templates select="html:html/html:body/html:*"/>					
 				</fo:block>
 			</xsl:when>	
