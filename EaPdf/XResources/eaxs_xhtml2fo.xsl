@@ -73,11 +73,27 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   <!-- TGH For increased performance and also security set this to false -->
   <xsl:param name="load-external-images">false</xsl:param>
   
-  <xsl:param name="SerifFont" select="'Times'"/><!-- Used as the default -->
-  <xsl:param name="SansSerifFont" select="'Helvetica'"/>
-  <xsl:param name="MonospaceFont" select="'Courier'"/>
+  <xsl:param name="SerifFont" select="'serif'"/><!-- Used as the default -->
+  <xsl:param name="SansSerifFont" select="'sans-serif'"/>
+  <xsl:param name="MonospaceFont" select="'monospace'"/>
   
   <xsl:variable name="DefaultFont" select="$SerifFont"/>
+  
+  <!-- TGH:  Apache FOP does not support font-weight bolder or lighter, so use bold or normal instead -->
+  <xsl:variable name="Bolder">
+    <xsl:choose>
+      <xsl:when test="$fo-processor = 'fop'">bold</xsl:when>
+      <xsl:otherwise>bolder</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  <xsl:variable name="Lighter">
+    <xsl:choose>
+      <xsl:when test="$fo-processor = 'fop'">normal</xsl:when>
+      <xsl:otherwise>lighter</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  
+  
   <!--======================================================================
       Attribute Sets
   =======================================================================-->
@@ -389,7 +405,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:attribute-set>
 
   <xsl:attribute-set name="th">
-    <xsl:attribute name="font-weight">bolder</xsl:attribute>
+    <xsl:attribute name="font-weight"><xsl:value-of select="$Bolder"/></xsl:attribute>
     <xsl:attribute name="text-align">center</xsl:attribute>
     <xsl:attribute name="border">1px</xsl:attribute>
     <!--
@@ -411,14 +427,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-->
 
   <xsl:attribute-set name="b">
-    <xsl:attribute name="font-weight">bolder</xsl:attribute>
+    <xsl:attribute name="font-weight"><xsl:value-of select="$Bolder"/></xsl:attribute>
   </xsl:attribute-set>
   <xsl:attribute-set name="strong">
-    <xsl:attribute name="font-weight">bolder</xsl:attribute>
+    <xsl:attribute name="font-weight"><xsl:value-of select="$Bolder"/></xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="strong-em">
-    <xsl:attribute name="font-weight">bolder</xsl:attribute>
+    <xsl:attribute name="font-weight"><xsl:value-of select="$Bolder"/></xsl:attribute>
     <xsl:attribute name="font-style">italic</xsl:attribute>
   </xsl:attribute-set>
 
@@ -661,6 +677,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </xsl:choose>
 
     <xsl:choose>
+      <!-- NOTE: The xml:lang attribute can interfer with Apache FOP's complex script functionality -->
       <xsl:when test="@xml:lang">
         <xsl:attribute name="xml:lang">
           <xsl:value-of select="@xml:lang"/>
@@ -675,7 +692,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
     <xsl:choose>
       <!-- only create id attributes if they are unique with the whole document -->
-      <!-- TODO: Eventually we should probably rewrite non-unique ids so they are unbique -->
+      <!-- TODO: Eventually we should probably rewrite non-unique ids so they are unique -->
       <!--       This will require a bit of logoic to avoid breaking possible internal fragment id links -->
       <xsl:when test="@id and count(key('HTML_IDS',@id)) &lt;= 1">
         <xsl:attribute name="id">
@@ -730,7 +747,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         <xsl:with-param name="style" select="@style"/>
       </xsl:call-template>
     </xsl:if>
-
+    
   </xsl:template>
 
   <xsl:template name="process-style">
@@ -798,6 +815,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
               </xsl:attribute>                          
             </xsl:otherwise>
           </xsl:choose>
+        </xsl:when>
+        <!-- TGH:  Apache FOP does not support bolder or lighter, so just use bold or normal -->
+        <xsl:when test="$name = 'font-weight' and fn:lower-case(fn:normalize-space($value)) = 'bolder'">
+          <xsl:attribute name="font-weight"><xsl:value-of select="$Bolder"/></xsl:attribute>
+        </xsl:when>
+        <xsl:when test="$name = 'font-weight' and fn:lower-case(fn:normalize-space($value)) = 'lighter'">
+          <xsl:attribute name="font-weight"><xsl:value-of select="$Lighter"/></xsl:attribute>
         </xsl:when>
         <xsl:when test="$name = 'font-family'">
           <!-- TGH Map font family to one of the passed in parameters for fonts -->
