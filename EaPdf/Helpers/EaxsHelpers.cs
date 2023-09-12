@@ -1,4 +1,4 @@
-﻿using static UIUCLibrary.EaPdf.Helpers.FontHelper;
+﻿using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
 using System.Xml;
 using SkiaSharp;
 

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Xml;
 using System.Xml.Linq;
-using static UIUCLibrary.EaPdf.Helpers.FontHelper;
+using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {

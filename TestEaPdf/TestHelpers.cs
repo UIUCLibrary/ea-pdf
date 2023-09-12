@@ -21,10 +21,10 @@ namespace UIUCLibrary.TestEaPdf
             Assert.IsNotNull(ttf);
 
             char latin_a = 'a'; 
-            Assert.IsTrue(FontHelper.FontContainsCharacter(ttf, latin_a));
+            Assert.IsTrue(FontHelpers.FontContainsCharacter(ttf, latin_a));
 
             char arabic_comma = '\x060C'; //not in the Arial Black font
-            Assert.IsFalse(FontHelper.FontContainsCharacter(ttf, arabic_comma));
+            Assert.IsFalse(FontHelpers.FontContainsCharacter(ttf, arabic_comma));
         }
 
         [TestMethod]

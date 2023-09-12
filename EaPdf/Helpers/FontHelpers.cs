@@ -8,7 +8,7 @@ using RoyT.TrueType.Tables.Name;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    public class FontHelper
+    public class FontHelpers
     {
 
         public const string SERIF = "serif";
@@ -285,7 +285,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             return weight;
         }
 
-        protected internal static BaseFontFamily GuessBaseFontFamily(TrueTypeFont font, Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping)
+        protected internal static BaseFontFamily GuessBaseFontFamily(TrueTypeFont font, Dictionary<Regex, FontHelpers.BaseFontFamily> baseFontMapping)
         {
             var family = NameHelper.GetName(NameId.FontFamilyName, CultureInfo.CurrentCulture, font);
 

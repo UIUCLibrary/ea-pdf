@@ -13,7 +13,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         public string Style { get; set; } = string.Empty;
         public string Weight { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
-        public FontHelper.BaseFontFamily BaseFamily { get; set; }
+        public FontHelpers.BaseFontFamily BaseFamily { get; set; }
         public long FileSize { get; set; }
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="fontFolder"></param>
         /// <param name="baseFontMapping"></param>
         /// <returns></returns>
-        public static List<FontData> GetList(string fontFolder, Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping)
+        public static List<FontData> GetList(string fontFolder, Dictionary<Regex, FontHelpers.BaseFontFamily> baseFontMapping)
         {
             List<FontData> fontDataList = new();
 
@@ -34,9 +34,9 @@ namespace UIUCLibrary.EaPdf.Helpers
                 var family = NameHelper.GetName(NameId.FontFamilyName, CultureInfo.CurrentCulture, font);
                 var subfamily = NameHelper.GetName(NameId.FontSubfamilyName, CultureInfo.CurrentCulture, font);
 
-                var style = FontHelper.GuessFontStyle(font);
-                var weight = FontHelper.GuessFontWeight(font);
-                var bas = FontHelper.GuessBaseFontFamily(font, baseFontMapping);
+                var style = FontHelpers.GuessFontStyle(font);
+                var weight = FontHelpers.GuessFontWeight(font);
+                var bas = FontHelpers.GuessBaseFontFamily(font, baseFontMapping);
 
                 var fontData = new FontData
                 {

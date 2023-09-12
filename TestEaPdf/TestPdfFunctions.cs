@@ -57,31 +57,31 @@ namespace UIUCLibrary.TestEaPdf
         [TestMethod]
         public void TestFontList()
         {
-            Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping = new()
+            Dictionary<Regex, FontHelpers.BaseFontFamily> baseFontMapping = new()
             {
-                { new Regex("^Kurinto Mono.*") , FontHelper.BaseFontFamily.Monospace },
-                { new Regex("^Kurinto Sans.*") , FontHelper.BaseFontFamily.SansSerif },
-                { new Regex("^Kurinto Text.*") , FontHelper.BaseFontFamily.Serif }
+                { new Regex("^Kurinto Mono.*") , FontHelpers.BaseFontFamily.Monospace },
+                { new Regex("^Kurinto Sans.*") , FontHelpers.BaseFontFamily.SansSerif },
+                { new Regex("^Kurinto Text.*") , FontHelpers.BaseFontFamily.Serif }
             };
 
-            var fonts = FontHelper.GetDictionaryOfFonts("Fonts", baseFontMapping);
+            var fonts = FontHelpers.GetDictionaryOfFonts("Fonts", baseFontMapping);
 
             Assert.IsNotNull(fonts);
             Assert.IsTrue(fonts.Count > 0);
-            Assert.IsTrue(fonts.ContainsKey(FontHelper.BaseFontFamily.Serif));
+            Assert.IsTrue(fonts.ContainsKey(FontHelpers.BaseFontFamily.Serif));
         }
 
         [TestMethod]
         public void TestXepFontConfig()
         {
-            Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping = new()
+            Dictionary<Regex, FontHelpers.BaseFontFamily> baseFontMapping = new()
             {
-                { new Regex("^Kurinto Mono.*") , FontHelper.BaseFontFamily.Monospace },
-                { new Regex("^Kurinto Sans.*") , FontHelper.BaseFontFamily.SansSerif },
-                { new Regex("^Kurinto Text.*") , FontHelper.BaseFontFamily.Serif }
+                { new Regex("^Kurinto Mono.*") , FontHelpers.BaseFontFamily.Monospace },
+                { new Regex("^Kurinto Sans.*") , FontHelpers.BaseFontFamily.SansSerif },
+                { new Regex("^Kurinto Text.*") , FontHelpers.BaseFontFamily.Serif }
             };
 
-            var fonts = FontHelper.GenerateXepFontsConfig(@"Fonts", baseFontMapping);
+            var fonts = FontHelpers.GenerateXepFontsConfig(@"Fonts", baseFontMapping);
 
             Assert.IsFalse(string.IsNullOrWhiteSpace(fonts));
 
@@ -110,14 +110,14 @@ namespace UIUCLibrary.TestEaPdf
         [TestMethod]
         public void TestFopFontConfig()
         {
-            Dictionary<Regex, FontHelper.BaseFontFamily> baseFontMapping = new()
+            Dictionary<Regex, FontHelpers.BaseFontFamily> baseFontMapping = new()
             {
-                { new Regex("^Kurinto Mono.*") , FontHelper.BaseFontFamily.Monospace },
-                { new Regex("^Kurinto Sans.*") , FontHelper.BaseFontFamily.SansSerif },
-                { new Regex("^Kurinto Text.*") , FontHelper.BaseFontFamily.Serif }
+                { new Regex("^Kurinto Mono.*") , FontHelpers.BaseFontFamily.Monospace },
+                { new Regex("^Kurinto Sans.*") , FontHelpers.BaseFontFamily.SansSerif },
+                { new Regex("^Kurinto Text.*") , FontHelpers.BaseFontFamily.Serif }
             };
 
-            var fonts = FontHelper.GenerateFopFontsConfig(@"Fonts", baseFontMapping);
+            var fonts = FontHelpers.GenerateFopFontsConfig(@"Fonts", baseFontMapping);
 
             Assert.IsFalse(string.IsNullOrWhiteSpace(fonts));
 
