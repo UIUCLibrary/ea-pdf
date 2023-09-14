@@ -47,7 +47,7 @@
 			<xsl:when test="$fo-processor='xep'"/>
 			<xsl:otherwise>
 				<xsl:message terminate="yes">
-					The value '<xsl:value-of select="$fo-processor"/>' is not a valid value for fo-processor param; the only allowed values are 'fop' and 'xep'.
+					<xsl:text>Error: The value '</xsl:text><xsl:value-of select="$fo-processor-version"/><xsl:text>' is not a valid value for fo-processor-version param; allowed values must start with 'FOP' and 'XEP'.</xsl:text>
 				</xsl:message>
 			</xsl:otherwise>
 		</xsl:choose>

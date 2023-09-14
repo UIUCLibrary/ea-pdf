@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Ocsp;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -28,7 +29,14 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 List<(LogLevel level, string message)> messages = new();
                 _ = RunMainClass(MAIN_CLASS, args, ref messages);
 
-                return messages[0].message;
+                LogLevel lvl = messages[0].level;
+                string ret = messages[0].message;
+                if (!ret.StartsWith("XEP", StringComparison.OrdinalIgnoreCase))
+                {
+                    ret = "UNKNOWN VERSION";
+                }
+
+                return ret;
             }
         }
 
@@ -76,33 +84,15 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 //Date Format:  Jul 19, 2023 11:55:07 AM or Jul 19, 2023 1:55:07 AM (one-digit hour)
                 if (!message.message.StartsWith('\t') && message.message.StartsWith("[warning]"))
                 {
-                    //start of new message
-                    if (messageAccumulator.Length > 0)
-                    {
-                        AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
-                    }
-                    logLevel= LogLevel.Warning;
-                    messageAccumulator.AppendLine(message.message);
+                    StartNewMessage(message.message, LogLevel.Warning, ref logLevel, ref messageAccumulator, ref ret);
                 }
                 else if (!message.message.StartsWith('\t') && (message.message.StartsWith("[error]") || message.message.StartsWith("error:") || message.message.StartsWith("Parse error:")))
                 {
-                    //start of new message
-                    if (messageAccumulator.Length > 0)
-                    {
-                        AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
-                    }
-                    logLevel = LogLevel.Error;
-                    messageAccumulator.AppendLine(message.message);
+                    StartNewMessage(message.message, LogLevel.Error, ref logLevel, ref messageAccumulator, ref ret);
                 }
                 else if (!message.message.StartsWith('\t') && Regex.IsMatch(message.message, @"^[\w\.]+\.[\w]+Exception\s*$"))
                 {
-                    //start of new message
-                    if (messageAccumulator.Length > 0)
-                    {
-                        AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
-                    }
-                    logLevel = LogLevel.Error;
-                    messageAccumulator.AppendLine(message.message);
+                    StartNewMessage(message.message, LogLevel.Error, ref logLevel, ref messageAccumulator, ref ret);
                 }
                 else if (message.message.StartsWith('\t'))
                 {
@@ -123,23 +113,18 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
             }
-
             return ret;
         }
 
-        private void AppendMessage(ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)> messages)
+        private void StartNewMessage(string message, LogLevel newLevel, ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)>  ret)
         {
-            if (logLevel != LogLevel.None)
+            if (messageAccumulator.Length > 0)
             {
-                messages.Add((logLevel, messageAccumulator.ToString().Trim()));
-                messageAccumulator.Clear();
-                logLevel = LogLevel.None;
+                AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
             }
-            else
-            {
-                throw new Exception("Unable to determine log level");
-            }
-        }
+            logLevel = LogLevel.Error;
+            messageAccumulator.AppendLine(message);
 
+        }
     }
 }

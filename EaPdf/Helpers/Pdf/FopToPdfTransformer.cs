@@ -29,7 +29,14 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 List<(LogLevel level, string message)> messages = new();
                 _ = RunExecutableJar(JarFilePath, args, ref messages);
 
-                return messages[0].message;
+                LogLevel lvl = messages[0].level;
+                string ret = messages[0].message;
+                if (!ret.StartsWith("FOP",StringComparison.OrdinalIgnoreCase))
+                {
+                    ret = "UNKNOWN VERSION";
+                }
+
+                return ret;
             }
         }
 
@@ -65,7 +72,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         private List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
         {
 
-            //FOP has one log message per multiple lines which could be infom warn, or error
+            //FOP has one log message per multiple lines which could be info, warn, or error
             //The first line of the message is the date and time, the second line is the log level, and the rest of the lines are the message
 
             List<(LogLevel level, string message)> ret = new();
@@ -122,18 +129,5 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             return ret;
         }
 
-        private void AppendMessage(ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)> messages)
-        {
-            if (logLevel != LogLevel.None)
-            {
-                messages.Add((logLevel, messageAccumulator.ToString().Trim()));
-                messageAccumulator.Clear();
-                logLevel = LogLevel.None;
-            }
-            else
-            {
-                throw new Exception("Unable to determine log level");
-            }
-        }
     }
 }

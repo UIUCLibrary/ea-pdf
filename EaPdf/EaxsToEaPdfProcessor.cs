@@ -53,8 +53,9 @@ namespace UIUCLibrary.EaPdf
                 { "MonospaceFont", defaultFonts.monoFonts }
             };
 
-            //first transform the EAXS to FO using XSLT
             List<(LogLevel level, string message)> messages = new();
+
+            //first transform the EAXS to FO using XSLT
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltFoFilePath, foFilePath, xsltParams, ref messages);
             foreach (var (level, message) in messages)
             {

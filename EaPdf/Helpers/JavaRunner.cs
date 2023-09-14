@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Text;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
@@ -99,6 +100,9 @@ namespace UIUCLibrary.EaPdf.Helpers
             if(!string.IsNullOrWhiteSpace(workingDir))
                 psi.WorkingDirectory = workingDir ;
 
+            Console.WriteLine($"Running: {psi.FileName} {psi.Arguments}");
+            Console.WriteLine($"Working Directory: {psi.WorkingDirectory}");
+
             using var proc = new Process
             {
                 StartInfo = psi
@@ -128,5 +132,21 @@ namespace UIUCLibrary.EaPdf.Helpers
             return proc.ExitCode;
 
         }
+
+        //used by child subclasses to convert message lines to the correct log level and granularity
+        protected void AppendMessage(ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)> messages)
+        {
+            if (logLevel != LogLevel.None)
+            {
+                messages.Add((logLevel, messageAccumulator.ToString().Trim()));
+                messageAccumulator.Clear();
+                logLevel = LogLevel.None;
+            }
+            else
+            {
+                throw new Exception("Unable to determine log level");
+            }
+        }
+
     }
 }
