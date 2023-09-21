@@ -927,6 +927,20 @@
 					</documentation>
 				</annotation>
 			</element>
+			<element name="Created" type="dateTime" minOccurs="0">
+				<annotation>
+					<documentation>
+						TGH 2023-09-19 This is the date/time that the mbox or eml files was created, usually based on the file system property
+					</documentation>
+				</annotation>
+			</element>
+			<element name="Modified" type="dateTime" minOccurs="0">
+				<annotation>
+					<documentation>
+						TGH 2023-09-19 This is the date/time that the mbox or eml files was last modified, usually based on the file system property
+					</documentation>
+				</annotation>
+			</element>
 			<element name="MessageCount" type="long" minOccurs="0">
 				<annotation>
 					<documentation>

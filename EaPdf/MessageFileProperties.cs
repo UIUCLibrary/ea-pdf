@@ -306,16 +306,21 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        public long FileSize
+        FileInfo? _fileInfo;
+        public FileInfo? FileInfo
         {
             get
             {
                 if (!string.IsNullOrWhiteSpace(MessageFilePath) && File.Exists(MessageFilePath))
-                    return new FileInfo(MessageFilePath).Length;
-                else 
-                    return -1;
+                {
+                    _fileInfo ??= new FileInfo(MessageFilePath);
+                    return _fileInfo;
+                }
+                else
+                    return null;
             }
         }
+
 
         public bool AlreadySerialized { get; set; } = false;
     }

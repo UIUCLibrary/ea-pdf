@@ -780,14 +780,18 @@ namespace UIUCLibrary.EaPdf
                     WriteToLogWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
                 }
 
-                if (msgFileProps.FileSize >= 0)
+                if (msgFileProps.FileInfo != null)
                 {
-                    xwriter.WriteElementString("Size", XM_NS, msgFileProps.FileSize.ToString());
+                    xwriter.WriteElementString("Size", XM_NS, msgFileProps.FileInfo.Length.ToString());
+                    xwriter.WriteElementString("Created", XM_NS, msgFileProps.FileInfo.CreationTimeUtc.ToString("yyyy-MM-ddTHH:mm:ssK"));
+                    xwriter.WriteElementString("Modified", XM_NS, msgFileProps.FileInfo.LastWriteTimeUtc.ToString("yyyy-MM-ddTHH:mm:ssK"));
                 }
                 else
                 {
-                    WriteToLogWarningMessage(xwriter, $"Unable to determine the size of the Mbox");
+                    WriteToLogWarningMessage(xwriter, $"Unable to determine the file properties");
                 }
+
+
 
                 xwriter.WriteElementString("MessageCount", XM_NS, msgFileProps.MessageCount.ToString());
 
