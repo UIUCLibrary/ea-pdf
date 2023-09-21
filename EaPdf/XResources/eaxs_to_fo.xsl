@@ -27,9 +27,9 @@
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no" cdata-section-elements="rx:custom-meta"/>
 	
 	<!-- The font-family values to use for serif, sans-serif, and monospace fonts repsectively -->
-	<xsl:param name="SerifFont" select="'Times'"/>
-	<xsl:param name="SansSerifFont" select="'Helvetica'"/>
-	<xsl:param name="MonospaceFont" select="'Courier'"/>
+	<xsl:param name="SerifFont" select="'serif'"/>
+	<xsl:param name="SansSerifFont" select="'sans-serif'"/>
+	<xsl:param name="MonospaceFont" select="'monospace'"/>
 	<xsl:variable name="DefaultFont" select="$SerifFont"/><!-- Used as the default at the root level of the document, and anywhere else that needs a font which can't be definitely determined -->
 	
 	<xsl:param name="icc-profile" select="'file:/C:/Program Files/RenderX/XEP/sRGB2014.icc'"/>
@@ -554,7 +554,7 @@
 		<xsl:param name="RenderToc">true</xsl:param>
 		<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:MessageId"/>
-			<xsl:apply-templates select="eaxs:OrigDate[not('0001-01-01T00:00:00Z')]"/> <!-- MimeKit seems to use this as the default value if there is no date -->
+			<xsl:apply-templates select="eaxs:OrigDate"/> <!-- MimeKit seems to use this as the default value if there is no date -->
 			<xsl:apply-templates select="eaxs:From"/>
 			<xsl:apply-templates select="eaxs:Sender"/>
 			<xsl:apply-templates select="eaxs:To"/>
@@ -607,16 +607,18 @@
 	</xsl:template>
 
 	<xsl:template match="eaxs:OrigDate">
-		<fo:list-item>
-			<fo:list-item-label end-indent="label-end()">
-				<fo:block xml:lang="en">Date:</fo:block>
-			</fo:list-item-label>
-			<fo:list-item-body start-indent="body-start()">
-				<fo:block xml:lang="en-us">
-					<xsl:value-of select="fn:format-dateTime(., '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>									
-				</fo:block>
-			</fo:list-item-body>
-		</fo:list-item>
+		<xsl:if test="fn:year-from-dateTime(.) != 1"> <!-- MimeKit seems to use '0001-01-01T00:00:00Z' as the default value if there is no date -->
+			<fo:list-item>
+				<fo:list-item-label end-indent="label-end()">
+					<fo:block xml:lang="en">Date:</fo:block>
+				</fo:list-item-label>
+				<fo:list-item-body start-indent="body-start()">
+					<fo:block xml:lang="en-us">
+						<xsl:value-of select="fn:format-dateTime(., '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/>									
+					</fo:block>
+				</fo:list-item-body>
+			</fo:list-item>
+		</xsl:if>
 	</xsl:template>
 
 	<xsl:template match="eaxs:From">
