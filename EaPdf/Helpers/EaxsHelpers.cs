@@ -4,15 +4,17 @@ using SkiaSharp;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    class EaxsHelpers
+    public class EaxsHelpers
     {
-        private XmlDocument XDoc { get; init; } = new();
+
+        public XmlDocument EaxsDocument { get; init; } = new();
+
         private string EaxsFilePath { get; init; } = string.Empty;
 
         public EaxsHelpers(string eaxsFilePath)
         {
             EaxsFilePath = eaxsFilePath;
-            XDoc.Load(EaxsFilePath);
+            EaxsDocument.Load(EaxsFilePath);
         }
 
         /// <summary>
@@ -29,7 +31,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="eaxsFilePath"></param>
         public void SaveFoFile(string eaxsFilePath)
         {
-            XDoc.Save(eaxsFilePath);
+            EaxsDocument.Save(eaxsFilePath);
         }
 
         /// <summary>
@@ -45,7 +47,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             HashSet<string> monospaceFonts = new() { MONOSPACE };
 
 
-            var text = XDoc.DocumentElement?.InnerText ?? string.Empty;
+            var text = EaxsDocument.DocumentElement?.InnerText ?? string.Empty;
 
             if (text != null)
             {
