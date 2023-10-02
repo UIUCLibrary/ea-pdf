@@ -8,6 +8,9 @@ namespace UIUCLibrary.EaPdf
     /// </summary>
     public class EmailToEaxsProcessorSettings
     {
+        public const string MBOX_FILE_EXTENSION = ".mbox";
+        public const string EML_FILE_EXTENSION = ".eml";
+
         /// <summary>
         /// The name of the HashAlgorithm to use, must be one of the values in the System.Security.Cryptography.HashAlgorithmNames class.
         /// Default is SHA256
@@ -77,11 +80,27 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public LogLevel LogToXmlThreshold { get; set; } = LogLevel.Information;
 
+        private string _defaultFileExtension = MBOX_FILE_EXTENSION;
         /// <summary>
         /// If the source input file does not have a filename extension, this is the value that should be used.
-        /// It should not include the leading period.
+        /// It should include the leading period.
         /// </summary>
-        public string DefaultFileExtension { get; set; } = "mbox";
+        public string DefaultFileExtension
+        {
+            get
+            { 
+                return _defaultFileExtension;
+            }
+            set
+            {
+                if (value == null || value.Length == 0)
+                    throw new Exception("DefaultFileExtension cannot be null or empty");
+                else if (value[0] != '.')
+                    throw new Exception("DefaultFileExtension must start with a period");
+                else
+                    _defaultFileExtension = value.ToLowerInvariant();
+            }
+        }
 
         /// <summary>
         /// Skip processing of all messages until this MessageId is reached, then proceed as normal
@@ -102,7 +121,7 @@ namespace UIUCLibrary.EaPdf
         /// <summary>
         /// Extra non-standard HTML character entities to add to the list of entities that are converted to their Unicode equivalent
         /// </summary>
-        public Dictionary<string, int>? ExtraHtmlCharacterEntities { get; set; } = new Dictionary<string, int>(){ { "QUOT", 0x22} };
+        public Dictionary<string, int>? ExtraHtmlCharacterEntities { get; set; } = new Dictionary<string, int>() { { "QUOT", 0x22 } };
 
         public void WriteSettings(XmlWriter xwriter)
         {

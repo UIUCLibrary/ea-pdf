@@ -62,6 +62,9 @@
 			
 			2023-05-03
 			* Add SAA DACS metadata to the metadata at the account level and the folder level
+			
+			20223-09-27
+			* Added ContentType to file-props-type to record the MIME type of the message source files
 
 		</documentation>
 	</annotation>
@@ -761,19 +764,34 @@
 					</documentation>
 				</annotation>
 			</element>
+			<element name="XMLHash" type="xm:hash-type" minOccurs="0">
+				<annotation>
+					<documentation>
+						The results of some hash function computed on the entire contents of the
+						external XML file.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="XMLSize" type="long" minOccurs="0">
+				<annotation>
+					<documentation>
+						TGH 2022-11-30 This is the size of the external XML file, counting the same bytes that were used to calculate the Hash.
+					</documentation>
+				</annotation>
+			</element>
 			<element name="Eol" type="xm:eol-type" minOccurs="0"/>
 			<element name="Hash" type="xm:hash-type" minOccurs="0">
 				<annotation>
 					<documentation>
 						The results of some hash function computed on the entire contents of the
-						external file.
+						unwrapped external file.
 					</documentation>
 				</annotation>
 			</element>
 			<element name="Size" type="long" minOccurs="0">
 				<annotation>
 					<documentation>
-						TGH 2022-11-30 This is the size of the external file, counting the same bytes that were used to calculate the Hash.
+						TGH 2022-11-30 This is the size of the external unwrapped file, counting the same bytes that were used to calculate the Hash.
 					</documentation>
 				</annotation>
 			</element>
@@ -907,13 +925,27 @@
 					</documentation>
 				</annotation>
 			</element>
-			<element name="FileExt" type="string" minOccurs="0">
+			<element name="FileExt" minOccurs="0">
 				<annotation>
 					<documentation>
 						TGH_2023-01-19: This is the extension to be used for the source filename.  It should match the actual
-						extension used on the source filename, of it the source filename doesn't have an actual extension, it
+						extension used on the source filename, or if the source filename doesn't have an actual extension, it
 						should be whatever matches the file type. This is used whenever a filename needs to be constructed for
-						the file, such as if the file hash is used as a filename. It must not include the leading period.
+						the file, such as if the file hash is used as a filename. It must include the leading period.
+					</documentation>
+				</annotation>
+				<simpleType>
+					<restriction base="normalizedString">
+						<pattern value="\.[^\.]+"/><!-- must start with dot, followed by anything not a dot -->
+					</restriction>
+				</simpleType>
+			</element>
+			<element name="ContentType" type="string" minOccurs="0">
+				<annotation>
+					<documentation>
+						TGH_2023-09-27: This is the MIME Type of the source filename, 
+						such as 'application/mbox' or 'message/rfc822'.  It is used when embedding the
+						file in the PDF document.
 					</documentation>
 				</annotation>
 			</element>
@@ -950,6 +982,12 @@
 			</element>
 		</sequence>
 	</complexType>
+	
+	<simpleType name="MimeType">
+		<restriction base="normalizedString">
+			<pattern value="(application|audio|image|message|multipart|text|video|font|example|model)/[a-z\.\+]+"/>
+		</restriction>
+	</simpleType>
 
 	<simpleType name="eol-type">
 		<restriction base="string">

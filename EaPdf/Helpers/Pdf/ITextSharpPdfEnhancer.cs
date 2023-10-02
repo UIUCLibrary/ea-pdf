@@ -35,6 +35,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
+        public void NormalizeAttachments(List<EmbeddedFile> embeddedFiles)
+        {
+            var catalog = _reader.Catalog;
+        }
 
         /// <summary>
         /// Add Xmp metadata to a DPart range of pages for each message

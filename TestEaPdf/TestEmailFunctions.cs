@@ -90,9 +90,9 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext--oneper-includeSubs", "SHA256", true, false, false, false, true, true, 0, 9, 852, DisplayName = "moz-dlf-sha256-ext--oneper-includeSubs")]
 
         //Pine mbox folder
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 59, 20799, DisplayName = "pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 59, 20799, DisplayName = "pine-folder-one-file-in-subfolder")]
-        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 59, 20799, DisplayName = "pine-folder-one-file-per-in-subfolder")]
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 64, 20799, DisplayName = "pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 64, 20799, DisplayName = "pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 64, 20799, DisplayName = "pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 6, 1301, DisplayName = "pine-sent-mail-aug-2007")] //not an mbox file
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, false, 0, 1, 100, DisplayName = "pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
@@ -314,9 +314,9 @@ namespace UIUCLibrary.TestEaPdf
 
 
         //Pine mbox folder
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 572, 20799, DisplayName = "xhtml-pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 572, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
-        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 572, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 578, 20799, DisplayName = "xhtml-pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 578, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 578, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 278, 1301, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
         [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, false, 0, 1, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
@@ -693,7 +693,7 @@ namespace UIUCLibrary.TestEaPdf
             if (nds2 != null)
             {
                 foreach (XmlElement nd in nds2)
-                {
+                {  
                     //check that there is a PhantomBody element
                     var phantom = nd.SelectSingleNode("xm:PhantomBody", xmlns);
                     Assert.IsNotNull(phantom);
@@ -845,26 +845,6 @@ namespace UIUCLibrary.TestEaPdf
                     var extFilepath = Path.Combine(outFolder, settings.ExternalContentFolder, extPath);
                     Assert.IsTrue(File.Exists(extFilepath));
 
-                    //make sure the hash values match
-                    var extHash = Helpers.CalculateHash(hashAlg, extFilepath);
-                    if (string.IsNullOrEmpty(extHash))
-                    {
-                        logger?.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
-                    }
-                    else
-                    {
-                        string? calcHash = extNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText;
-                        Assert.AreEqual(calcHash, extHash);
-                    }
-                    string? calcHashAlg = extNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText;
-                    Assert.AreEqual(hashAlg, calcHashAlg);
-
-                    //make sure the size values match
-                    FileInfo fi = new(extFilepath);
-                    long expectedSize = fi.Length;
-                    long actualSize = long.Parse(extNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
-                    Assert.AreEqual(expectedSize, actualSize);
-
                     //get the actual wrapped in xml indicator
                     var xmlWrappedStr = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
                     bool actualWrapExtInXml = false;
@@ -883,6 +863,41 @@ namespace UIUCLibrary.TestEaPdf
                         logger?.LogDebug(msg);
                         //Assert.Inconclusive(msg); //inconclusive since it might be wrapped in XML because of a virus or other file IO problem
                     }
+
+                    //get the hash and size for the external file
+                    string? expectedHash;
+                    string? expectedHashAlg;
+                    long expectedSize;
+                    if (actualWrapExtInXml)
+                    {
+                        expectedHash = extNode.SelectSingleNode("xm:XMLHash/xm:Value", xmlns)?.InnerText;
+                        expectedHashAlg = extNode.SelectSingleNode("xm:XMLHash/xm:Function", xmlns)?.InnerText;
+                        expectedSize = long.Parse(extNode.SelectSingleNode("xm:XMLSize", xmlns)?.InnerText ?? "-1");
+                    }
+                    else
+                    {
+                        expectedHash = extNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText;
+                        expectedHashAlg = extNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText;
+                        expectedSize = long.Parse(extNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
+                    }
+
+                    //make sure the hash values match
+                    var actualHash = Helpers.CalculateHash(hashAlg, extFilepath);
+                    if (string.IsNullOrEmpty(actualHash))
+                    {
+                        logger?.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
+                    }
+                    else
+                    {
+                        Assert.AreEqual(expectedHash, actualHash);
+                    }
+                    Assert.AreEqual(hashAlg, expectedHashAlg);
+
+                    //make sure the size values match
+                    FileInfo fi = new(extFilepath);
+                    long actualSize = fi.Length;
+                    Assert.AreEqual(expectedSize, actualSize);
+
 
                     if (actualWrapExtInXml)
                     {

@@ -150,6 +150,7 @@
 		
 		<fo:block background-color="beige" border="1px solid brown" padding="0.125em">
 			You may need to open the PDF reader's attachments list to download or open these f&zwnj;iles. Look for the name that matches the long random-looking string of characters in bold.
+			The same attachment might have originated from multiple mail messages, possibly with different filenames; only one copy will be attached to the this PDF.
 		</fo:block>
 		
 		<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>Source Email Files</fo:block>
@@ -159,7 +160,7 @@
 			<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties[eaxs:RelPath]">
 				<xsl:sort select="fn:string-join(ancestor-or-self::eaxs:Folder/eaxs:Name)"/> 
 				<fo:list-item margin-top="5pt" >
-					<fo:list-item-label><fo:block font-weight="bold" ><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></fo:block></fo:list-item-label>
+					<fo:list-item-label><fo:block font-weight="bold" ><xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:value-of select="eaxs:FileExt"/></fo:block></fo:list-item-label>
 					<fo:list-item-body keep-together.within-column="always">
 						<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
 						<fox:destination><xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
@@ -183,7 +184,7 @@
 			<xsl:for-each select="//eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
 				<xsl:sort select="eaxs:RelPath"/>
 				<fo:list-item margin-top="5pt" >
-					<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></fo:block></fo:list-item-label>
+					<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:value-of select="eaxs:FileExt"/></fo:block></fo:list-item-label>
 					<fo:list-item-body keep-together.within-column="always">
 						<xsl:attribute name="id">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
 						<fox:destination><xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
@@ -209,51 +210,38 @@
 			<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>File Attachments</fo:block>
 			
 			<fo:list-block font-size="{$font-size}">
-				<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+				<xsl:for-each-group select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]" group-by="eaxs:Hash/eaxs:Value">
 					<xsl:sort select="../eaxs:DispositionFileName"/>
 					<xsl:sort select="../eaxs:ContentName"/>
+					<xsl:variable name="hash" select="eaxs:Hash/eaxs:Value"/>
 					<fo:list-item margin-top="5pt">
-						<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:call-template name="GetFileExtension"/></fo:block></fo:list-item-label>
+						<fo:list-item-label><fo:block font-weight="bold"><xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:call-template name="GetFileExtension"/></fo:block></fo:list-item-label>
 						<fo:list-item-body keep-together.within-column="always">
-							<xsl:attribute name="id">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
-							<fox:destination><xsl:attribute name="internal-destination">ATT_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute></fox:destination>
+							<xsl:attribute name="id">ATT_<xsl:value-of select="$hash"/></xsl:attribute>
+							<fox:destination><xsl:attribute name="internal-destination">ATT_<xsl:value-of select="$hash"/></xsl:attribute></fox:destination>
 							<xsl:call-template name="file-list-2x2">
 								<xsl:with-param name="lbl-1">Original f&zwnj;ile: </xsl:with-param>
 								<xsl:with-param name="body-1">
 									<xsl:choose>
 										<xsl:when test="../eaxs:DispositionFileName | ../eaxs:ContentName">
-											<xsl:text>"</xsl:text><xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/><xsl:text>"</xsl:text>										
+											<xsl:text>"</xsl:text><xsl:value-of select="fn:string-join(fn:distinct-values(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/(eaxs:DispositionFileName | eaxs:ContentName)),'&quot;, &quot;')"/><xsl:text>"</xsl:text>										
 										</xsl:when>
 										<xsl:otherwise>
 											<fo:inline xsl:use-attribute-sets="i">* No f&zwnj;ilename given *</fo:inline>
 										</xsl:otherwise>
 									</xsl:choose>
-									<xsl:choose>
-										<xsl:when test="eaxs:Size and fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='false'">
-											<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
-										</xsl:when>
-										<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped))='true'">
-											<xsl:variable name="rel-path">
-												<xsl:call-template name="concat-path">
-													<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
-													<xsl:with-param name="path2" select="normalize-space(eaxs:RelPath)"/>
-												</xsl:call-template>
-											</xsl:variable>
-											<xsl:variable name="extSize" select="document(fn:resolve-uri($rel-path, fn:base-uri()))/eaxs:BodyContent/eaxs:Size"/>
-											<xsl:if test="$extSize">
-												<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number($extSize,'#,###')"/> bytes)</fo:inline>
-											</xsl:if>
-										</xsl:when>
-									</xsl:choose>
+									<xsl:if test="eaxs:Size">
+										<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
+									</xsl:if>
 								</xsl:with-param>
 								<xsl:with-param name="lbl-2">Message id: </xsl:with-param>
 								<xsl:with-param name="body-2">
-									<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="ancestor::*[eaxs:MessageId][1]/eaxs:MessageId"/></xsl:call-template><xsl:text>"</xsl:text>
+									<xsl:text>"</xsl:text><xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="fn:string-join(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/ancestor::*[eaxs:MessageId][1]/eaxs:MessageId,'&quot;, &quot;')"/></xsl:call-template><xsl:text>"</xsl:text>
 								</xsl:with-param>
-							</xsl:call-template>
+							</xsl:call-template>								
 						</fo:list-item-body>
 					</fo:list-item>
-				</xsl:for-each>
+				</xsl:for-each-group>
 			</fo:list-block>
 		</xsl:if>
 	</xsl:template>
@@ -361,7 +349,7 @@
 		<!-- if the source is an MBOX file, it is referenced in Folder/FolderProperties -->
 		<xsl:for-each select="//eaxs:Folder[eaxs:Message]/eaxs:FolderProperties[eaxs:RelPath]">
 			<pdf:embedded-file>
-				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
+				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
 				<xsl:attribute name="description">Source f&zwnj;ile for mail folder '<xsl:value-of select="../eaxs:Name"/>'</xsl:attribute>
 				<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 			</pdf:embedded-file>				
@@ -369,19 +357,19 @@
 		<!-- if the source is an EML file, it is referenced in Folder/Message/MessageProperties -->
 		<xsl:for-each select="//eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
 			<pdf:embedded-file>
-				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
+				<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
 				<xsl:attribute name="description">Source f&zwnj;ile for message '<xsl:value-of select="../eaxs:MessageId"/>'</xsl:attribute>
 				<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 			</pdf:embedded-file>				
 		</xsl:for-each>
 		<!-- inline attachments which are not text -->
-		<xsl:for-each select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+		<xsl:for-each-group select="//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]" group-by="eaxs:Hash/eaxs:Value">
 			<xsl:variable name="filename">
-				<xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:text>.</xsl:text><xsl:call-template name="GetFileExtension"/>
+				<xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:call-template name="GetFileExtension"/>
 			</xsl:variable>
 			<pdf:embedded-file>
 				<xsl:attribute name="filename"><xsl:value-of select="$filename"/></xsl:attribute>
-				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/></xsl:attribute>
+				<xsl:attribute name="description">Original File Name: <xsl:value-of select="(../eaxs:DispositionFileName | ../eaxs:ContentName)[1]"/></xsl:attribute>
 				<xsl:attribute name="src">
 					<xsl:call-template name="data-uri">
 						<xsl:with-param name="content-type" select="../eaxs:ContentType"/>
@@ -390,9 +378,9 @@
 					</xsl:call-template>
 				</xsl:attribute>
 			</pdf:embedded-file>								
-		</xsl:for-each>
+		</xsl:for-each-group>
 		<!-- external attachments -->
-		<xsl:for-each select="//eaxs:SingleBody/eaxs:ExtBodyContent">
+		<xsl:for-each-group select="//eaxs:SingleBody/eaxs:ExtBodyContent" group-by="eaxs:Hash/eaxs:Value">
 			<xsl:variable name="rel-path">
 				<xsl:call-template name="concat-path">
 					<xsl:with-param name="path1" select="normalize-space(ancestor::eaxs:Message/eaxs:RelPath)"/>
@@ -400,11 +388,11 @@
 				</xsl:call-template>
 			</xsl:variable>
 			<xsl:variable name="filename">
-				<xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:text>.</xsl:text><xsl:call-template name="GetFileExtension"/>
+				<xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:call-template name="GetFileExtension"/>
 			</xsl:variable>
 			<pdf:embedded-file>
 				<xsl:attribute name="filename"><xsl:value-of select="$filename"/></xsl:attribute>
-				<xsl:attribute name="description">Original File Name: <xsl:value-of select="../eaxs:DispositionFileName | ../eaxs:ContentName"/></xsl:attribute>
+				<xsl:attribute name="description">Original File Name: <xsl:value-of select="(../eaxs:DispositionFileName | ../eaxs:ContentName)[1]"/></xsl:attribute>
 				<xsl:choose>
 					<xsl:when test="fn:normalize-space(fn:lower-case(eaxs:XMLWrapped)) = 'false'">
 						<xsl:attribute name="src">url(<xsl:value-of select="fn:resolve-uri($rel-path, fn:base-uri())"/>)</xsl:attribute>								
@@ -420,7 +408,7 @@
 					</xsl:when>
 				</xsl:choose>
 			</pdf:embedded-file>								
-		</xsl:for-each>		
+		</xsl:for-each-group>		
 	</xsl:template>
 	
 	<xsl:template name="CoverPage">
@@ -508,7 +496,7 @@
 										<rx:pdf-comment>
 											<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:RelPath"/></xsl:attribute>
 											<rx:pdf-file-attachment icon-type="paperclip">
-												<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
+												<xsl:attribute name="filename"><xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:value-of select="eaxs:FileExt"/></xsl:attribute>
 												<xsl:attribute name="src">url(<xsl:value-of select="my:GetPathRelativeToBaseUri(eaxs:RelPath, fn:base-uri())"/>)</xsl:attribute>
 											</rx:pdf-file-attachment>
 										</rx:pdf-comment>
@@ -1173,15 +1161,19 @@
 		
 		<xsl:choose>
 			<!-- force the file extension for certain mime content types, regardless of the content name or disposition filename -->
-			<xsl:when test="fn:lower-case(normalize-space($single-body/eaxs:ContentType)) = 'application/pdf'">pdf</xsl:when>
-			<xsl:when test="fn:lower-case(normalize-space($single-body/eaxs:ContentType)) = 'text/rtf'">rtf</xsl:when>
+			<xsl:when test="fn:lower-case(normalize-space($single-body/eaxs:ContentType)) = 'application/pdf'">.pdf</xsl:when>
+			<xsl:when test="fn:lower-case(normalize-space($single-body/eaxs:ContentType)) = 'text/rtf'">.rtf</xsl:when>
 			
 			<!-- use the extension from the content name or disposition filename if there is one -->
-			<xsl:when test="fn:contains($single-body/eaxs:DispositionFileName,'.')"><xsl:value-of select="fn:tokenize($single-body/eaxs:DispositionFileName,'\.')[last()]"/></xsl:when>
-			<xsl:when test="fn:contains($single-body/eaxs:ContentName,'.')"><xsl:value-of select="fn:tokenize($single-body/eaxs:ContentName,'\.')[last()]"/></xsl:when>
+			<xsl:when test="fn:contains($single-body/eaxs:DispositionFileName,'.')">
+				<xsl:text>.</xsl:text><xsl:value-of select="fn:tokenize($single-body/eaxs:DispositionFileName,'\.')[last()]"/>
+			</xsl:when>
+			<xsl:when test="fn:contains($single-body/eaxs:ContentName,'.')">
+				<xsl:text>.</xsl:text><xsl:value-of select="fn:tokenize($single-body/eaxs:ContentName,'\.')[last()]"/>
+			</xsl:when>
 			
 			<!-- fallback to just 'bin' -->
-			<xsl:otherwise>bin</xsl:otherwise>
+			<xsl:otherwise>.bin</xsl:otherwise>
 		</xsl:choose>
 		
 	</xsl:template>
@@ -1219,7 +1211,7 @@
 						<rx:pdf-comment>
 							<xsl:attribute name="title">Attachment &mdash; </xsl:attribute>
 							<rx:pdf-file-attachment icon-type="paperclip">
-								<xsl:attribute name="filename"><xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/>.<xsl:value-of select="$file-ext"/></xsl:attribute>
+								<xsl:attribute name="filename"><xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/><xsl:value-of select="$file-ext"/></xsl:attribute>
 								<xsl:choose>
 									<xsl:when test="$single-body/eaxs:ExtBodyContent">
 										<xsl:variable name="rel-path">

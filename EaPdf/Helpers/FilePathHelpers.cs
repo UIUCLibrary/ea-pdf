@@ -193,7 +193,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     //if file doesn't have an extension, or if the extension is not valid, should try to use the content type to get the extension
                     if (!MimeTypes.TryGetExtension(part.ContentType.MimeType, out ext))
                     {
-                        ext = ".bin"; //if no extension found, use .bin
+                        ext = MimeTypeMap.DefaultExtension; //if no extension found, use the default .bin
                     }
                 }
             }

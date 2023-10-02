@@ -43,10 +43,22 @@ namespace UIUCLibrary.EaPdf
             return this.MemberwiseClone();
         }
 
+        private string _messageFilepath = "";
         /// <summary>
         /// The full path to the message file being processed
         /// </summary>
-        public string MessageFilePath { get; set; } = "";
+        public string MessageFilePath 
+        {
+            get 
+            { 
+                return _messageFilepath;
+            }
+            set 
+            { 
+                _messageFilepath = value;
+                _fileInfo = null; //clear the cached FileInfo object
+            }
+        }
 
         /// <summary>
         /// The name of the file, which is just the file name minus the path
@@ -298,11 +310,14 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
+        /// <summary>
+        /// The file extension of the message file including the leading period
+        /// </summary>
         public string Extension
         {
             get
             {
-                return Path.GetExtension(MessageFilePath).TrimStart('.');
+                return Path.GetExtension(MessageFilePath);
             }
         }
 

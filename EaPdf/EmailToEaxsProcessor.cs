@@ -510,7 +510,7 @@ namespace UIUCLibrary.EaPdf
         private void WriteAccountHeaderFields(XmlWriter xwriter, string globalId, string accntEmails = "")
         {
             {
-                Settings.WriteSettings( xwriter );
+                Settings.WriteSettings(xwriter);
 
                 xwriter.WriteProcessingInstruction("DateGenerated", DateTime.Now.ToString("u"));
 
@@ -744,13 +744,19 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private (string relPath, string ext) GetRelPathAndExt(MessageFileProperties msgFileProps)
+        /// <summary>
+        /// Return the path, extension, and mime type of the message file
+        /// </summary>
+        /// <param name="msgFileProps"></param>
+        /// <returns></returns>
+        private (string relPath, string ext, string mimeType) GetRelPathAndExt(MessageFileProperties msgFileProps)
         {
             var relPath = msgFileProps.RelativePath;
             var ext = msgFileProps.Extension;
             if (string.IsNullOrWhiteSpace(ext))
                 ext = Settings.DefaultFileExtension;
-            return (relPath, ext);
+            var mime = MimeTypeMap.GetMimeType(ext);
+            return (relPath, ext, mime);
         }
 
         private void WriteMessageFileProperties(XmlWriter xwriter, MessageFileProperties msgFileProps, string wrapperElement)
@@ -759,9 +765,10 @@ namespace UIUCLibrary.EaPdf
             {
                 xwriter.WriteStartElement(wrapperElement, XM_NS);
 
-                (string relPath, string ext) = GetRelPathAndExt(msgFileProps);
+                (string relPath, string ext, string mime) = GetRelPathAndExt(msgFileProps);
                 xwriter.WriteElementString("RelPath", XM_NS, relPath.ToString().Replace('\\', '/'));
                 xwriter.WriteElementString("FileExt", XM_NS, ext);
+                xwriter.WriteElementString("ContentType", XM_NS, mime);
 
                 xwriter.WriteElementString("Eol", XM_NS, msgFileProps.MostCommonEol);
                 if (msgFileProps.UsesDifferentEols)
@@ -883,14 +890,14 @@ namespace UIUCLibrary.EaPdf
             string? subfolderName = null;
 
             string[]? subfolders = Directory.GetDirectories(msgFileProps.MessageDirectoryName, $"{msgFileProps.MessageFileName}.*"); //first look for folders matching the parent name, including extension
-            if(subfolders == null || subfolders.Length == 0)
+            if (subfolders == null || subfolders.Length == 0)
             {
                 //if not found, look for names matching the parent without extension
                 subfolders = Directory.GetDirectories(msgFileProps.MessageDirectoryName, $"{Path.GetFileNameWithoutExtension(msgFileProps.MessageFileName)}.*");
             }
 
-            if(subfolders != null)
-            { 
+            if (subfolders != null)
+            {
                 try
                 {
                     subfolderName = subfolders.SingleOrDefault();
@@ -1157,14 +1164,19 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private void WriteHash(XmlWriter xwriter, byte[] hash, string hashAlgorithmName)
+        private void WriteHash(XmlWriter xwriter, string elemName, byte[] hash, string hashAlgorithmName)
         {
-            xwriter.WriteStartElement("Hash", XM_NS);
+            xwriter.WriteStartElement(elemName, XM_NS);
             xwriter.WriteStartElement("Value", XM_NS);
             xwriter.WriteBinHex(hash, 0, hash.Length);
             xwriter.WriteEndElement(); //Value
             xwriter.WriteElementString("Function", XM_NS, hashAlgorithmName);
             xwriter.WriteEndElement(); //Hash
+        }
+
+        private void WriteHash(XmlWriter xwriter, byte[] hash, string hashAlgorithmName)
+        {
+            WriteHash(xwriter, "Hash", hash, hashAlgorithmName);
         }
 
         private long ProcessCurrentMessage(MimeMessage message, XmlWriter xwriter, long localId, List<MessageBrief> messageList, MessageFileProperties msgFileProps, MimeMessageProperties mimeMsgProps)
@@ -1800,15 +1812,15 @@ namespace UIUCLibrary.EaPdf
                 //       See https://www.oreilly.com/library/view/programming-internet-email/9780596802585/ch04s04s01.html
                 //       Also consider the "X-Mozilla-External-Attachment-URL: url" and the "X-Mozilla-Altered: AttachmentDetached; date="Thu Jul 06 21:38:39 2006"" headers
 
-                if (!Settings.SaveAttachmentsAndBinaryContentExternally)
-                {
-                    //save non-text content or attachments as part of the XML
-                    SerializeContentInXml(part, xwriter, false, localId);
-                }
-                else
+                if (Settings.SaveAttachmentsAndBinaryContentExternally)
                 {
                     //save non-text content or attachments externally, possibly wrapped in XML
                     localId = SerializeContentInExtFile(part, xwriter, localId, msgFileProps);
+                }
+                else
+                {
+                    //save non-text content or attachments as part of the XML
+                    var (hash, size) = SerializeContentInXml(part, xwriter, false, localId);
                 }
             }
             return localId;
@@ -1987,7 +1999,8 @@ namespace UIUCLibrary.EaPdf
         /// <param name="xwriter">the XML writer to serialize it to</param>
         /// <param name="extContent">if true, it is being written to an external file</param>
         /// <param name="localId">The local id of the content being written to an external file</param>
-        private void SerializeContentInXml(MimePart part, XmlWriter xwriter, bool extContent, long localId)
+        /// <returns>the hash and size of the decoded content</returns>
+        private (byte[] hash, long size) SerializeContentInXml(MimePart part, XmlWriter xwriter, bool extContent, long localId)
         {
             var content = part.Content;
 
@@ -1995,7 +2008,8 @@ namespace UIUCLibrary.EaPdf
             if (extContent)
             {
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
-                WriteToLogInfoMessage(xwriter, $"LocalId {localId} written to external file");
+                _logger.LogInformation($"LocalId {localId} written to external file");
+                //NOTE:  This cannot be written to the XML wrapper file because the localId will be different even for duplicate files; it will cause the Hash and Size to be incorrect
             }
 
             var actualEncoding = "";
@@ -2013,8 +2027,8 @@ namespace UIUCLibrary.EaPdf
 
             //set up hashing
             using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
-            byte[]? hash;
-            long? fileSize = null; 
+            byte[] hash;
+            long fileSize;
 
             //get the byte array of the decoded content, also the size of the decoded content, and the hash of the decoded content
             byte[] byts;
@@ -2025,7 +2039,7 @@ namespace UIUCLibrary.EaPdf
             hash = cryptoHashAlg.ComputeHash(byts);
 
             //reset stream positions to beginning
-            ms.Position= 0; 
+            ms.Position = 0;
             content.Stream.Position = 0;
 
             string? encoding;
@@ -2064,17 +2078,13 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteElementString("TransferEncoding", XM_NS, encoding);
             }
 
-            if (hash != null)
-            {
-                WriteHash(xwriter, hash, Settings.HashAlgorithmName);
-            }
+            WriteHash(xwriter, hash, Settings.HashAlgorithmName);
 
-            if (fileSize != null) 
-            {
-                xwriter.WriteElementString("Size", XM_NS, fileSize.ToString());
-            }
+            xwriter.WriteElementString("Size", XM_NS, fileSize.ToString());
 
             xwriter.WriteEndElement(); //BodyContent
+
+            return (hash, fileSize);
         }
 
         /// <summary>
@@ -2095,17 +2105,23 @@ namespace UIUCLibrary.EaPdf
 
             string randomFilePath = FilePathHelpers.GetRandomFilePath(msgFileProps.OutDirectoryName);
 
-            byte[] hash;
-            long size;
+            byte[] fileHash;
+            long fileSize;
+            byte[]? xmlHash = null;
+            long? xmlSize = null;
 
-            if (!wrapInXml)
+            if (wrapInXml)
             {
-                hash = SaveContentAsRaw(randomFilePath, part, out size);
+                (xmlHash, xmlSize, fileHash, fileSize) = SaveContentAsXmlExtFile(randomFilePath, part, localId, "");
+            }
+            else
+            {
+                (fileHash, fileSize) = SaveContentAsRawExtFile(randomFilePath, part);
 
                 //Try to open the file to see if it has a virus or there was some other IO problem
                 try
                 {
-                    //this seems to trigger the virus scanner, but an IO error may not occur until we try to move the file later
+                    //this seems to trigger the virus scanner, otherwise an IO error may not occur until we try to move the file later
                     using var testStream = new FileStream(randomFilePath, FileMode.Open, FileAccess.Read);
                     testStream.Close();
                 }
@@ -2115,17 +2131,13 @@ namespace UIUCLibrary.EaPdf
                     WriteToLogWarningMessage(xwriter, msg);
                     wrapInXml = true;
                     File.Delete(randomFilePath); //so we can try saving a new stream there
-                    hash = SaveContentAsXml(randomFilePath, part, localId, msg, out size);
+                    (xmlHash, xmlSize, fileHash, fileSize) = SaveContentAsXmlExtFile(randomFilePath, part, localId, msg);
                 }
-            }
-            else
-            {
-                hash = SaveContentAsXml(randomFilePath, part, localId, "", out size);
             }
 
             _logger.LogTrace("Created temporary file: '{randomFilePath}'", randomFilePath);
 
-            var hashFileName = FilePathHelpers.GetOutputFilePathBasedOnHash(hash, part, Path.Combine(msgFileProps.OutDirectoryName, Settings.ExternalContentFolder), wrapInXml);
+            var hashFileName = FilePathHelpers.GetOutputFilePathBasedOnHash(fileHash, part, Path.Combine(msgFileProps.OutDirectoryName, Settings.ExternalContentFolder), wrapInXml);
             //create folder if needed
             Directory.CreateDirectory(Path.GetDirectoryName(hashFileName) ?? "");
 
@@ -2159,12 +2171,17 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteElementString("LocalId", XM_NS, localId.ToString());
             xwriter.WriteElementString("XMLWrapped", XM_NS, wrapInXml.ToString().ToLower());
-            //Eol is not applicable since we are not wrapping the content in XML
-            WriteHash(xwriter, hash, Settings.HashAlgorithmName);
-
-            if (size >= 0)
+            if (wrapInXml && xmlHash != null && xmlSize != null)
             {
-                xwriter.WriteElementString("Size", XM_NS, size.ToString());
+                WriteHash(xwriter, "XMLHash", xmlHash, Settings.HashAlgorithmName);
+                xwriter.WriteElementString("XMLSize", XM_NS, xmlSize.ToString());
+            }
+            //Eol is not applicable since we are not wrapping the content in XML
+            WriteHash(xwriter, fileHash, Settings.HashAlgorithmName);
+
+            if (fileSize >= 0)
+            {
+                xwriter.WriteElementString("Size", XM_NS, fileSize.ToString());
             }
             else
             {
@@ -2181,9 +2198,9 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         /// <param name="filePath"></param>
         /// <param name="part"></param>
-        /// <returns>the hash of the saved file</returns>
+        /// <returns>the hash and size of the saved file</returns>
         /// <exception cref="Exception"></exception>
-        private byte[] SaveContentAsRaw(string filePath, MimePart part, out long size)
+        private (byte[] hash, long size) SaveContentAsRawExtFile(string filePath, MimePart part)
         {
             var content = part.Content;
 
@@ -2193,12 +2210,12 @@ namespace UIUCLibrary.EaPdf
 
             content.DecodeTo(cryptoStream);
 
-            size = contentStream.Length;
+            long size = contentStream.Length;
             cryptoStream.Close();
             contentStream.Close();
 
             if (cryptoHashAlg.Hash != null)
-                return cryptoHashAlg.Hash;
+                return (cryptoHashAlg.Hash, size);
             else
                 throw new NullReferenceException($"Unable to calculate hash value for the content");
         }
@@ -2209,9 +2226,9 @@ namespace UIUCLibrary.EaPdf
         /// <param name="filePath"></param>
         /// <param name="part"></param>
         /// <param name="localId"></param>
-        /// <returns>the hash of the saved file</returns>
+        /// <returns>the hash and size of the saved file</returns>
         /// <exception cref="Exception"></exception>
-        private byte[] SaveContentAsXml(string filePath, MimePart part, long localId, string comment, out long size)
+        private (byte[] hash, long size, byte[] fileHash, long fileSize) SaveContentAsXmlExtFile(string filePath, MimePart part, long localId, string comment)
         {
             //TODO: It might be good to embellish the external XML schema, maybe make it equivalent to the internal XML schema SingleBody element
             //      This would provide more context if the external file is ever separated from the main XML email message file
@@ -2230,16 +2247,16 @@ namespace UIUCLibrary.EaPdf
             {
                 extXmlWriter.WriteComment(comment);
             }
-            SerializeContentInXml(part, extXmlWriter, true, localId);
+            var (fileHash, fileSize) = SerializeContentInXml(part, extXmlWriter, true, localId);
             extXmlWriter.WriteEndDocument();
             extXmlWriter.Close();
 
-            size = contentStream.Length;
+            long size = contentStream.Length;
             cryptoStream.Close();
             contentStream.Close();
 
             if (cryptoHashAlg.Hash != null)
-                return cryptoHashAlg.Hash;
+                return (cryptoHashAlg.Hash, size, fileHash, fileSize);
             else
                 throw new Exception($"Unable to calculate hash value for the content");
         }

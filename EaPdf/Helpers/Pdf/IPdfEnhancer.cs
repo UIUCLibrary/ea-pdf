@@ -10,6 +10,10 @@
         /// <param name="dparts">Dictionary where the key is a tuple of named destinations for the start page and end part of the DPart, and the value is the XMP string to associate with that DPart</param>
         public void AddXmpToDParts(DPartInternalNode dparts);
 
-
+        /// <summary>
+        /// Add appropriate metadata, extracted from the EAXS XML file, to the PDF file attachments
+        /// </summary>
+        /// <param name="eaxs"></param>
+        public void NormalizeAttachments(List<EmbeddedFile> embeddedFiles);
     }
 }
