@@ -5,6 +5,11 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public class XmlHelpers
     {
+        //for use with the XPath function translate
+        public const string UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        public const string LOWER = "abcdefghijklmnopqrstuvwxyz";
+
+
         //See: https://stackoverflow.com/questions/397250/unicode-regex-invalid-xml-characters/961504#961504
 
         // Filters control characters but allows only properly-formed surrogate sequences

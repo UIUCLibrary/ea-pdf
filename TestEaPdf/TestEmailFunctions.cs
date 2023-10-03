@@ -25,9 +25,6 @@ namespace UIUCLibrary.TestEaPdf
         readonly List<string> loggedLines = new();
         readonly LogLevel minLogLvl = LogLevel.Trace;
 
-        const string UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        const string LOWER = "abcdefghijklmnopqrstuvwxyz";
-
         string testFilesBaseDirectory = @"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles\Testing";
 
         [TestInitialize]
@@ -689,7 +686,7 @@ namespace UIUCLibrary.TestEaPdf
                     Assert.IsTrue((!string.IsNullOrWhiteSpace(contentType) && contentType.Equals("message/external-body", StringComparison.OrdinalIgnoreCase)) || (xMozillaExternal != null));
                 }
             }
-            XmlNodeList? nds2 = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'message/external-body'] | //xm:SingleBody[translate(xm:OtherMimeHeader/xm:Name,'{UPPER}','{LOWER}') = 'x-mozilla-external-attachment-url']", xmlns);
+            XmlNodeList? nds2 = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'message/external-body'] | //xm:SingleBody[translate(xm:OtherMimeHeader/xm:Name,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'x-mozilla-external-attachment-url']", xmlns);
             if (nds2 != null)
             {
                 foreach (XmlElement nd in nds2)
@@ -705,7 +702,7 @@ namespace UIUCLibrary.TestEaPdf
         private void ValidateRfc822Nodes(XmlDocument xDoc, XmlNamespaceManager xmlns)
         {
             //If mime type is message/rfc822 or text/rfc822-headers, make sure there is a ChildMessage 
-            var rfc822Nds = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'text/rfc822-headers' or translate(xm:ContentType,'{UPPER}','{LOWER}') = 'message/rfc822']", xmlns);
+            var rfc822Nds = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'text/rfc822-headers' or translate(xm:ContentType,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'message/rfc822']", xmlns);
             if (rfc822Nds != null)
             {
                 foreach (XmlElement nd in rfc822Nds)
@@ -760,7 +757,7 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.IsNull(node.SelectSingleNode("xm:ExtBodyContent", xmlns));
 
                 //unless this is a 'text/rfc822-headers', make sure there is a body
-                if (node.SelectSingleNode($"ancestor::xm:SingleBody[translate(xm:ContentType,'{UPPER}','{LOWER}') = 'text/rfc822-headers']", xmlns) == null)
+                if (node.SelectSingleNode($"ancestor::xm:SingleBody[translate(xm:ContentType,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'text/rfc822-headers']", xmlns) == null)
                 {
                     Assert.IsNotNull(node.SelectSingleNode("xm:BodyContent | xm:ChildMessage | xm:DeliveryStatus | xm:PhantomBody", xmlns));
                 }
@@ -811,7 +808,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             //make sure all attachments or binary content are external and that the file exists and hashes match
             //get all SingleBody elements that don't have a child element ChildMessage or child element DeliveryStatus and are attachments or not text/... or message/... mime types
-            XmlNodeList? extNodes = xDoc.SelectNodes($"/xm:Account//xm:Folder/xm:Message//xm:SingleBody[not(xm:ChildMessage) and not(xm:DeliveryStatus) and (xm:Disposition='attachment' or (not(starts-with(translate(xm:ContentType,'{UPPER}','{LOWER}'),'text/')) and not(starts-with(translate(xm:ContentType,'{UPPER}','{LOWER}'),'message/'))))]", xmlns);
+            XmlNodeList? extNodes = xDoc.SelectNodes($"/xm:Account//xm:Folder/xm:Message//xm:SingleBody[not(xm:ChildMessage) and not(xm:DeliveryStatus) and (xm:Disposition='attachment' or (not(starts-with(translate(xm:ContentType,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}'),'text/')) and not(starts-with(translate(xm:ContentType,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}'),'message/'))))]", xmlns);
 
             if (extNodes != null)
             {
