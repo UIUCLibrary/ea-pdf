@@ -2,6 +2,7 @@ using Extensions.Logging.ListOfString;
 using iTextSharp.text.pdf;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -145,95 +146,60 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
-        [TestMethod]
-        public void TestMozillaThunderbirdWithNestedFoldersFop()
+
+        [DataRow("Non-Western\\Arabic", "fop", false, DisplayName = "ARABIC-FOP-NO-WRAP")] //Use Arabic folder and FOP and do not wrap external files in XML
+        [DataRow("Non-Western\\Arabic", "fop", true, DisplayName = "ARABIC-FOP-WRAP")] //Use Arabic folder and FOP and wrap external files in XML
+        [DataRow("Non-Western\\Arabic", "xep", true, DisplayName = "ARABIC-XEP-WRAP")] //Use Arabic folder and XEP and wrap external files in XML
+
+        [DataRow("Non-Western\\Chinese", "fop", false, DisplayName = "CHINESE-FOP-NO-WRAP")] //Use Chinese folder and FOP and do not wrap external files in XML
+        [DataRow("Non-Western\\Chinese", "fop", true, DisplayName = "CHINESE-FOP-WRAP")] //Use Chinese folder and FOP and wrap external files in XML
+        [DataRow("Non-Western\\Chinese", "xep", true, DisplayName = "CHINESE-XEP-WRAP")] //Use Chinese folder and XEP and wrap external files in XML
+
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", false, DisplayName = "ENGLISH-FOP-NO-WRAP")] //Use short-test file and FOP and do not wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, DisplayName = "ENGLISH-FOP-WRAP")] //Use short-test file and FOP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "xep", true, DisplayName = "ENGLISH-XEP-WRAP")] //Use short-test file and XEP and wrap external files in XML
+
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", false, DisplayName = "MOZILLA-FOP-NO-WRAP")] //Use Mozilla file and FOP and do not wrap external files in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, DisplayName = "MOZILLA-FOP-WRAP")] //Use Mozilla file and FOP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", true, DisplayName = "MOZILLA-XEP-WRAP")] //Use Mozilla file and XEP and wrap external files in XML
+
+        [DataTestMethod]
+        public void TestEaxsToPdfProcessor(string inPath, string foProcessor, bool wrap)
         {
+            if (!foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase) && !foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException(nameof(foProcessor));
+
+            if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase) && !wrap)
+                throw new ArgumentException("XEP requires external files to be wrapped in XML");
+
             if (logger != null)
             {
-                string inPath = "MozillaThunderbird\\DLF Distributed Library";
-                ConvertMBoxToEaxs(inPath);
+                var xmlFile = ConvertToEaxs(inPath, null, wrap);
 
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(inPath, "xml"));
-                var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
-                var configFile = Path.GetFullPath("XResources\\fop.xconf");
+                string pdfFile, configFile;
+                IXslFoTransformer foTransformer;
+                if (foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    pdfFile = Path.ChangeExtension(xmlFile, $"fop{(wrap ? "_x" : "")}.pdf");
+                    configFile = Path.GetFullPath("XResources\\fop.xconf");
+                    foTransformer = new FopToPdfTransformer(configFile);
+                }
+                else if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    pdfFile = Path.ChangeExtension(xmlFile, $"xep_{(wrap ? "_x" : "")}.pdf");
+                    configFile = Path.GetFullPath("XResources\\xep.xml");
+                    foTransformer = new XepToPdfTransformer(configFile);
+                }
+                else
+                {
+                    throw new ArgumentException(nameof(foProcessor));
+                }
 
                 var xslt = new SaxonXsltTransformer();
-                var fop = new FopToPdfTransformer(configFile);
                 var iText = new ITextSharpPdfEnhancerFactory();
                 var set = new EaxsToEaPdfProcessorSettings();
 
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-
-                Assert.IsTrue(File.Exists(pdfFile));
-
-                Assert.IsTrue(IsPdfValid(pdfFile));
-
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
-
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-        }
-
-        [TestMethod]
-        public void TestMozillaThunderbirdWithNestedFoldersXep()
-        {
-            if (logger != null)
-            {
-                string inPath = "MozillaThunderbird\\DLF Distributed Library";
-                ConvertMBoxToEaxs(inPath);
-
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(inPath, "xml"));
-                var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
-                var configFile = Path.GetFullPath("XResources\\xep.xml");
-
-                var xslt = new SaxonXsltTransformer();
-                var xep = new XepToPdfTransformer(configFile);
-                var iText = new ITextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, xep, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-
-                Assert.IsTrue(File.Exists(pdfFile));
-
-                Assert.IsTrue(IsPdfValid(pdfFile));
-
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
-
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-        }
-        [TestMethod]
-        public void TestChineseEmailsFop()
-        {
-            if (logger != null)
-            {
-                string inPath = "Non-Western\\Chinese";
-                ConvertEmlFolderToEaxs(inPath);
-
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(inPath) ?? ".", Path.GetFileName(inPath) + "Out", Path.ChangeExtension(Path.GetFileName(inPath), "xml"));
-                var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
-                var configFile = Path.GetFullPath("XResources\\fop.xconf");
-
-                var xslt = new SaxonXsltTransformer();
-                var fop = new FopToPdfTransformer(configFile);
-                var iText = new ITextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, foTransformer, iText, set);
 
                 proc.ConvertEaxsToPdf(xmlFile, pdfFile);
 
@@ -253,196 +219,28 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
-        [TestMethod]
-        public void TestChineseEmailsXep()
+
+
+        private string ConvertToEaxs(string filePath, string? skipAfterMsgId = null, bool wrapExtContentInXml = true)
         {
-            if (logger != null)
-            {
-                string inPath = "Non-Western\\Chinese";
-                ConvertEmlFolderToEaxs(inPath);
+            var inFile = Path.Combine(testFilesBaseDirectory, filePath);
 
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(inPath) ?? ".", Path.GetFileName(inPath) + "Out", Path.ChangeExtension(Path.GetFileName(inPath), "xml"));
-                var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
-                var configFile = Path.GetFullPath("XResources\\xep.xml");
+            FileAttributes attr = File.GetAttributes(inFile);
 
-                var xslt = new SaxonXsltTransformer();
-                var xep = new XepToPdfTransformer(configFile);
-                var iText = new ITextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, xep, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-
-                Assert.IsTrue(File.Exists(pdfFile));
-
-                Assert.IsTrue(IsPdfValid(pdfFile));
-
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
-
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
-            }
+            if (attr.HasFlag(FileAttributes.Directory))
+                //directory of EML files
+                return ConvertEmlFolderToEaxs(filePath, wrapExtContentInXml);
             else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-
+                //single MBOX file
+                return ConvertMBoxToEaxs(filePath, skipAfterMsgId, wrapExtContentInXml);
         }
 
-        [TestMethod]
-        public void TestArabicEmailsFop()
+        private string ConvertMBoxToEaxs(string filePath, string? skipAfterMsgId = null, bool wrapExtContentInXml = true)
         {
             if (logger != null)
             {
-                string inPath = "Non-Western\\Arabic";
-                ConvertEmlFolderToEaxs(inPath);
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(filePath, "xml"));
 
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(inPath) ?? ".", Path.GetFileName(inPath) + "Out", Path.ChangeExtension(Path.GetFileName(inPath), "xml"));
-                var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
-                var configFile = Path.GetFullPath("XResources\\fop.xconf");
-
-                var xslt = new SaxonXsltTransformer();
-                var fop = new FopToPdfTransformer(configFile);
-                var iText = new ITextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-
-                Assert.IsTrue(File.Exists(pdfFile));
-
-                Assert.IsTrue(IsPdfValid(pdfFile));
-
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
-
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-
-        }
-
-        [TestMethod]
-        public void TestArabicEmailsXep()
-        {
-            if (logger != null)
-            {
-                string inPath = "Non-Western\\Arabic";
-                ConvertEmlFolderToEaxs(inPath);
-
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(inPath) ?? ".", Path.GetFileName(inPath) + "Out", Path.ChangeExtension(Path.GetFileName(inPath), "xml"));
-                var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
-                var configFile = Path.GetFullPath("XResources\\xep.xml");
-
-                var xslt = new SaxonXsltTransformer();
-                var xep = new XepToPdfTransformer(configFile);
-                var iText = new ITextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, xep, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-
-                Assert.IsTrue(File.Exists(pdfFile));
-
-                Assert.IsTrue(IsPdfValid(pdfFile));
-
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
-
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-
-        }
-
-        [TestMethod]
-        public void TestEaxsToPdfProcessorFop()
-        {
-            if (logger != null)
-            {
-                string inPath = "MozillaThunderbird\\short-test\\short-test.mbox";
-                ConvertMBoxToEaxs(inPath);
-
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(inPath, "xml"));
-                var pdfFile = Path.ChangeExtension(xmlFile, "fop.pdf");
-                var configFile = Path.GetFullPath("XResources\\fop.xconf");
-
-                var xslt = new SaxonXsltTransformer();
-                var fop = new FopToPdfTransformer(configFile);
-                var iText = new ITextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, fop, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-
-                Assert.IsTrue(File.Exists(pdfFile));
-
-                Assert.IsTrue(IsPdfValid(pdfFile));
-
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
-
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-
-        }
-
-        [TestMethod]
-        public void TestEaxsToPdfProcessorXep()
-        {
-            if (logger != null)
-            {
-                string inPath = "MozillaThunderbird\\short-test\\short-test.mbox";
-                ConvertMBoxToEaxs(inPath);
-
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(inPath, "xml"));
-                var pdfFile = Path.ChangeExtension(xmlFile, "xep.pdf");
-                var configFile = Path.GetFullPath("XResources\\xep.xml");
-
-                var xslt = new SaxonXsltTransformer();
-                var xep = new XepToPdfTransformer(configFile);
-                var iText = new ITextSharpPdfEnhancerFactory();
-                var set = new EaxsToEaPdfProcessorSettings();
-
-                var proc = new EaxsToEaPdfProcessor(logger, xslt, xep, iText, set);
-
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
-
-                Assert.IsTrue(File.Exists(pdfFile));
-
-                Assert.IsTrue(IsPdfValid(pdfFile));
-
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
-
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
-
-            }
-            else
-            {
-                Assert.Fail("Logger was not initialized");
-            }
-
-        }
-
-        private void ConvertMBoxToEaxs(string filePath, string? skipAfterMsgId = null)
-        {
-            if (logger != null)
-            {
                 var inFile = Path.Combine(testFilesBaseDirectory, filePath);
                 var outFolder = Path.GetDirectoryName(inFile);
 
@@ -451,7 +249,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 var settings = new EmailToEaxsProcessorSettings();
 
-                settings.WrapExternalContentInXml = true;  //required for XEP to properly attach external PDFs
+                settings.WrapExternalContentInXml = wrapExtContentInXml;  //must be true for XEP to properly attach external PDFs
                 settings.SaveTextAsXhtml = true; //required to render html inside the PDF
                 if (!string.IsNullOrWhiteSpace(skipAfterMsgId))
                     settings.SkipAfterMessageId = skipAfterMsgId;
@@ -459,24 +257,36 @@ namespace UIUCLibrary.TestEaPdf
                 var eProc = new EmailToEaxsProcessor(logger, settings);
 
                 var count = eProc.ConvertMboxToEaxs(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+
+                return xmlFile;
+            }
+            else
+            {
+                return "";
             }
         }
 
-        private void ConvertEmlFolderToEaxs(string folderPath)
+        private string ConvertEmlFolderToEaxs(string folderPath, bool wrapExtContentInXml = true)
         {
             if (logger != null)
             {
+                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(folderPath) ?? ".", Path.GetFileName(folderPath) + "Out", Path.ChangeExtension(Path.GetFileName(folderPath), "xml"));
                 var inFolder = Path.Combine(testFilesBaseDirectory, folderPath);
                 var outFolder = Path.Combine(Path.GetDirectoryName(inFolder) ?? ".", Path.GetFileName(inFolder) + "Out");
 
                 var settings = new EmailToEaxsProcessorSettings();
 
-                settings.WrapExternalContentInXml = true;  //required for XEP to properly attach external PDFs
+                settings.WrapExternalContentInXml = wrapExtContentInXml;  //Must be true for XEP to properly attach external PDFs
                 settings.SaveTextAsXhtml = true; //required to render html inside the PDF
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);
 
                 var count = eProc.ConvertFolderOfEmlToEaxs(inFolder, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                return xmlFile;
+            }
+            else
+            {
+                return "";
             }
         }
 
