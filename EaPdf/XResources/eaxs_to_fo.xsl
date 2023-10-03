@@ -150,7 +150,7 @@
 		
 		<fo:block background-color="beige" border="1px solid brown" padding="0.125em">
 			You may need to open the PDF reader's attachments list to download or open these f&zwnj;iles. Look for the name that matches the long random-looking string of characters in bold.
-			The same attachment might have originated from multiple mail messages, possibly with different filenames; only one copy will be attached to the this PDF.
+			The same attachment might have originated from multiple mail messages, possibly with different filenames; only one copy will be attached to this PDF.
 		</fo:block>
 		
 		<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>Source Email Files</fo:block>
