@@ -147,46 +147,57 @@ namespace UIUCLibrary.TestEaPdf
         }
 
 
-        [DataRow("Non-Western\\Arabic", "fop", false, DisplayName = "ARABIC-FOP-NO-WRAP")] //Use Arabic folder and FOP and do not wrap external files in XML
-        [DataRow("Non-Western\\Arabic", "fop", true, DisplayName = "ARABIC-FOP-WRAP")] //Use Arabic folder and FOP and wrap external files in XML
-        [DataRow("Non-Western\\Arabic", "xep", true, DisplayName = "ARABIC-XEP-WRAP")] //Use Arabic folder and XEP and wrap external files in XML
+        [DataRow("Non-Western\\Arabic", "fop", true, false, DisplayName = "ARABIC-FOP-EXT-NO-WRAP")] //Use Arabic folder and FOP and do not wrap external files in XML
+        [DataRow("Non-Western\\Arabic", "fop", true, true, DisplayName = "ARABIC-FOP-EXT-WRAP")] //Use Arabic folder and FOP and wrap external files in XML
+        [DataRow("Non-Western\\Arabic", "xep", true, true, DisplayName = "ARABIC-XEP-EXT-WRAP")] //Use Arabic folder and XEP and wrap external files in XML
 
-        [DataRow("Non-Western\\Chinese", "fop", false, DisplayName = "CHINESE-FOP-NO-WRAP")] //Use Chinese folder and FOP and do not wrap external files in XML
-        [DataRow("Non-Western\\Chinese", "fop", true, DisplayName = "CHINESE-FOP-WRAP")] //Use Chinese folder and FOP and wrap external files in XML
-        [DataRow("Non-Western\\Chinese", "xep", true, DisplayName = "CHINESE-XEP-WRAP")] //Use Chinese folder and XEP and wrap external files in XML
+        [DataRow("Non-Western\\Chinese", "fop", true, false, DisplayName = "CHINESE-FOP-EXT-NO-WRAP")] //Use Chinese folder and FOP and do not wrap external files in XML
+        [DataRow("Non-Western\\Chinese", "fop", true, true, DisplayName = "CHINESE-FOP-EXT-WRAP")] //Use Chinese folder and FOP and wrap external files in XML
+        [DataRow("Non-Western\\Chinese", "xep", true, true, DisplayName = "CHINESE-XEP-EXT-WRAP")] //Use Chinese folder and XEP and wrap external files in XML
 
-        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", false, DisplayName = "ENGLISH-FOP-NO-WRAP")] //Use short-test file and FOP and do not wrap external files in XML
-        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, DisplayName = "ENGLISH-FOP-WRAP")] //Use short-test file and FOP and wrap external files in XML
-        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "xep", true, DisplayName = "ENGLISH-XEP-WRAP")] //Use short-test file and XEP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, false, DisplayName = "ENGLISH-FOP-EXT-NO-WRAP")] //Use short-test file and FOP and do not wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, true, DisplayName = "ENGLISH-FOP-EXT-WRAP")] //Use short-test file and FOP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "xep", true, true, DisplayName = "ENGLISH-XEP-EXT-WRAP")] //Use short-test file and XEP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", false, false, DisplayName = "ENGLISH-FOP")] //Use short-test file and FOP and do not wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "xep", false, false, DisplayName = "ENGLISH-XEP")] //Use short-test file and XEP and wrap external files in XML
 
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", false, DisplayName = "MOZILLA-FOP-NO-WRAP")] //Use Mozilla file and FOP and do not wrap external files in XML
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, DisplayName = "MOZILLA-FOP-WRAP")] //Use Mozilla file and FOP and wrap external files in XML
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", true, DisplayName = "MOZILLA-XEP-WRAP")] //Use Mozilla file and XEP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "fop", true, false, DisplayName = "ENGLISH-NESTED-FOP-EXT-NO-WRAP")] //Use short-test file and FOP and do not wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "fop", true, true, DisplayName = "ENGLISH-NESTED-FOP-EXT-WRAP")] //Use short-test file and FOP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "xep", true, true, DisplayName = "ENGLISH-NESTED-XEP-EXT-WRAP")] //Use short-test file and XEP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "fop", false, false, DisplayName = "ENGLISH-NESTED-FOP")] //Use short-test file and FOP and do not wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "xep", false, false, DisplayName = "ENGLISH-NESTED-XEP")] //Use short-test file and XEP and wrap external files in XML
+
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, false, DisplayName = "MOZILLA-FOP-EXT-NO-WRAP")] //Use Mozilla file and FOP and do not wrap external files in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, true, DisplayName = "MOZILLA-FOP-EXT-WRAP")] //Use Mozilla file and FOP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", true, true, DisplayName = "MOZILLA-XEP-EXT-WRAP")] //Use Mozilla file and XEP and wrap external files in XML
 
         [DataTestMethod]
-        public void TestEaxsToPdfProcessor(string inPath, string foProcessor, bool wrap)
+        public void TestEaxsToPdfProcessor(string inPath, string foProcessor, bool ext, bool wrap)
         {
             if (!foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase) && !foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException(nameof(foProcessor));
 
-            if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase) && !wrap)
+            if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase) && ext && !wrap)
                 throw new ArgumentException("XEP requires external files to be wrapped in XML");
+
+            if (!ext && wrap)
+                throw new ArgumentException("Attachments must be saved externally to be wrapped in XML");
 
             if (logger != null)
             {
-                var xmlFile = ConvertToEaxs(inPath, null, wrap);
+                var xmlFile = ConvertToEaxs(inPath, ext, wrap, null);
 
                 string pdfFile, configFile;
                 IXslFoTransformer foTransformer;
                 if (foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    pdfFile = Path.ChangeExtension(xmlFile, $"fop{(wrap ? "_x" : "")}.pdf");
+                    pdfFile = Path.ChangeExtension(xmlFile, $"fop{(ext ? "_x" : "")}{(wrap ? "_w" : "")}.pdf");
                     configFile = Path.GetFullPath("XResources\\fop.xconf");
                     foTransformer = new FopToPdfTransformer(configFile);
                 }
                 else if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    pdfFile = Path.ChangeExtension(xmlFile, $"xep_{(wrap ? "_x" : "")}.pdf");
+                    pdfFile = Path.ChangeExtension(xmlFile, $"xep_{(ext ? "_x" : "")}{(wrap ? "_w" : "")}.pdf");
                     configFile = Path.GetFullPath("XResources\\xep.xml");
                     foTransformer = new XepToPdfTransformer(configFile);
                 }
@@ -221,7 +232,7 @@ namespace UIUCLibrary.TestEaPdf
 
 
 
-        private string ConvertToEaxs(string filePath, string? skipAfterMsgId = null, bool wrapExtContentInXml = true)
+        private string ConvertToEaxs(string filePath, bool saveAttachmentsExt, bool wrapExtContentInXml, string? skipAfterMsgId)
         {
             var inFile = Path.Combine(testFilesBaseDirectory, filePath);
 
@@ -229,13 +240,13 @@ namespace UIUCLibrary.TestEaPdf
 
             if (attr.HasFlag(FileAttributes.Directory))
                 //directory of EML files
-                return ConvertEmlFolderToEaxs(filePath, wrapExtContentInXml);
+                return ConvertEmlFolderToEaxs(filePath, saveAttachmentsExt, wrapExtContentInXml);
             else
                 //single MBOX file
-                return ConvertMBoxToEaxs(filePath, skipAfterMsgId, wrapExtContentInXml);
+                return ConvertMBoxToEaxs(filePath, saveAttachmentsExt, wrapExtContentInXml, skipAfterMsgId);
         }
 
-        private string ConvertMBoxToEaxs(string filePath, string? skipAfterMsgId = null, bool wrapExtContentInXml = true)
+        private string ConvertMBoxToEaxs(string filePath, bool saveAttachmentsExt, bool wrapExtContentInXml, string? skipAfterMsgId)
         {
             if (logger != null)
             {
@@ -249,6 +260,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 var settings = new EmailToEaxsProcessorSettings();
 
+                settings.SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt;
                 settings.WrapExternalContentInXml = wrapExtContentInXml;  //must be true for XEP to properly attach external PDFs
                 settings.SaveTextAsXhtml = true; //required to render html inside the PDF
                 if (!string.IsNullOrWhiteSpace(skipAfterMsgId))
@@ -266,7 +278,7 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
-        private string ConvertEmlFolderToEaxs(string folderPath, bool wrapExtContentInXml = true)
+        private string ConvertEmlFolderToEaxs(string folderPath, bool saveAttachmentsExt, bool wrapExtContentInXml)
         {
             if (logger != null)
             {
@@ -276,6 +288,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 var settings = new EmailToEaxsProcessorSettings();
 
+                settings.SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt;
                 settings.WrapExternalContentInXml = wrapExtContentInXml;  //Must be true for XEP to properly attach external PDFs
                 settings.SaveTextAsXhtml = true; //required to render html inside the PDF
 
