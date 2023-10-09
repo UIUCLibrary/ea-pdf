@@ -183,7 +183,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             string ext;
             if (wrapInXml)
             {
-                ext = ".xml";
+                ext = ".xmlw";
             }
             else
             {
