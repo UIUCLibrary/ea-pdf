@@ -35,14 +35,14 @@ namespace UIUCLibrary.TestEaPdf
 
             const string ARABIC_CD = "Arab";
             const string ARABIC_TXT = "العربية";
-            const string ADLAM_CD = "Adlm";
+            //const string ADLAM_CD = "Adlm";
 
-            const string SP2 = "  ";
+            //const string SP2 = "  ";
 
-            const string ARAB_COMMA = "\x060C"; //this character has the common (Zyyy) script property,
+            //const string ARAB_COMMA = "\x060C"; //this character has the common (Zyyy) script property,
                                                 //but it has extended properties and applies to just the "Arab", "Rohg", "Syrc", or "Thaa" scripts (note: arab is first in the list)
 
-            const string ARAB_TATWEEL = "\x0640"; //this character has the common (Zyyy) script property,
+            //const string ARAB_TATWEEL = "\x0640"; //this character has the common (Zyyy) script property,
                                                   //but it has extended properties and applies to just the "Adlm", "Arab", "Mand", "Mani", "Phlp", "Rohg", "Sogd", "Syrc" scripts (note: arab is second in the list)
 
             var text = LATIN_TXT;
