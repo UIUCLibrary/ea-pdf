@@ -156,7 +156,17 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (XmlNode folderPropNode in folderPropNodes)
                 {
-                    AddEmbeddedFile(ret, EmbeddedFile.AFRelationship.Source, folderPropNode, folderPropNode.ParentNode?.SelectNodes("xm:Message/xm:OrigDate", xmlns), xmlns);
+                    XmlNodeList? dates = folderPropNode.ParentNode?.SelectNodes(".//xm:Message/xm:OrigDate", xmlns);
+                    XmlNodeList? parentFolderNames = folderPropNode.SelectNodes("ancestor::xm:Folder/xm:Name", xmlns);
+                    List<string> names = new();
+                    if(parentFolderNames != null)
+                    {
+                        foreach (XmlNode parentFolderName in parentFolderNames)
+                        {
+                            names.Add(parentFolderName.InnerText);
+                        }
+                    }
+                    AddSourceFile(ret, folderPropNode, dates, names, true, xmlns);
                 }
             }
 
@@ -164,40 +174,111 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (XmlNode msgPropNode in msgPropNodes)
                 {
-                    AddEmbeddedFile(ret, EmbeddedFile.AFRelationship.Source, msgPropNode, msgPropNode.ParentNode?.SelectNodes("xm:OrigDate", xmlns), xmlns);
-                }
-            }
-
-            var inlineAttachmentNodes = xdoc.SelectNodes("//xm:SingleBody/xm:BodyContent[translate(normalize-space(../@IsAttachment),'TRUE','true') = 'true' or not(starts-with(translate(normalize-space(../xm:ContentType),'TEX','tex'),'text/'))]", xmlns);
-            var extAttachmentNodes = xdoc.SelectNodes("//xm:SingleBody/xm:ExtBodyContent", xmlns);
-
-            if (inlineAttachmentNodes != null)
-            {
-                foreach (XmlNode inlineAttachmentNode in inlineAttachmentNodes)
-                {
-                }
-            }
-
-            if (extAttachmentNodes != null)
-            {
-                foreach (XmlNode extAttachmentNode in extAttachmentNodes)
-                {
-                    string fileName = extAttachmentNode.SelectSingleNode("../xm:DispositionFileName | ../xm:ContentName", xmlns)?.InnerText ?? "";
-                    string hash = extAttachmentNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText ?? "";
-                    if (string.IsNullOrWhiteSpace(fileName))
+                    XmlNodeList? dates = msgPropNode.ParentNode?.SelectNodes("xm:OrigDate", xmlns);
+                    XmlNodeList? parentFolderNames = msgPropNode.SelectNodes("ancestor::xm:Folder/xm:Name", xmlns);
+                    List<string> names = new();
+                    if (parentFolderNames != null)
                     {
-                        fileName = Path.ChangeExtension(hash, GetFileExtension(extAttachmentNode.ParentNode, xmlns));
+                        foreach (XmlNode parentFolderName in parentFolderNames)
+                        {
+                            names.Add(parentFolderName.InnerText);
+                        }
                     }
-                    long size = long.Parse(extAttachmentNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
+                    names.Add(msgPropNode.SelectSingleNode("../xm:MessageId", xmlns)?.InnerText ?? "");
+                    AddSourceFile(ret, msgPropNode, dates, names, false, xmlns);
+                }
+            }
 
-                    var creDate = extAttachmentNode.ParentNode?.SelectSingleNode("xm:DispositionParam[normalize-space(xm:Name) = 'creation-date']", xmlns)?.InnerText;
-                    var modDate = extAttachmentNode.ParentNode?.SelectSingleNode("xm:DispositionParam[xm:Name = 'modification-date']", xmlns)?.InnerText;
+            var bodyContentNodes = xdoc.SelectNodes("//xm:SingleBody/xm:BodyContent[translate(normalize-space(../@IsAttachment),'TRUE','true') = 'true' or not(starts-with(translate(normalize-space(../xm:ContentType),'TEX','tex'),'text/'))]", xmlns);
+            var extBodyContentNodes = xdoc.SelectNodes("//xm:SingleBody/xm:ExtBodyContent", xmlns);
 
+            if (bodyContentNodes != null)
+            {
+                foreach (XmlNode inlineAttachmentNode in bodyContentNodes)
+                {
+                    AddAttachmentFile(ret, inlineAttachmentNode, xmlns);
+                }
+            }
+
+            if (extBodyContentNodes != null)
+            {
+                foreach (XmlNode extAttachmentNode in extBodyContentNodes)
+                {
+                    AddAttachmentFile(ret, extAttachmentNode, xmlns);
                 }
             }
 
 
             //get the attachment files
+
+            return ret;
+        }
+
+        private (string filename, string hash, long size) GetAttachmentFilenameHashSize(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
+        {
+            string fileName = extAttachmentNode.SelectSingleNode("(ancestor::*/xm:DispositionFileName | ancestor::*/xm:ContentName)[last()]", xmlns)?.InnerText ?? "";
+
+
+            string hash = extAttachmentNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText ?? "";
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = Path.ChangeExtension(hash, GetFileExtension(extAttachmentNode.ParentNode, xmlns));
+            }
+            else
+            {
+                fileName = Path.ChangeExtension(fileName, GetFileExtension(extAttachmentNode.ParentNode, xmlns));
+            }
+            long size = long.Parse(extAttachmentNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
+            return (fileName, hash, size);
+        }
+
+        private void AddAttachmentFile(List<EmbeddedFile> ret, XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
+        {
+            (DateTime earliest, DateTime latest) = GetEarliestLatestMessageDates(extAttachmentNode.SelectNodes($"ancestor::xm:Folder//xm:OrigDate", xmlns));
+            (string fileName, string hash, long size)  = GetAttachmentFilenameHashSize(extAttachmentNode, xmlns);
+
+
+            if (!DateTime.TryParse(extAttachmentNode.SelectSingleNode($"ancestor::*/xm:DispositionParam[translate(normalize-space(xm:Name),'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'creation-date']/xm:Value", xmlns)?.InnerText, out DateTime creDate))
+            {
+                if (!DateTime.TryParse(extAttachmentNode.SelectSingleNode($"ancestor::*/xm:OrigDate", xmlns)?.InnerText, out creDate))
+                {
+                    creDate = earliest;
+                }
+            }
+            if (!DateTime.TryParse(extAttachmentNode.SelectSingleNode($"ancestor::*/xm:DispositionParam[translate(normalize-space(xm:Name),'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'modification-date']/xm:Value", xmlns)?.InnerText, out DateTime modDate))
+            {
+                if (!DateTime.TryParse(extAttachmentNode.SelectSingleNode($"ancestor::*/xm:OrigDate", xmlns)?.InnerText, out modDate))
+                {
+                    modDate = latest;
+                }
+            }
+
+
+
+            var mime = extAttachmentNode.ParentNode?.SelectSingleNode("xm:ContentType", xmlns)?.InnerText ?? "";
+
+            ret.Add(new EmbeddedFile()
+            {
+                OriginalFileName = fileName,
+                Relationship = EmbeddedFile.AFRelationship.Supplement,
+                Subtype = mime,
+                Size = size,
+                Hash = hash,
+                CreationDate = creDate,
+                ModDate = modDate,
+                UniqueName = Path.ChangeExtension(hash, GetFileExtension(extAttachmentNode.ParentNode, xmlns)),
+                Description = GetAttachmentDescription(extAttachmentNode, xmlns)
+            });
+
+        }
+
+        private string GetAttachmentDescription(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
+        {
+            string msgId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText ?? "";
+            string from = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:From/xm:Mailbox", xmlns)?.InnerText ?? "";
+            string to = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:To/xm:Mailbox", xmlns)?.InnerText ?? "";
+            string subj = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:Subject", xmlns)?.InnerText ?? "";
+            string ret = $"Attachment from Message ID '{msgId}' From {from} To {to} Subject '{subj}'";
 
             return ret;
         }
@@ -232,26 +313,33 @@ namespace UIUCLibrary.EaPdf
             }
             else if (dispositionFileName.Contains('.'))
             {
-                return dispositionFileName.Substring(dispositionFileName.LastIndexOf('.') + 1);
+                return Path.GetExtension(dispositionFileName);
             }
             else if (contentName.Contains('.'))
             {
-                return contentName.Substring(contentName.LastIndexOf('.') + 1);
+                return Path.GetExtension(contentName);
             }
             else
             {
-                return MimeTypeMap.GetExtension(contentType).Substring(1); //skip the leading dot
+                return MimeTypeMap.GetExtension(contentType);
             }
         }
 
-        private void AddEmbeddedFile(List<EmbeddedFile> ret, EmbeddedFile.AFRelationship relat, XmlNode propNode, XmlNodeList? origDates, XmlNamespaceManager xmlns)
+        private void AddSourceFile(List<EmbeddedFile> ret, XmlNode propNode, XmlNodeList? origDates, List<string> sourceNames, bool folder, XmlNamespaceManager xmlns)
         {
             var relPath = propNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText ?? "";
+            var fileExt = propNode.SelectSingleNode("xm:FileExt", xmlns)?.InnerText ?? "";
+
+            if(!string.IsNullOrWhiteSpace(fileExt))
+            {
+                relPath = Path.ChangeExtension(relPath, fileExt);
+            }
+
             var mime = propNode.SelectSingleNode("xm:ContentType", xmlns)?.InnerText ?? "";
             var (earliest, latest) = GetEarliestLatestMessageDates(origDates);
             //get file dates
-            DateTime.TryParse(propNode.SelectSingleNode("xm:Created", xmlns)?.InnerText, out var fileCreDate);
-            DateTime.TryParse(propNode.SelectSingleNode("xm:Modified", xmlns)?.InnerText, out var fileModDate);
+            DateTime.TryParse(propNode.SelectSingleNode("xm:Created", xmlns)?.InnerText, out DateTime fileCreDate);
+            DateTime.TryParse(propNode.SelectSingleNode("xm:Modified", xmlns)?.InnerText, out DateTime fileModDate);
 
             //fileModDate can be earlier than fileCreDate, for example if file has been copied, so swap if this is the case
             if (fileModDate < fileCreDate)
@@ -271,17 +359,21 @@ namespace UIUCLibrary.EaPdf
                 fileModDate = latest;
             }
 
+            var hash = propNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText ?? "";
+
             ret.Add(new EmbeddedFile()
             {
                 OriginalFileName = relPath,
-                Relationship = relat,
+                Relationship = EmbeddedFile.AFRelationship.Source,
                 Subtype = mime,
                 Size = long.Parse(propNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1"),
-                Hash = propNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText ?? "",
+                Hash = hash,
                 CreationDate = fileCreDate,
-                ModDate = fileModDate
+                ModDate = fileModDate,
+                UniqueName = Path.ChangeExtension(hash, MimeTypeMap.GetExtension(mime)),
+                Description = "Source file for " + (folder ? "folder: " :  "message: ") + string.Join(" -> ", sourceNames)
+            }); ;
 
-            });
         }
 
 

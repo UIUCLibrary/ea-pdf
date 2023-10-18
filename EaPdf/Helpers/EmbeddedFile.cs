@@ -35,5 +35,9 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         public DateTime? CreationDate { get; init; } = null;
 
+        public string Description { get; init; } = string.Empty;
+
+        public string UniqueName { get; init; } = string.Empty;
+
     }
 }

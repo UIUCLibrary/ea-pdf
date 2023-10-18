@@ -35,9 +35,161 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
+        /// <summary>
+        /// Set the AFRelationship, use the actual file names, and set the size, mod date, and creation date for each attachment
+        /// </summary>
+        /// <param name="embeddedFiles"></param>
+        /// <exception cref="Exception"></exception>
         public void NormalizeAttachments(List<EmbeddedFile> embeddedFiles)
         {
-            var catalog = _reader.Catalog;
+            foreach (var embeddedFileGrp in embeddedFiles.GroupBy(e => e.UniqueName)) //The embeddedFiles list can contain duplicates, so group by PdfName and use the first one in the group or use the group to create a new PdfName
+            {
+                var embeddedFile = embeddedFileGrp.First();
+
+                var fileName = embeddedFile.UniqueName;
+                var desc = embeddedFile.Description;
+                var fileNames = embeddedFileGrp.Select(e => e.OriginalFileName).Distinct().ToList();
+                var descs = embeddedFileGrp.Select(e => e.Description).Distinct().ToList();
+
+                //For duplicates only use the original filename if all the duplicates use the same name; otherwise use the Pdfname, and put something in the description
+                if (fileNames.Count == 1)
+                {
+                    fileName = fileNames[0];
+                }
+                else if (fileNames.Count > 1)
+                {
+                    desc = $"* {desc} *[File occurs {fileNames.Count} times with different filenames: '{string.Join("', '", fileNames)}']";
+                }
+
+                if (descs.Count > 1)
+                {
+                    desc = $"* {desc} *[File is attached to multiple messages; description is for the first.]";
+                }
+
+
+                var annotFileSpecList = GetAnnotFileSpecList(embeddedFile.UniqueName);
+                foreach (var (annot, filespec) in annotFileSpecList)
+                {
+                    //Update the values of the /Contents and /T entries in the annotation dictionary for the file attachment annotation
+                    //Also add a /NM entry to the annotation dictionary, to maintain the linkage to the original file spec
+                    if (annot != null)
+                    {
+                        var d = new PdfDate();
+                        annot.Put(PdfName.Nm, new PdfString(embeddedFile.UniqueName, PdfObject.TEXT_UNICODE));
+                        annot.Put(PdfName.Contents, new PdfString(desc, PdfObject.TEXT_UNICODE));
+                        annot.Put(new PdfName("Subj"), new PdfString(fileName, PdfObject.TEXT_UNICODE));
+                        annot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
+                        annot.Put(PdfName.Creationdate, d);
+                        annot.Put(PdfName.M, d);
+                    }
+
+                    filespec.Put(new PdfName("AFRelationship"), new PdfName(embeddedFile.Relationship.ToString()));
+
+                    filespec.Put(new PdfName("F"), new PdfString(fileName, PdfObject.TEXT_UNICODE));
+                    filespec.Put(new PdfName("UF"), new PdfString(fileName, PdfObject.TEXT_UNICODE));
+                    if (!string.IsNullOrWhiteSpace(desc))
+                        filespec.Put(new PdfName("Desc"), new PdfString(desc, PdfObject.TEXT_UNICODE));
+
+                    var efDict = filespec.GetAsDict(PdfName.EF) ?? throw new Exception($"Filespec EmbeddedFile (EF) for attachment '{embeddedFile.UniqueName}' not found");
+
+                    var efStream = efDict.GetAsStream(PdfName.F) ?? throw new Exception($"Filespec EmbeddedFile stream for attachment '{embeddedFile.UniqueName}' not found");
+
+                    efStream.Put(new PdfName("Subtype"), new PdfName(embeddedFile.Subtype));
+
+                    var paramsDict = efStream.GetAsDict(PdfName.Params);
+
+                    if (paramsDict == null)
+                    {
+                        paramsDict = new PdfDictionary();
+                        paramsDict.Put(PdfName.Size, new PdfNumber(embeddedFile.Size));
+                        efStream.Put(PdfName.Params, paramsDict);
+                    }
+                    var size = paramsDict.GetAsNumber(PdfName.Size) ?? throw new Exception($"Filespec EmbeddedFile stream Params Size for attachment '{embeddedFile.UniqueName}' not found");
+                    if ((long)size.FloatValue != embeddedFile.Size) throw new Exception($"Filespec EmbeddedFile stream Params Size for attachment '{embeddedFile.UniqueName}' does not match");
+
+
+                    if (embeddedFile.ModDate != null) paramsDict.Put(new PdfName("ModDate"), new PdfDate(embeddedFile.ModDate ?? DateTime.Now));
+                    if (embeddedFile.CreationDate != null) paramsDict.Put(new PdfName("CreationDate"), new PdfDate(embeddedFile.ModDate ?? DateTime.Now));
+                }
+
+
+            }
+
+        }
+
+        private List<(PdfDictionary? annotation, PdfDictionary filespec)> GetAnnotFileSpecList(string name)
+        {
+            List<(PdfDictionary? annotation, PdfDictionary filespec)> ret = new();
+
+            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
+
+            //attachments via the catalog Names Embeddedfiles entries
+            var names = catalog.GetAsDict(PdfName.Names);
+            var embeddedFilesDict = names?.GetAsDict(PdfName.Embeddedfiles);
+
+            //attachments via the page annotations entries
+            var annotationAttachments = GetFileAttachmentAnnotations();
+
+            if (embeddedFilesDict != null)
+            {
+                var fs = (PdfDictionary?)GetObjFromNameTree(embeddedFilesDict, name);
+                if (fs != null)
+                    ret.Add((null, fs));
+            }
+
+            if (annotationAttachments.ContainsKey(name))
+            {
+                ret.AddRange(annotationAttachments[name]);
+            }
+
+            if (ret == null)
+                throw new Exception($"Filespec for attachment '{name}' not found");
+
+            return ret;
+        }
+
+        object locker = new object();
+        Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec)>>? _fileAttachmentAnnotations;
+        private Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec)>> GetFileAttachmentAnnotations()
+        {
+            lock (locker)
+            {
+                if (_fileAttachmentAnnotations == null)
+                {
+                    _fileAttachmentAnnotations = new();
+
+                    int pageCount = _reader.NumberOfPages;
+                    for (int i = 1; i <= pageCount; i++)
+                    {
+                        PdfDictionary pageDict = _reader.GetPageN(i) ?? throw new Exception($"Unable to get page {i}");
+                        PdfArray annots = pageDict.GetAsArray(PdfName.Annots);
+
+                        if (annots == null)
+                            continue;
+
+                        for (int j = 0; j < annots.Size; j++)
+                        {
+                            PdfDictionary annot = annots.GetAsDict(j) ?? throw new Exception("Unable to retrieve Annot dictionary");
+                            var name = annot.GetAsName(PdfName.Subtype);
+                            if (name == PdfName.Fileattachment)
+                            {
+                                var fs = annot.GetAsDict(PdfName.Fs) ?? throw new Exception("Unable to retrieve Annotation Filespec dictionary (Fs)");
+                                var f = fs.GetAsString(PdfName.F) ?? throw new Exception("Unable to retrieve Filespec Filename (F)");
+                                if (_fileAttachmentAnnotations.ContainsKey(f.ToUnicodeString()))
+                                {
+                                    _fileAttachmentAnnotations[f.ToUnicodeString()].Add((annot, fs));
+                                }
+                                else
+                                {
+                                    _fileAttachmentAnnotations.Add(f.ToUnicodeString(), (new List<(PdfDictionary? annotation, PdfDictionary filespec)>() { (annot, fs) }));
+                                }
+                            }
+                        }
+
+                    }
+                }
+                return _fileAttachmentAnnotations;
+            }
         }
 
         /// <summary>
@@ -98,7 +250,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 metaDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference);
                 newDPartDict.Put(new PdfName("DPM"), metaDict);
                 //Maybe use this instead: newDPartDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference); 
-                if(dpartNode.Parent == null)
+                if (dpartNode.Parent == null)
                 {
                     //this is the root DPart node, so replace the catalog metadata with this
                     _reader.Catalog.Remove(PdfName.Metadata);
@@ -227,6 +379,73 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             public int PageNumber { get; }
 
             public PdfDictionary PageDictionary { get; }
+        }
+
+        private PdfObject? GetObjFromNameTree(PdfDictionary nameTree, string name)
+        {
+            if (nameTree == null)
+                throw new ArgumentNullException(nameof(nameTree));
+
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+
+            PdfObject? ret = null;
+
+            PdfArray names = nameTree.GetAsArray(PdfName.Names);
+            PdfArray kids = nameTree.GetAsArray(PdfName.Kids);
+            PdfArray limits = nameTree.GetAsArray(PdfName.Limits);
+
+            string lowerLimit;
+            string upperLimit;
+            if (limits != null)
+            {
+                lowerLimit = limits.GetAsString(0).ToString();
+                upperLimit = limits.GetAsString(1).ToString();
+                int compLower = string.Compare(name, lowerLimit, StringComparison.Ordinal);
+                int compUpper = string.Compare(name, upperLimit, StringComparison.Ordinal);
+                if (compLower < 0 || compUpper > 0)
+                    return null;
+            }
+
+            if (names != null)
+            {
+                //TODO: this is a linear search, could be improved since the names are sorted
+
+                for (int i = 0; i < names.ArrayList.Count; i += 2)
+                {
+                    var key = names.GetAsString(i).ToString();
+                    var value = names.GetDirectObject(i + 1);
+                    if (string.Compare(name, key, StringComparison.Ordinal) == 0)
+                    {
+                        return value;
+                    }
+
+                }
+            }
+            else if (kids != null)
+            {
+                for (int i = 0; i < kids.Size; i += 1)
+                {
+                    PdfObject nodes = (PdfDictionary)kids.GetDirectObject(i);
+                    if (nodes.IsDictionary())
+                    {
+                        ret = GetObjFromNameTree((PdfDictionary)nodes, name);
+                        if (ret != null)
+                            break;
+                    }
+                    else
+                    {
+                        throw new Exception("Invalid kids");
+                    }
+                }
+            }
+            else
+            {
+                throw new Exception("Invalid name tree");
+            }
+
+
+            return ret;
         }
     }
 }
