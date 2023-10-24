@@ -197,7 +197,7 @@ namespace UIUCLibrary.TestEaPdf
                 }
                 else if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    pdfFile = Path.ChangeExtension(xmlFile, $"xep_{(ext ? "_x" : "")}{(wrap ? "_w" : "")}.pdf");
+                    pdfFile = Path.ChangeExtension(xmlFile, $"xep{(ext ? "_x" : "")}{(wrap ? "_w" : "")}.pdf");
                     configFile = Path.GetFullPath("XResources\\xep.xml");
                     foTransformer = new XepToPdfTransformer(configFile);
                 }

@@ -68,7 +68,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
 
                 var annotFileSpecList = GetAnnotFileSpecList(embeddedFile.UniqueName);
-                foreach (var (annot, filespec) in annotFileSpecList)
+                foreach (var (annot, filespec, indRef) in annotFileSpecList)
                 {
                     //Update the values of the /Contents and /T entries in the annotation dictionary for the file attachment annotation
                     //Also add a /NM entry to the annotation dictionary, to maintain the linkage to the original file spec
@@ -111,15 +111,93 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     if (embeddedFile.ModDate != null) paramsDict.Put(new PdfName("ModDate"), new PdfDate(embeddedFile.ModDate ?? DateTime.Now));
                     if (embeddedFile.CreationDate != null) paramsDict.Put(new PdfName("CreationDate"), new PdfDate(embeddedFile.ModDate ?? DateTime.Now));
                 }
-
-
             }
+
+            AddFileAttachmentAnnots(embeddedFiles);
 
         }
 
-        private List<(PdfDictionary? annotation, PdfDictionary filespec)> GetAnnotFileSpecList(string name)
+        private void AddFileAttachmentAnnots(List<EmbeddedFile> embeddedFiles)
         {
-            List<(PdfDictionary? annotation, PdfDictionary filespec)> ret = new();
+            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
+
+            //named destinations via the catalog Names Dests entries
+            var names = catalog.GetAsDict(PdfName.Names);
+            var destsDict = names?.GetAsDict(PdfName.Dests) ?? throw new Exception("Unable to get the Catalog Names Dests name tree");
+
+            var linkAnnotations = GetLinkAnnotations();
+
+            var annotAppearanceStream = AddAnnotAppearanceStream();
+
+            foreach (var embeddedFile in embeddedFiles)
+            {
+                var annotFileSpecs = GetAnnotFileSpecList(embeddedFile.UniqueName);
+                var annotFileSpec = annotFileSpecs.Single(); //TODO: There can be multiple annotations for the same file spec, but for now just use the first one  
+
+                var objs = GetObjListFromNameTree(destsDict, "X_" + embeddedFile.Hash) ;
+
+                foreach ((PdfObject obj , PdfIndirectReference indRef) in objs)
+                {
+
+                    var linkAnnots = linkAnnotations[indRef.ToString()];
+                    foreach (var linkAnnot in linkAnnots)
+                    {
+                        var d = new PdfDate();
+
+                        //convert the link annotation into a file attachment annotation
+                        linkAnnot.Put(PdfName.Subtype, PdfName.Fileattachment);
+                        linkAnnot.Put(PdfName.Name, new PdfName("Paperclip"));
+                        linkAnnot.Put(PdfName.Nm, new PdfString(embeddedFile.UniqueName, PdfObject.TEXT_UNICODE));
+                        linkAnnot.Put(PdfName.Contents, new PdfString("TODO: contents", PdfObject.TEXT_UNICODE));
+                        linkAnnot.Put(new PdfName("Subj"), new PdfString("TODO: Subj", PdfObject.TEXT_UNICODE));
+                        linkAnnot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
+                        linkAnnot.Put(PdfName.Creationdate, d);
+                        linkAnnot.Put(PdfName.M, d);
+                        linkAnnot.Put(PdfName.Fs, annotFileSpec.indRef); 
+                        var ap = new PdfDictionary();
+                        ap.Put(PdfName.N, annotAppearanceStream.IndirectReference);
+                        linkAnnot.Put(PdfName.Ap, ap);
+                        //linkAnnot.Put(PdfName.P, indRef); //TODO: Need to get the indirect reference to the page object
+                        linkAnnot.Remove(PdfName.A);
+                        linkAnnot.Remove(PdfName.H);
+                        linkAnnot.Remove(PdfName.Structparent);
+                    }
+
+                }
+            }
+        }
+
+        private PdfIndirectObject AddAnnotAppearanceStream()
+        {
+            using var memStrm = new MemoryStream();
+            using var strmWrtr = new StreamWriter(memStrm);
+            //TODO: the graphic is cribbed from a RenderX XEP-produced file; may need to be modified to avoid licensing issues
+            strmWrtr.Write("q\r\n1.0 1.0 0.0 rg 0 G 0 i 0.59 w 4 M 1 j 0 J []0 d  0.51 13.63 m 0.51 13.25 0.48 4.38 0.48 3.74 c 0.48 3.29 0.49 1.93 1.38 1.05 c 1.89 0.55 2.59 0.31 3.45 0.32 c 5.46 0.36 6.60 1.61 6.57 3.76 c 6.56 4.66 6.57 10.39 6.57 10.45 c 6.57 10.70 6.36 10.90 6.11 10.90 c 5.86 10.90 5.65 10.70 5.65 10.44 c 5.65 10.21 5.64 4.66 5.65 3.75 c 5.67 2.09 4.95 1.27 3.44 1.24 c 2.83 1.23 2.35 1.39 2.03 1.71 c 1.40 2.32 1.40 3.39 1.40 3.75 c 1.40 4.37 1.43 13.24 1.43 13.63 c 1.43 13.97 1.52 15.65 3.03 15.65 c 3.91 15.65 4.29 15.09 4.29 13.77 c 4.29 13.63 l 4.30 13.30 4.28 9.30 4.27 7.24 c 4.27 7.23 4.27 7.22 4.27 7.21 c 4.28 7.00 4.25 6.32 3.96 6.03 c 3.87 5.94 3.76 5.89 3.60 5.90 c 2.85 5.91 2.86 7.23 2.86 7.24 c 2.84 10.81 l 2.83 11.07 2.63 11.27 2.37 11.27 c 2.12 11.27 1.92 11.06 1.92 10.81 c 1.94 7.24 l 1.93 6.47 2.26 5.00 3.59 4.98 c 3.99 4.97 4.35 5.12 4.62 5.40 c 5.21 6.01 5.20 7.06 5.19 7.24 c 5.19 7.50 5.22 13.24 5.20 13.66 c 5.20 13.77 l 5.21 14.92 4.92 15.61 4.51 16.03 c 4.08 16.45 3.53 16.57 3.03 16.57 c 1.05 16.57 0.52 14.72 0.51 13.63 c h B \r\nQ\r\n");
+            strmWrtr.Flush();
+            memStrm.Position = 0;
+
+            var annotAppearanceStream = new PdfStream(memStrm, _stamper.Writer);
+            annotAppearanceStream.Put(PdfName.TYPE, PdfName.Xobject);
+            annotAppearanceStream.Put(PdfName.Subtype, PdfName.Form);
+            var bb = new PdfArray();
+            bb.Add(new PdfNumber(0));
+            bb.Add(new PdfNumber(0));
+            bb.Add(new PdfNumber(7));
+            bb.Add(new PdfNumber(17));
+            annotAppearanceStream.Put(PdfName.Bbox, bb);
+            annotAppearanceStream.Put(PdfName.Resources, new PdfDictionary());
+            var ret = _stamper.Writer.AddToBody(annotAppearanceStream);
+            annotAppearanceStream.WriteLength();
+
+            strmWrtr.Close();
+            memStrm.Close();
+
+            return ret;
+        }
+
+        private List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)> GetAnnotFileSpecList(string name)
+        {
+            List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)> ret = new();
 
             var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
 
@@ -132,9 +210,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             if (embeddedFilesDict != null)
             {
-                var fs = (PdfDictionary?)GetObjFromNameTree(embeddedFilesDict, name);
-                if (fs != null)
-                    ret.Add((null, fs));
+                var t = GetObjFromNameTree(embeddedFilesDict, name);
+                if (t?.obj is PdfDictionary fs)
+                    ret.Add((null, fs, t.Value.indRef));
             }
 
             if (annotationAttachments.ContainsKey(name))
@@ -149,8 +227,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         }
 
         object locker = new object();
-        Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec)>>? _fileAttachmentAnnotations;
-        private Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec)>> GetFileAttachmentAnnotations()
+        Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>>? _fileAttachmentAnnotations;
+        private Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>> GetFileAttachmentAnnotations()
         {
             lock (locker)
             {
@@ -170,18 +248,21 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         for (int j = 0; j < annots.Size; j++)
                         {
                             PdfDictionary annot = annots.GetAsDict(j) ?? throw new Exception("Unable to retrieve Annot dictionary");
-                            var name = annot.GetAsName(PdfName.Subtype);
-                            if (name == PdfName.Fileattachment)
+                            var subtype = annot.GetAsName(PdfName.Subtype);
+                            if (subtype == PdfName.Fileattachment)
                             {
                                 var fs = annot.GetAsDict(PdfName.Fs) ?? throw new Exception("Unable to retrieve Annotation Filespec dictionary (Fs)");
+                                var fsRef = annot.GetAsIndirectObject(PdfName.Fs) ?? throw new Exception("Unable to retrieve Annotation Filespec indirect reference (Fs)");
+                                var indRef = fsRef.IndRef;
+
                                 var f = fs.GetAsString(PdfName.F) ?? throw new Exception("Unable to retrieve Filespec Filename (F)");
                                 if (_fileAttachmentAnnotations.ContainsKey(f.ToUnicodeString()))
                                 {
-                                    _fileAttachmentAnnotations[f.ToUnicodeString()].Add((annot, fs));
+                                    _fileAttachmentAnnotations[f.ToUnicodeString()].Add((annot, fs, fsRef));
                                 }
                                 else
                                 {
-                                    _fileAttachmentAnnotations.Add(f.ToUnicodeString(), (new List<(PdfDictionary? annotation, PdfDictionary filespec)>() { (annot, fs) }));
+                                    _fileAttachmentAnnotations.Add(f.ToUnicodeString(), (new List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>() { (annot, fs, fsRef) }));
                                 }
                             }
                         }
@@ -191,6 +272,53 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 return _fileAttachmentAnnotations;
             }
         }
+
+        Dictionary<string, List<PdfDictionary>>? _linkAnnotations;
+        private Dictionary<string, List<PdfDictionary>> GetLinkAnnotations()
+        {
+            lock (locker)
+            {
+                if (_linkAnnotations == null)
+                {
+                    _linkAnnotations = new();
+
+                    int pageCount = _reader.NumberOfPages;
+                    for (int i = 1; i <= pageCount; i++)
+                    {
+                        PdfDictionary pageDict = _reader.GetPageN(i) ?? throw new Exception($"Unable to get page {i}");
+                        PdfArray annots = pageDict.GetAsArray(PdfName.Annots);
+
+                        if (annots == null)
+                            continue;
+
+                        for (int j = 0; j < annots.Size; j++)
+                        {
+                            PdfDictionary annot = annots.GetAsDict(j) ?? throw new Exception("Unable to retrieve Annot dictionary");
+                            var subtype = annot.GetAsName(PdfName.Subtype);
+                            if (subtype == PdfName.Link)
+                            {
+                                var a = annot.Get(PdfName.A);
+                                if (a == null)
+                                    continue;
+
+                                var key = a.ToString();
+                                if (_linkAnnotations.ContainsKey(key))
+                                {
+                                    _linkAnnotations[key].Add(annot);
+                                }
+                                else
+                                {
+                                    _linkAnnotations.Add(key, (new List<PdfDictionary>() { annot }));
+                                }
+                            }
+                        }
+
+                    }
+                }
+                return _linkAnnotations;
+            }
+        }
+
 
         /// <summary>
         /// Add Xmp metadata to a DPart range of pages for each message
@@ -381,7 +509,15 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             public PdfDictionary PageDictionary { get; }
         }
 
-        private PdfObject? GetObjFromNameTree(PdfDictionary nameTree, string name)
+        /// <summary>
+        /// Return the object and indirect reference from a name tree, where the name matches the given string
+        /// </summary>
+        /// <param name="nameTree"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="Exception"></exception>
+        private (PdfObject obj, PdfIndirectReference indRef)? GetObjFromNameTree(PdfDictionary nameTree, string name)
         {
             if (nameTree == null)
                 throw new ArgumentNullException(nameof(nameTree));
@@ -389,7 +525,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
-            PdfObject? ret = null;
+            (PdfObject obj, PdfIndirectReference indRef)? ret = null;
 
             PdfArray names = nameTree.GetAsArray(PdfName.Names);
             PdfArray kids = nameTree.GetAsArray(PdfName.Kids);
@@ -415,9 +551,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 {
                     var key = names.GetAsString(i).ToString();
                     var value = names.GetDirectObject(i + 1);
+                    var indRef = names.GetAsIndirectObject(i + 1);
                     if (string.Compare(name, key, StringComparison.Ordinal) == 0)
                     {
-                        return value;
+                        return (value, indRef);
                     }
 
                 }
@@ -447,5 +584,83 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             return ret;
         }
+
+        /// <summary>
+        /// Return a list of objects and indirect references from a name tree, where the name starts with the given string
+        /// </summary>
+        /// <param name="nameTree"></param>
+        /// <param name="nameStartsWith"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="Exception"></exception>
+        private List<(PdfObject obj, PdfIndirectReference indRef)> GetObjListFromNameTree(PdfDictionary nameTree, string nameStartsWith)
+        {
+            if (nameTree == null)
+                throw new ArgumentNullException(nameof(nameTree));
+
+            if (string.IsNullOrWhiteSpace(nameStartsWith))
+                throw new ArgumentNullException(nameof(nameStartsWith));
+
+            List<(PdfObject obj, PdfIndirectReference indRef)> ret = new();
+
+            PdfArray names = nameTree.GetAsArray(PdfName.Names);
+            PdfArray kids = nameTree.GetAsArray(PdfName.Kids);
+            PdfArray limits = nameTree.GetAsArray(PdfName.Limits);
+
+            string lowerLimit;
+            string upperLimit;
+            if (limits != null)
+            {
+                lowerLimit = limits.GetAsString(0).ToString();
+                upperLimit = limits.GetAsString(1).ToString();
+                //becausing looking for names starting with string, truncate the limits to the length of the nameStartsWith string
+                lowerLimit = lowerLimit.Substring(0, Math.Min(lowerLimit.Length, nameStartsWith.Length));
+                upperLimit = upperLimit.Substring(0, Math.Min(upperLimit.Length, nameStartsWith.Length));
+                int compLower = string.Compare(nameStartsWith, lowerLimit, StringComparison.Ordinal);
+                int compUpper = string.Compare(nameStartsWith, upperLimit, StringComparison.Ordinal);
+                if (compLower < 0 || compUpper > 0)
+                    return ret;
+            }
+
+            if (names != null)
+            {
+                //TODO: this is a linear search, could be improved since the names are sorted
+
+                for (int i = 0; i < names.ArrayList.Count; i += 2)
+                {
+                    var key = names.GetAsString(i).ToString();
+                    var value = names.GetDirectObject(i + 1);
+                    var indRef = names.GetAsIndirectObject(i + 1);
+                    if (key.StartsWith(nameStartsWith, StringComparison.Ordinal))
+                    {
+                        ret.Add((value, indRef));
+                    }
+
+                }
+            }
+            else if (kids != null)
+            {
+                for (int i = 0; i < kids.Size; i += 1)
+                {
+                    PdfObject nodes = (PdfDictionary)kids.GetDirectObject(i);
+                    if (nodes.IsDictionary())
+                    {
+                        ret.AddRange(GetObjListFromNameTree((PdfDictionary)nodes, nameStartsWith));
+                    }
+                    else
+                    {
+                        throw new Exception("Invalid kids");
+                    }
+                }
+            }
+            else
+            {
+                throw new Exception("Invalid name tree");
+            }
+
+
+            return ret;
+        }
+
     }
 }

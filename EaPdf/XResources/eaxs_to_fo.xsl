@@ -1197,10 +1197,20 @@
 		<xsl:if test="$single-body/eaxs:ExtBodyContent or lower-case(normalize-space($single-body/eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64' and (fn:lower-case(normalize-space($single-body/@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space($single-body/eaxs:ContentType)),'text/')))">
 			<xsl:choose>
 				<xsl:when test="$fo-processor='fop'">
-							<fo:basic-link>
-								<xsl:attribute name="internal-destination">ATT_<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/></xsl:attribute>
-								<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Attachment</fo:inline>	
-							</fo:basic-link>
+					<xsl:variable name="UniqueDestination">
+						<xsl:text>X_</xsl:text><xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/><xsl:text>_</xsl:text><xsl:value-of select="$single-body/ancestor::*/eaxs:LocalId"/>
+					</xsl:variable>
+					<fo:basic-link>
+						<xsl:attribute name="internal-destination">ATT_<xsl:value-of select="$single-body/eaxs:*/eaxs:Hash/eaxs:Value"/></xsl:attribute>
+						<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Attachment</fo:inline>	
+					</fo:basic-link>
+					<fo:inline>&nbsp;</fo:inline>
+					<fo:basic-link>
+						<xsl:attribute name="id"><xsl:value-of select="$UniqueDestination"/></xsl:attribute>
+						<xsl:attribute name="internal-destination"><xsl:value-of select="$UniqueDestination"/></xsl:attribute>
+						<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="$UniqueDestination"/></xsl:attribute></fox:destination>
+						<fo:inline xsl:use-attribute-sets="a-link" font-size="small">&nbsp;</fo:inline>	
+					</fo:basic-link>
 				</xsl:when>
 				<xsl:when test="$fo-processor='xep'">
 					<fo:basic-link>
