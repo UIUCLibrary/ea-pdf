@@ -1898,7 +1898,7 @@ namespace UIUCLibrary.EaPdf
             }
             //UNSUPPORTED: ContentIdComments, not currently supported by MimeKit, actually might not be allowed by the RFC - not sure if ContentId is a structured header type
 
-            if (isMultipart && !string.IsNullOrWhiteSpace(part?.ContentDescription))
+            if (!string.IsNullOrWhiteSpace(part?.ContentDescription))
             {
                 xwriter.WriteElementString("Description", XM_NS, part.ContentDescription);
             }
