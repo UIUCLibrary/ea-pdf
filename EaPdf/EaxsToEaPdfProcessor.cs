@@ -101,7 +101,7 @@ namespace UIUCLibrary.EaPdf
             File.Copy(pdfFilePath, Path.ChangeExtension(pdfFilePath, "pre.pdf"), true);
 #endif
 
-            //Do some post processing to add metadata
+            //Do some post processing to add metadata, cleanup attachments, etc.
             PostProcessPdf(eaxsFilePath, pdfFilePath);
         }
 
@@ -274,11 +274,39 @@ namespace UIUCLibrary.EaPdf
 
         private string GetAttachmentDescription(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
         {
-            string msgId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText ?? "";
-            string from = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:From/xm:Mailbox", xmlns)?.InnerText ?? "";
-            string to = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:To/xm:Mailbox", xmlns)?.InnerText ?? "";
-            string subj = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:Subject", xmlns)?.InnerText ?? "";
+            //if the mime header has its own description, use that
+            string descr = extAttachmentNode.SelectSingleNode("../xm:Description", xmlns)?.InnerText ?? "";
+
+            string msgId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText ?? "[Missing Value]";
+            var froms = extAttachmentNode.SelectNodes("ancestor::xm:Message/xm:From/xm:Mailbox", xmlns);
+
+
+            string from = "[Missing Value]";
+            if (froms != null && froms.Count > 0)
+            {
+                from = froms[0]?.InnerText ?? "";
+                if(froms.Count > 1)
+                {
+                    from += " (and others)";
+                }
+            }
+            var tos = extAttachmentNode.SelectNodes("ancestor::xm:Message/xm:To/xm:Mailbox", xmlns);
+            string to = "[Missing Value]";
+            if (tos != null && tos.Count > 0)
+            {
+                to = tos[0]?.InnerText ?? "";
+                if (tos.Count > 1)
+                {
+                    to += " (and others)";
+                }
+            }
+            string subj = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:Subject", xmlns)?.InnerText ?? "[Missing Value]";
             string ret = $"Attachment from Message ID '{msgId}' From {from} To {to} Subject '{subj}'";
+
+            if (!string.IsNullOrWhiteSpace(descr))
+            {
+                ret += $"\r\n\r\nDescription: {descr}";
+            }
 
             return ret;
         }
