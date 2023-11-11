@@ -7,6 +7,8 @@ namespace UIUCLibrary.EaPdf.Helpers
     public class FilePathHelpers
     {
 
+        public const string XML_WRAPPED_EXT  = ".xmlw";
+
         /// <summary>
         /// Determine whether the output path is allowed given the input folder path
         /// The output folder path cannot be the same as or a child folder of the input folder 
@@ -183,7 +185,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             string ext;
             if (wrapInXml)
             {
-                ext = ".xmlw";
+                ext = XML_WRAPPED_EXT; //TODO: what if the original filename already has an xmlw extension?
             }
             else
             {

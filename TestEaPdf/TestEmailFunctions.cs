@@ -902,7 +902,7 @@ namespace UIUCLibrary.TestEaPdf
                         var wrapped = extNode.SelectSingleNode("xm:XMLWrapped", xmlns)?.InnerText ?? "false";
                         Assert.IsTrue(wrapped.Equals("true", StringComparison.OrdinalIgnoreCase));
 
-                        Assert.IsTrue(Path.GetExtension(extFilepath) == ".xml");
+                        Assert.IsTrue(Path.GetExtension(extFilepath) == FilePathHelpers.XML_WRAPPED_EXT);
 
                         //make sure external file is valid xml
                         validXml = true;
