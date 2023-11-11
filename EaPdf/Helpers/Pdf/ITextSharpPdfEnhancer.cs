@@ -1,7 +1,11 @@
 ﻿using Aron.Weiler;
+using iTextSharp.text;
 using iTextSharp.text.pdf;
 using Microsoft.Extensions.Logging;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.util;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
@@ -35,6 +39,14 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
+        public Dictionary<string,string> PdfInfo
+        {
+            get
+            {
+                return (Dictionary<string, string>)(_reader.Info);
+            }
+        }
+
         /// <summary>
         /// Set the AFRelationship, use the actual file names, and set the size, mod date, and creation date for each attachment
         /// </summary>
@@ -64,6 +76,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 if (descs.Count > 1)
                 {
                     desc = $"* {desc} *[File is attached to multiple messages; description is for the first.]";
+                    desc = Regex.Replace(desc, @"^\* \* ", "** ");
                 }
 
 
@@ -115,6 +128,16 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             AddFileAttachmentAnnots(embeddedFiles);
 
+            if(PdfInfo.ContainsKey("Producer") && PdfInfo["Producer"].Contains("Apache FOP"))
+            {
+                //if the PDF was produced by FOP, the AddFileAttachmentAnnots will cause duplicate entries in the file attachments list
+                //so delete the /Catalog /Names /EmbeddedFiles entry
+                //TODO:  This will leave an orphaned name tree in the document, which will be removed by the RemoveUnusedObjects call in the Dispose method
+                var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
+                var names = catalog.GetAsDict(PdfName.Names);
+                names?.Remove(PdfName.Embeddedfiles);
+            }
+
         }
 
         private void AddFileAttachmentAnnots(List<EmbeddedFile> embeddedFiles)
@@ -131,39 +154,42 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             foreach (var embeddedFile in embeddedFiles)
             {
+                var objs = GetObjListFromNameTree(destsDict, "X_" + embeddedFile.Hash);
+
                 var annotFileSpecs = GetAnnotFileSpecList(embeddedFile.UniqueName);
-                var annotFileSpec = annotFileSpecs.Single(); //TODO: There can be multiple annotations for the same file spec, but for now just use the first one  
-
-                var objs = GetObjListFromNameTree(destsDict, "X_" + embeddedFile.Hash) ;
-
-                foreach ((PdfObject obj , PdfIndirectReference indRef) in objs)
+                foreach (var annotFileSpec in annotFileSpecs) //There can be multiple annotations pointing to the same embedded file 
+                    //TODO: Take advantage of this to provide unique filenames for duplicate attachments
                 {
-
-                    var linkAnnots = linkAnnotations[indRef.ToString()];
-                    foreach (var linkAnnot in linkAnnots)
+                    foreach ((PdfObject obj, PdfIndirectReference indRef) in objs)
                     {
-                        var d = new PdfDate();
 
-                        //convert the link annotation into a file attachment annotation
-                        linkAnnot.Put(PdfName.Subtype, PdfName.Fileattachment);
-                        linkAnnot.Put(PdfName.Name, new PdfName("Paperclip"));
-                        linkAnnot.Put(PdfName.Nm, new PdfString(embeddedFile.UniqueName, PdfObject.TEXT_UNICODE));
-                        linkAnnot.Put(PdfName.Contents, new PdfString("TODO: contents", PdfObject.TEXT_UNICODE));
-                        linkAnnot.Put(new PdfName("Subj"), new PdfString("TODO: Subj", PdfObject.TEXT_UNICODE));
-                        linkAnnot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
-                        linkAnnot.Put(PdfName.Creationdate, d);
-                        linkAnnot.Put(PdfName.M, d);
-                        linkAnnot.Put(PdfName.Fs, annotFileSpec.indRef); 
-                        var ap = new PdfDictionary();
-                        ap.Put(PdfName.N, annotAppearanceStream.IndirectReference);
-                        linkAnnot.Put(PdfName.Ap, ap);
-                        //linkAnnot.Put(PdfName.P, indRef); //TODO: Need to get the indirect reference to the page object
-                        linkAnnot.Remove(PdfName.A);
-                        linkAnnot.Remove(PdfName.H);
-                        linkAnnot.Remove(PdfName.Structparent);
+                        var linkAnnots = linkAnnotations[indRef.ToString()];
+                        foreach (var linkAnnot in linkAnnots)
+                        {
+                            var d = new PdfDate();
+
+                            //convert the link annotation into a file attachment annotation
+                            linkAnnot.Put(PdfName.Subtype, PdfName.Fileattachment);
+                            linkAnnot.Put(PdfName.Name, new PdfName("Paperclip"));
+                            linkAnnot.Put(PdfName.Nm, new PdfString(embeddedFile.UniqueName, PdfObject.TEXT_UNICODE));
+                            linkAnnot.Put(PdfName.Contents, new PdfString(embeddedFile.Description, PdfObject.TEXT_UNICODE));  //TODO: Look if the MIME header has a description
+                            //linkAnnot.Put(new PdfName("Subj"), new PdfString("TODO: Subj", PdfObject.TEXT_UNICODE)); //TODO: Look if the MIME header has a subject
+                            linkAnnot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
+                            linkAnnot.Put(PdfName.Creationdate, d);
+                            linkAnnot.Put(PdfName.M, d);
+                            linkAnnot.Put(PdfName.Fs, annotFileSpec.indRef);
+                            var ap = new PdfDictionary();
+                            ap.Put(PdfName.N, annotAppearanceStream.IndirectReference);
+                            linkAnnot.Put(PdfName.Ap, ap);
+                            //linkAnnot.Put(PdfName.P, indRef); //TODO: Need to get the indirect reference to the page object
+                            linkAnnot.Remove(PdfName.A);
+                            linkAnnot.Remove(PdfName.H);
+                            linkAnnot.Remove(PdfName.Structparent);
+                        }
+
                     }
-
                 }
+
             }
         }
 

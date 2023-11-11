@@ -15,5 +15,7 @@
         /// </summary>
         /// <param name="eaxs"></param>
         public void NormalizeAttachments(List<EmbeddedFile> embeddedFiles);
+
+        public Dictionary<string, string> PdfInfo { get; }
     }
 }
