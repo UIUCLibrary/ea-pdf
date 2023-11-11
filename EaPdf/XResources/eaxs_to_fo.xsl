@@ -41,13 +41,15 @@
 	
 	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadata -->
 	
+	<xsl:param name="list-of-attachments">true</xsl:param>
+	
 	<xsl:template name="check-params">
 		<xsl:choose>
 			<xsl:when test="$fo-processor='fop'"/>
 			<xsl:when test="$fo-processor='xep'"/>
 			<xsl:otherwise>
 				<xsl:message terminate="yes">
-					<xsl:text>Error: The value '</xsl:text><xsl:value-of select="$fo-processor-version"/><xsl:text>' is not a valid value for fo-processor-version param; allowed values must start with 'FOP' and 'XEP'.</xsl:text>
+					<xsl:text>Error: (name='check-params') The value '</xsl:text><xsl:value-of select="$fo-processor-version"/><xsl:text>' is not a valid value for fo-processor-version param; allowed values must start with 'FOP' or 'XEP'.</xsl:text>
 				</xsl:message>
 			</xsl:otherwise>
 		</xsl:choose>
@@ -104,12 +106,15 @@
 				</xsl:for-each>
 			</fo:page-sequence>
 			
-			<fo:page-sequence master-reference="message-page" xml:lang="en">
-				<xsl:call-template name="static-content"/>
-				<fo:flow flow-name="xsl-region-body">
-					<xsl:call-template name="AttachmentsList"/>
-				</fo:flow>
-			</fo:page-sequence>
+			<xsl:if test="$list-of-attachments='true'">
+				<fo:page-sequence master-reference="message-page" xml:lang="en">
+					<xsl:call-template name="static-content"/>
+					<fo:flow flow-name="xsl-region-body">
+						<xsl:call-template name="AttachmentsList"/>
+					</fo:flow>
+				</fo:page-sequence>
+			</xsl:if>
+			
 			<!-- TODO: Add a section which is the conversion report with info, warning, and error messages -->
 			<!--       Might need to embedd these into the source XML, not just as xml comments -->
 		</fo:root>
@@ -304,7 +309,7 @@
 				</fo:bookmark>
 			</xsl:if>
 		</fo:bookmark>
-		<xsl:if test="$topfolder='true'">
+		<xsl:if test="$topfolder='true' and $list-of-attachments='true'">
 			<fo:bookmark>
 				<xsl:attribute name="internal-destination">AttachmentList</xsl:attribute>
 				<fo:bookmark-title>List of All Attachments</fo:bookmark-title>
@@ -476,23 +481,32 @@
 				<fo:list-item-body start-indent="body-start()" >
 					<fo:block xsl:use-attribute-sets="h3-font">
 						<xsl:apply-templates select="eaxs:Name"/>
-						<fo:inline font-size="small"> (<xsl:value-of select="count(eaxs:Message)"/> Messages)</fo:inline>
+						<fo:inline font-size="small"> (<xsl:value-of select="count(eaxs:Message)"/> Messages, </fo:inline>
 						<xsl:for-each select="eaxs:FolderProperties[eaxs:RelPath] | eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
 							<xsl:choose>
-								<xsl:when test="$fo-processor='fop' and fn:position()=1">
+								<xsl:when test="$fo-processor='fop'">
+									<xsl:variable name="UniqueDestination">
+										<xsl:text>X_</xsl:text><xsl:value-of select="eaxs:Hash/eaxs:Value"/>
+									</xsl:variable>
+									<fo:inline font-size="small">
+										<xsl:if test="fn:position()=1">									
+											<fo:inline>Source</fo:inline>
+										</xsl:if>
+										<fo:inline>&nbsp;</fo:inline>
 										<fo:basic-link>
-											<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
-											<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Source</fo:inline>
+											<xsl:attribute name="id"><xsl:value-of select="$UniqueDestination"/></xsl:attribute>
+											<xsl:attribute name="internal-destination"><xsl:value-of select="$UniqueDestination"/></xsl:attribute>
+											<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="$UniqueDestination"/></xsl:attribute></fox:destination>
+											<fo:inline xsl:use-attribute-sets="a-link" font-size="small">&nbsp;&nbsp;</fo:inline>	
 										</fo:basic-link>
+									</fo:inline>
 								</xsl:when>
 								<xsl:when test="$fo-processor='xep'">
 									<fo:inline font-size="small">
 										<xsl:if test="fn:position()=1">
-											<fo:basic-link>
-												<xsl:attribute name="internal-destination">SRC_<xsl:value-of select="eaxs:Hash/eaxs:Value"/></xsl:attribute>
-												<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Source</fo:inline><fo:inline>&nbsp;</fo:inline>
-											</fo:basic-link>
+											<fo:inline>Source</fo:inline>
 										</xsl:if>
+										<fo:inline>&nbsp;</fo:inline>
 										<rx:pdf-comment>
 											<xsl:attribute name="title">Source File &mdash; <xsl:value-of select="eaxs:RelPath"/></xsl:attribute>
 											<rx:pdf-file-attachment icon-type="paperclip">
@@ -503,8 +517,14 @@
 										<fo:inline>&nbsp;&nbsp;</fo:inline>
 									</fo:inline>
 								</xsl:when>
+								<xsl:when test="$fo-processor!='xep' and $fo-processor!='fop'">
+									<xsl:message terminate="yes">
+										<xsl:text>Error: (match='eaxs:Folder' mode='RenderToc') The value '</xsl:text><xsl:value-of select="$fo-processor-version"/><xsl:text>' is not a valid value for fo-processor-version param; allowed values must start with 'FOP' or 'XEP'.</xsl:text>
+									</xsl:message>
+								</xsl:when>
 							</xsl:choose>
 						</xsl:for-each>
+						<fo:inline font-size="small">) </fo:inline>						
 						<fo:basic-link>
 							<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
 							<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To First Message</fo:inline>
@@ -1209,7 +1229,7 @@
 						<xsl:attribute name="id"><xsl:value-of select="$UniqueDestination"/></xsl:attribute>
 						<xsl:attribute name="internal-destination"><xsl:value-of select="$UniqueDestination"/></xsl:attribute>
 						<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="$UniqueDestination"/></xsl:attribute></fox:destination>
-						<fo:inline xsl:use-attribute-sets="a-link" font-size="small">&nbsp;</fo:inline>	
+						<fo:inline xsl:use-attribute-sets="a-link" font-size="small">&nbsp;&nbsp;</fo:inline>	
 					</fo:basic-link>
 				</xsl:when>
 				<xsl:when test="$fo-processor='xep'">
@@ -1259,6 +1279,11 @@
 						</rx:pdf-comment>
 					</fo:inline>								
 				</xsl:when>
+				<xsl:otherwise>
+					<xsl:message terminate="yes">
+						<xsl:text>Error: (name='AttachmentLink') The value '</xsl:text><xsl:value-of select="$fo-processor-version"/><xsl:text>' is not a valid value for fo-processor-version param; allowed values must start with 'FOP' or 'XEP'.</xsl:text>
+					</xsl:message>
+				</xsl:otherwise>
 			</xsl:choose>
 		</xsl:if>
 	</xsl:template>
