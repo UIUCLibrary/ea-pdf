@@ -39,7 +39,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
-        public Dictionary<string,string> PdfInfo
+        public Dictionary<string, string> PdfInfo
         {
             get
             {
@@ -58,39 +58,28 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 var embeddedFile = embeddedFileGrp.First();
 
-                var fileName = embeddedFile.UniqueName;
-                var desc = embeddedFile.Description;
-                var fileNames = embeddedFileGrp.Select(e => e.OriginalFileName).Distinct().ToList();
-                var descs = embeddedFileGrp.Select(e => e.Description).Distinct().ToList();
+                var fileNames = embeddedFileGrp.Select(e => e.OriginalFileName).ToList();
+                var descs = embeddedFileGrp.Select(e => e.Description).ToList();
 
-                //For duplicates only use the original filename if all the duplicates use the same name; otherwise use the Pdfname, and put something in the description
-                if (fileNames.Count == 1)
-                {
-                    fileName = fileNames[0];
-                }
-                else if (fileNames.Count > 1)
-                {
-                    desc = $"* {desc} *[File occurs {fileNames.Count} times with different filenames: '{string.Join("', '", fileNames)}']";
-                }
+                var annotFileSpecList = GetAnnotFileSpecList(embeddedFileGrp.Key);
 
-                if (descs.Count > 1)
+                if (annotFileSpecList.Count > embeddedFileGrp.Count())
                 {
-                    desc = $"* {desc} *[File is attached to multiple messages; description is for the first.]";
-                    desc = Regex.Replace(desc, @"^\* \* ", "** ");
+                    throw new Exception($"Attachment {embeddedFile.UniqueName} ({embeddedFile.OriginalFileName}) has too many matching annotations or filespecs.");
                 }
 
 
-                var annotFileSpecList = GetAnnotFileSpecList(embeddedFile.UniqueName);
-                foreach (var (annot, filespec, indRef) in annotFileSpecList)
+                for (int fileNum = 0; fileNum < annotFileSpecList.Count; fileNum++)
                 {
+                    var (annot, filespec, indRef) = annotFileSpecList[fileNum];
+
                     //Update the values of the /Contents and /T entries in the annotation dictionary for the file attachment annotation
                     //Also add a /NM entry to the annotation dictionary, to maintain the linkage to the original file spec
                     if (annot != null)
                     {
                         var d = new PdfDate();
-                        annot.Put(PdfName.Nm, new PdfString(embeddedFile.UniqueName, PdfObject.TEXT_UNICODE));
-                        annot.Put(PdfName.Contents, new PdfString(desc, PdfObject.TEXT_UNICODE));
-                        annot.Put(new PdfName("Subj"), new PdfString(fileName, PdfObject.TEXT_UNICODE));
+                        annot.Put(PdfName.Nm, new PdfString(embeddedFileGrp.Key, PdfObject.TEXT_UNICODE));
+                        annot.Put(PdfName.Contents, new PdfString(descs[fileNum], PdfObject.TEXT_UNICODE));
                         annot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
                         annot.Put(PdfName.Creationdate, d);
                         annot.Put(PdfName.M, d);
@@ -98,10 +87,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
                     filespec.Put(new PdfName("AFRelationship"), new PdfName(embeddedFile.Relationship.ToString()));
 
-                    filespec.Put(new PdfName("F"), new PdfString(fileName, PdfObject.TEXT_UNICODE));
-                    filespec.Put(new PdfName("UF"), new PdfString(fileName, PdfObject.TEXT_UNICODE));
-                    if (!string.IsNullOrWhiteSpace(desc))
-                        filespec.Put(new PdfName("Desc"), new PdfString(desc, PdfObject.TEXT_UNICODE));
+                    filespec.Put(new PdfName("F"), new PdfString(fileNames[fileNum], PdfObject.TEXT_UNICODE));
+                    filespec.Put(new PdfName("UF"), new PdfString(fileNames[fileNum], PdfObject.TEXT_UNICODE));
+                    if (!string.IsNullOrWhiteSpace(descs[fileNum]))
+                        filespec.Put(new PdfName("Desc"), new PdfString(descs[fileNum], PdfObject.TEXT_UNICODE));
 
                     var efDict = filespec.GetAsDict(PdfName.EF) ?? throw new Exception($"Filespec EmbeddedFile (EF) for attachment '{embeddedFile.UniqueName}' not found");
 
@@ -123,16 +112,17 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
                     if (embeddedFile.ModDate != null) paramsDict.Put(new PdfName("ModDate"), new PdfDate(embeddedFile.ModDate ?? DateTime.Now));
                     if (embeddedFile.CreationDate != null) paramsDict.Put(new PdfName("CreationDate"), new PdfDate(embeddedFile.ModDate ?? DateTime.Now));
+
                 }
             }
 
             AddFileAttachmentAnnots(embeddedFiles);
 
-            if(PdfInfo.ContainsKey("Producer") && PdfInfo["Producer"].Contains("Apache FOP"))
+            if (PdfInfo.ContainsKey("Producer") && PdfInfo["Producer"].Contains("Apache FOP"))
             {
                 //if the PDF was produced by FOP, the AddFileAttachmentAnnots will cause duplicate entries in the file attachments list
                 //so delete the /Catalog /Names /EmbeddedFiles entry
-                //TODO:  This will leave an orphaned name tree in the document, which will be removed by the RemoveUnusedObjects call in the Dispose method
+                //This will leave an orphaned name tree in the document, which will be removed by the RemoveUnusedObjects call in the Dispose method
                 var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
                 var names = catalog.GetAsDict(PdfName.Names);
                 names?.Remove(PdfName.Embeddedfiles);
@@ -152,17 +142,31 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             var annotAppearanceStream = AddAnnotAppearanceStream();
 
-            foreach (var embeddedFile in embeddedFiles)
+            foreach (var embeddedFileGrp in embeddedFiles.GroupBy(e => e.UniqueName))
             {
+
+                var embeddedFile = embeddedFileGrp.First();
+
+                var descs = embeddedFileGrp.Select(e => e.Description).ToList();
+
                 var objs = GetObjListFromNameTree(destsDict, "X_" + embeddedFile.Hash);
+                if (objs.Count == 0) continue;
 
-                var annotFileSpecs = GetAnnotFileSpecList(embeddedFile.UniqueName);
+                var annotFileSpecs = GetAnnotFileSpecList(embeddedFileGrp.Key);
                 foreach (var annotFileSpec in annotFileSpecs) //There can be multiple annotations pointing to the same embedded file 
-                    //TODO: Take advantage of this to provide unique filenames for duplicate attachments
                 {
-                    foreach ((PdfObject obj, PdfIndirectReference indRef) in objs)
+                    for (int objNum = 0; objNum < objs.Count; objNum++)
                     {
+                        var fileSpecIndRef = annotFileSpec.indRef;
+                        if (objNum > 0)
+                        {
+                            //if there are multiple annotations pointing to the same embedded file, create a new filespec for each annotation
+                            var embeddedFileIndRef = annotFileSpec.filespec.GetAsDict(PdfName.EF).GetAsIndirectObject(PdfName.F);
+                            var fileSpec = AddFilespec(embeddedFileGrp.ElementAt(objNum), embeddedFileIndRef);
+                            fileSpecIndRef = fileSpec.IndirectReference;
+                        }
 
+                        var (obj, indRef) = objs[objNum];
                         var linkAnnots = linkAnnotations[indRef.ToString()];
                         foreach (var linkAnnot in linkAnnots)
                         {
@@ -171,22 +175,19 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                             //convert the link annotation into a file attachment annotation
                             linkAnnot.Put(PdfName.Subtype, PdfName.Fileattachment);
                             linkAnnot.Put(PdfName.Name, new PdfName("Paperclip"));
-                            linkAnnot.Put(PdfName.Nm, new PdfString(embeddedFile.UniqueName, PdfObject.TEXT_UNICODE));
-                            linkAnnot.Put(PdfName.Contents, new PdfString(embeddedFile.Description, PdfObject.TEXT_UNICODE));  //TODO: Look if the MIME header has a description
-                            //linkAnnot.Put(new PdfName("Subj"), new PdfString("TODO: Subj", PdfObject.TEXT_UNICODE)); //TODO: Look if the MIME header has a subject
+                            linkAnnot.Put(PdfName.Nm, new PdfString(embeddedFileGrp.Key, PdfObject.TEXT_UNICODE));
+                            linkAnnot.Put(PdfName.Contents, new PdfString(embeddedFileGrp.ElementAt(objNum).Description, PdfObject.TEXT_UNICODE));
                             linkAnnot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
                             linkAnnot.Put(PdfName.Creationdate, d);
                             linkAnnot.Put(PdfName.M, d);
-                            linkAnnot.Put(PdfName.Fs, annotFileSpec.indRef);
+                            linkAnnot.Put(PdfName.Fs, fileSpecIndRef);
                             var ap = new PdfDictionary();
                             ap.Put(PdfName.N, annotAppearanceStream.IndirectReference);
                             linkAnnot.Put(PdfName.Ap, ap);
-                            //linkAnnot.Put(PdfName.P, indRef); //TODO: Need to get the indirect reference to the page object
                             linkAnnot.Remove(PdfName.A);
                             linkAnnot.Remove(PdfName.H);
                             linkAnnot.Remove(PdfName.Structparent);
                         }
-
                     }
                 }
 
@@ -217,6 +218,29 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             strmWrtr.Close();
             memStrm.Close();
+
+            return ret;
+        }
+
+        private PdfIndirectObject AddFilespec(EmbeddedFile embeddedFile, PdfIndirectReference indRef)
+        {
+            var fileSpec = new PdfDictionary();
+            fileSpec.Put(PdfName.TYPE, PdfName.Filespec);
+            fileSpec.Put(PdfName.F, new PdfString(embeddedFile.OriginalFileName, PdfObject.TEXT_UNICODE));
+            fileSpec.Put(PdfName.Uf, new PdfString(embeddedFile.OriginalFileName, PdfObject.TEXT_UNICODE));
+            fileSpec.Put(new PdfName("AFRelationship"), new PdfName(embeddedFile.Relationship.ToString()));
+            fileSpec.Put(PdfName.Desc, new PdfString(embeddedFile.Description, PdfObject.TEXT_UNICODE));
+
+            var efDict = new PdfDictionary();
+            efDict.Put(PdfName.F, indRef);
+            fileSpec.Put(PdfName.EF, efDict);
+
+            var ret = _stamper.Writer.AddToBody(fileSpec);
+
+            //Need to add the fileSpec to the /Catalog/AF array name tree
+            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
+            var af = catalog.GetAsArray(new PdfName("AF"));
+            af.Add(ret.IndirectReference);
 
             return ret;
         }
