@@ -1,11 +1,7 @@
 ﻿using Aron.Weiler;
-using iTextSharp.text;
 using iTextSharp.text.pdf;
 using Microsoft.Extensions.Logging;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.util;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
@@ -44,6 +40,38 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             get
             {
                 return (Dictionary<string, string>)(_reader.Info);
+            }
+        }
+
+        public void RemoveUnnecessaryElements()
+        {
+            RemoveProcSet();
+        }
+
+        private void RemoveProcSet()
+        {
+            int pageCount = _reader.NumberOfPages;
+            for (int i = 1; i <= pageCount; i++)
+            {
+                PdfDictionary pageDict = _reader.GetPageN(i) ?? throw new Exception($"Unable to get page {i}");
+                var resources = pageDict.GetAsDict(PdfName.Resources) ?? throw new Exception($"Unable to get page {i} resources");
+                resources.Remove(PdfName.Procset);
+
+                //remove the ProcSet from the XObject resources as well
+                var xobj = resources.GetAsDict(PdfName.Xobject);
+                if(xobj != null)
+                {
+                    foreach (var key in xobj.Keys)
+                    {
+                        var xobjStrm = xobj.GetDirectObject(key) as PdfStream;
+                        if (xobjStrm != null )
+                        {
+                            var xres = xobjStrm.GetAsDict(PdfName.Resources);
+                            xres?.Remove(PdfName.Procset);
+                        }
+                    }
+                }
+
             }
         }
 

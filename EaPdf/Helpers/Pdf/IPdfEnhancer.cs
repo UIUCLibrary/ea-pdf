@@ -16,6 +16,14 @@
         /// <param name="eaxs"></param>
         public void NormalizeAttachments(List<EmbeddedFile> embeddedFiles);
 
+        /// <summary>
+        /// Return a dictionary of the PDF Info metadata
+        /// </summary>
         public Dictionary<string, string> PdfInfo { get; }
+
+        /// <summary>
+        /// Remove unnecessary or deprecated elements from the PDF file
+        /// </summary>
+        public void RemoveUnnecessaryElements();
     }
 }

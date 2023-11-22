@@ -1,12 +1,7 @@
-﻿using AngleSharp.Dom;
-using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Ocsp;
-using Org.BouncyCastle.Pkcs;
+﻿using Microsoft.Extensions.Logging;
 using System.Xml;
-using System.Xml.Schema;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -124,6 +119,8 @@ namespace UIUCLibrary.EaPdf
             enhancer.AddXmpToDParts(dparts); //Associate XMP with the PDF DPart of the message
 
             enhancer.NormalizeAttachments(embeddedFiles);
+
+            enhancer.RemoveUnnecessaryElements();
 
             //dispose of the enhancer to make sure files are closed
             enhancer.Dispose();
