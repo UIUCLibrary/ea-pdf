@@ -1,4 +1,5 @@
 ﻿// *************************************************
+// https://www.codeproject.com/Articles/32894/C-Multi-key-Generic-Dictionary
 // Created by Aron Weiler
 // Feel free to use this code in any way you like, 
 // just don't blame me when your coworkers think you're awesome.
@@ -8,7 +9,8 @@
 // Possible deadlock and race conditions resolved by swapping out the two lock objects for a ReaderWriterLockSlim. 
 // Performance takes a very small hit, but correctness is guaranteed.
 // *************************************************
-// 20223-03-14 Modified by TGH to use the new C# 9.0 syntax and to support setting the equality comparers on the internal dictionaries
+// 2023-03-14 Modified by TGH to use the new C# 9.0 syntax and to support setting the equality comparers on the internal dictionaries
+// 2023-11-24 Add support for getting the primary key from a sub key or vice versa
 // *************************************************
 
 namespace Aron.Weiler
@@ -72,6 +74,44 @@ namespace Aron.Weiler
 				throw new KeyNotFoundException("primary key not found: " + primaryKey.ToString());
 			}
 		}
+
+		public L GetSubKey(K primaryKey)
+		{
+            readerWriterLock.EnterReadLock();
+
+            try
+			{
+                if (primaryToSubkeyMapping.ContainsKey(primaryKey))
+				{
+                    return primaryToSubkeyMapping[primaryKey];
+                }
+            }
+            finally
+			{
+                readerWriterLock.ExitReadLock();
+            }
+
+            throw new KeyNotFoundException(string.Format("The primary key '{0}' was not found in the dictionary", primaryKey));
+        }
+
+		public K GetPrimaryKey(L subKey)
+		{
+            readerWriterLock.EnterReadLock();
+
+            try
+			{
+                if (subDictionary.ContainsKey(subKey))
+				{
+                    return subDictionary[subKey];
+                }
+            }
+            finally
+			{
+                readerWriterLock.ExitReadLock();
+            }
+
+            throw new KeyNotFoundException(string.Format("The sub key '{0}' was not found in the dictionary", subKey));
+        }
 
 		public void Associate(L subKey, K primaryKey)
 		{
