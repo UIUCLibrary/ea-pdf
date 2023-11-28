@@ -2,6 +2,7 @@
 using iTextSharp.text.pdf;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using System.Xml.Linq;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
@@ -13,6 +14,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         private readonly Stream _out;
         private readonly PdfStamper _stamper;
         private readonly ILogger _logger;
+
+        readonly object locker = new();
 
         /// <summary>
         /// Dictionary where either the indirect refererence or the page number can be used to get the page data
@@ -26,48 +29,74 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             _out = new FileStream(outPdfFilePath, FileMode.Create);
             _stamper = new PdfStamper(_reader, _out, PdfWriter.VERSION_1_7);
 
+            _logger.LogTrace("ITextSharpPdfEnhancer: Opened PDF file '{inPdfFilePath}' for enhancement to '{outPdfFilePath}'", inPdfFilePath, outPdfFilePath);
 
             //populate the page dictionary
             for (int i = 1; i <= _reader.NumberOfPages; i++)
             {
-                var indRef = _reader.GetPageOrigRef(i);
-                _pages.Add(indRef, i, new PageData(indRef, i, _reader.GetPageN(i)));
+                var indRef = _reader.GetPageOrigRef(i) ?? throw new Exception($"Unable to get PrIndirectReference for page {i}");
+                var pgDict = _reader.GetPageN(i) ?? throw new Exception($"Unable to get PdfDictionary for page {i}");
+                _pages.Add(indRef, i, new PageData(indRef, i, pgDict));
             }
+
         }
 
+        Dictionary<string, string>? _pdfInfo;
         public Dictionary<string, string> PdfInfo
         {
             get
             {
-                return (Dictionary<string, string>)(_reader.Info);
+                lock (locker)
+                {
+                    if (_pdfInfo == null)
+                    {
+                        _pdfInfo = (Dictionary<string, string>)(_reader.Info);
+                        var msg = "ITextSharpPdfEnhancer: PDFInfo:\r\n";
+                        foreach (var kv in _pdfInfo)
+                        {
+                            msg += $"  {kv.Key} = {kv.Value}\r\n";
+                        }
+                        _logger.LogTrace(msg.Trim());
+                        return _pdfInfo;
+                    }
+                    return _pdfInfo;
+                }
             }
         }
 
         public void RemoveUnnecessaryElements()
         {
+            _logger.LogTrace("ITextSharpPdfEnhancer: RemoveUnnecessaryElements");
             RemoveProcSet();
         }
 
         private void RemoveProcSet()
         {
-            int pageCount = _reader.NumberOfPages;
-            for (int i = 1; i <= pageCount; i++)
+            _logger.LogTrace("ITextSharpPdfEnhancer: RemoveProcSet");
+            foreach (var page in _pages)
             {
-                PdfDictionary pageDict = _reader.GetPageN(i) ?? throw new Exception($"Unable to get page {i}");
-                var resources = pageDict.GetAsDict(PdfName.Resources) ?? throw new Exception($"Unable to get page {i} resources");
-                resources.Remove(PdfName.Procset);
+                PdfDictionary pageDict = page.Value.PageDictionary;
+                var resources = pageDict.GetAsDict(PdfName.Resources) ?? throw new Exception($"Unable to get page {_pages.GetSubKey(page.Key)} resources");
+                if (resources.Keys.Contains(PdfName.Procset))
+                {
+                    _logger.LogTrace("ITextSharpPdfEnhancer: RemoveProcSet: Removing ProcSet from page {pageNumber}", page.Value.PageNumber);
+                    resources.Remove(PdfName.Procset);
+                }
 
                 //remove the ProcSet from the XObject resources as well
                 var xobj = resources.GetAsDict(PdfName.Xobject);
-                if(xobj != null)
+                if (xobj != null)
                 {
                     foreach (var key in xobj.Keys)
                     {
-                        var xobjStrm = xobj.GetDirectObject(key) as PdfStream;
-                        if (xobjStrm != null )
+                        if (xobj.GetDirectObject(key) is PdfStream xobjStrm)
                         {
                             var xres = xobjStrm.GetAsDict(PdfName.Resources);
-                            xres?.Remove(PdfName.Procset);
+                            if (xres != null && xres.Keys.Contains(PdfName.Procset))
+                            {
+                                _logger.LogTrace("ITextSharpPdfEnhancer: RemoveProcSet: Removing ProcSet from page {pageNumber}, XObject {xobject}", page.Value.PageNumber, key);
+                                xres.Remove(PdfName.Procset);
+                            }
                         }
                     }
                 }
@@ -82,8 +111,14 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <exception cref="Exception"></exception>
         public void NormalizeAttachments(List<EmbeddedFile> embeddedFiles)
         {
+            //FUTURE: Some of the same attachments are added to the same place multiple times, so need to consolidate them to avoid unnecessary duplication
+
+            _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments ({fileCount} embedded files)", embeddedFiles.Count);
+
             foreach (var embeddedFileGrp in embeddedFiles.GroupBy(e => e.UniqueName)) //The embeddedFiles list can contain duplicates, so group by PdfName and use the first one in the group or use the group to create a new PdfName
             {
+                _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments: Processing embedded file group {groupName}", embeddedFileGrp.Key);
+
                 var embeddedFile = embeddedFileGrp.First();
 
                 var fileNames = embeddedFileGrp.Select(e => e.OriginalFileName).ToList();
@@ -101,10 +136,13 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 {
                     var (annot, filespec, indRef) = annotFileSpecList[fileNum];
 
+                    _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments: Processing embedded file group {groupName}, fileSpec {indirectRef}", embeddedFileGrp.Key, indRef);
+
                     //Update the values of the /Contents and /T entries in the annotation dictionary for the file attachment annotation
                     //Also add a /NM entry to the annotation dictionary, to maintain the linkage to the original file spec
                     if (annot != null)
                     {
+                        _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments: Processing embedded file group {groupName}, fileSpec {indirectRef}, updating annotation", embeddedFileGrp.Key, indRef);
                         var d = new PdfDate();
                         annot.Put(PdfName.Nm, new PdfString(embeddedFileGrp.Key, PdfObject.TEXT_UNICODE));
                         annot.Put(PdfName.Contents, new PdfString(descs[fileNum], PdfObject.TEXT_UNICODE));
@@ -150,16 +188,24 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 //if the PDF was produced by FOP, the AddFileAttachmentAnnots will cause duplicate entries in the file attachments list
                 //so delete the /Catalog /Names /EmbeddedFiles entry
-                //This will leave an orphaned name tree in the document, which will be removed by the RemoveUnusedObjects call in the Dispose method
-                var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
-                var names = catalog.GetAsDict(PdfName.Names);
-                names?.Remove(PdfName.Embeddedfiles);
+                RemoveCatalogNamesEmbeddedFiles();
             }
 
         }
 
+        private void RemoveCatalogNamesEmbeddedFiles()
+        {
+            //This will leave an orphaned name tree in the document, which will be removed by the RemoveUnusedObjects call in the Dispose method
+            _logger.LogTrace("ITextSharpPdfEnhancer: RemoveCatalogNamesEmbeddedFiles");
+            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
+            var names = catalog.GetAsDict(PdfName.Names);
+            names?.Remove(PdfName.Embeddedfiles);
+        }
+
         private void AddFileAttachmentAnnots(List<EmbeddedFile> embeddedFiles)
         {
+            _logger.LogTrace("ITextSharpPdfEnhancer: AddFileAttachmentAnnots ({fileCount} embedded files)", embeddedFiles.Count);
+
             var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
 
             //named destinations via the catalog Names Dests entries
@@ -172,19 +218,20 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             foreach (var embeddedFileGrp in embeddedFiles.GroupBy(e => e.UniqueName))
             {
-
                 var embeddedFile = embeddedFileGrp.First();
 
                 var descs = embeddedFileGrp.Select(e => e.Description).ToList();
 
-                var objs = GetObjListFromNameTree(destsDict, "X_" + embeddedFile.Hash);
+                var objs = GetObjsFromNameTreeStartingWith(destsDict, "X_" + embeddedFile.Hash);
                 if (objs.Count == 0) continue;
 
                 var annotFileSpecs = GetAnnotFileSpecList(embeddedFileGrp.Key);
                 foreach (var annotFileSpec in annotFileSpecs) //There can be multiple annotations pointing to the same embedded file 
                 {
+
                     for (int objNum = 0; objNum < objs.Count; objNum++)
                     {
+
                         var fileSpecIndRef = annotFileSpec.indRef;
                         if (objNum > 0)
                         {
@@ -224,6 +271,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
         private PdfIndirectObject AddAnnotAppearanceStream()
         {
+            _logger.LogTrace("ITextSharpPdfEnhancer: AddAnnotAppearanceStream");
+
             using var memStrm = new MemoryStream();
             using var strmWrtr = new StreamWriter(memStrm);
             //TODO: the graphic is cribbed from a RenderX XEP-produced file; may need to be modified to avoid licensing issues
@@ -252,6 +301,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
         private PdfIndirectObject AddFilespec(EmbeddedFile embeddedFile, PdfIndirectReference indRef)
         {
+            _logger.LogTrace("ITextSharpPdfEnhancer: AddFilespec ({embeddedFile}, {originalFileName}, {indirectReference}", embeddedFile.UniqueName, embeddedFile.OriginalFileName, indRef);
+
             var fileSpec = new PdfDictionary();
             fileSpec.Put(PdfName.TYPE, PdfName.Filespec);
             fileSpec.Put(PdfName.F, new PdfString(embeddedFile.OriginalFileName, PdfObject.TEXT_UNICODE));
@@ -275,6 +326,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
         private List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)> GetAnnotFileSpecList(string name)
         {
+            _logger.LogTrace("ITextSharpPdfEnhancer: GetAnnotFileSpecList ({name})", name);
+
             List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)> ret = new();
 
             var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
@@ -304,20 +357,21 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             return ret;
         }
 
-        object locker = new object();
         Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>>? _fileAttachmentAnnotations;
         private Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>> GetFileAttachmentAnnotations()
         {
+
             lock (locker)
             {
                 if (_fileAttachmentAnnotations == null)
                 {
+                    _logger.LogTrace("ITextSharpPdfEnhancer: GetFileAttachmentAnnotations");
+
                     _fileAttachmentAnnotations = new();
 
-                    int pageCount = _reader.NumberOfPages;
-                    for (int i = 1; i <= pageCount; i++)
+                    foreach (var page in _pages)
                     {
-                        PdfDictionary pageDict = _reader.GetPageN(i) ?? throw new Exception($"Unable to get page {i}");
+                        PdfDictionary pageDict = page.Value.PageDictionary;
                         PdfArray annots = pageDict.GetAsArray(PdfName.Annots);
 
                         if (annots == null)
@@ -354,16 +408,18 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         Dictionary<string, List<PdfDictionary>>? _linkAnnotations;
         private Dictionary<string, List<PdfDictionary>> GetLinkAnnotations()
         {
+
             lock (locker)
             {
                 if (_linkAnnotations == null)
                 {
+                    _logger.LogTrace("ITextSharpPdfEnhancer: GetLinkAnnotations");
+
                     _linkAnnotations = new();
 
-                    int pageCount = _reader.NumberOfPages;
-                    for (int i = 1; i <= pageCount; i++)
+                    foreach (var page in _pages)
                     {
-                        PdfDictionary pageDict = _reader.GetPageN(i) ?? throw new Exception($"Unable to get page {i}");
+                        PdfDictionary pageDict = page.Value.PageDictionary;
                         PdfArray annots = pageDict.GetAsArray(PdfName.Annots);
 
                         if (annots == null)
@@ -405,6 +461,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <exception cref="Exception"></exception>
         public void AddXmpToDParts(DPartInternalNode dparts)
         {
+            if (_logger.IsEnabled(LogLevel.Trace))
+                _logger.LogTrace("ITextSharpPdfEnhancer: AddXmpToDParts ({xmp})", dparts.GetFirstDpmXmpElement());
+
             //get reference to new DPartRoot object
             var dpartRootIndRef = _stamper.Writer.PdfIndirectReference;
 
@@ -436,6 +495,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <exception cref="Exception"></exception>
         private PdfIndirectReference AddDPartNode(DPartNode dpartNode, PdfIndirectReference parentIndRef)
         {
+            if (_logger.IsEnabled(LogLevel.Trace))
+                _logger.LogTrace("ITextSharpPdfEnhancer: AddDPartNode ({xmp}, {parentIndirectReference})", dpartNode.GetFirstDpmXmpElement(), parentIndRef);
+
             if (dpartNode == null)
                 throw new ArgumentNullException(nameof(dpartNode));
 
@@ -452,7 +514,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 newStrm.Put(new PdfName("Type"), new PdfName("Metadata"));
                 newStrm.Put(new PdfName("Subtype"), new PdfName("XML"));
                 PdfIndirectObject metaIndObj = _stamper.Writer.AddToBody(newStrm);
-                PdfDictionary metaDict = new PdfDictionary();
+                PdfDictionary metaDict = new();
                 metaDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference);
                 newDPartDict.Put(new PdfName("DPM"), metaDict);
                 //Maybe use this instead: newDPartDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference); 
@@ -527,6 +589,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <exception cref="Exception"></exception>
         private PageData? GetPageDataForNamedDestination(string name)
         {
+            _logger.LogTrace("ITextSharpPdfEnhancer: GetPageDataForNamedDestination ({name})", name);
 
             var d1 = _reader.GetNamedDestination(true);
             if (d1.ContainsKey(name))
@@ -597,6 +660,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <exception cref="Exception"></exception>
         private (PdfObject obj, PdfIndirectReference indRef)? GetObjFromNameTree(PdfDictionary nameTree, string name)
         {
+
             if (nameTree == null)
                 throw new ArgumentNullException(nameof(nameTree));
 
@@ -618,7 +682,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 int compLower = string.Compare(name, lowerLimit, StringComparison.Ordinal);
                 int compUpper = string.Compare(name, upperLimit, StringComparison.Ordinal);
                 if (compLower < 0 || compUpper > 0)
+                {
+                    //_logger.LogTrace("ITextSharpPdfEnhancer: GetObjFromNameTree ({name}): name is outside the limits", name);
                     return null;
+                }
             }
 
             if (names != null)
@@ -630,9 +697,16 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     var key = names.GetAsString(i).ToString();
                     var value = names.GetDirectObject(i + 1);
                     var indRef = names.GetAsIndirectObject(i + 1);
-                    if (string.Compare(name, key, StringComparison.Ordinal) == 0)
+                    int comp = string.Compare(key, name, StringComparison.Ordinal);
+                    if (comp == 0)
                     {
+                        _logger.LogTrace("ITextSharpPdfEnhancer: GetObjFromNameTree ({name}): found match", name);
                         return (value, indRef);
+                    }
+                    else if (comp > 0)
+                    {
+                        _logger.LogTrace("ITextSharpPdfEnhancer: GetObjFromNameTree ({name}): gone past the name, so stop searching", name);  
+                        break;  //gone past the name, so stop searching
                     }
 
                 }
@@ -644,9 +718,12 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     PdfObject nodes = (PdfDictionary)kids.GetDirectObject(i);
                     if (nodes.IsDictionary())
                     {
+                        //_logger.LogTrace("  ITextSharpPdfEnhancer: GetObjFromNameTree ({name}): recursing", name);
                         ret = GetObjFromNameTree((PdfDictionary)nodes, name);
                         if (ret != null)
+                        {
                             break;
+                        }
                     }
                     else
                     {
@@ -663,6 +740,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             return ret;
         }
 
+
+
         /// <summary>
         /// Return a list of objects and indirect references from a name tree, where the name starts with the given string
         /// </summary>
@@ -671,7 +750,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="Exception"></exception>
-        private List<(PdfObject obj, PdfIndirectReference indRef)> GetObjListFromNameTree(PdfDictionary nameTree, string nameStartsWith)
+        private List<(PdfObject obj, PdfIndirectReference indRef)> GetObjsFromNameTreeStartingWith(PdfDictionary nameTree, string nameStartsWith)
         {
             if (nameTree == null)
                 throw new ArgumentNullException(nameof(nameTree));
@@ -692,12 +771,15 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 lowerLimit = limits.GetAsString(0).ToString();
                 upperLimit = limits.GetAsString(1).ToString();
                 //becausing looking for names starting with string, truncate the limits to the length of the nameStartsWith string
-                lowerLimit = lowerLimit.Substring(0, Math.Min(lowerLimit.Length, nameStartsWith.Length));
-                upperLimit = upperLimit.Substring(0, Math.Min(upperLimit.Length, nameStartsWith.Length));
+                lowerLimit = lowerLimit[..Math.Min(lowerLimit.Length, nameStartsWith.Length)];
+                upperLimit = upperLimit[..Math.Min(upperLimit.Length, nameStartsWith.Length)];
                 int compLower = string.Compare(nameStartsWith, lowerLimit, StringComparison.Ordinal);
                 int compUpper = string.Compare(nameStartsWith, upperLimit, StringComparison.Ordinal);
                 if (compLower < 0 || compUpper > 0)
+                {
+                    //_logger.LogTrace("ITextSharpPdfEnhancer: GetObjsFromNameTreeStartingWith ({nameStartsWith}): nameStartsWith is outside the limits", nameStartsWith);
                     return ret;
+                }
             }
 
             if (names != null)
@@ -711,7 +793,13 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     var indRef = names.GetAsIndirectObject(i + 1);
                     if (key.StartsWith(nameStartsWith, StringComparison.Ordinal))
                     {
+                        _logger.LogTrace("ITextSharpPdfEnhancer: GetObjsFromNameTreeStartingWith ({nameStartsWith}): found match", nameStartsWith);
                         ret.Add((value, indRef));
+                    }
+                    else if (string.Compare(key, nameStartsWith, StringComparison.Ordinal) > 0)
+                    {
+                        _logger.LogTrace("ITextSharpPdfEnhancer: GetObjsFromNameTreeStartingWith ({nameStartsWith}): gone past the name, so stop searching", nameStartsWith);
+                        break;  //gone past the name, so stop searching
                     }
 
                 }
@@ -723,7 +811,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     PdfObject nodes = (PdfDictionary)kids.GetDirectObject(i);
                     if (nodes.IsDictionary())
                     {
-                        ret.AddRange(GetObjListFromNameTree((PdfDictionary)nodes, nameStartsWith));
+                        //_logger.LogTrace("ITextSharpPdfEnhancer: GetObjsFromNameTreeStartingWith ({nameStartsWith}): recursing", nameStartsWith);
+                        ret.AddRange(GetObjsFromNameTreeStartingWith((PdfDictionary)nodes, nameStartsWith));
                     }
                     else
                     {

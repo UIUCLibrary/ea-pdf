@@ -9,6 +9,27 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
     {
         public string DpmXmpString { get; set; } = "";
 
+        public XmlDocument? DpmXmpXml 
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(DpmXmpString))
+                {
+                    return null;
+                }
+
+                XmlDocument ret = new();
+                ret.LoadXml(DpmXmpString);
+                return ret;
+            }
+        }
+
+        public string? GetFirstDpmXmpElement()
+        {
+            string ret = DpmXmpXml?.SelectSingleNode("/*/*/*/*")?.OuterXml ?? "";
+            return ret;
+        }
+
         public DPartNode? Parent { get; set; } = null;
 
         public static DPartInternalNode Create(DPartNode parent, string xmlFilePath)
