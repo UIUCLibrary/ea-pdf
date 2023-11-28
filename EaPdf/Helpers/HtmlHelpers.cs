@@ -10,7 +10,7 @@ using System.Xml;
 namespace UIUCLibrary.EaPdf.Helpers
 {
 
-    internal class HtmlHelpers
+    public static class HtmlHelpers
     {
         //Add any needed non-standard character entities here; note that character entities are case-sensitive
         public static Dictionary<string, int> ExtraCharacterEntities = new() { { "QUOT", 0x22 } };

@@ -4,7 +4,7 @@ using Wiry.Base32;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    public class FilePathHelpers
+    public static class FilePathHelpers
     {
 
         public const string XML_WRAPPED_EXT  = ".xmlw";

@@ -3,7 +3,7 @@ using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    public class XmlHelpers
+    public static class XmlHelpers
     {
         //for use with the XPath function translate
         public const string UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

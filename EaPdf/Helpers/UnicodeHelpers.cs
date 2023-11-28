@@ -5,7 +5,7 @@ using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    public class UnicodeHelpers
+    public static class UnicodeHelpers
     {
 
         public const char ZWNJ = '\u200c';

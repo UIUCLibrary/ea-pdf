@@ -39,7 +39,7 @@ namespace UIUCLibrary.TestEaPdf
             loggerFactory.AddStringListLogger(loggedLines);
 
             logger = loggerFactory.CreateLogger<EaxsToEaPdfProcessor>();
-            logger.LogDebug("Starting Test");  //all loging done by the test scripts are debug level
+            logger.LogDebug("Starting Test");  //all logging done by the test scripts are debug level
         }
 
         [TestCleanup]

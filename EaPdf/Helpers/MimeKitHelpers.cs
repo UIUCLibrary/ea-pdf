@@ -8,7 +8,7 @@ using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
-    public class MimeKitHelpers
+    public static class MimeKitHelpers
     {
 
         public static readonly string[] TextContentEncodings = new string[] { "", "7bit", "8bit" };
