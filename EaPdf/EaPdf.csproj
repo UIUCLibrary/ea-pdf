@@ -11,12 +11,12 @@
     <PackageReference Include="AngleSharp.Css" Version="0.17.0" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="Fizzler.Systems.HtmlAgilityPack" Version="1.2.1" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
-    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.3.5" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
-    <PackageReference Include="MimeKit" Version="4.0.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />
+    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.4.13" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+    <PackageReference Include="MimeKit" Version="4.3.0" />
     <PackageReference Include="NDepend.Path" Version="2.0.0" />
     <PackageReference Include="PdfTemplating.XslFO.Render.ApacheFOP.Serverless" Version="3.2.1" />
     <PackageReference Include="RoyT.TrueType" Version="0.2.0" />
