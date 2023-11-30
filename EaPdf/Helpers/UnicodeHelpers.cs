@@ -44,7 +44,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 if ((c >= 0xE000 && c <= 0xF8FF)) // || (c >= 0xF0000 && c <= 0xFFFFD) || (c >= 0x100000 && c <= 0x10FFFD)) //FUTURE: Add support for other private use areas
                 {
-                    ret.Append("\uFFFD");
+                    ret.Append('\uFFFD');
                     messages.Add((LogLevel.Warning, $"(PUA) Private use area character {c} U+{(int)c:X4} replaced with \uFFFD U+FFFD"));
                 }
                 else

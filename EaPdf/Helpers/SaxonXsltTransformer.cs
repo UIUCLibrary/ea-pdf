@@ -64,7 +64,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// </summary>
         /// <param name="messages"></param>
         /// <returns></returns>
-        private List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
+        private static List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
         {
             //Saxon can have one message that crosses multiple lines; a new message does not have leading white space, but additional lines start with spaces
 

@@ -13,7 +13,7 @@ namespace UIUCLibrary.EaPdf.Helpers
     public static class HtmlHelpers
     {
         //Add any needed non-standard character entities here; note that character entities are case-sensitive
-        public static Dictionary<string, int> ExtraCharacterEntities = new() { { "QUOT", 0x22 } };
+        public static readonly Dictionary<string, int> ExtraCharacterEntities = new() { { "QUOT", 0x22 } };
 
         /// <summary>
         /// Use the HTML Agility Pack to parse the HTML and return it as valid XHTML
@@ -65,21 +65,21 @@ namespace UIUCLibrary.EaPdf.Helpers
                 messages.Add((LogLevel.Warning, $"Unable to reload html document node from outer html: {ex.Message}"));
             }
 
-            CorrectEmptyNamespaceDeclarations(hdoc, ref messages, ignoreHtmlIssues);
+            CorrectEmptyNamespaceDeclarations(hdoc, ref messages);
 
             //rebalance the xhtml so it contains a single root html just one head and one body child
             //with the appropriate elements created and moved as needed
             var htmlNode = MakeHtmlMinimallyValid(hdoc, ref messages, ignoreHtmlIssues);
 
             //move styles to inline with the elements
-            ConvertToInlineCssUsingAngleSharpCss(htmlNode, ref messages, ignoreHtmlIssues);
+            ConvertToInlineCssUsingAngleSharpCss(htmlNode, ref messages);
 
             //Normalize style properties and remove any inline style properties that are not supported by the HTML
             NormalizeStyleProperties(htmlNode, ref messages, ignoreHtmlIssues);
 
             //The rgba function is not supported by the XSL-FO processor, so convert it to rgb
             //This must occur after the inlining process, because that will move rgba values from stylesheets to inline style attributes
-            ConvertStylesRgbaToRgb(hdoc, ref messages, ignoreHtmlIssues);
+            ConvertStylesRgbaToRgb(hdoc, ref messages);
 
             //Fix improperly nested lists
             FixImproprerlyNestedLists(htmlNode, ref messages, ignoreHtmlIssues);
@@ -88,10 +88,10 @@ namespace UIUCLibrary.EaPdf.Helpers
             //The XSL-FO processor will complain if ids are not unique
             FixNonUniqueIdValues(hdoc, ref messages, ignoreHtmlIssues);
 
-            ConvertRelativeUrlsToAbsolute(hdoc, ref messages, ignoreHtmlIssues);
+            ConvertRelativeUrlsToAbsolute(hdoc);
 
             //If an element has the "display: none" style set, delete it from the xhtml.  make sure this is after the inlining process
-            RemoveDisplayNone(hdoc, ref messages, ignoreHtmlIssues);
+            RemoveDisplayNone(hdoc);
 
             ret = htmlNode.OuterHtml;
 
@@ -108,7 +108,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         const string RGBA_REGEX = @"rgba\(\s*(?<r>[^,]+?)\s*,\s*(?<g>[^,]+?)\s*,\s*(?<b>[^,]+?)\s*,\s*(?<a>[^,]+?)\s*\)";
 
-        private static void ConvertStylesRgbaToRgb(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void ConvertStylesRgbaToRgb(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages)
         {
             var styleNodes = hdoc.DocumentNode.SelectNodes("//*/@style[contains(translate(.,'RGBA','rgba'), 'rgba')]");
             if (styleNodes == null || styleNodes.Count == 0)
@@ -170,8 +170,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             {
                 messages.Add((LogLevel.Warning, $"For '{match.Value}' the blue value '{b}' is not a valid percentage or integer value"));
             }
-            float alpha = 1.0f;
-            if (float.TryParse(a, out alpha))
+            if (float.TryParse(a, out float alpha))
             {
                 if (alpha < 0 || alpha > 1)
                 {
@@ -189,7 +188,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="hdoc"></param>
         /// <param name="messages"></param>
         /// <param name="ignoreHtmlIssues"></param>
-        private static void CorrectEmptyNamespaceDeclarations(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void CorrectEmptyNamespaceDeclarations(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages)
         {
             var xmlnsNodes = hdoc.DocumentNode.SelectNodes("//*/@*[starts-with(local-name(),'xmlns')]");
             if (xmlnsNodes != null)
@@ -231,7 +230,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="hdoc"></param>
         /// <param name="messages"></param>
         /// <param name="ignoreHtmlIssues"></param>
-        private static void RemoveDisplayNone(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void RemoveDisplayNone(HtmlDocument hdoc)
         {
             var displayNoneNodes = hdoc.DocumentNode.QuerySelectorAll("*[style*='display:none']");
 
@@ -245,7 +244,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         }
 
-        private static void ConvertRelativeUrlsToAbsolute(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void ConvertRelativeUrlsToAbsolute(HtmlDocument hdoc)
         {
             var baseNode = hdoc.DocumentNode.SelectSingleNode("/html/head/base");
 
@@ -679,7 +678,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
         }
 
-        private static void RemoveTextFromHead(HtmlDocument hdoc, HtmlNode head, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void RemoveTextFromHead(HtmlNode head, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
             var bodyTextNodes = head.ChildNodes.Where(n => n.NodeType == HtmlNodeType.Text);
             foreach (HtmlTextNode node in bodyTextNodes.Cast<HtmlTextNode>())
@@ -809,7 +808,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             var head = GetOrCreateHead(hdoc, htmlNode, body, ref messages, ignoreHtmlIssues);
 
             //remove non-whitespace text from the head
-            RemoveTextFromHead(hdoc, head, ref messages, ignoreHtmlIssues);
+            RemoveTextFromHead(head, ref messages, ignoreHtmlIssues);
 
             AddRootDivToBodyIfNeeded(hdoc, body, ref messages, ignoreHtmlIssues);
 
@@ -919,7 +918,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             namespacePrefixes.Pop();
         }
 
-        private static void ConvertToInlineCssUsingAngleSharpCss(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void ConvertToInlineCssUsingAngleSharpCss(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages)
         {
             //get all the style elements
             var styles = htmlNode.SelectNodes("//style");

@@ -29,7 +29,6 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 List<(LogLevel level, string message)> messages = new();
                 _ = RunExecutableJar(JarFilePath, args, ref messages);
 
-                LogLevel lvl = messages[0].level;
                 string ret = messages[0].message;
                 if (!ret.StartsWith("FOP",StringComparison.OrdinalIgnoreCase))
                 {
@@ -69,7 +68,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// </summary>
         /// <param name="messages"></param>
         /// <returns></returns>
-        private List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
+        private static List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
         {
 
             //FOP has one log message per multiple lines which could be info, warn, or error

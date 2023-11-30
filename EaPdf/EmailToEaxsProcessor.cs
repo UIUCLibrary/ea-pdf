@@ -71,17 +71,17 @@ namespace UIUCLibrary.EaPdf
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _logger.LogTrace($"{this.GetType().Name} Created");
+            _logger.LogTrace("{typeName} Created", this.GetType().Name);
 
             //Set the skippingMessages flag if both SkipUntilMessageId  is set
             if (!string.IsNullOrWhiteSpace(Settings.SkipUntilMessageId))
             {
                 skippingMessages = true;
-                _logger.LogInformation($"Skipping all messages until MessagedId '{Settings.SkipUntilMessageId}' is found");
+                _logger.LogInformation("Skipping all messages until MessagedId '{SkipUntilMessageId}' is found", Settings.SkipUntilMessageId);
             }
             if (!string.IsNullOrWhiteSpace(Settings.SkipAfterMessageId))
             {
-                _logger.LogInformation($"Skipping all messages after MessagedId '{Settings.SkipAfterMessageId}' is found");
+                _logger.LogInformation("Skipping all messages after MessagedId '{SkipAfterMessageId}' is found", Settings.SkipAfterMessageId);
             }
 
             //add any extra character entities to the HtmlAgilityPack.HtmlEntity class
@@ -153,14 +153,14 @@ namespace UIUCLibrary.EaPdf
 
 
             xwriter.WriteStartDocument();
-            WriteDocType(xwriter);
+            WriteDocType(xwriter, null);
             WriteAccountHeaderFields(xwriter, globalId, accntEmails);
 
             return (xwriter, xstream);
 
         }
 
-        private void XmlStreamTeardown(XmlWriter xwriter, Stream xstream)
+        private static void XmlStreamTeardown(XmlWriter xwriter, Stream xstream)
         {
             xwriter.WriteEndElement(); //Account
             xwriter.WriteEndDocument();
@@ -323,7 +323,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private (string fullMessageFolderPath, string fullOutFolderPath) MessageFolderSetup(string messageFolderPath, string outFolderPath, string globalId)
+        private static (string fullMessageFolderPath, string fullOutFolderPath) MessageFolderSetup(string messageFolderPath, string outFolderPath, string globalId)
         {
             if (string.IsNullOrWhiteSpace(messageFolderPath))
             {
@@ -688,7 +688,7 @@ namespace UIUCLibrary.EaPdf
                         if (msgFileProps.MessageCount > 0)
                         {
                             var msg = $"{fex2.Message} The content of the message is probably incomplete because of an unmangled 'From ' line in the message body. Content starting from offset {mboxParser.MboxMarkerOffset} to the beginning of the next message will be skipped.";
-                            _logger.LogWarning(msg);
+                            _logger.LogWarning("{message}",msg);
                             mimeMsgProps.Incomplete(msg, $"Stream Position: {mboxParser.MboxMarkerOffset}");
 
                             //FUTURE: Maybe try to recover lost message content when this happens.  This is probably very tricky except for the most basic cases of content-type: text/plain with no multipart messages or binary attachments
@@ -818,7 +818,7 @@ namespace UIUCLibrary.EaPdf
 
             //When processing EML files, process all subfolders whether they match the filename or not.
 
-            string[]? dirs = null;
+            string[]? dirs;
             try
             {
                 dirs = Directory.GetDirectories(msgFileProps.MessageDirectoryName);
@@ -836,10 +836,12 @@ namespace UIUCLibrary.EaPdf
                     _logger.LogInformation("Processing Subfolder: {subfolderName}", dir);
 
                     //copy the message file properties into new class instance so we can change the file path
-                    MessageFileProperties msgFileProps2 = new(msgFileProps);
-                    msgFileProps2.MessageFilePath = Path.Combine(dir, Guid.NewGuid().ToString()); // use Guid to ensure its not a real file; this is a dummy file path that will be overwritten in the foreach loop below, but is needed to initialize the MessageFileProperties object with the correct file directory
+                    MessageFileProperties msgFileProps2 = new(msgFileProps)
+                    {
+                        MessageFilePath = Path.Combine(dir, Guid.NewGuid().ToString()) // use Guid to ensure its not a real file; this is a dummy file path that will be overwritten in the foreach loop below, but is needed to initialize the MessageFileProperties object with the correct file directory
+                    };
 
-                    WriteFolderOpen(xwriter, msgFileProps2);
+                WriteFolderOpen(xwriter, msgFileProps2);
 
                     string[]? files = null;
                     try
@@ -1020,7 +1022,7 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         /// <param name="xwriter"></param>
         /// <param name="nesting"></param>
-        private void WriteFolderOpeners(XmlWriter xwriter, Stack<string> nesting)
+        private static void WriteFolderOpeners(XmlWriter xwriter, Stack<string> nesting)
         {
             foreach (var fld in nesting.Reverse())
             {
@@ -1046,7 +1048,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="xwriter"></param>
         /// <param name="nesting"></param>
         /// <param name="clearStack"></param>
-        private void WriteFolderClosers(XmlWriter xwriter, Stack<string> nesting, bool clearStack)
+        private static void WriteFolderClosers(XmlWriter xwriter, Stack<string> nesting, bool clearStack)
         {
             for (int c = 0; c < nesting.Count; c++)
             {
@@ -1093,7 +1095,7 @@ namespace UIUCLibrary.EaPdf
             xwriter = XmlWriter.Create(xstream, xset);
 
             xwriter.WriteStartDocument();
-            WriteDocType(xwriter);
+            WriteDocType(xwriter, null);
             xwriter.WriteProcessingInstruction("ContinuedFrom", $"'{Path.GetFileName(origXmlFilePath)}'");
 
             WriteAccountHeaderFields(xwriter, msgFileProps.GlobalId, msgFileProps.AccountEmails);
@@ -1137,7 +1139,7 @@ namespace UIUCLibrary.EaPdf
             xwriter = XmlWriter.Create(xstream, xset);
 
             xwriter.WriteStartDocument();
-            WriteDocType(xwriter);
+            WriteDocType(xwriter, null);
 
             WriteAccountHeaderFields(xwriter, newMsgFileProps.GlobalId, newMsgFileProps.AccountEmails);
             WriteToLogInfoMessage(xwriter, $"Processing mbox file: {newMsgFileProps.MessageFilePath}");
@@ -1148,10 +1150,12 @@ namespace UIUCLibrary.EaPdf
         /// Write a DocType declaration with entity definitions
         /// </summary>
         /// <param name="xwriter"></param>
-        private void WriteDocType(XmlWriter xwriter)
+        /// <param name="namedEntFile"></param> 
+        private static void WriteDocType(XmlWriter xwriter, string? namedEntFile)
         {
             //This is only needed if we use named entities in the XML
-            //xwriter.WriteDocType("Account", null, null, "<!ENTITY % xhtml-lat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \"xhtml-lat1.ent\" > %xhtml-lat1;");
+            if(!string.IsNullOrWhiteSpace(namedEntFile))
+                xwriter.WriteDocType("Account", null, null, $"<!ENTITY % xhtml-lat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \"{namedEntFile}\" > %xhtml-lat1;");
         }
 
         private void SetHashAlgorithm(MessageFileProperties msgFileProps, XmlWriter xwriter)
@@ -1164,7 +1168,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private void WriteHash(XmlWriter xwriter, string elemName, byte[] hash, string hashAlgorithmName)
+        private static void WriteHash(XmlWriter xwriter, string elemName, byte[] hash, string hashAlgorithmName)
         {
             xwriter.WriteStartElement(elemName, XM_NS);
             xwriter.WriteStartElement("Value", XM_NS);
@@ -1174,7 +1178,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteEndElement(); //Hash
         }
 
-        private void WriteHash(XmlWriter xwriter, byte[] hash, string hashAlgorithmName)
+        private static void WriteHash(XmlWriter xwriter, byte[] hash, string hashAlgorithmName)
         {
             WriteHash(xwriter, "Hash", hash, hashAlgorithmName);
         }
@@ -1344,7 +1348,7 @@ namespace UIUCLibrary.EaPdf
             return localId;
         }
 
-        private void WriteMessageStatuses(XmlWriter xwriter, MimeMessage message, MimeMessageProperties msgProps)
+        private static void WriteMessageStatuses(XmlWriter xwriter, MimeMessage message, MimeMessageProperties msgProps)
         {
             //StatusFlags
             if (MimeKitHelpers.TryGetSeen(message, msgProps, out string status))
@@ -2008,7 +2012,7 @@ namespace UIUCLibrary.EaPdf
             if (extContent)
             {
                 xwriter.WriteAttributeString("xsi", "schemaLocation", "http://www.w3.org/2001/XMLSchema-instance", "eaxs_schema_v2.xsd");
-                _logger.LogInformation($"LocalId {localId} written to external file");
+                _logger.LogInformation("LocalId {localId} written to external file", localId);
                 //NOTE:  This cannot be written to the XML wrapper file because the localId will be different even for duplicate files; it will cause the Hash and Size to be incorrect
             }
 
@@ -2270,19 +2274,19 @@ namespace UIUCLibrary.EaPdf
         {
             if (Settings.LogToXmlThreshold <= LogLevel.Error)
                 xwriter.WriteComment($"ERROR: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
-            _logger.LogError(message);
+            _logger.LogError("{message}", message);
         }
         private void WriteToLogWarningMessage(XmlWriter xwriter, string message)
         {
             if (Settings.LogToXmlThreshold <= LogLevel.Warning)
                 xwriter.WriteComment($"WARNING: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
-            _logger.LogWarning(message);
+            _logger.LogWarning("{message}", message);
         }
         private void WriteToLogInfoMessage(XmlWriter xwriter, string message)
         {
             if (Settings.LogToXmlThreshold <= LogLevel.Information)
                 xwriter.WriteComment($"INFO: {XmlHelpers.ReplaceInvalidXMLChars(message)}");
-            _logger.LogInformation(message);
+            _logger.LogInformation("{message}", message);
         }
 
         private void WriteToLogMessage(XmlWriter xwriter, string message, LogLevel lvl)
@@ -2304,7 +2308,7 @@ namespace UIUCLibrary.EaPdf
                     if (lvl >= Settings.LogToXmlThreshold)
                         xwriter.WriteComment($"{lvl.ToString().ToUpperInvariant()}: {msg}");
 
-                    _logger.Log(lvl, msg);
+                    _logger.Log(lvl, "{message}", msg);
                     break;
             }
         }

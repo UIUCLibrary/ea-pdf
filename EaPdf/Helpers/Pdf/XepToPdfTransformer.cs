@@ -29,7 +29,6 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 List<(LogLevel level, string message)> messages = new();
                 _ = RunMainClass(MAIN_CLASS, args, ref messages);
 
-                LogLevel lvl = messages[0].level;
                 string ret = messages[0].message;
                 if (!ret.StartsWith("XEP", StringComparison.OrdinalIgnoreCase))
                 {
@@ -69,7 +68,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// </summary>
         /// <param name="messages"></param>
         /// <returns></returns>
-        private List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
+        private static List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
         {
             //In quiet mode, XEP has one message per line which should all be errors or warnings
             //Except for exceptions, which are multiple lines with the first line being "...something.somethingException" and subsequent lines beginning with tab and being the stack trace
@@ -116,13 +115,13 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             return ret;
         }
 
-        private void StartNewMessage(string message, LogLevel newLevel, ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)>  ret)
+        private static void StartNewMessage(string message, LogLevel newLevel, ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)>  ret)
         {
             if (messageAccumulator.Length > 0)
             {
                 AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
             }
-            logLevel = LogLevel.Error;
+            logLevel = newLevel; // LogLevel.Error;
             messageAccumulator.AppendLine(message);
 
         }

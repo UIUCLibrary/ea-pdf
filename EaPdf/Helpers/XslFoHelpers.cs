@@ -82,9 +82,8 @@ namespace UIUCLibrary.EaPdf.Helpers
                 foreach (XmlText xtextNode in nodes)
                 {
                     //get the nearest ancestor that has one of the default font-families; used to determine the default font-family for this block of text
-                    XmlElement? ancestorFontFamilyElem = xtextNode.SelectSingleNode($"ancestor::*[contains(@font-family,'{SERIF}') or contains(@font-family,'{SANS_SERIF}') or contains(@font-family,'{MONOSPACE}')]") as XmlElement;
                     BaseFontFamily defaultFontFamily = BaseFontFamily.Serif;
-                    if (ancestorFontFamilyElem != null)
+                    if (xtextNode.SelectSingleNode($"ancestor::*[contains(@font-family,'{SERIF}') or contains(@font-family,'{SANS_SERIF}') or contains(@font-family,'{MONOSPACE}')]") is XmlElement ancestorFontFamilyElem)
                     {
                         string fontFamily = ancestorFontFamilyElem.GetAttribute("font-family");
                         if (!string.IsNullOrWhiteSpace(fontFamily))
@@ -137,7 +136,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="Exception"></exception>
-        private XmlNode WrapFontFamilyForSpecialLanguages(XmlText originalText, BaseFontFamily defaultFontFamily, EaxsToEaPdfProcessorSettings settings, ref List<string> usedFonts)
+        private static XmlNode WrapFontFamilyForSpecialLanguages(XmlText originalText, BaseFontFamily defaultFontFamily, EaxsToEaPdfProcessorSettings settings, ref List<string> usedFonts)
         {
             if (originalText == null)
             {
@@ -157,14 +156,14 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (offsets.Count > 0 && offsets.Any(o => settings.AllSupportedScripts.Contains(o.scriptName, StringComparer.OrdinalIgnoreCase)))
             {
                 ret = originalText.OwnerDocument.CreateDocumentFragment();
-                foreach (var offset in offsets)
+                foreach (var (range, scriptName) in offsets)
                 {
                     //TODO:  Look for the base font family of the parent elements and use that same base font family
-                    var fonts = settings.GetFontFamily(offset.scriptName, defaultFontFamily);
+                    var fonts = settings.GetFontFamily(scriptName, defaultFontFamily);
 
                     if (fonts == null)
                     {
-                        var newElem = originalText.OwnerDocument.CreateTextNode(text[offset.range]);
+                        var newElem = originalText.OwnerDocument.CreateTextNode(text[range]);
                         ret.AppendChild(newElem);
                     }
                     else
@@ -173,7 +172,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                         newElem.SetAttribute("font-family", fonts);
                         usedFonts.AddRange(fonts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                         usedFonts = usedFonts.Distinct().ToList();
-                        newElem.InnerText = text[offset.range];
+                        newElem.InnerText = text[range];
                         ret.AppendChild(newElem);
                     }
 

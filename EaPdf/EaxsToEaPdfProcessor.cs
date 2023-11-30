@@ -31,7 +31,7 @@ namespace UIUCLibrary.EaPdf
             _enhancerFactory = enhancerFactory ?? throw new ArgumentNullException(nameof(enhancerFactory));
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _logger.LogTrace($"{this.GetType().Name} Created");
+            _logger.LogTrace("{typeName} Created", this.GetType().Name);
 
         }
 
@@ -41,14 +41,14 @@ namespace UIUCLibrary.EaPdf
 
             var eaxsHelpers = new EaxsHelpers(eaxsFilePath);
             //get fonts based on the Unicode scripts used in the text in the EAXS file and the font settings
-            var defaultFonts = eaxsHelpers.GetBaseFontsToUse(Settings);
+            var (serifFonts, sansFonts, monoFonts) = eaxsHelpers.GetBaseFontsToUse(Settings);
 
             var xsltParams = new Dictionary<string, object>
             {
                 { "fo-processor-version", _xslfo.ProcessorVersion },
-                { "SerifFont", defaultFonts.serifFonts },
-                { "SansSerifFont", defaultFonts.sansFonts },
-                { "MonospaceFont", defaultFonts.monoFonts }
+                { "SerifFont", serifFonts },
+                { "SansSerifFont", sansFonts },
+                { "MonospaceFont", monoFonts }
             };
 
             List<(LogLevel level, string message)> messages = new();
@@ -57,7 +57,7 @@ namespace UIUCLibrary.EaPdf
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltFoFilePath, foFilePath, xsltParams, ref messages);
             foreach (var (level, message) in messages)
             {
-                _logger.Log(level, message);
+                _logger.Log(level, "{message}", message);
             }
 
             //if the first transform was successful, transform the FO to PDF using one of the XSL-FO processors
@@ -74,7 +74,7 @@ namespace UIUCLibrary.EaPdf
                 var status2 = _xslfo.Transform(foFilePath, pdfFilePath, ref messages);
                 foreach (var (level, message) in messages)
                 {
-                    _logger.Log(level, message);
+                    _logger.Log(level, "{message}", message);
                 }
                 if (status2 != 0)
                 {
@@ -211,7 +211,7 @@ namespace UIUCLibrary.EaPdf
             return ret;
         }
 
-        private (string filename, string hash, long size) GetAttachmentFilenameHashSize(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
+        private static (string filename, string hash, long size) GetAttachmentFilenameHashSize(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
         {
             string fileName = extAttachmentNode.SelectSingleNode("(ancestor::*/xm:DispositionFileName | ancestor::*/xm:ContentName)[last()]", xmlns)?.InnerText ?? "";
 
@@ -229,7 +229,7 @@ namespace UIUCLibrary.EaPdf
             return (fileName, hash, size);
         }
 
-        private void AddAttachmentFile(List<EmbeddedFile> ret, XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
+        private static void AddAttachmentFile(List<EmbeddedFile> ret, XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
         {
             (DateTime earliest, DateTime latest) = GetEarliestLatestMessageDates(extAttachmentNode.SelectNodes($"ancestor::xm:Folder//xm:OrigDate", xmlns));
             (string fileName, string hash, long size)  = GetAttachmentFilenameHashSize(extAttachmentNode, xmlns);
@@ -269,7 +269,7 @@ namespace UIUCLibrary.EaPdf
 
         }
 
-        private string GetAttachmentDescription(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
+        private static string GetAttachmentDescription(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
         {
             //if the mime header has its own description, use that
             string descr = extAttachmentNode.SelectSingleNode("../xm:Description", xmlns)?.InnerText ?? "";
@@ -314,7 +314,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="singleBody"></param>
         /// <param name="xmlns"></param>
         /// <returns></returns>
-        private string GetFileExtension(XmlNode? singleBody, XmlNamespaceManager xmlns)
+        private static string GetFileExtension(XmlNode? singleBody, XmlNamespaceManager xmlns)
         {
             if (singleBody == null)
             {
@@ -363,24 +363,30 @@ namespace UIUCLibrary.EaPdf
             var mime = propNode.SelectSingleNode("xm:ContentType", xmlns)?.InnerText ?? "";
             var (earliest, latest) = GetEarliestLatestMessageDates(origDates);
             //get file dates
-            DateTime.TryParse(propNode.SelectSingleNode("xm:Created", xmlns)?.InnerText, out DateTime fileCreDate);
-            DateTime.TryParse(propNode.SelectSingleNode("xm:Modified", xmlns)?.InnerText, out DateTime fileModDate);
+            if(!DateTime.TryParse(propNode.SelectSingleNode("xm:Created", xmlns)?.InnerText, out DateTime fileCreDate))
+            {
+                throw new Exception($"File creation date is missing for file '{relPath}'.");
+            }
+            if(!DateTime.TryParse(propNode.SelectSingleNode("xm:Modified", xmlns)?.InnerText, out DateTime fileModDate))
+            {
+                throw new Exception($"File modification date is missing for file '{relPath}'.");
+            }
 
             //fileModDate can be earlier than fileCreDate, for example if file has been copied, so swap if this is the case
             if (fileModDate < fileCreDate)
             {
-                _logger.LogWarning($"File modification date '{fileModDate}' is earlier than file creation date '{fileCreDate}' for file '{relPath}'.\r\nThis sometimes results when the file has been copied or moved to a new medium.");
+                _logger.LogWarning("File modification date '{fileModDate}' is earlier than file creation date '{fileCreDate}' for file '{relPath}'.\r\nThis sometimes results when the file has been copied or moved to a new medium.", fileModDate, fileCreDate, relPath);
             }
 
             //if there are no file dates, use the message dates
             if (fileCreDate.Equals(DateTime.MinValue))
             {
-                _logger.LogWarning($"File creation date is missing for file '{relPath}'.\r\nUsing the earliest message date '{earliest}'.");
+                _logger.LogWarning("File creation date is missing for file '{relPath}'.\r\nUsing the earliest message date '{earliest}'.", relPath, earliest);
                 fileCreDate = earliest;
             }
             if (fileModDate.Equals(DateTime.MinValue))
             {
-                _logger.LogWarning($"File modification date is missing for file '{relPath}'.\r\nUsing the latest message date '{latest}'.");
+                _logger.LogWarning("File modification date is missing for file '{relPath}'.\r\nUsing the latest message date '{latest}'.", relPath, latest);
                 fileModDate = latest;
             }
 
@@ -402,7 +408,7 @@ namespace UIUCLibrary.EaPdf
         }
 
 
-        private (DateTime earliest, DateTime latest) GetEarliestLatestMessageDates(XmlNodeList? origDates)
+        private static (DateTime earliest, DateTime latest) GetEarliestLatestMessageDates(XmlNodeList? origDates)
         {
             if (origDates != null && origDates.Count > 0)
             {
@@ -432,7 +438,7 @@ namespace UIUCLibrary.EaPdf
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltXmpFilePath, xmpFilePath, null, ref messages);
             foreach (var (level, message) in messages)
             {
-                _logger.Log(level, message);
+                _logger.Log(level, "{message}", message);
             }
 
             if (status == 0)
@@ -456,9 +462,10 @@ namespace UIUCLibrary.EaPdf
         {
             string ret;
 
-            Dictionary<string, object> parms = new();
-
-            parms.Add("producer", GetType().Namespace ?? "UIUCLibrary");
+            Dictionary<string, object> parms = new()
+            {
+                { "producer", GetType().Namespace ?? "UIUCLibrary" }
+            };
 
 
             var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
@@ -467,7 +474,7 @@ namespace UIUCLibrary.EaPdf
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltRootXmpFilePath, xmpFilePath, parms, ref messages);
             foreach (var (level, message) in messages)
             {
-                _logger.Log(level, message);
+                _logger.Log(level, "{message}", message);
             }
 
             if (status == 0)

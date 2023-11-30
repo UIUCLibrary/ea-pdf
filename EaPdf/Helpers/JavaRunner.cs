@@ -9,7 +9,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         const string DEFAULT_JAVA_EXEC = "java"; //default assumes that java is in the path
         const string DEFAULT_MAX_MEMORY = "1024m";
 
-        public string JavaExec { get; set; } = DEFAULT_JAVA_EXEC; 
+        public string JavaExec { get; set; } = DEFAULT_JAVA_EXEC;
         public string MaxMemory { get; set; } = DEFAULT_MAX_MEMORY;
         public string ClassPath { get; set; } = "";
 
@@ -42,7 +42,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             if (!string.IsNullOrWhiteSpace(jarPath))
                 args += $" -jar \"{jarPath}\"";
-            else 
+            else
                 throw new ArgumentNullException(nameof(jarPath));
 
             if (!string.IsNullOrWhiteSpace(arguments))
@@ -71,7 +71,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             if (!string.IsNullOrWhiteSpace(mainClass))
                 args += $" {mainClass}";
-            else 
+            else
                 throw new ArgumentNullException(nameof(mainClass));
 
             if (!string.IsNullOrWhiteSpace(arguments))
@@ -83,7 +83,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         public int Run(string arguments, ref List<(LogLevel level, string message)> messages)
         {
-            return Run(arguments, "", ref messages);    
+            return Run(arguments, "", ref messages);
         }
 
         public int Run(string arguments, string workingDir, ref List<(LogLevel level, string message)> messages)
@@ -97,8 +97,8 @@ namespace UIUCLibrary.EaPdf.Helpers
                 UseShellExecute = false,
             };
 
-            if(!string.IsNullOrWhiteSpace(workingDir))
-                psi.WorkingDirectory = workingDir ;
+            if (!string.IsNullOrWhiteSpace(workingDir))
+                psi.WorkingDirectory = workingDir;
 
             Console.WriteLine($"Running: {psi.FileName} {psi.Arguments}");
             Console.WriteLine($"Working Directory: {psi.WorkingDirectory}");
@@ -134,7 +134,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
 
         //used by child subclasses to convert message lines to the correct log level and granularity
-        protected void AppendMessage(ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)> messages)
+        protected static void AppendMessage(ref LogLevel logLevel, ref StringBuilder messageAccumulator, ref List<(LogLevel level, string message)> messages)
         {
             if (logLevel != LogLevel.None)
             {

@@ -191,7 +191,9 @@ namespace UIUCLibrary.EaPdf.Helpers
                 WriteFopFontTriplet(xwriter, font.Family, font.Style, font.Weight);
                 xwriter.WriteEndElement(); // font
             }
-            WriteFopSubstitutions(xwriter, fontList);
+
+            //UNDONE: Not sure if we even need this
+            //WriteFopSubstitutions(xwriter, fontList);
                 
             xwriter.WriteEndElement(); // fonts
 
@@ -199,55 +201,6 @@ namespace UIUCLibrary.EaPdf.Helpers
             xwriter.Flush();
             xwriter.Close();
             return sb.ToString();
-        }
-
-        private static void WriteFopSubstitutions(XmlWriter xwriter, List<FontData> fonts)
-        {
-            //UNDONE:  not sure if I even need this
-        }
-
-        private static void WriteFopFontTriplet(XmlWriter xwriter, FontData font)
-        {
-            switch (font.BaseFamily)
-            {
-                case BaseFontFamily.SansSerif:
-                    WriteFopSansSerifTriplet(xwriter, font.Style, font.Weight);
-                    break;
-                case BaseFontFamily.Serif:
-                    WriteFopSerifTriplet(xwriter, font.Style, font.Weight);
-                    break;
-                case BaseFontFamily.Monospace:
-                    WriteFopMonospacedTriplet(xwriter, font.Style, font.Weight);
-                    break;
-                default:
-                    WriteFopFontTriplet(xwriter, font.Family, font.Style, font.Weight);
-                    break;
-            }
-        }
-
-        private static void WriteFopSansSerifTriplet(XmlWriter xwriter, string style, string weight)
-        {
-            WriteFopFontTriplet(xwriter, "Helvetica", style, weight);
-            WriteFopFontTriplet(xwriter, "Arial", style, weight);
-            WriteFopFontTriplet(xwriter, "sans-serif", style, weight);
-            WriteFopFontTriplet(xwriter, "SansSerif", style, weight);
-        }
-
-        private static void WriteFopSerifTriplet(XmlWriter xwriter, string style, string weight)
-        {
-            WriteFopFontTriplet(xwriter, "Times", style, weight);
-            WriteFopFontTriplet(xwriter, "Times Roman", style, weight);
-            WriteFopFontTriplet(xwriter, "Time New Roman", style, weight);
-            WriteFopFontTriplet(xwriter, "Times-Roman", style, weight);
-            WriteFopFontTriplet(xwriter, "serif", style, weight);
-            WriteFopFontTriplet(xwriter, "any", style, weight);
-        }
-
-        private static void WriteFopMonospacedTriplet(XmlWriter xwriter, string style, string weight)
-        {
-            WriteFopFontTriplet(xwriter, "Courier", style, weight);
-            WriteFopFontTriplet(xwriter, "monospace", style, weight);
-            WriteFopFontTriplet(xwriter, "Monospaced", style, weight);
         }
 
         private static void WriteFopFontTriplet(XmlWriter xwriter, string name, string style, string weight)

@@ -34,11 +34,15 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
         public static DPartInternalNode Create(DPartNode parent, string xmlFilePath)
         {
-            DPartInternalNode ret = new(); //this is the root node that refers to the first-level folders of the account
-            ret.Parent = parent;
+            DPartInternalNode ret = new()
+            {
+                Parent = parent //this is the root node that refers to the first-level folders of the account
+            }; 
 
-            XmlDocument xdoc = new();
-            xdoc.PreserveWhitespace = true;
+            XmlDocument xdoc = new()
+            {
+                PreserveWhitespace = true
+            };
             xdoc.Load(xmlFilePath);
 
             var xmlFolderNodes = xdoc.SelectNodes("/root/folder");

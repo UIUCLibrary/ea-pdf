@@ -56,7 +56,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         {
                             msg += $"  {kv.Key} = {kv.Value}\r\n";
                         }
-                        _logger.LogTrace(msg.Trim());
+                        _logger.LogTrace("{message}",msg.Trim());
                         return _pdfInfo;
                     }
                     return _pdfInfo;

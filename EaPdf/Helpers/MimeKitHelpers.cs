@@ -71,17 +71,17 @@ namespace UIUCLibrary.EaPdf.Helpers
         const char STATUS_FLAG_ANSWERED = 'A';  //Answered
         const char STATUS_FLAG_DRAFT = 'T';  //Draft
         //Others Status Headers???
-        const char STATUS_FLAG_NEW = 'N'; //New ??? http://www.mit.edu/~mm/mm.home/help/top.message-sequence.html
-        const char STATUS_FLAG_UNREAD = 'U'; //Unread ??? https://datatracker.ietf.org/doc/html/rfc2076
+        //const char STATUS_FLAG_NEW = 'N'; //New ??? http://www.mit.edu/~mm/mm.home/help/top.message-sequence.html
+        //const char STATUS_FLAG_UNREAD = 'U'; //Unread ??? https://datatracker.ietf.org/doc/html/rfc2076
 
         //Constants for Gmail Labels
-        const string GMAIL_INBOX = "INBOX";
+        //const string GMAIL_INBOX = "INBOX";
         const string GMAIL_SPAM = "SPAM";
         const string GMAIL_TRASH = "TRASH";
         const string GMAIL_UNREAD = "UNREAD";
         const string GMAIL_STARRED = "STARRED";
-        const string GMAIL_IMPORTANT = "IMPORTANT";
-        const string GMAIL_SENT = "SENT";
+        //const string GMAIL_IMPORTANT = "IMPORTANT";
+        //const string GMAIL_SENT = "SENT";
         const string GMAIL_DRAFT = "DRAFT";
         const string GMAIL_OPENED = "OPENED";
         const string GMAIL_ARCHIVED = "ARCHIVED";
