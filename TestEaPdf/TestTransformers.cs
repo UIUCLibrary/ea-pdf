@@ -42,9 +42,9 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                logger.LogDebug($"Information: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count()}");
-                logger.LogDebug($"Warnings: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count()}");
-                logger.LogDebug($"Errors: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count()}");
+                logger.LogDebug("Information: {informationCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count());
+                logger.LogDebug("Warnings: {warningCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count());
+                logger.LogDebug("Errors: {errorCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count());
                 logger.LogDebug("Ending Test");
             }
             loggerFactory?.Dispose();
@@ -64,19 +64,19 @@ namespace UIUCLibrary.TestEaPdf
                 File.Delete(foFile);
 
                 var messages = new List<(LogLevel level, string message)>();
-                var parms = new Dictionary<string,object>() { { "fo-processor-version", "FOP Version 2.8" } };
+                var parms = new Dictionary<string, object>() { { "fo-processor-version", "FOP Version 2.8" } };
 
                 var tran = new SaxonXsltTransformer();
 
                 var version = tran.ProcessorVersion;
-                Assert.IsTrue(version.StartsWith("Saxon",StringComparison.OrdinalIgnoreCase));
+                Assert.IsTrue(version.StartsWith("Saxon", StringComparison.OrdinalIgnoreCase));
                 logger.LogInformation("Version: {version}", version);
 
                 int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
 
                 foreach (var (level, message) in messages)
                 {
-                    logger.Log(level, message);
+                    logger.Log(level, "{message}", message);
                 }
 
                 Assert.AreEqual(0, ret);
@@ -114,14 +114,14 @@ namespace UIUCLibrary.TestEaPdf
 
                 foreach (var (level, message) in messages)
                 {
-                    logger.Log(level, message);
+                    logger.Log(level, "{message}", message);
                 }
 
                 Assert.AreEqual(0, ret);
 
                 Assert.IsTrue(File.Exists(pdfFile));
 
-                if(OPEN_PDFS)
+                if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
 
             }
@@ -150,13 +150,13 @@ namespace UIUCLibrary.TestEaPdf
 
                 var version = tran.ProcessorVersion;
                 Assert.IsTrue(version.StartsWith("Saxon", StringComparison.OrdinalIgnoreCase));
-                logger.LogInformation("Version: {version}",version);
+                logger.LogInformation("Version: {version}", version);
 
                 int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
 
                 foreach (var (level, message) in messages)
                 {
-                    logger.Log(level, message);
+                    logger.Log(level, "{message}", message);
                 }
 
                 Assert.AreEqual(0, ret);
@@ -177,7 +177,7 @@ namespace UIUCLibrary.TestEaPdf
             if (logger != null)
             {
                 var foFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xep");
-                var configFile = Path.GetFullPath("XResources\\xep.xml"); 
+                var configFile = Path.GetFullPath("XResources\\xep.xml");
                 var pdfFile = Path.ChangeExtension(foFile, "xep.pdf");
 
                 File.Delete(pdfFile);
@@ -194,14 +194,14 @@ namespace UIUCLibrary.TestEaPdf
 
                 foreach (var (level, message) in messages)
                 {
-                    logger.Log(level, message);
+                    logger.Log(level, "{message}", message);
                 }
 
                 Assert.AreEqual(0, ret);
 
                 Assert.IsTrue(File.Exists(pdfFile));
 
-                if(OPEN_PDFS)
+                if (OPEN_PDFS)
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
 
             }

@@ -48,9 +48,9 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                logger.LogDebug($"Information: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count()}");
-                logger.LogDebug($"Warnings: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count()}");
-                logger.LogDebug($"Errors: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count()}");
+                logger.LogDebug("Information: {informationCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count());
+                logger.LogDebug("Warnings: {warningCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count());
+                logger.LogDebug("Errors: {errorCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count());
                 logger.LogDebug("Ending Test");
             }
             loggerFactory?.Dispose();
@@ -496,7 +496,7 @@ namespace UIUCLibrary.TestEaPdf
         }
 
 
-        private long ConvertMessagesAndCheckCounts(EmailToEaxsProcessor eProc, MimeFormat format, string sampleFile, string outFolder, long expectedCounts)
+        private static long ConvertMessagesAndCheckCounts(EmailToEaxsProcessor eProc, MimeFormat format, string sampleFile, string outFolder, long expectedCounts)
         {
             long validMessageCount = 0;
             if (format == MimeFormat.Mbox && Directory.Exists(sampleFile))
@@ -539,7 +539,7 @@ namespace UIUCLibrary.TestEaPdf
             return validMessageCount;
         }
 
-        private List<string> CheckOutputFolderAndGetXmlFiles(string expectedOutFolder, string outFolder, string sampleFile, bool oneFilePerMbox)
+        private static List<string> CheckOutputFolderAndGetXmlFiles(string expectedOutFolder, string outFolder, string sampleFile, bool oneFilePerMbox)
         {
             //make sure output folders and files exist
             Assert.AreEqual(expectedOutFolder, outFolder);
@@ -571,7 +571,7 @@ namespace UIUCLibrary.TestEaPdf
             //make sure the xml files are valid
             foreach (var xmlFile in expectedXmlFiles)
             {
-                logger.LogDebug($"Validating xml file '{xmlFile}'");
+                logger.LogDebug("Validating xml file '{xmlFile}'", xmlFile);
 
                 //use an XmlReader to validate with line numbers as soon as the Xml document is loaded
                 XmlReaderSettings rdrSettings = new()
@@ -672,7 +672,7 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
-        private void ValidatePhantomBodies(XmlDocument xDoc, XmlNamespaceManager xmlns)
+        private static void ValidatePhantomBodies(XmlDocument xDoc, XmlNamespaceManager xmlns)
         {
             //check that any PhantomBody elements are valid
             XmlNodeList? nds = xDoc.SelectNodes("//xm:SingleBody[xm:PhantomBody]", xmlns);
@@ -690,7 +690,7 @@ namespace UIUCLibrary.TestEaPdf
             if (nds2 != null)
             {
                 foreach (XmlElement nd in nds2)
-                {  
+                {
                     //check that there is a PhantomBody element
                     var phantom = nd.SelectSingleNode("xm:PhantomBody", xmlns);
                     Assert.IsNotNull(phantom);
@@ -699,7 +699,7 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
-        private void ValidateRfc822Nodes(XmlDocument xDoc, XmlNamespaceManager xmlns)
+        private static void ValidateRfc822Nodes(XmlDocument xDoc, XmlNamespaceManager xmlns)
         {
             //If mime type is message/rfc822 or text/rfc822-headers, make sure there is a ChildMessage 
             var rfc822Nds = xDoc.SelectNodes($"//xm:SingleBody[translate(xm:ContentType,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'text/rfc822-headers' or translate(xm:ContentType,'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'message/rfc822']", xmlns);
@@ -707,8 +707,7 @@ namespace UIUCLibrary.TestEaPdf
             {
                 foreach (XmlElement nd in rfc822Nds)
                 {
-                    var id = nd.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
-
+                    //var id = nd.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
                     //logger.LogDebug($"RFC822 Message Id: {id}");
 
                     var encoding = nd.SelectSingleNode("xm:TransferEncoding", xmlns)?.InnerText ?? "";
@@ -742,7 +741,7 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
-        private void ValidateInternalContent(XmlDocument xDoc, XmlNamespaceManager xmlns, bool preserveBinaryEnc, bool preserveTextEnc)
+        private static void ValidateInternalContent(XmlDocument xDoc, XmlNamespaceManager xmlns, bool preserveBinaryEnc, bool preserveTextEnc)
         {
             //make sure all content is saved in the XML 
             XmlNodeList? nodes = xDoc.SelectNodes("/xm:Account//xm:Folder/xm:Message//xm:SingleBody", xmlns);
@@ -750,8 +749,7 @@ namespace UIUCLibrary.TestEaPdf
             foreach (XmlElement node in nodes)
             {
 
-                var id = node.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
-
+                //var id = node.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText;
                 //logger.LogDebug($"RFC822 Message Id: {id}");
 
                 Assert.IsNull(node.SelectSingleNode("xm:ExtBodyContent", xmlns));
@@ -851,13 +849,13 @@ namespace UIUCLibrary.TestEaPdf
                     if (actualWrapExtInXml != wrapExtInXml && wrapExtInXml)
                     {
                         var msg = $"External file: {extFilepath} is not wrapped in xml as expected";
-                        logger?.LogDebug(msg);
+                        logger?.LogDebug("{message}", msg);
                         Assert.Fail(msg); //shouldn't be any exceptions to this
                     }
                     else if (actualWrapExtInXml != wrapExtInXml && !wrapExtInXml)
                     {
                         var msg = $"External file: {extFilepath} is wrapped in xml when it shouldn't be";
-                        logger?.LogDebug(msg);
+                        logger?.LogDebug("{message}", msg);
                         //Assert.Inconclusive(msg); //inconclusive since it might be wrapped in XML because of a virus or other file IO problem
                     }
 
@@ -882,7 +880,7 @@ namespace UIUCLibrary.TestEaPdf
                     var actualHash = Helpers.CalculateHash(hashAlg, extFilepath);
                     if (string.IsNullOrEmpty(actualHash))
                     {
-                        logger?.LogDebug($"Unable to calculate the hash for external file: {extFilepath}");
+                        logger?.LogDebug("Unable to calculate the hash for external file: {extFilepath}", extFilepath);
                     }
                     else
                     {
@@ -941,7 +939,7 @@ namespace UIUCLibrary.TestEaPdf
                             case null:
                             case "":
                                 decoder = new MimeKit.Encodings.PassThroughDecoder(ContentEncoding.Default); //don't really care about the encoding since we are just testing the hash and size
-                                break; 
+                                break;
                             case "base64":
                                 decoder = new MimeKit.Encodings.Base64Decoder();
                                 break;
@@ -960,7 +958,7 @@ namespace UIUCLibrary.TestEaPdf
                                 Assert.Fail($"Unknown transfer encoding: {enc}");
                                 break;
                         }
-                        if(decoder != null)
+                        if (decoder != null)
                         {
                             var inBytes = Encoding.UTF8.GetBytes(extdoc.SelectSingleNode("/xm:BodyContent/xm:Content", xmlns)?.InnerText ?? "");
                             int estCount = decoder.EstimateOutputLength(inBytes.Length);
@@ -994,7 +992,7 @@ namespace UIUCLibrary.TestEaPdf
                         catch (IOException ioex)
                         {
                             //file might be a virus or have some other problem, assume it is not valid XML
-                            logger?.LogDebug(ioex.Message);
+                            logger?.LogDebug("{message}", ioex.Message);
                             validXml = false;
                         }
                         Assert.IsFalse(validXml);
@@ -1011,7 +1009,7 @@ namespace UIUCLibrary.TestEaPdf
         /// </summary>
         /// <param name="expectedErrors"></param>
         /// <param name="expectedWarnings"></param>
-        private void ValidateErrorAndWarningCounts(long expectedErrors, long expectedWarnings)
+        private static void ValidateErrorAndWarningCounts(long expectedErrors, long expectedWarnings)
         {
             if (expectedErrors <= -1)
                 Assert.IsTrue(StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count() >= -expectedErrors, "Expected some errors");
@@ -1024,7 +1022,7 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.AreEqual(expectedWarnings, StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count(), "Expected warning count does not match");
         }
 
-        private void ValidateHash(XmlElement msgFilePropElem, XmlNamespaceManager xmlns, string outFolder, EmailToEaxsProcessorSettings settings, string hashAlg)
+        private static void ValidateHash(XmlElement msgFilePropElem, XmlNamespaceManager xmlns, string outFolder, EmailToEaxsProcessorSettings settings, string hashAlg)
         {
             //get the hash values from the xml
             XmlNode? hashValueNd = msgFilePropElem.SelectSingleNode("xm:Hash/xm:Value", xmlns);
@@ -1052,11 +1050,11 @@ namespace UIUCLibrary.TestEaPdf
             validXml = false;
             if (e.Severity == XmlSeverityType.Warning)
             {
-                logger?.LogDebug($"Line: {e.Exception.LineNumber} -- {e.Message}");
+                logger?.LogDebug("Line: {lineNumber} -- {message}", e.Exception.LineNumber, e.Message);
             }
             else if (e.Severity == XmlSeverityType.Error)
             {
-                logger?.LogDebug($"Line: {e.Exception.LineNumber} -- {e.Message}");
+                logger?.LogDebug("Line: {lineNumber} -- {message}", e.Exception.LineNumber, e.Message);
             }
         }
 
@@ -1129,7 +1127,7 @@ namespace UIUCLibrary.TestEaPdf
                 var xDoc = new XmlDocument(); //this will validate the XML
                 try
                 {
-                    logger?.LogInformation($"Validating '{xmlFile}'; results are in '{outFile}'.");
+                    logger?.LogInformation("Validating '{xmlFile}'; results are in '{outFile}'.", xmlFile, outFile);
                     File.AppendAllText(outFile, $"*** Validating XML File: {xmlFile} ***\r\n");
                     xDoc.Load(xRdr);
                 }

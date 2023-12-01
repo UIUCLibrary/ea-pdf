@@ -47,9 +47,9 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                logger.LogDebug($"Information: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count()}");
-                logger.LogDebug($"Warnings: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count()}");
-                logger.LogDebug($"Errors: {StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count()}");
+                logger.LogDebug("Information: {informationCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Information]")).Count());
+                logger.LogDebug("Warnings: {warningCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Warning]")).Count());
+                logger.LogDebug("Errors: {errorCount}", StringListLogger.Instance.LoggedLines.Where(s => s.StartsWith("[Error]")).Count());
                 logger.LogDebug("Ending Test");
             }
             loggerFactory?.Dispose();
@@ -175,7 +175,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToPdfProcessor(string inPath, string foProcessor, bool ext, bool wrap)
         {
             if (!foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase) && !foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
-                throw new ArgumentException(nameof(foProcessor));
+                throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case",nameof(foProcessor));
 
             if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase) && ext && !wrap)
                 throw new ArgumentException("XEP requires external files to be wrapped in XML");
@@ -203,7 +203,7 @@ namespace UIUCLibrary.TestEaPdf
                 }
                 else
                 {
-                    throw new ArgumentException(nameof(foProcessor));
+                    throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case", nameof(foProcessor));
                 }
 
                 var xslt = new SaxonXsltTransformer();
@@ -258,17 +258,17 @@ namespace UIUCLibrary.TestEaPdf
                 if (outFolder == null)
                     Assert.Fail("Could not get directory name from " + inFile);
 
-                var settings = new EmailToEaxsProcessorSettings();
-
-                settings.SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt;
-                settings.WrapExternalContentInXml = wrapExtContentInXml;  //must be true for XEP to properly attach external PDFs
-                settings.SaveTextAsXhtml = true; //required to render html inside the PDF
+                var settings = new EmailToEaxsProcessorSettings
+                {
+                    SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt,
+                    WrapExternalContentInXml = wrapExtContentInXml,  //must be true for XEP to properly attach external PDFs
+                    SaveTextAsXhtml = true //required to render html inside the PDF
+                };
                 if (!string.IsNullOrWhiteSpace(skipAfterMsgId))
                     settings.SkipAfterMessageId = skipAfterMsgId;
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);
-
-                var count = eProc.ConvertMboxToEaxs(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                _ = eProc.ConvertMboxToEaxs(inFile, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
 
                 return xmlFile;
             }
@@ -286,15 +286,15 @@ namespace UIUCLibrary.TestEaPdf
                 var inFolder = Path.Combine(testFilesBaseDirectory, folderPath);
                 var outFolder = Path.Combine(Path.GetDirectoryName(inFolder) ?? ".", Path.GetFileName(inFolder) + "Out");
 
-                var settings = new EmailToEaxsProcessorSettings();
-
-                settings.SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt;
-                settings.WrapExternalContentInXml = wrapExtContentInXml;  //Must be true for XEP to properly attach external PDFs
-                settings.SaveTextAsXhtml = true; //required to render html inside the PDF
+                var settings = new EmailToEaxsProcessorSettings
+                {
+                    SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt,
+                    WrapExternalContentInXml = wrapExtContentInXml,  //Must be true for XEP to properly attach external PDFs
+                    SaveTextAsXhtml = true //required to render html inside the PDF
+                };
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);
-
-                var count = eProc.ConvertFolderOfEmlToEaxs(inFolder, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
+                _ = eProc.ConvertFolderOfEmlToEaxs(inFolder, outFolder, "mailto:thabing@illinois.edu", "thabing@illinois.edu,thabing@uiuc.edu");
                 return xmlFile;
             }
             else

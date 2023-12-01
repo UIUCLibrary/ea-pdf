@@ -38,10 +38,9 @@ namespace UIUCLibrary.TestEaPdf
 
         public static string CalculateHash(string algName, byte[] byts)
         {
-            byte[] hash = Array.Empty<byte>();
-
             using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
 
+            byte[] hash;
             try
             {
                 hash = alg.ComputeHash(byts);
@@ -57,10 +56,9 @@ namespace UIUCLibrary.TestEaPdf
 
         public static string CalculateHash(string algName, byte[] byts, int offset, int count)
         {
-            byte[] hash = Array.Empty<byte>();
-
             using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
 
+            byte[] hash;
             try
             {
                 hash = alg.ComputeHash(byts, offset, count);
