@@ -35,12 +35,14 @@ var logLevel = new Option<LogLevel>("--log-level", () => LogLevel.Information, "
 };
 
 //create the root command
-var rootCommand = new RootCommand("Convert email files to XML");
-rootCommand.Add(inFileFolder);
-rootCommand.Add(outFolder);
-rootCommand.Add(globalId);
-rootCommand.Add(addresses);
-rootCommand.Add(startAt);
+var rootCommand = new RootCommand("Convert email files to XML")
+{
+    inFileFolder,
+    outFolder,
+    globalId,
+    addresses,
+    startAt
+};
 
 //init the host
 var host = Host.CreateDefaultBuilder(args)
@@ -61,9 +63,9 @@ rootCommand.SetHandler((mboxFilePath, outFolderPath, globalId, accntEmails, star
     try
     {
         var started = DateTime.Now;
-        logger.LogInformation($"Processing email in '{mboxFilePath}', output goes to '{outFolderPath}'.");
+        logger.LogInformation("Processing email in '{mboxFilePath}', output goes to '{outFolderPath}'.", mboxFilePath, outFolderPath);
         var count = emailProc.ConvertMboxToEaxs(mboxFilePath.FullName, outFolderPath.FullName, globalId.ToString(), string.Join(",", accntEmails), startingLocalId);
-        logger.LogInformation($"Processed {count} Messages in {DateTime.Now - started}");
+        logger.LogInformation("Processed {count} Messages in {elapsedTime}", count, DateTime.Now - started);
     }
     catch (Exception ex)
     {
