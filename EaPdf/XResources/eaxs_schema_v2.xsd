@@ -63,8 +63,11 @@
 			2023-05-03
 			* Add SAA DACS metadata to the metadata at the account level and the folder level
 			
-			20223-09-27
+			2023-09-27
 			* Added ContentType to file-props-type to record the MIME type of the message source files
+			
+			2023-12-12
+			* Added image/width and image/height *BodyContent; image sizes can useful when rendering to PDF pages
 
 		</documentation>
 	</annotation>
@@ -717,9 +720,22 @@
 			<!-- Added Hash and Size because these attributes can also be useful even when the content is embedded inside the XML -->
 			<element name="Hash" type="xm:hash-type" minOccurs="0"/>
 			<element name="Size" type="long" minOccurs="0"/>
+			<element name="ImageProperties" type="xm:image-props" minOccurs="0"/>
 		</sequence>
 	</complexType>
-
+	
+	<complexType name="image-props">
+		<annotation>
+			<documentation>
+				TGH 2023-12-12 Width and Height of images in pixels
+			</documentation>
+		</annotation>
+		<sequence>
+			<element name="Width" type="long"/>
+			<element name="Height" type="long" />
+		</sequence>
+	</complexType>
+  
 	<complexType name="ext-body-content-type">
 		<sequence>
 			<element name="RelPath" type="anyURI">
@@ -795,7 +811,7 @@
 					</documentation>
 				</annotation>
 			</element>
-
+			<element name="ImageProperties" type="xm:image-props" minOccurs="0"/>
 		</sequence>
 	</complexType>
 

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE stylesheet SYSTEM "eaxs_entities.ent">
 
 <!--
 
@@ -6,9 +7,15 @@ Copyright Antenna House, Inc. (http://www.antennahouse.com) 2001, 2002.
 
 Since this stylesheet is originally developed by Antenna House to be used with XSL Formatter, it may not be compatible with another XSL-FO processors.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, provided that the above copyright notice(s) and this permission notice appear in all copies of the Software and that both the above copyright notice(s) and this permission notice appear in supporting documentation.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to 
+deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do so, provided that the above copyright notice(s) and this permission 
+notice appear in all copies of the Software and that both the above copyright notice(s) and this permission notice appear in supporting documentation.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE 
+BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, 
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 -->
 
@@ -16,22 +23,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 <xsl:stylesheet version="2.0"
                 xmlns:html="http://www.w3.org/1999/xhtml"
-  
+                xmlns:eaxs="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
+                
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:fo="http://www.w3.org/1999/XSL/Format"
                 xmlns:fn="http://www.w3.org/2005/xpath-functions"
-
+                xmlns:my="http://library.illinois.edu/myFunctions"
+                
                 xmlns:pdf="http://xmlgraphics.apache.org/fop/extensions/pdf"
                 xmlns:fox="http://xmlgraphics.apache.org/fop/extensions"
                 
                 xmlns:rx="http://www.renderx.com/XSL/Extensions"
                   >
 
-  <xsl:output method="xml"
-              version="1.0"
-              encoding="UTF-8"
-              indent="no"/>
-  
   <xsl:key name="HTML_IDS" match="//html:*[@id]" use="@id"  />
   <xsl:key name="HTML_NAMES" match="//html:a[@name]" use="@name"  />
   
@@ -39,13 +43,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       Parameters
   =======================================================================-->
 
-  <!-- page size -->
-  <xsl:param name="page-width">auto</xsl:param>
-  <xsl:param name="page-height">auto</xsl:param>
-  <xsl:param name="page-margin-top">1in</xsl:param>
-  <xsl:param name="page-margin-bottom">1in</xsl:param>
-  <xsl:param name="page-margin-left">1in</xsl:param>
-  <xsl:param name="page-margin-right">1in</xsl:param>
 
   <!-- page header and footer -->
   <xsl:param name="page-header-margin">0.5in</xsl:param>
@@ -67,17 +64,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   <xsl:param name="hyphenate">false</xsl:param>
   
 
-  <!-- TGH Which FO Processor -->
-  <xsl:param name="fo-processor">fop</xsl:param> <!-- Values used: fop or xep -->
-  
   <!-- TGH For increased performance and also security set this to false -->
   <xsl:param name="load-external-images">false</xsl:param>
   
-  <xsl:param name="SerifFont" select="'serif'"/><!-- Used as the default -->
-  <xsl:param name="SansSerifFont" select="'sans-serif'"/>
-  <xsl:param name="MonospaceFont" select="'monospace'"/>
-  
-  <xsl:variable name="DefaultFont" select="$SerifFont"/>
   
   <!-- TGH:  Apache FOP does not support font-weight bolder or lighter, so use bold or normal instead -->
   <xsl:variable name="Bolder">
@@ -766,7 +755,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             <xsl:value-of select="normalize-space(substring-before(
                                   $value-and-rest, ';'))"/>
           </xsl:when>
-          <xsl:otherwise>
+          <xsl:otherwise>  
             <xsl:value-of select="$value-and-rest"/>
           </xsl:otherwise>
         </xsl:choose>
@@ -781,6 +770,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             <xsl:value-of select="$value"/>
           </xsl:attribute>
         </xsl:when>
+        
+        <!-- TGH 2023-12-05 Make sure width and height of images do not exceed the page size of the expected PDF -->
+        <xsl:when test="$name = 'width' and self::html:img">
+          <xsl:attribute name="{$name}">
+             <xsl:value-of select="my:ScaleToBodyWidth($value)"/>
+          </xsl:attribute>
+        </xsl:when>
+        <xsl:when test="$name = 'height' and self::html:img">
+          <xsl:attribute name="{$name}">
+            <xsl:value-of select="my:ScaleToBodyHeight($value)"/>
+          </xsl:attribute>
+        </xsl:when>
+        
         <xsl:when test="$name = 'vertical-align' and (
                                  self::html:table or self::html:caption or
                                  self::html:thead or self::html:tfoot or
@@ -852,11 +854,24 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             </xsl:otherwise>
           </xsl:choose>
         </xsl:when>
-        <xsl:when test="$name = 'overflow-x' or $name = 'overflow-y'">
-          <!-- TGH Convert overflow-x and overflow-y into the just overflow -->
+        
+        <!-- TGH Convert overflow-x and/or overflow-y into the just overflow, unless there is already an overflow in which case just ignore them -->
+        <xsl:when test="($name = 'overflow-x' or $name='overflow-y') and my:StyleContainsProperty(self::*/@style,'overflow')">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; there is already an 'overflow' property, so '<xsl:value-of select="$name"/>' will be omitted.</xsl:message>          
+        </xsl:when>
+        <xsl:when test="$name = 'overflow-x' and not(my:StyleContainsProperty(self::*/@style,'overflow'))">
           <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it is converted to a plain 'overflow:<xsl:value-of select="$value"/>'</xsl:message>
           <xsl:attribute name="overflow"><xsl:value-of select="$value"/></xsl:attribute>
         </xsl:when>
+        <xsl:when test="$name = 'overflow-y' and not(my:StyleContainsProperty(self::*/@style,'overflow')) and my:StyleContainsProperty(self::*/@style,'overflow-x')">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; there was an 'overflow-x' already converted to an 'overflow' property, so the '<xsl:value-of select="$name"/>' will be omitted</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name = 'overflow-y' and not(my:StyleContainsProperty(self::*/@style,'overflow'))">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it is converted to a plain 'overflow:<xsl:value-of select="$value"/>'</xsl:message>
+          <xsl:attribute name="overflow"><xsl:value-of select="$value"/></xsl:attribute>
+        </xsl:when>
+        
+        
         <xsl:when test="$name = 'list-style-type'">
           <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
         </xsl:when>
@@ -2050,7 +2065,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <xsl:template match="html:img">
     <xsl:choose>
-      <xsl:when test="fn:lower-case(normalize-space($load-external-images))='true'">
+      <xsl:when test="fn:lower-case(normalize-space($load-external-images))='true' or fn:starts-with(fn:lower-case(normalize-space(@src)),'cid:')">
         <fo:external-graphic xsl:use-attribute-sets="img">
           <xsl:call-template name="process-img"/>
         </fo:external-graphic>
@@ -2066,7 +2081,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
   <xsl:template match="html:img[ancestor::html:a/@href]">
     <xsl:choose>
-      <xsl:when test="fn:lower-case(normalize-space($load-external-images))='true'">
+      <xsl:when test="fn:lower-case(normalize-space($load-external-images))='true' or fn:starts-with(fn:lower-case(normalize-space(@src)),'cid:')">
         <fo:external-graphic xsl:use-attribute-sets="img-link">
           <xsl:call-template name="process-img"/>
         </fo:external-graphic>
@@ -2081,45 +2096,87 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   </xsl:template>
 
   <xsl:template name="process-img">
-    <xsl:attribute name="src">
-      <xsl:text>url('</xsl:text>
-      <xsl:value-of select="@src"/>
-      <xsl:text>')</xsl:text>
-    </xsl:attribute>
-    <xsl:if test="@alt">
-      <xsl:attribute name="role">
-        <!-- TODO: This needs to use one of the custom FOP or XEP attributes, instead of role -->
-        <xsl:value-of select="@alt"/>
-      </xsl:attribute>
+    <xsl:variable name="InlineImgSingleBody" select="ancestor::eaxs:Message[1]//eaxs:SingleBody[eaxs:ContentId = fn:substring(normalize-space(current()/@src),5)]"/>
+    
+    <xsl:choose>
+      <xsl:when test="$InlineImgSingleBody">
+        <xsl:attribute name="src">
+          <xsl:call-template name="GetURLForAttachedContent">
+            <xsl:with-param name="inline" select="$InlineImgSingleBody"/>
+          </xsl:call-template>
+        </xsl:attribute>
+        <xsl:if test="$InlineImgSingleBody/eaxs:ContentType">
+          <xsl:attribute name="content-type">content-type:<xsl:value-of select="fn:lower-case(normalize-space($InlineImgSingleBody/eaxs:ContentType))"/></xsl:attribute>
+        </xsl:if>
+        <xsl:call-template name="GetImgAltAttr">
+          <xsl:with-param name="inline" select="$InlineImgSingleBody"/>
+          <xsl:with-param name="default" select="@alt"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:attribute name="src">
+          <xsl:text>url('</xsl:text>
+          <xsl:value-of select="@src"/>
+          <xsl:text>')</xsl:text>   
+        </xsl:attribute>
+        <xsl:call-template name="GetImgAltAttr">
+          <xsl:with-param name="preferred" select="@alt"/>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
+    
+    <xsl:if test="not(@style) or (@style and not(my:StyleContainsProperty(@style,'overflow')) and not(my:StyleContainsProperty(@style,'overflow-x')) and not(my:StyleContainsProperty(@style,'overflow-y')))">
+      <xsl:attribute name="overflow">error-if-overflow</xsl:attribute>
     </xsl:if>
-    <xsl:if test="@width">
-      <xsl:choose>
-        <xsl:when test="contains(@width, '%')">
-          <xsl:attribute name="width">
-            <xsl:value-of select="@width"/>
-          </xsl:attribute>
-          <xsl:attribute name="content-width">scale-to-fit</xsl:attribute>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:attribute name="content-width">
-            <xsl:value-of select="@width"/>px</xsl:attribute>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:if>
-    <xsl:if test="@height">
-      <xsl:choose>
-        <xsl:when test="contains(@height, '%')">
-          <xsl:attribute name="height">
-            <xsl:value-of select="@height"/>
-          </xsl:attribute>
-          <xsl:attribute name="content-height">scale-to-fit</xsl:attribute>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:attribute name="content-height">
-            <xsl:value-of select="@height"/>px</xsl:attribute>
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:if>
+    
+    <xsl:choose>
+      <xsl:when test="@width">
+        <xsl:choose>
+          <xsl:when test="contains(@width, '%') and (not(@style) or (@style and not(my:StyleContainsProperty(@style,'width'))))">
+            <xsl:attribute name="width">
+              <xsl:value-of select="@width"/>
+            </xsl:attribute>
+            <xsl:attribute name="content-width">scale-to-fit</xsl:attribute>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:attribute name="content-width">
+              <xsl:value-of select="@width"/>px</xsl:attribute>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:when test="$InlineImgSingleBody/*/eaxs:ImageProperties and (not(@style) or (@style and not(my:StyleContainsProperty(@style,'width'))))">
+        <xsl:attribute name="width">
+          <xsl:value-of select="my:ScaleToBodyWidth(fn:concat($InlineImgSingleBody/*/eaxs:ImageProperties/eaxs:Width,'px'))"/>
+        </xsl:attribute>        
+      </xsl:when>
+    </xsl:choose>
+    
+    <xsl:choose>
+      <xsl:when test="@height">
+        <xsl:choose>
+          <xsl:when test="contains(@height, '%') and (not(@style) or (@style and not(my:StyleContainsProperty(@style,'height'))))">
+            <xsl:attribute name="height">
+              <xsl:value-of select="@height"/>
+            </xsl:attribute>
+            <xsl:attribute name="content-height">scale-to-fit</xsl:attribute>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:attribute name="content-height">
+              <xsl:value-of select="@height"/>px</xsl:attribute>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:when test="$InlineImgSingleBody/*/eaxs:ImageProperties and (not(@style) or (@style and not(my:StyleContainsProperty(@style,'height'))))">
+        <xsl:attribute name="height">
+          <xsl:value-of select="my:ScaleToBodyHeight(fn:concat($InlineImgSingleBody/*/eaxs:ImageProperties/eaxs:Height,'px'))"/>
+        </xsl:attribute>        
+      </xsl:when>
+      <xsl:when test="fn:lower-case(fn:normalize-space($fo-processor))='xep'">
+        <!-- XEP crashes if a tall image exceeds the page size, so set the height to a little less than that -->
+        <xsl:attribute name="height"><xsl:value-of select="my:PageBodyHeightPts()"/>pt</xsl:attribute>												
+      </xsl:when>												        
+    </xsl:choose>
+    
     <xsl:if test="@border">
       <xsl:attribute name="border">
         <xsl:value-of select="@border"/>px solid</xsl:attribute>

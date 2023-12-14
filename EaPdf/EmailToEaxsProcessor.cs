@@ -1824,7 +1824,7 @@ namespace UIUCLibrary.EaPdf
                 else
                 {
                     //save non-text content or attachments as part of the XML
-                    var (hash, size) = SerializeContentInXml(part, xwriter, false, localId);
+                    var (hash, size, imageWidth, imageHeight) = SerializeContentInXml(part, xwriter, false, localId);
                 }
             }
             return localId;
@@ -2004,7 +2004,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="extContent">if true, it is being written to an external file</param>
         /// <param name="localId">The local id of the content being written to an external file</param>
         /// <returns>the hash and size of the decoded content</returns>
-        private (byte[] hash, long size) SerializeContentInXml(MimePart part, XmlWriter xwriter, bool extContent, long localId)
+        private (byte[] hash, long size, int imageWidth, int imageHeight) SerializeContentInXml(MimePart part, XmlWriter xwriter, bool extContent, long localId)
         {
             var content = part.Content;
 
@@ -2027,7 +2027,6 @@ namespace UIUCLibrary.EaPdf
                 WriteToLogWarningMessage(xwriter, $"The TransferEncoding '{actualEncoding}' is not a recognized standard; treating it as '{MimeKitHelpers.GetContentEncodingString(part.ContentTransferEncoding, "default")}'.");
             }
 
-            xwriter.WriteStartElement("Content", XM_NS);
 
             //set up hashing
             using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
@@ -2046,12 +2045,33 @@ namespace UIUCLibrary.EaPdf
             ms.Position = 0;
             content.Stream.Position = 0;
 
+            //If the content is an image, get the width and height and write them to the XML
+            (int width, int height) imageDims = (0, 0);
+            if(ImageHelpers.SupportedMimeTypes.Contains(part.ContentType.MimeType.Trim(), StringComparer.OrdinalIgnoreCase))
+            {
+                imageDims = ImageHelpers.GetImageSize(ms, out string message);
+                if(!string.IsNullOrWhiteSpace(message))
+                {
+                    WriteToLogWarningMessage(xwriter, message);
+                }
+            }
+            else if (part.ContentType.IsMimeType("image", "*"))
+            {
+                WriteToLogWarningMessage(xwriter, $"Cannot determine the dimensions of image content-type '{part.ContentType.MimeType}'.");
+            }
+
+            //reset stream positions to beginning
+            ms.Position = 0;
+            content.Stream.Position = 0;
+
             string? encoding;
             //7bit and 8bit should be text content, so if preserving the encoding, decode it and use the streamreader with the contenttype charset, if any, to get the text and write it to the xml in a cdata section.  Default is the same as 7bit.
             if (Settings.PreserveTextAttachmentTransferEncoding && (content.Encoding == ContentEncoding.EightBit || content.Encoding == ContentEncoding.SevenBit || content.Encoding == ContentEncoding.Default))
             {
                 using StreamReader reader = new(ms, part.ContentType.CharsetEncoding, true);
+                xwriter.WriteStartElement("Content", XM_NS);
                 xwriter.WriteCData(reader.ReadToEnd());
+                xwriter.WriteEndElement(); //Content
                 encoding = String.Empty;
                 if (content.Encoding == ContentEncoding.Default && !string.IsNullOrWhiteSpace(actualEncoding))
                 {
@@ -2066,16 +2086,18 @@ namespace UIUCLibrary.EaPdf
 
                 //treat the stream as ASCII because it is already encoded and just write it out using the same encoding
                 using StreamReader reader = new(baseStream, System.Text.Encoding.ASCII);
+                xwriter.WriteStartElement("Content", XM_NS);
                 xwriter.WriteCData(reader.ReadToEnd());
+                xwriter.WriteEndElement(); //Content
                 encoding = MimeKitHelpers.GetContentEncodingString(content.Encoding);
             }
             else //anything is treated as binary content, so copy to a memory stream and write it to the XML as base64
             {
+                xwriter.WriteStartElement("Content", XM_NS);
                 xwriter.WriteBase64(byts, 0, byts.Length);
+                xwriter.WriteEndElement(); //Content
                 encoding = "base64";
             }
-
-            xwriter.WriteEndElement(); //Content
 
             if (!string.IsNullOrWhiteSpace(encoding))
             {
@@ -2086,9 +2108,17 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteElementString("Size", XM_NS, fileSize.ToString());
 
+            if(imageDims.width > 0 && imageDims.height > 0)
+            {
+                xwriter.WriteStartElement("ImageProperties", XM_NS);
+                xwriter.WriteElementString("Width", XM_NS, imageDims.width.ToString());
+                xwriter.WriteElementString("Height", XM_NS, imageDims.height.ToString());
+                xwriter.WriteEndElement(); //ImageProperties
+            }
+
             xwriter.WriteEndElement(); //BodyContent
 
-            return (hash, fileSize);
+            return (hash, fileSize, imageDims.width, imageDims.height);
         }
 
         /// <summary>
@@ -2113,14 +2143,16 @@ namespace UIUCLibrary.EaPdf
             long fileSize;
             byte[]? xmlHash = null;
             long? xmlSize = null;
+            int imageWidth = 0;
+            int imageHeight = 0;
 
             if (wrapInXml)
             {
-                (xmlHash, xmlSize, fileHash, fileSize) = SaveContentAsXmlExtFile(randomFilePath, part, localId, "");
+                (xmlHash, xmlSize, fileHash, fileSize, imageWidth, imageHeight) = SaveContentAsXmlExtFile(randomFilePath, part, localId, "");
             }
             else
             {
-                (fileHash, fileSize) = SaveContentAsRawExtFile(randomFilePath, part);
+                (fileHash, fileSize, imageWidth, imageHeight) = SaveContentAsRawExtFile(randomFilePath, part, xwriter);
 
                 //Try to open the file to see if it has a virus or there was some other IO problem
                 try
@@ -2135,7 +2167,7 @@ namespace UIUCLibrary.EaPdf
                     WriteToLogWarningMessage(xwriter, msg);
                     wrapInXml = true;
                     File.Delete(randomFilePath); //so we can try saving a new stream there
-                    (xmlHash, xmlSize, fileHash, fileSize) = SaveContentAsXmlExtFile(randomFilePath, part, localId, msg);
+                    (xmlHash, xmlSize, fileHash, fileSize, imageWidth, imageHeight) = SaveContentAsXmlExtFile(randomFilePath, part, localId, msg);
                 }
             }
 
@@ -2192,6 +2224,16 @@ namespace UIUCLibrary.EaPdf
                 WriteToLogWarningMessage(xwriter, $"Unable to determine the size of the external file");
             }
 
+            if (imageWidth > 0 && imageHeight > 0)
+            {
+                xwriter.WriteStartElement("ImageProperties", XM_NS);
+                xwriter.WriteElementString("Width", XM_NS, imageWidth.ToString());
+                xwriter.WriteElementString("Height", XM_NS, imageHeight.ToString());
+                xwriter.WriteEndElement(); //ImageProperties
+            }
+
+
+
             xwriter.WriteEndElement(); //ExtBodyContent
 
             return localId;
@@ -2204,7 +2246,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="part"></param>
         /// <returns>the hash and size of the saved file</returns>
         /// <exception cref="Exception"></exception>
-        private (byte[] hash, long size) SaveContentAsRawExtFile(string filePath, MimePart part)
+        private (byte[] hash, long size, int imageWidth, int imageHeight) SaveContentAsRawExtFile(string filePath, MimePart part, XmlWriter xwriter)
         {
             var content = part.Content;
 
@@ -2212,6 +2254,22 @@ namespace UIUCLibrary.EaPdf
             using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);
 
+            (int width, int height) imageDims = (0, 0);
+            if(ImageHelpers.SupportedMimeTypes.Contains(part.ContentType.MimeType.Trim(), StringComparer.OrdinalIgnoreCase))
+            {
+                imageDims = ImageHelpers.GetImageSize(content.Open(), out string message);
+                if (!string.IsNullOrWhiteSpace(message))
+                {
+                    WriteToLogWarningMessage(xwriter, message);
+                }
+            }
+            else if (part.ContentType.IsMimeType("image", "*"))
+            {
+                WriteToLogWarningMessage(xwriter, $"Cannot determine the dimensions of image content-type '{part.ContentType.MimeType}'.");
+            }
+
+
+            content.Stream.Position = 0;
             content.DecodeTo(cryptoStream);
 
             long size = contentStream.Length;
@@ -2219,7 +2277,7 @@ namespace UIUCLibrary.EaPdf
             contentStream.Close();
 
             if (cryptoHashAlg.Hash != null)
-                return (cryptoHashAlg.Hash, size);
+                return (cryptoHashAlg.Hash, size, imageDims.width, imageDims.height);
             else
                 throw new NullReferenceException($"Unable to calculate hash value for the content");
         }
@@ -2232,7 +2290,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="localId"></param>
         /// <returns>the hash and size of the saved file</returns>
         /// <exception cref="Exception"></exception>
-        private (byte[] hash, long size, byte[] fileHash, long fileSize) SaveContentAsXmlExtFile(string filePath, MimePart part, long localId, string comment)
+        private (byte[] hash, long size, byte[] fileHash, long fileSize, int imageWidth, int imageHeight) SaveContentAsXmlExtFile(string filePath, MimePart part, long localId, string comment)
         {
             //TODO: It might be good to embellish the external XML schema, maybe make it equivalent to the internal XML schema SingleBody element
             //      This would provide more context if the external file is ever separated from the main XML email message file
@@ -2251,7 +2309,7 @@ namespace UIUCLibrary.EaPdf
             {
                 extXmlWriter.WriteComment(comment);
             }
-            var (fileHash, fileSize) = SerializeContentInXml(part, extXmlWriter, true, localId);
+            var (fileHash, fileSize, imageWidth, imageHeight) = SerializeContentInXml(part, extXmlWriter, true, localId);
             extXmlWriter.WriteEndDocument();
             extXmlWriter.Close();
 
@@ -2260,7 +2318,7 @@ namespace UIUCLibrary.EaPdf
             contentStream.Close();
 
             if (cryptoHashAlg.Hash != null)
-                return (cryptoHashAlg.Hash, size, fileHash, fileSize);
+                return (cryptoHashAlg.Hash, size, fileHash, fileSize, imageWidth, imageHeight);
             else
                 throw new Exception($"Unable to calculate hash value for the content");
         }

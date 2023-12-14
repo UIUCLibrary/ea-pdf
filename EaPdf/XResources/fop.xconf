@@ -6,10 +6,10 @@
 
 	<font-base>../Fonts</font-base>
 
-	<source-resolution>120</source-resolution> 
-	<target-resolution>120</target-resolution>
+	<source-resolution>96</source-resolution> 
+	<target-resolution>96</target-resolution>
 
-	<default-page-settings height="11in" width="8.26in"/>
+	<default-page-settings height="11in" width="8.5in"/>
 
 	<accessibility keep-empty-tags="false">true</accessibility>
 

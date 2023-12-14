@@ -66,7 +66,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <returns></returns>
         private static List<(LogLevel level, string message)> ConvertLogLines(List<(LogLevel level, string message)> messages)
         {
-            //Saxon can have one message that crosses multiple lines; a new message does not have leading white space, but additional lines start with spaces
+            //Saxon can have one message that crosses multiple lines; a new message does not have leading white space, but additional lines start with spaces or the word 'at'
 
             List<(LogLevel level, string message)> ret = new();
 
@@ -75,7 +75,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             foreach ((LogLevel level, string message) message in messages)
             {
-                if (message.message.IndexOfAny(new char[] { ' ', '\t' }) != 0)
+                if (message.message.IndexOfAny(new char[] { ' ', '\t' }) != 0 && !message.message.StartsWith("at ", StringComparison.Ordinal))
                 {
                     //start of new message
                     if (messageAccumulator.Length > 0)
@@ -98,7 +98,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
                     messageAccumulator.AppendLine(message.message);
                 }
-                else if (message.message.IndexOfAny(new char[] { ' ', '\t' }) == 0)
+                else if (message.message.IndexOfAny(new char[] { ' ', '\t' }) == 0 || message.message.StartsWith("at ", StringComparison.Ordinal))
                 {
                     messageAccumulator.AppendLine(message.message);
                 }

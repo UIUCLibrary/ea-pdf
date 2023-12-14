@@ -154,12 +154,14 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Non-Western\\Chinese", "fop", true, false, DisplayName = "CHINESE-FOP-EXT-NO-WRAP")] //Use Chinese folder and FOP and do not wrap external files in XML
         [DataRow("Non-Western\\Chinese", "fop", true, true, DisplayName = "CHINESE-FOP-EXT-WRAP")] //Use Chinese folder and FOP and wrap external files in XML
         [DataRow("Non-Western\\Chinese", "xep", true, true, DisplayName = "CHINESE-XEP-EXT-WRAP")] //Use Chinese folder and XEP and wrap external files in XML
+        [DataRow("Non-Western\\Chinese", "fop", false, false, DisplayName = "CHINESE-FOP")] //Use Chinese folder and FOP and embed files in XML
+        [DataRow("Non-Western\\Chinese", "xep", false, false, DisplayName = "CHINESE-XEP")] //Use Chinese folder and XEP and embed files in XML
 
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, false, DisplayName = "ENGLISH-FOP-EXT-NO-WRAP")] //Use short-test file and FOP and do not wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, true, DisplayName = "ENGLISH-FOP-EXT-WRAP")] //Use short-test file and FOP and wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "xep", true, true, DisplayName = "ENGLISH-XEP-EXT-WRAP")] //Use short-test file and XEP and wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", false, false, DisplayName = "ENGLISH-FOP")] //Use short-test file and FOP and do not wrap external files in XML
-        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "xep", false, false, DisplayName = "ENGLISH-XEP")] //Use short-test file and XEP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "xep", false, false, DisplayName = "ENGLISH-XEP")] //Use short-test file and XEP and do not wrap external files in XML
 
         [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "fop", true, false, DisplayName = "ENGLISH-NESTED-FOP-EXT-NO-WRAP")] //Use short-test file and FOP and do not wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "fop", true, true, DisplayName = "ENGLISH-NESTED-FOP-EXT-WRAP")] //Use short-test file and FOP and wrap external files in XML
@@ -170,6 +172,11 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, false, DisplayName = "MOZILLA-FOP-EXT-NO-WRAP")] //Use Mozilla file and FOP and do not wrap external files in XML
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, true, DisplayName = "MOZILLA-FOP-EXT-WRAP")] //Use Mozilla file and FOP and wrap external files in XML
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", true, true, DisplayName = "MOZILLA-XEP-EXT-WRAP")] //Use Mozilla file and XEP and wrap external files in XML
+
+        [DataRow("InlineImages\\EML", "fop", true, false, DisplayName = "INLINE-IMAGES-FOP-EXT")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "xep", true, true, DisplayName = "INLINE-IMAGES-XEP-EXT-WRAP")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "fop", false, false, DisplayName = "INLINE-IMAGES-FOP")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "xep", false, false, DisplayName = "INLINE-IMAGES-XEP")] //Sample EML with inline images of different sizes
 
         [DataTestMethod]
         public void TestEaxsToPdfProcessor(string inPath, string foProcessor, bool ext, bool wrap)
@@ -230,6 +237,84 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
+        [DataRow("InlineImages\\EML", "fop", true, false, DisplayName = "INLINE-IMAGES-FOP-EXT")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "xep", true, true, DisplayName = "INLINE-IMAGES-XEP-EXT-WRAP")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "fop", false, false, DisplayName = "INLINE-IMAGES-FOP")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "xep", false, false, DisplayName = "INLINE-IMAGES-XEP")] //Sample EML with inline images of different sizes
+
+        [DataTestMethod]
+        public void TestEaxsToPdfProcessorRemoveImageDimensions(string inPath, string foProcessor, bool ext, bool wrap)
+        {
+            if (!foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase) && !foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case", nameof(foProcessor));
+
+            if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase) && ext && !wrap)
+                throw new ArgumentException("XEP requires external files to be wrapped in XML");
+
+            if (!ext && wrap)
+                throw new ArgumentException("Attachments must be saved externally to be wrapped in XML");
+
+            if (logger != null)
+            {
+                var xmlFile = ConvertToEaxs(inPath, ext, wrap, null);
+
+                string pdfFile, configFile;
+                IXslFoTransformer foTransformer;
+                if (foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    pdfFile = Path.ChangeExtension(xmlFile, $"fop{(ext ? "_x" : "")}{(wrap ? "_w" : "")}_ni.pdf");
+                    configFile = Path.GetFullPath("XResources\\fop.xconf");
+                    foTransformer = new FopToPdfTransformer(configFile);
+                }
+                else if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    pdfFile = Path.ChangeExtension(xmlFile, $"xep{(ext ? "_x" : "")}{(wrap ? "_w" : "")}_ni.pdf");
+                    configFile = Path.GetFullPath("XResources\\xep.xml");
+                    foTransformer = new XepToPdfTransformer(configFile);
+                }
+                else
+                {
+                    throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case", nameof(foProcessor));
+                }
+
+                //For testing purposes, remove image dimensions from the XML file so that the PDF processor will have to calculate the dimensions
+                var xdoc = new XmlDocument();
+                xdoc.Load(xmlFile);
+                XmlNamespaceManager xmlns = new(xdoc.NameTable);
+                xmlns.AddNamespace("eaxs", "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2");
+                var nodesToRemove = xdoc.SelectNodes("//eaxs:ImageProperties", xmlns);
+                if(nodesToRemove != null)
+                {
+                    foreach (XmlNode node in nodesToRemove)
+                    {
+                        _ = node.ParentNode?.RemoveChild(node);
+                    }
+                }
+                xdoc.Save(xmlFile);
+
+                var xslt = new SaxonXsltTransformer();
+                var iText = new ITextSharpPdfEnhancerFactory();
+                var set = new EaxsToEaPdfProcessorSettings();
+
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, foTransformer, iText, set);
+
+                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
+
+                Assert.IsTrue(File.Exists(pdfFile));
+
+                Assert.IsTrue(IsPdfValid(pdfFile));
+
+                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
+
+                if (OPEN_PDFS)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
 
 
         private string ConvertToEaxs(string filePath, bool saveAttachmentsExt, bool wrapExtContentInXml, string? skipAfterMsgId)

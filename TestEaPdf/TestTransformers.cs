@@ -212,5 +212,44 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
+        [TestMethod]
+        public void TestMyXsltFunctions()
+        {
+            if (logger != null)
+            {
+                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                var xsltFile = "XResources\\eaxs_to_fo.xsl";
+                var foFile = Path.ChangeExtension(xmlFile, "fop");
+
+                File.Delete(foFile);
+
+                var messages = new List<(LogLevel level, string message)>();
+                var parms = new Dictionary<string, object>() { { "fo-processor-version", "FOP Version 2.8" }, { "test-helpers", "true" } };
+
+                var tran = new SaxonXsltTransformer();
+
+                var version = tran.ProcessorVersion;
+                Assert.IsTrue(version.StartsWith("Saxon", StringComparison.OrdinalIgnoreCase));
+                logger.LogInformation("Version: {version}", version);
+
+                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
+
+                foreach (var (level, message) in messages)
+                {
+                    logger.Log(level, "{message}", message);
+                }
+
+                Assert.AreEqual(0, ret, "One of the XSLT tests failed; view the error log for details");
+
+                Assert.IsTrue(File.Exists(foFile));
+
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
     }
 }
