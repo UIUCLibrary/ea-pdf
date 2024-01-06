@@ -219,7 +219,9 @@ namespace UIUCLibrary.TestEaPdf
                     var profileName = validationReport.GetAttribute("profileName");
                     var isCompliant = validationReport.GetAttribute("isCompliant");
 
-                    Assert.IsTrue(profileName.StartsWith("PDF/A-3A", StringComparison.OrdinalIgnoreCase));
+                    Debug.WriteLine($"{profileName}, compliant: {isCompliant}");
+
+                    Assert.IsTrue(profileName.StartsWith("PDF/A-3U", StringComparison.OrdinalIgnoreCase) || profileName.StartsWith("PDF/A-3A", StringComparison.OrdinalIgnoreCase));
                     Assert.AreEqual("true", isCompliant.ToLowerInvariant());
                 }
             }

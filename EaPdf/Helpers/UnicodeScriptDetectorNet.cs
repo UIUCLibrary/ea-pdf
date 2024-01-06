@@ -26,6 +26,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             };
         }
 
+        public class ComplexScript
+        {
+            public string ShortName { get; init; } = ScriptShortUnknown;
+            public string LongName { get; init; } = ScriptLongUnknown;
+        }
+
         /// <summary>
         /// One of the writing scripts defined in Unicode
         /// </summary>
@@ -296,6 +302,45 @@ namespace UIUCLibrary.EaPdf.Helpers
         public static IList<Script> GetScripts() => Array.AsReadOnly(Scripts);
         public static IList<CodepointScript> GetCodepointScripts() => Array.AsReadOnly(CodepointScripts);
         public static IList<CodepointScriptExtended> GetCodepointScriptsExtended() => Array.AsReadOnly(CodepointScriptsExtended);
+        public static IList<ComplexScript> GetComplexScripts() => Array.AsReadOnly(ComplexScripts);
+
+        /// <summary>
+        /// Return true if the specified script name is one of the complex scripts
+        /// </summary>
+        /// <param name="scriptName"></param>
+        /// <returns></returns>
+        static public bool IsComplexScript(string? scriptName)
+        {
+            if (scriptName == null)
+                return false;
+
+            return ComplexScripts.Any(cs => cs.ShortName == scriptName || cs.LongName == scriptName);
+        }
+
+        /// <summary>
+        /// These are the scripts that are considered "complex" (https://en.wikipedia.org/wiki/Complex_text_layout)
+        /// Taken from the FOP list, <see href="https://xmlgraphics.apache.org/fop/2.9/complexscripts.html#supported_scripts"/>
+        /// </summary>
+        private static readonly ComplexScript[] ComplexScripts = new ComplexScript[] 
+        {
+            new() {ShortName = "Arab", LongName = "Arabic" },
+            new() {ShortName = "Beng", LongName = "Bengali" },
+            new() {ShortName = "Mymr", LongName = "Myanmar" }, //Burmese
+            new() {ShortName = "Deva", LongName = "Devanagari" },
+            new() {ShortName = "Khmr", LongName = "Khmer" },
+            new() {ShortName = "Gujr", LongName = "Gujarati" },
+            new() {ShortName = "Guru", LongName = "Gurmukhi" },
+            new() {ShortName = "Hebr", LongName = "Hebrew" },
+            new() {ShortName = "Knda", LongName = "Kannada" },
+            new() {ShortName = "Laoo", LongName = "Lao" },
+            new() {ShortName = "Mlym", LongName = "Malayalam" },
+            new() {ShortName = "Mong", LongName = "Mongolian" },
+            new() {ShortName = "Orya", LongName = "Oriya" },
+            new() {ShortName = "Taml", LongName = "Tamil" },
+            new() {ShortName = "Telu", LongName = "Telugu" },
+            new() {ShortName = "Tibt", LongName = "Tibetan" },
+            new() {ShortName = "Thai", LongName = "Thai" },
+        };
 
         /// <summary>
         /// Derived from Unicode data, see https://github.com/DaniRK/UnicodeScriptDetectorNet/tree/master/ImportDataToCSharp
@@ -391,7 +436,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 new() {ShortName = "Mroo", LongName = "Mro", TempIndex = 85, Type = ScriptType.Normal},
                 new() {ShortName = "Mtei", LongName = "Meetei_Mayek", TempIndex = 86, Type = ScriptType.Normal},
                 new() {ShortName = "Mult", LongName = "Multani", TempIndex = 87, Type = ScriptType.Normal},
-                new() {ShortName = "Mymr", LongName = "Myanmar", TempIndex = 88, Type = ScriptType.Normal},
+                new() {ShortName = "Mymr", LongName = "Myanmar", TempIndex = 88, Type = ScriptType.Normal}, //Burmese
                 new() {ShortName = "Nand", LongName = "Nandinagari", TempIndex = 89, Type = ScriptType.Normal},
                 new() {ShortName = "Narb", LongName = "Old_North_Arabian", TempIndex = 90, Type = ScriptType.Normal},
                 new() {ShortName = "Nbat", LongName = "Nabataean", TempIndex = 91, Type = ScriptType.Normal},

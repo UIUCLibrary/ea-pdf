@@ -146,6 +146,13 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
+        [DataRow("Non-Western\\Farsi", "fop", true, false, DisplayName = "FARSI-FOP-EXT-NO-WRAP")] //Use Farsi folder and FOP and do not wrap external files in XML
+        [DataRow("Non-Western\\Farsi", "fop", true, true, DisplayName = "FARSI-FOP-EXT-WRAP")] //Use Farsi folder and FOP and wrap external files in XML
+        [DataRow("Non-Western\\Farsi", "xep", true, true, DisplayName = "FARSI-XEP-EXT-WRAP")] //Use Farsi folder and XEP and wrap external files in XML
+
+        [DataRow("Non-Western\\Hebrew", "fop", true, false, DisplayName = "HEBREW-FOP-EXT-NO-WRAP")] //Use Hebrew folder and FOP and do not wrap external files in XML
+        [DataRow("Non-Western\\Hebrew", "fop", true, true, DisplayName = "HEBREW-FOP-EXT-WRAP")] //Use Hebrew folder and FOP and wrap external files in XML
+        [DataRow("Non-Western\\Hebrew", "xep", true, true, DisplayName = "HEBREW-XEP-EXT-WRAP")] //Use Hebrew folder and XEP and wrap external files in XML
 
         [DataRow("Non-Western\\Arabic", "fop", true, false, DisplayName = "ARABIC-FOP-EXT-NO-WRAP")] //Use Arabic folder and FOP and do not wrap external files in XML
         [DataRow("Non-Western\\Arabic", "fop", true, true, DisplayName = "ARABIC-FOP-EXT-WRAP")] //Use Arabic folder and FOP and wrap external files in XML
@@ -156,6 +163,12 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Non-Western\\Chinese", "xep", true, true, DisplayName = "CHINESE-XEP-EXT-WRAP")] //Use Chinese folder and XEP and wrap external files in XML
         [DataRow("Non-Western\\Chinese", "fop", false, false, DisplayName = "CHINESE-FOP")] //Use Chinese folder and FOP and embed files in XML
         [DataRow("Non-Western\\Chinese", "xep", false, false, DisplayName = "CHINESE-XEP")] //Use Chinese folder and XEP and embed files in XML
+
+        [DataTestMethod]
+        public void TestEaxsToPdfNonWesternLangs(string inPath, string foProcessor, bool ext, bool wrap)
+        {
+            TestEaxsToPdfProcessor(inPath, foProcessor, ext, wrap);
+        }
 
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, false, DisplayName = "ENGLISH-FOP-EXT-NO-WRAP")] //Use short-test file and FOP and do not wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, true, DisplayName = "ENGLISH-FOP-EXT-WRAP")] //Use short-test file and FOP and wrap external files in XML

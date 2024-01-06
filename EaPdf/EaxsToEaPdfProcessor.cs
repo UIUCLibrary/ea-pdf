@@ -41,7 +41,7 @@ namespace UIUCLibrary.EaPdf
 
             var eaxsHelpers = new EaxsHelpers(eaxsFilePath);
             //get fonts based on the Unicode scripts used in the text in the EAXS file and the font settings
-            var (serifFonts, sansFonts, monoFonts) = eaxsHelpers.GetBaseFontsToUse(Settings);
+            var (serifFonts, sansFonts, monoFonts, complex) = eaxsHelpers.GetBaseFontsToUse(Settings);
 
             var xsltParams = new Dictionary<string, object>
             {
@@ -54,7 +54,7 @@ namespace UIUCLibrary.EaPdf
             List<(LogLevel level, string message)> messages = new();
 
             //first transform the EAXS to FO using XSLT
-            var status = _xslt.Transform(eaxsFilePath, Settings.XsltFoFilePath, foFilePath, xsltParams, ref messages);
+            var status = _xslt.Transform(eaxsFilePath, Settings.XsltFoFilePath, foFilePath, xsltParams, null, ref messages);
             foreach (var (level, message) in messages)
             {
                 _logger.Log(level, "{message}", message);
@@ -71,7 +71,18 @@ namespace UIUCLibrary.EaPdf
                 foHelper.WrapLanguagesInFontFamily(Settings);
                 foHelper.SaveFoFile();
 
-                var status2 = _xslfo.Transform(foFilePath, pdfFilePath, ref messages);
+                string extraCmdLineParams = "";
+                if(!complex && _xslfo.ProcessorVersion.StartsWith("FOP"))
+                {
+                    _logger.LogInformation("Disabling '{version}' complex script support; no complex scripts were detected.", _xslfo.ProcessorVersion);
+                    extraCmdLineParams = "-nocs";
+                }
+                else
+                {
+                    _logger.LogInformation("Enabling '{version}' complex script support; complex scripts were detected.", _xslfo.ProcessorVersion);
+                }
+
+                var status2 = _xslfo.Transform(foFilePath, pdfFilePath, extraCmdLineParams, ref messages);
                 foreach (var (level, message) in messages)
                 {
                     _logger.Log(level, "{message}", message);
@@ -156,7 +167,7 @@ namespace UIUCLibrary.EaPdf
                     XmlNodeList? dates = folderPropNode.ParentNode?.SelectNodes(".//xm:Message/xm:OrigDate", xmlns);
                     XmlNodeList? parentFolderNames = folderPropNode.SelectNodes("ancestor::xm:Folder/xm:Name", xmlns);
                     List<string> names = new();
-                    if(parentFolderNames != null)
+                    if (parentFolderNames != null)
                     {
                         foreach (XmlNode parentFolderName in parentFolderNames)
                         {
@@ -232,7 +243,7 @@ namespace UIUCLibrary.EaPdf
         private static void AddAttachmentFile(List<EmbeddedFile> ret, XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
         {
             (DateTime earliest, DateTime latest) = GetEarliestLatestMessageDates(extAttachmentNode.SelectNodes($"ancestor::xm:Folder//xm:OrigDate", xmlns));
-            (string fileName, string hash, long size)  = GetAttachmentFilenameHashSize(extAttachmentNode, xmlns);
+            (string fileName, string hash, long size) = GetAttachmentFilenameHashSize(extAttachmentNode, xmlns);
 
 
             if (!DateTime.TryParse(extAttachmentNode.SelectSingleNode($"ancestor::*/xm:DispositionParam[translate(normalize-space(xm:Name),'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'creation-date']/xm:Value", xmlns)?.InnerText, out DateTime creDate))
@@ -282,7 +293,7 @@ namespace UIUCLibrary.EaPdf
             if (froms != null && froms.Count > 0)
             {
                 from = froms[0]?.InnerText ?? "";
-                if(froms.Count > 1)
+                if (froms.Count > 1)
                 {
                     from += " (and others)";
                 }
@@ -355,7 +366,7 @@ namespace UIUCLibrary.EaPdf
             var relPath = propNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText ?? "";
             var fileExt = propNode.SelectSingleNode("xm:FileExt", xmlns)?.InnerText ?? "";
 
-            if(!string.IsNullOrWhiteSpace(fileExt))
+            if (!string.IsNullOrWhiteSpace(fileExt))
             {
                 relPath = Path.ChangeExtension(relPath, fileExt);
             }
@@ -363,11 +374,11 @@ namespace UIUCLibrary.EaPdf
             var mime = propNode.SelectSingleNode("xm:ContentType", xmlns)?.InnerText ?? "";
             var (earliest, latest) = GetEarliestLatestMessageDates(origDates);
             //get file dates
-            if(!DateTime.TryParse(propNode.SelectSingleNode("xm:Created", xmlns)?.InnerText, out DateTime fileCreDate))
+            if (!DateTime.TryParse(propNode.SelectSingleNode("xm:Created", xmlns)?.InnerText, out DateTime fileCreDate))
             {
                 throw new Exception($"File creation date is missing for file '{relPath}'.");
             }
-            if(!DateTime.TryParse(propNode.SelectSingleNode("xm:Modified", xmlns)?.InnerText, out DateTime fileModDate))
+            if (!DateTime.TryParse(propNode.SelectSingleNode("xm:Modified", xmlns)?.InnerText, out DateTime fileModDate))
             {
                 throw new Exception($"File modification date is missing for file '{relPath}'.");
             }
@@ -402,7 +413,7 @@ namespace UIUCLibrary.EaPdf
                 CreationDate = fileCreDate,
                 ModDate = fileModDate,
                 UniqueName = Path.ChangeExtension(hash, MimeTypeMap.GetExtension(mime)),
-                Description = "Source file for " + (folder ? "folder: " :  "message: ") + string.Join(" -> ", sourceNames)
+                Description = "Source file for " + (folder ? "folder: " : "message: ") + string.Join(" -> ", sourceNames)
             }); ;
 
         }
@@ -435,7 +446,7 @@ namespace UIUCLibrary.EaPdf
             var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
 
             List<(LogLevel level, string message)> messages = new();
-            var status = _xslt.Transform(eaxsFilePath, Settings.XsltXmpFilePath, xmpFilePath, null, ref messages);
+            var status = _xslt.Transform(eaxsFilePath, Settings.XsltXmpFilePath, xmpFilePath, null, null, ref messages);
             foreach (var (level, message) in messages)
             {
                 _logger.Log(level, "{message}", message);
@@ -462,16 +473,24 @@ namespace UIUCLibrary.EaPdf
         {
             string ret;
 
+            var foProc = _xslfo.ProcessorVersion;
+            var pdfaConfLvl = "A"; //PDF/A-3 A, B, or U
+            if (foProc.StartsWith("FOP", StringComparison.OrdinalIgnoreCase))
+            {
+                pdfaConfLvl = "A";
+            }
+
             Dictionary<string, object> parms = new()
             {
-                { "producer", GetType().Namespace ?? "UIUCLibrary" }
+                { "producer", GetType().Namespace ?? "UIUCLibrary" },
+                {"pdf_a_conf_level", pdfaConfLvl }
             };
 
 
             var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
 
             List<(LogLevel level, string message)> messages = new();
-            var status = _xslt.Transform(eaxsFilePath, Settings.XsltRootXmpFilePath, xmpFilePath, parms, ref messages);
+            var status = _xslt.Transform(eaxsFilePath, Settings.XsltRootXmpFilePath, xmpFilePath, parms, null, ref messages);
             foreach (var (level, message) in messages)
             {
                 _logger.Log(level, "{message}", message);

@@ -12,6 +12,9 @@
 
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="yes" omit-xml-declaration="yes" />
 
+	<xsl:param name="pdf_a_conf_level">A</xsl:param><!-- A, B, or U -->
+	<xsl:variable name="pdf_a_conf_level_norm" select="fn:upper-case(normalize-space($pdf_a_conf_level))"/>
+	
 	<xsl:param name="description">
 		<xsl:text>PDF Email Archive for Account '</xsl:text>
 		<xsl:value-of select="fn:string-join(/eaxs:Account/eaxs:EmailAddress,', ')"/>
@@ -24,6 +27,9 @@
 	<xsl:param name="datetime-string" select="fn:format-dateTime(fn:adjust-dateTime-to-timezone(fn:current-dateTime(),xs:dayTimeDuration('P0D')),'[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
 
 	<xsl:template match="/">
+		<xsl:if test="$pdf_a_conf_level_norm != 'A' and $pdf_a_conf_level_norm != 'B' and $pdf_a_conf_level_norm != 'U'">
+			<xsl:message terminate="yes">The 'pdf_a_conf_level' param must be 'A', 'B', or 'U'; it was '<xsl:value-of select="$pdf_a_conf_level_norm"/>'.</xsl:message>
+		</xsl:if>
 		<xsl:processing-instruction name="xpacket">begin="" id="W5M0MpCehiHzreSzNTczkc9d" </xsl:processing-instruction><xsl:text xml:space="preserve">
 </xsl:text>
 		<x:xmpmeta xmlns:x="adobe:ns:meta/">
@@ -70,7 +76,7 @@
 					<pdf:PDFVersion>1.7</pdf:PDFVersion>
 
 					<pdfaid:part>3</pdfaid:part>
-					<pdfaid:conformance>A</pdfaid:conformance>
+					<pdfaid:conformance><xsl:value-of select="$pdf_a_conf_level_norm"/></pdfaid:conformance>
 
 					<pdfmailid:part>1</pdfmailid:part>
 					<pdfmailid:rev>2022</pdfmailid:rev>

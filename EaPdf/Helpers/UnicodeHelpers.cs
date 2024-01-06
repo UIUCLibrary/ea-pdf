@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Crypto.Prng;
 using System.Text;
 using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
 
@@ -28,7 +27,6 @@ namespace UIUCLibrary.EaPdf.Helpers
             return ret;
         }
 
-
         /// <summary>
         /// Replace any characters in the Unicode Private Use Area (PUA) with the Unicode replacement character
         /// and log a warning message
@@ -36,7 +34,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="original"></param>
         /// <param name="messages"></param>
         /// <returns></returns>
-        public static string ReplacePuaChars(string original, out List<(LogLevel level, string message)> messages)
+        public static string ReplacePuaChars_OLD(string original, out List<(LogLevel level, string message)> messages)
         {
             messages = new();
             StringBuilder ret = new();
@@ -50,6 +48,37 @@ namespace UIUCLibrary.EaPdf.Helpers
                 else
                 {
                     ret.Append(c);
+                }
+            }
+
+            return ret.ToString();
+        }
+
+        /// <summary>
+        /// Replace any characters in the Unicode Private Use Area (PUA) with the Unicode replacement character
+        /// and log a warning message
+        /// </summary>
+        /// <param name="original"></param>
+        /// <param name="messages"></param>
+        /// <returns></returns>
+        public static string ReplacePuaChars(string original, out List<(LogLevel level, string message)> messages)
+        {
+            messages = new();
+            StringBuilder ret = new();
+            for (int charIndex = 0; charIndex < original.Length; charIndex++)
+            {
+                int codePoint = char.ConvertToUtf32(original, charIndex); //must accommodate unicode codepoints > 0xffff using surrogates
+                if (codePoint > 0xffff)
+                    charIndex++;
+
+                if ((codePoint >= 0xE000 && codePoint <= 0xF8FF) || (codePoint >= 0xF0000 && codePoint <= 0xFFFFD) || (codePoint >= 0x100000 && codePoint <= 0x10FFFD)) 
+                {
+                    ret.Append('\uFFFD');
+                    messages.Add((LogLevel.Warning, $"(PUA) Private use area character {codePoint} U+{(int)codePoint:X6} replaced with \uFFFD U+FFFD"));
+                }
+                else
+                {
+                    ret.Append(char.ConvertFromUtf32(codePoint));
                 }
             }
 

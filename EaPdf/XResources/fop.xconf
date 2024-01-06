@@ -18,7 +18,7 @@
 
 	<renderers>
 		<renderer mime="application/pdf">
-			<pdf-a-mode>PDF/A-3a</pdf-a-mode>
+			<pdf-a-mode>PDF/A-3a</pdf-a-mode><!-- Note: This may be overridden during post-processing, depending on the processor and other factors -->
 			<version>1.7</version>
 			<!--<filterList>
 				<value>flate</value>

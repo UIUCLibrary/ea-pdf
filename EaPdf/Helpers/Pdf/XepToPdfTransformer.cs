@@ -46,14 +46,15 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <param name="xsltFilePath"></param>
         /// <param name="outputFilePath"></param>
         /// <param name="xsltParams"></param>
+        /// <param name="extraCommandLineParams"></param>
         /// <param name="messages"></param>
         /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
-        public int Transform(string sourceFoFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages)
+        public int Transform(string sourceFoFilePath, string outputPdfFilePath, string? extraCommandLineParams, ref List<(LogLevel level, string message)> messages)
         {
             List<(LogLevel level, string message)> tempMessages = new();
 
             //-quiet option to suppress output except warnings and errors
-            var args = $"\"-DCONFIG={ConfigFilePath}\" -quiet -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+            var args = $"\"-DCONFIG={ConfigFilePath}\" -quiet {extraCommandLineParams} -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
 
             int status = RunMainClass(MAIN_CLASS, args, ref tempMessages);
 

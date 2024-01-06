@@ -47,14 +47,15 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <param name="xsltFilePath"></param>
         /// <param name="outputFilePath"></param>
         /// <param name="xsltParams"></param>
+        /// <param name="extraCommandLineParams"></param>
         /// <param name="messages"></param>
-        /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
-        public int Transform(string sourceFoFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages)
+        /// <returns>the status code for the transformation, usually the same as returned by the transformation command line process; 0 usually indicates success</returns>
+        public int Transform(string sourceFoFilePath, string outputPdfFilePath, string? extraCommandLineParams, ref List<(LogLevel level, string message)> messages)
         {
             List<(LogLevel level, string message)> tempMessages = new();
 
             //-q option to suppress output except warnings and errors; unfortunately doesn't seem to make a difference
-            var args = $" -q -c \"{ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+            var args = $" -q {extraCommandLineParams} -c \"{ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
 
             int status = RunExecutableJar(JarFilePath, args, ref tempMessages);
 
@@ -82,7 +83,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             foreach ((LogLevel level, string message) message in messages)
             {
                 //Date Format:  Jul 19, 2023 11:55:07 AM or Jul 19, 2023 1:55:07 AM (one-digit hour)
-                if (message.message.Length >=24 && DateTime.TryParseExact(message.message[..24], "MMM dd, yyyy h:mm:ss tt", null, System.Globalization.DateTimeStyles.AssumeLocal | System.Globalization.DateTimeStyles.AllowTrailingWhite, out DateTime dateTime))
+                if (message.message == "USAGE" || (message.message.Length >=24 && DateTime.TryParseExact(message.message[..24], "MMM dd, yyyy h:mm:ss tt", null, System.Globalization.DateTimeStyles.AssumeLocal | System.Globalization.DateTimeStyles.AllowTrailingWhite, out DateTime dateTime)))
                 {
                     //start of new message
                     if (messageAccumulator.Length > 0)
@@ -124,6 +125,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 AppendMessage(ref logLevel, ref messageAccumulator, ref ret);
             }
+
+            //remove the USAGE message which is not useful
+            ret.RemoveAll(m => m.message.StartsWith("USAGE\r\n") && m.level==LogLevel.Critical);
 
             return ret;
         }

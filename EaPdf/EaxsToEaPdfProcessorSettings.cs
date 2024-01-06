@@ -41,11 +41,18 @@ namespace UIUCLibrary.EaPdf
                     {BaseFontFamily.Monospace, MONOSPACE}
                 }
             },
+            {"hebr", new Dictionary<BaseFontFamily, string>() //Hebrew
+                {
+                    {BaseFontFamily.Serif, SERIF},
+                    {BaseFontFamily.SansSerif, SANS_SERIF},
+                    {BaseFontFamily.Monospace, MONOSPACE},  
+                }
+            },
             {"arab", new Dictionary<BaseFontFamily, string>() //Arabic
                 {
-                    {BaseFontFamily.Serif, "Traditional Arabic"},
-                    {BaseFontFamily.SansSerif, "Simplified Arabic "},
-                    {BaseFontFamily.Monospace, "Simplified Arabic Fixed"},
+                    {BaseFontFamily.Serif, "Traditional Arabic," + SERIF},
+                    {BaseFontFamily.SansSerif, "Simplified Arabic," + SANS_SERIF},
+                    {BaseFontFamily.Monospace, "Simplified Arabic Fixed," + MONOSPACE},
                 }
             },
             {"hira,kana,hrkt", new Dictionary<BaseFontFamily, string>() //Hiragana, Katakana (Japanese)

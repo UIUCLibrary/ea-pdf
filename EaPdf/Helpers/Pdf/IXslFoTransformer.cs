@@ -10,9 +10,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// </summary>
         /// <param name="sourceFoFilePath"></param>
         /// <param name="outputPdfFilePath"></param>
+        /// <param name="extraCommandLineParams"></param>
         /// <param name="messages"></param>
         /// <returns>the status code for the transformation, usually the same as returned by the tranformation command line process; 0 usually indicates success</returns>
-        int Transform(string sourceFoFilePath, string outputPdfFilePath, ref List<(LogLevel level, string message)> messages);
+        int Transform(string sourceFoFilePath, string outputPdfFilePath, string? extraCommandLineParams, ref List<(LogLevel level, string message)> messages);
 
         string ProcessorVersion { get; }
     }

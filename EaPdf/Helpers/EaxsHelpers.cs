@@ -1,6 +1,5 @@
 ﻿using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
 using System.Xml;
-using SkiaSharp;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
@@ -39,13 +38,13 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// </summary>
         /// <param name="eaxsFilePath"></param>
         /// <param name="settings"></param>
-        /// <returns></returns>
-        public (string serifFonts, string sansFonts, string monoFonts) GetBaseFontsToUse(EaxsToEaPdfProcessorSettings settings)
+        /// <returns>4-tuple with comma-separated lists of serif, sans-serif, and monospace font names, plus a bool indicating whether complex scripts are present</returns>
+        public (string serifFonts, string sansFonts, string monoFonts, bool complexScripts) GetBaseFontsToUse(EaxsToEaPdfProcessorSettings settings)
         {
             HashSet<string> serifFonts = new() { SERIF };
             HashSet<string> sansSerifFonts = new() { SANS_SERIF };
             HashSet<string> monospaceFonts = new() { MONOSPACE };
-
+            bool complexScripts = false;
 
             var text = EaxsDocument.DocumentElement?.InnerText ?? string.Empty;
 
@@ -63,9 +62,12 @@ namespace UIUCLibrary.EaPdf.Helpers
                         monospaceFonts.UnionWith((settings.GetFontFamily(script.ScriptNameShort ?? MONOSPACE, BaseFontFamily.Monospace) ?? MONOSPACE).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                     }
                 }
+
+                complexScripts = scripts.Any(s => UnicodeScriptDetector.IsComplexScript(s.ScriptNameShort));
             }
 
-            return (string.Join(',', serifFonts), string.Join(',', sansSerifFonts), string.Join(',', monospaceFonts));
+
+            return (string.Join(',', serifFonts), string.Join(',', sansSerifFonts), string.Join(',', monospaceFonts), complexScripts);
         }
 
     }

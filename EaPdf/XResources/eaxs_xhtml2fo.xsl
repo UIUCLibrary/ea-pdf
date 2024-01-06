@@ -871,6 +871,15 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
           <xsl:attribute name="overflow"><xsl:value-of select="$value"/></xsl:attribute>
         </xsl:when>
         
+        <xsl:when test="fn:starts-with($name,'border-image')">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
+          <!-- FUTURE: Might be able replicate this with some XSL-FO extensions -->
+        </xsl:when>
+        
+        <xsl:when test="$name = 'overflow-wrap'">
+          <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
+          <!-- FUTURE: When value is 'anywhere' or 'break-word' might be able to fake this by insert zwnj characters between characters -->
+        </xsl:when>
         
         <xsl:when test="$name = 'list-style-type'">
           <xsl:message>Property '<xsl:value-of select="$name"/>:<xsl:value-of select="$value"/>' is not supported; it was dropped.</xsl:message>
@@ -1123,7 +1132,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
           <xsl:if test="@dir">
             <xsl:attribute name="writing-mode">
               <xsl:choose>
-                <xsl:when test="@dir = 'rtl'">rl-tb</xsl:when>
+                <xsl:when test="fn:lower-case(fn:normalize-space(@dir)) = 'rtl'">rl-tb</xsl:when>
                 <xsl:otherwise>lr-tb</xsl:otherwise>
               </xsl:choose>
             </xsl:attribute>
@@ -1990,7 +1999,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
   </xsl:template>
 
   <xsl:template match="html:span[@dir]">
-    <fo:bidi-override direction="{@dir}" unicode-bidi="embed">
+    <fo:bidi-override direction="{fn:lower-case(fn:normalize-space(@dir))}" unicode-bidi="embed">
       <xsl:call-template name="process-common-attributes-and-children"/>
     </fo:bidi-override>
   </xsl:template>
@@ -2011,13 +2020,13 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
   </xsl:template>
 
   <xsl:template match="html:bdo">
-    <fo:bidi-override direction="{@dir}" unicode-bidi="bidi-override">
+    <fo:bidi-override direction="{fn:lower-case(fn:normalize-space(@dir))}" unicode-bidi="bidi-override">
       <xsl:call-template name="process-common-attributes-and-children"/>
     </fo:bidi-override>
   </xsl:template>
 
   <xsl:template match="html:br">
-    <fo:block><xsl:call-template name="process-common-attributes"/></fo:block>
+    <fo:block><xsl:call-template name="process-common-attributes"/>&nbsp;</fo:block><!-- nbsp forces a line break when there are multiple br tags stacked together -->
   </xsl:template>
 
   <xsl:template match="html:q">

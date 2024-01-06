@@ -72,7 +72,7 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.IsTrue(version.StartsWith("Saxon", StringComparison.OrdinalIgnoreCase));
                 logger.LogInformation("Version: {version}", version);
 
-                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
+                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, null, ref messages);
 
                 foreach (var (level, message) in messages)
                 {
@@ -110,7 +110,7 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.IsTrue(version.StartsWith("FOP", StringComparison.OrdinalIgnoreCase));
                 logger.LogInformation("Version: {version}", version);
 
-                int ret = tran.Transform(foFile, pdfFile, ref messages);
+                int ret = tran.Transform(foFile, pdfFile, null, ref messages);
 
                 foreach (var (level, message) in messages)
                 {
@@ -152,7 +152,7 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.IsTrue(version.StartsWith("Saxon", StringComparison.OrdinalIgnoreCase));
                 logger.LogInformation("Version: {version}", version);
 
-                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
+                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, null, ref messages);
 
                 foreach (var (level, message) in messages)
                 {
@@ -190,7 +190,7 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.IsTrue(version.StartsWith("XEP", StringComparison.OrdinalIgnoreCase));
                 logger.LogInformation("Version: {version}", version);
 
-                int ret = tran.Transform(foFile, pdfFile, ref messages);
+                int ret = tran.Transform(foFile, pdfFile, null, ref messages);
 
                 foreach (var (level, message) in messages)
                 {
@@ -232,7 +232,7 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.IsTrue(version.StartsWith("Saxon", StringComparison.OrdinalIgnoreCase));
                 logger.LogInformation("Version: {version}", version);
 
-                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, ref messages);
+                int ret = tran.Transform(xmlFile, xsltFile, foFile, parms, null, ref messages);
 
                 foreach (var (level, message) in messages)
                 {
