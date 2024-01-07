@@ -2026,7 +2026,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
   </xsl:template>
 
   <xsl:template match="html:br">
-    <fo:block><xsl:call-template name="process-common-attributes"/>&nbsp;</fo:block><!-- nbsp forces a line break when there are multiple br tags stacked together -->
+    <fo:block><xsl:call-template name="process-common-attributes"/><xsl:text>&#xA;</xsl:text></fo:block><!-- Using &nbsp; causes XEP to choke.  Might want to check how this deals with multiple <br>s in a row -->
   </xsl:template>
 
   <xsl:template match="html:q">
