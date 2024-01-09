@@ -41,7 +41,7 @@ namespace UIUCLibrary.EaPdf
 
             var eaxsHelpers = new EaxsHelpers(eaxsFilePath);
             //get fonts based on the Unicode scripts used in the text in the EAXS file and the font settings
-            var (serifFonts, sansFonts, monoFonts, complex) = eaxsHelpers.GetBaseFontsToUse(Settings);
+            var (serifFonts, sansFonts, monoFonts, complexScripts) = eaxsHelpers.GetBaseFontsToUse(Settings);
 
             var xsltParams = new Dictionary<string, object>
             {
@@ -72,7 +72,7 @@ namespace UIUCLibrary.EaPdf
                 foHelper.SaveFoFile();
 
                 string extraCmdLineParams = "";
-                if(!complex && _xslfo.ProcessorVersion.StartsWith("FOP"))
+                if(!complexScripts && _xslfo.ProcessorVersion.StartsWith("FOP"))
                 {
                     _logger.LogInformation("Disabling '{version}' complex script support; no complex scripts were detected.", _xslfo.ProcessorVersion);
                     extraCmdLineParams = "-nocs";
@@ -108,16 +108,16 @@ namespace UIUCLibrary.EaPdf
 #endif
 
             //Do some post processing to add metadata, cleanup attachments, etc.
-            PostProcessPdf(eaxsFilePath, pdfFilePath);
+            PostProcessPdf(eaxsFilePath, pdfFilePath, complexScripts);
         }
 
 
-        private void PostProcessPdf(string eaxsFilePath, string pdfFilePath)
+        private void PostProcessPdf(string eaxsFilePath, string pdfFilePath, bool complexScripts)
         {
             var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
             var dparts = GetXmpMetadataForMessages(eaxsFilePath);
-            var docXmp = GetRootXmpForAccount(eaxsFilePath);
+            var docXmp = GetRootXmpForAccount(eaxsFilePath, complexScripts);
 
             //add docXmp to the DPart root node
             dparts.DpmXmpString = docXmp;
@@ -469,15 +469,15 @@ namespace UIUCLibrary.EaPdf
             return ret;
         }
 
-        private string GetRootXmpForAccount(string eaxsFilePath)
+        private string GetRootXmpForAccount(string eaxsFilePath, bool complexScripts)
         {
             string ret;
 
             var foProc = _xslfo.ProcessorVersion;
-            var pdfaConfLvl = "A"; //PDF/A-3 A, B, or U
-            if (foProc.StartsWith("FOP", StringComparison.OrdinalIgnoreCase))
+            var pdfaConfLvl = "A"; //PDF/A-3 conformance level: A, B, or U
+            if (foProc.StartsWith("FOP", StringComparison.OrdinalIgnoreCase) && complexScripts)
             {
-                pdfaConfLvl = "A";
+                pdfaConfLvl = "U"; //FOP does not support full accessability for complex scripts, so use PDF/A-3U
             }
 
             Dictionary<string, object> parms = new()
