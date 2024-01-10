@@ -25,7 +25,7 @@ namespace UIUCLibrary.TestEaPdf
         readonly List<string> loggedLines = new();
         readonly LogLevel minLogLvl = LogLevel.Trace;
 
-        string testFilesBaseDirectory = @"C:\Users\thabi\Source\UIUC\ea-pdf\SampleFiles\Testing";
+        string testFilesBaseDirectory = @"D:\EmailsForTesting\SampleFiles\Testing";
 
         [TestInitialize]
         public void InitTest()
