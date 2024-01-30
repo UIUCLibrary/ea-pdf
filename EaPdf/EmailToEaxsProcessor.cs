@@ -1956,9 +1956,26 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteMimeContentType(XmlWriter xwriter, MimeEntity mimeEntity, bool isMultipart)
         {
+
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentType.MimeType))
             {
-                xwriter.WriteElementString("ContentType", XM_NS, mimeEntity.ContentType.MimeType);
+                if(!MimeTypeMap.ValidMediaTypes.Contains(mimeEntity.ContentType.MediaType, StringComparer.OrdinalIgnoreCase) && !mimeEntity.ContentType.MediaType.StartsWith("x-", StringComparison.OrdinalIgnoreCase))
+                {
+                    WriteToLogWarningMessage(xwriter, $"The MIME type '{mimeEntity.ContentType.MimeType}' has an invalid media type '{mimeEntity.ContentType.MediaType}'.  Allowed values are '{string.Join("','", MimeTypeMap.ValidMediaTypes)}'.");
+                }
+                if (mimeEntity.ContentType.MediaType.StartsWith("x-", StringComparison.OrdinalIgnoreCase))
+                {
+                    WriteToLogWarningMessage(xwriter, $"The MIME type '{mimeEntity.ContentType.MimeType}' contains an 'x-' prefix, which is not recommended.");
+                }
+
+                string mimeType = mimeEntity.ContentType.MimeType;
+                if (MimeTypeMap.MimeTypeCorrections.TryGetValue(mimeEntity.ContentType.MimeType, out string? correctedMimeType))
+                {
+                    WriteToLogWarningMessage(xwriter, $"The MIME type '{mimeEntity.ContentType.MimeType}' is not a valid MIME type.  It has been corrected to '{correctedMimeType}'.");
+                    mimeType = correctedMimeType;
+                }
+
+                xwriter.WriteElementString("ContentType", XM_NS, mimeType);
                 contentTypeCounts.TryGetValue(mimeEntity.ContentType.MimeType.ToLowerInvariant(), out int count);
                 contentTypeCounts[mimeEntity.ContentType.MimeType.ToLowerInvariant()] = count + 1;
             }

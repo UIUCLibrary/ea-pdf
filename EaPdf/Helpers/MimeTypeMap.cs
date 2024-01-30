@@ -7,6 +7,11 @@
     /// </summary>
     public static class MimeTypeMap
     {
+        public static readonly List<string> ValidMediaTypes = new() { "application", "audio", "font", "example", "image", "message", "model", "multipart", "text", "video" };
+
+        //some common mime types that are not valid and need to be corrected
+        public static readonly Dictionary<string, string> MimeTypeCorrections = new(StringComparer.OrdinalIgnoreCase) { { "file/pdf","application/pdf"} };
+
         public const string DefaultMimeType = "application/octet-stream";
         public const string DefaultExtension = ".bin"; //TGH Added
 
