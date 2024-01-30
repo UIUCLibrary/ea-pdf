@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RoyT.TrueType;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using UIUCLibrary.EaPdf.Helpers;
 using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
@@ -12,6 +12,119 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestHelpers
     {
+        [TestMethod]
+        public void TestGetFilePathWithIncrementNumber()
+        {
+            string path = "C:\\temp\\test.txt";
+            int increment = 2;
+            string expected = "C:\\temp\\test_0002.txt";
+            string actual = FilePathHelpers.GetFilePathWithIncrementNumber(path, increment);
+            Assert.AreEqual(expected, actual);
+
+            path = "test.txt";
+            increment = 3;
+            expected = "test_0003.txt";
+            actual = FilePathHelpers.GetFilePathWithIncrementNumber(path, increment);
+            Assert.AreEqual(expected, actual);
+
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public void TestGetFilePathWithIncrementNumberException()
+        {
+            string path = "C:\\temp\\test.txt";
+            int increment = 10001; //number too large
+            string expected = "C:\\temp\\test_10001.txt";
+            string actual = FilePathHelpers.GetFilePathWithIncrementNumber(path, increment);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void TestGetFilePathWithoutIncrementNumber()
+        {
+            string path = "C:\\temp\\test_0002.txt";
+            string expected = "C:\\temp\\test.txt";
+            string actual = FilePathHelpers.GetFilePathWithoutIncrementNumber(path);
+            Assert.AreEqual(expected, actual);
+
+            path = "test_0003.txt";
+            expected = "test.txt";
+            actual = FilePathHelpers.GetFilePathWithoutIncrementNumber(path);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public void TestGetFilePathWithoutIncrementNumberException()
+        {
+            string path = "C:\\temp\\test.txt"; //no increment number
+            string expected = "C:\\temp\\test.txt";
+            string actual = FilePathHelpers.GetFilePathWithoutIncrementNumber(path);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public void TestGetFilePathWithoutIncrementNumberException2()
+        {
+            string path = "C:\\temp\\test_1.txt"; //increment number does not have leading zeros
+            string expected = "C:\\temp\\test.txt";
+            string actual = FilePathHelpers.GetFilePathWithoutIncrementNumber(path);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(Exception))]
+        public void TestGetFilePathWithoutIncrementNumberException3()
+        {
+            string path = "C:\\temp\\test_11111.txt"; //increment number too large
+            string expected = "C:\\temp\\test.txt";
+            string actual = FilePathHelpers.GetFilePathWithoutIncrementNumber(path);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void TestTryGetFilePathWithoutIncrementNumber()
+        {
+            string path = "C:\\temp\\test_0002.txt";
+            string expectedPath = "C:\\temp\\test.txt";
+            int expectedIncr = 2;
+            int actualIncr = FilePathHelpers.TryGetFilePathWithoutIncrementNumber(path, out string actualPath);
+            Assert.AreEqual(expectedIncr, actualIncr);
+            Assert.AreEqual(expectedPath, actualPath);
+
+
+            path = "test_0003.txt";
+            expectedPath = "test.txt";
+            expectedIncr = 3;
+            actualIncr = FilePathHelpers.TryGetFilePathWithoutIncrementNumber(path, out actualPath);
+            Assert.AreEqual(expectedIncr, actualIncr);
+            Assert.AreEqual(expectedPath, actualPath);
+
+            path = "test.txt";
+            expectedPath = "test.txt";
+            expectedIncr = 0;
+            actualIncr = FilePathHelpers.TryGetFilePathWithoutIncrementNumber(path, out actualPath);
+            Assert.AreEqual(expectedIncr, actualIncr);
+            Assert.AreEqual(expectedPath, actualPath);
+
+            path = "test_99999.txt"; //increment number too large
+            expectedPath = "test_99999.txt";
+            expectedIncr = 0;
+            actualIncr = FilePathHelpers.TryGetFilePathWithoutIncrementNumber(path, out actualPath);
+            Assert.AreEqual(expectedIncr, actualIncr);
+            Assert.AreEqual(expectedPath, actualPath);
+
+            path = "test_6.txt"; //increment number missing leading zeros
+            expectedPath = "test_6.txt";
+            expectedIncr = 0;
+            actualIncr = FilePathHelpers.TryGetFilePathWithoutIncrementNumber(path, out actualPath);
+            Assert.AreEqual(expectedIncr, actualIncr);
+            Assert.AreEqual(expectedPath, actualPath);
+
+        }
+
         [TestMethod]
         public void TestFontContainsCharacter()
         {

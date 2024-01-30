@@ -18,7 +18,7 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestPdfFunctions
     {
-        private readonly bool OPEN_PDFS = true;  //set to true to open the PDFs in the default PDF viewer
+        private readonly bool OPEN_PDFS = false;  //set to true to open the PDFs in the default PDF viewer
         private readonly bool VALIDATE_PDFS = true;  //set to true to validate the PDFs using the PDF/A validator
 
         ILogger<EaxsToEaPdfProcessor>? logger;
@@ -55,96 +55,6 @@ namespace UIUCLibrary.TestEaPdf
             loggerFactory?.Dispose();
         }
 
-        [TestMethod]
-        public void TestFontList()
-        {
-            Dictionary<Regex, FontHelpers.BaseFontFamily> baseFontMapping = new()
-            {
-                { new Regex("^Kurinto Mono.*") , FontHelpers.BaseFontFamily.Monospace },
-                { new Regex("^Kurinto Sans.*") , FontHelpers.BaseFontFamily.SansSerif },
-                { new Regex("^Kurinto Text.*") , FontHelpers.BaseFontFamily.Serif }
-            };
-
-            var fonts = FontHelpers.GetDictionaryOfFonts("Fonts", baseFontMapping);
-
-            Assert.IsNotNull(fonts);
-            Assert.IsTrue(fonts.Count > 0);
-            Assert.IsTrue(fonts.ContainsKey(FontHelpers.BaseFontFamily.Serif));
-        }
-
-        [TestMethod]
-        public void TestXepFontConfig()
-        {
-            Dictionary<Regex, FontHelpers.BaseFontFamily> baseFontMapping = new()
-            {
-                { new Regex("^Kurinto Mono.*") , FontHelpers.BaseFontFamily.Monospace },
-                { new Regex("^Kurinto Sans.*") , FontHelpers.BaseFontFamily.SansSerif },
-                { new Regex("^Kurinto Text.*") , FontHelpers.BaseFontFamily.Serif }
-            };
-
-            var fonts = FontHelpers.GenerateXepFontsConfig(@"Fonts", baseFontMapping);
-
-            Assert.IsFalse(string.IsNullOrWhiteSpace(fonts));
-
-            Debug.Print(fonts);
-
-            var xdoc = new XmlDocument();
-            xdoc.LoadXml(fonts);
-
-            var node = xdoc.SelectSingleNode("/fonts");
-            Assert.IsNotNull(node);
-
-            node = xdoc.SelectSingleNode("/fonts/font-group");
-            Assert.IsNotNull(node);
-
-            node = xdoc.SelectSingleNode("/fonts/font-group/font-family");
-            Assert.IsNotNull(node);
-
-            node = xdoc.SelectSingleNode("/fonts/font-group/font-family/font");
-            Assert.IsNotNull(node);
-
-            node = xdoc.SelectSingleNode("/fonts/font-alias");
-            Assert.IsNotNull(node);
-
-        }
-
-        [TestMethod]
-        public void TestFopFontConfig()
-        {
-            Dictionary<Regex, FontHelpers.BaseFontFamily> baseFontMapping = new()
-            {
-                { new Regex("^Kurinto Mono.*") , FontHelpers.BaseFontFamily.Monospace },
-                { new Regex("^Kurinto Sans.*") , FontHelpers.BaseFontFamily.SansSerif },
-                { new Regex("^Kurinto Text.*") , FontHelpers.BaseFontFamily.Serif }
-            };
-
-            var fonts = FontHelpers.GenerateFopFontsConfig(@"Fonts", baseFontMapping);
-
-            Assert.IsFalse(string.IsNullOrWhiteSpace(fonts));
-
-            Debug.Print(fonts);
-
-            var xdoc = new XmlDocument();
-            xdoc.LoadXml(fonts);
-
-            var node = xdoc.SelectSingleNode("/fonts");
-            Assert.IsNotNull(node);
-
-            node = xdoc.SelectSingleNode("/fonts/font");
-            Assert.IsNotNull(node);
-            node = xdoc.SelectSingleNode("/fonts/font/@embed-url");
-            Assert.IsNotNull(node);
-
-            node = xdoc.SelectSingleNode("/fonts/font/font-triplet");
-            Assert.IsNotNull(node);
-            node = xdoc.SelectSingleNode("/fonts/font/font-triplet/@name");
-            Assert.IsNotNull(node);
-            node = xdoc.SelectSingleNode("/fonts/font/font-triplet/@style");
-            Assert.IsNotNull(node);
-            node = xdoc.SelectSingleNode("/fonts/font/font-triplet/@weight");
-            Assert.IsNotNull(node);
-
-        }
 
         [DataRow("Non-Western\\Farsi", "fop", true, false, DisplayName = "FARSI-FOP-EXT-NO-WRAP")] //Use Farsi folder and FOP and do not wrap external files in XML
         [DataRow("Non-Western\\Farsi", "fop", true, true, DisplayName = "FARSI-FOP-EXT-WRAP")] //Use Farsi folder and FOP and wrap external files in XML
@@ -170,6 +80,30 @@ namespace UIUCLibrary.TestEaPdf
             TestEaxsToPdfProcessor(inPath, foProcessor, ext, wrap);
         }
 
+        [DataRow("InlineImages\\EML", "fop", true, false, DisplayName = "INLINE-IMAGES-FOP-EXT")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "xep", true, true, DisplayName = "INLINE-IMAGES-XEP-EXT-WRAP")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "fop", false, false, DisplayName = "INLINE-IMAGES-FOP")] //Sample EML with inline images of different sizes
+        [DataRow("InlineImages\\EML", "xep", false, false, DisplayName = "INLINE-IMAGES-XEP")] //Sample EML with inline images of different sizes
+
+        [DataTestMethod]
+        public void TestEaxsToPdfInlineImages(string inPath, string foProcessor, bool ext, bool wrap)
+        {
+            TestEaxsToPdfProcessor(inPath, foProcessor, ext, wrap);
+        }
+
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, false, DisplayName = "MOZILLA-FOP-EXT-NO-WRAP")] //Use Mozilla file and FOP and do not wrap external files in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, true, DisplayName = "MOZILLA-FOP-EXT-WRAP")] //Use Mozilla file and FOP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", true, true, DisplayName = "MOZILLA-XEP-EXT-WRAP")] //Use Mozilla file and XEP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", false, false, DisplayName = "MOZILLA-FOP")] //Use Mozilla file and FOP with all attachments embedded in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", false, false, DisplayName = "MOZILLA-XEP")] //Use Mozilla file and XEP with all attachments embedded in XML
+
+        [DataTestMethod]
+        public void TestEaxsToPdfProcessorLargeFiles(string inPath, string foProcessor, bool ext, bool wrap)
+        {
+            TestEaxsToPdfProcessor(inPath, foProcessor, ext, wrap);
+        }
+
+
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, false, DisplayName = "ENGLISH-FOP-EXT-NO-WRAP")] //Use short-test file and FOP and do not wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "fop", true, true, DisplayName = "ENGLISH-FOP-EXT-WRAP")] //Use short-test file and FOP and wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test\\short-test.mbox", "xep", true, true, DisplayName = "ENGLISH-XEP-EXT-WRAP")] //Use short-test file and XEP and wrap external files in XML
@@ -181,15 +115,6 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "xep", true, true, DisplayName = "ENGLISH-NESTED-XEP-EXT-WRAP")] //Use short-test file and XEP and wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "fop", false, false, DisplayName = "ENGLISH-NESTED-FOP")] //Use short-test file and FOP and do not wrap external files in XML
         [DataRow("MozillaThunderbird\\short-test-mult\\short-test.mbox", "xep", false, false, DisplayName = "ENGLISH-NESTED-XEP")] //Use short-test file and XEP and wrap external files in XML
-
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, false, DisplayName = "MOZILLA-FOP-EXT-NO-WRAP")] //Use Mozilla file and FOP and do not wrap external files in XML
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", true, true, DisplayName = "MOZILLA-FOP-EXT-WRAP")] //Use Mozilla file and FOP and wrap external files in XML
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", true, true, DisplayName = "MOZILLA-XEP-EXT-WRAP")] //Use Mozilla file and XEP and wrap external files in XML
-
-        [DataRow("InlineImages\\EML", "fop", true, false, DisplayName = "INLINE-IMAGES-FOP-EXT")] //Sample EML with inline images of different sizes
-        [DataRow("InlineImages\\EML", "xep", true, true, DisplayName = "INLINE-IMAGES-XEP-EXT-WRAP")] //Sample EML with inline images of different sizes
-        [DataRow("InlineImages\\EML", "fop", false, false, DisplayName = "INLINE-IMAGES-FOP")] //Sample EML with inline images of different sizes
-        [DataRow("InlineImages\\EML", "xep", false, false, DisplayName = "INLINE-IMAGES-XEP")] //Sample EML with inline images of different sizes
 
         [DataTestMethod]
         public void TestEaxsToPdfProcessor(string inPath, string foProcessor, bool ext, bool wrap)
@@ -232,16 +157,22 @@ namespace UIUCLibrary.TestEaPdf
 
                 var proc = new EaxsToEaPdfProcessor(logger, xslt, foTransformer, iText, set);
 
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
+                var files = proc.ConvertEaxsToPdf(xmlFile, pdfFile);
 
-                Assert.IsTrue(File.Exists(pdfFile));
+                Assert.AreEqual(files.ElementAt(0).Key, xmlFile);
+                Assert.AreEqual(files.ElementAt(0).Value, pdfFile);
 
-                Assert.IsTrue(IsPdfValid(pdfFile));
+                foreach(var file in files)
+                {
+                    Assert.IsTrue(File.Exists(file.Value));
 
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                    Assert.IsTrue(IsPdfValid(file.Value));
 
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+                    if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(file.Value);
+
+                    if (OPEN_PDFS)
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file.Value) { UseShellExecute = true });
+                }
             }
             else
             {
@@ -256,7 +187,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("InlineImages\\EML", "xep", false, false, DisplayName = "INLINE-IMAGES-XEP")] //Sample EML with inline images of different sizes
 
         [DataTestMethod]
-        public void TestEaxsToPdfProcessorRemoveImageDimensions(string inPath, string foProcessor, bool ext, bool wrap)
+        public void TestEaxsToPdfInlineImagesRemoveDimensions(string inPath, string foProcessor, bool ext, bool wrap)
         {
             if (!foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase) && !foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case", nameof(foProcessor));
@@ -311,16 +242,92 @@ namespace UIUCLibrary.TestEaPdf
 
                 var proc = new EaxsToEaPdfProcessor(logger, xslt, foTransformer, iText, set);
 
-                proc.ConvertEaxsToPdf(xmlFile, pdfFile);
+                var files = proc.ConvertEaxsToPdf(xmlFile, pdfFile);
 
-                Assert.IsTrue(File.Exists(pdfFile));
+                Assert.AreEqual(files.ElementAt(0).Key, xmlFile);
+                Assert.AreEqual(files.ElementAt(0).Value, pdfFile);
 
-                Assert.IsTrue(IsPdfValid(pdfFile));
+                foreach (var file in files)
+                {
+                    Assert.IsTrue(File.Exists(file.Value));
 
-                if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(pdfFile);
+                    Assert.IsTrue(IsPdfValid(file.Value));
 
-                if (OPEN_PDFS)
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pdfFile) { UseShellExecute = true });
+                    if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(file.Value);
+
+                    if (OPEN_PDFS)
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file.Value) { UseShellExecute = true });
+                }
+            }
+            else
+            {
+                Assert.Fail("Logger was not initialized");
+            }
+
+        }
+
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "fop", false, false, 10000000, DisplayName = "MOZILLA-FOP-10000000")] //Use Mozilla file and FOP and wrap external files in XML
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "xep", false, false, 10000000, DisplayName = "MOZILLA-XEP-10000000")] //Use Mozilla file and XEP and wrap external files in XML
+
+        [DataTestMethod]
+        public void TestEaxsToPdfProcessorWithContinuations(string inPath, string foProcessor, bool ext, bool wrap, long maxOutFileSize)
+        {
+            if (!foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase) && !foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case", nameof(foProcessor));
+
+            if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase) && ext && !wrap)
+                throw new ArgumentException("XEP requires external files to be wrapped in XML");
+
+            if (!ext && wrap)
+                throw new ArgumentException("Attachments must be saved externally to be wrapped in XML");
+
+            if (logger != null)
+            {
+                var xmlFile = ConvertToEaxs(inPath, ext, wrap, null, maxOutFileSize);
+
+                string pdfFile, configFile;
+                IXslFoTransformer foTransformer;
+                if (foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    pdfFile = Path.ChangeExtension(xmlFile, $"fop{(ext ? "_x" : "")}{(wrap ? "_w" : "")}_C.pdf");
+                    configFile = Path.GetFullPath("XResources\\fop.xconf");
+                    foTransformer = new FopToPdfTransformer(configFile);
+                }
+                else if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    pdfFile = Path.ChangeExtension(xmlFile, $"xep{(ext ? "_x" : "")}{(wrap ? "_w" : "")}_C.pdf");
+                    configFile = Path.GetFullPath("XResources\\xep.xml");
+                    foTransformer = new XepToPdfTransformer(configFile);
+                }
+                else
+                {
+                    throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case", nameof(foProcessor));
+                }
+
+                var xslt = new SaxonXsltTransformer();
+                var iText = new ITextSharpPdfEnhancerFactory();
+                var set = new EaxsToEaPdfProcessorSettings();
+
+                var proc = new EaxsToEaPdfProcessor(logger, xslt, foTransformer, iText, set);
+
+                var files = proc.ConvertEaxsToPdf(xmlFile, pdfFile);
+
+                Assert.AreEqual(files.ElementAt(0).Key, xmlFile);
+                Assert.AreEqual(files.ElementAt(0).Value, pdfFile);
+
+                foreach (var file in files)
+                {
+                    logger.LogDebug("Files: {xmlfile} --> {pdfFile}", file.Key, file.Value);
+
+                    Assert.IsTrue(File.Exists(file.Value));
+
+                    Assert.IsTrue(IsPdfValid(file.Value));
+
+                    if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(file.Value);
+
+                    if (OPEN_PDFS)
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file.Value) { UseShellExecute = true });
+                }
             }
             else
             {
@@ -330,7 +337,7 @@ namespace UIUCLibrary.TestEaPdf
         }
 
 
-        private string ConvertToEaxs(string filePath, bool saveAttachmentsExt, bool wrapExtContentInXml, string? skipAfterMsgId)
+        private string ConvertToEaxs(string filePath, bool saveAttachmentsExt, bool wrapExtContentInXml, string? skipAfterMsgId, long maxFileSize = 0)
         {
             var inFile = Path.Combine(testFilesBaseDirectory, filePath);
 
@@ -338,13 +345,13 @@ namespace UIUCLibrary.TestEaPdf
 
             if (attr.HasFlag(FileAttributes.Directory))
                 //directory of EML files
-                return ConvertEmlFolderToEaxs(filePath, saveAttachmentsExt, wrapExtContentInXml);
+                return ConvertEmlFolderToEaxs(filePath, saveAttachmentsExt, wrapExtContentInXml, maxFileSize);
             else
                 //single MBOX file
-                return ConvertMBoxToEaxs(filePath, saveAttachmentsExt, wrapExtContentInXml, skipAfterMsgId);
+                return ConvertMBoxToEaxs(filePath, saveAttachmentsExt, wrapExtContentInXml, skipAfterMsgId, maxFileSize);
         }
 
-        private string ConvertMBoxToEaxs(string filePath, bool saveAttachmentsExt, bool wrapExtContentInXml, string? skipAfterMsgId)
+        private string ConvertMBoxToEaxs(string filePath, bool saveAttachmentsExt, bool wrapExtContentInXml, string? skipAfterMsgId, long maxFileSize = 0)
         {
             if (logger != null)
             {
@@ -360,7 +367,8 @@ namespace UIUCLibrary.TestEaPdf
                 {
                     SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt,
                     WrapExternalContentInXml = wrapExtContentInXml,  //must be true for XEP to properly attach external PDFs
-                    SaveTextAsXhtml = true //required to render html inside the PDF
+                    SaveTextAsXhtml = true, //required to render html inside the PDF
+                    MaximumXmlFileSize = maxFileSize
                 };
                 if (!string.IsNullOrWhiteSpace(skipAfterMsgId))
                     settings.SkipAfterMessageId = skipAfterMsgId;
@@ -376,7 +384,7 @@ namespace UIUCLibrary.TestEaPdf
             }
         }
 
-        private string ConvertEmlFolderToEaxs(string folderPath, bool saveAttachmentsExt, bool wrapExtContentInXml)
+        private string ConvertEmlFolderToEaxs(string folderPath, bool saveAttachmentsExt, bool wrapExtContentInXml, long maxFileSize = 0)
         {
             if (logger != null)
             {
@@ -388,7 +396,8 @@ namespace UIUCLibrary.TestEaPdf
                 {
                     SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt,
                     WrapExternalContentInXml = wrapExtContentInXml,  //Must be true for XEP to properly attach external PDFs
-                    SaveTextAsXhtml = true //required to render html inside the PDF
+                    SaveTextAsXhtml = true, //required to render html inside the PDF
+                    MaximumXmlFileSize = maxFileSize
                 };
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);

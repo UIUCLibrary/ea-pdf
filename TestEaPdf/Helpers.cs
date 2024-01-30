@@ -14,7 +14,7 @@ namespace UIUCLibrary.TestEaPdf
 {
     internal class Helpers
     {
-        const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf\\verapdf.bat";
+        const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf_1.24\\verapdf.bat";
 
         public static string CalculateHash(string algName, string filePath)
         {
@@ -27,8 +27,9 @@ namespace UIUCLibrary.TestEaPdf
                 using var fstream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
                 hash = alg.ComputeHash(fstream);
             }
-            catch
+            catch(Exception ex)
             {
+                Debug.WriteLine(ex.Message);
                 hash = Array.Empty<byte>();
             }
 
@@ -73,38 +74,90 @@ namespace UIUCLibrary.TestEaPdf
         }
 
 
-
-
-        public static List<string> GetExpectedFiles(bool oneFilePerMbox, string sampleFile, string outFolder)
+        public static List<string> GetExpectedFiles(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder)
         {
             List<string> expectedXmlFiles = new();
 
-            if (!oneFilePerMbox)
+            if (File.Exists(sampleFile))
             {
-                string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
-                Assert.IsTrue(File.Exists(xmlPathStr));
-                expectedXmlFiles.Add(xmlPathStr);
+                expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, sampleFile, outFolder));
+            }
+            else if (Directory.Exists(sampleFile))
+            {
+                expectedXmlFiles.AddRange(GetExpectedFilesForDirectory(includeSubs, oneFilePerMbox, sampleFile, outFolder));
+            }
+            else
+            {
+                Assert.Fail($"Sample file or directory not found: {sampleFile}");
+            }
 
-                //Output might be split into multiple files
-                var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                if (files != null)
+            return expectedXmlFiles;
+
+        }
+
+        private static List<string> GetExpectedFilesForDirectory(bool includeSubs, bool oneFilePerMbox, string sampleDir, string outFolder)
+        {
+            List<string> expectedXmlFiles = new();
+
+
+            if (oneFilePerMbox)
+            {
+                var files = Directory.GetFiles(sampleDir, "*", new EnumerationOptions() { RecurseSubdirectories = includeSubs });
+                foreach (var file in files)
                 {
-                    expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
+                    expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, file, outFolder));
                 }
             }
             else
             {
-                if (Directory.Exists(sampleFile))
+                expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, sampleDir, outFolder));
+            }
+
+
+            return expectedXmlFiles;
+        }
+
+
+        private static List<string> GetExpectedFilesForFile(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder)
+        {
+            List<string> expectedXmlFiles = new();
+
+            string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
+            Assert.IsTrue(File.Exists(xmlPathStr));
+            expectedXmlFiles.Add(xmlPathStr);
+
+            //Output might be split into multiple files
+            var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
+            if (files != null)
+            {
+                expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
+            }
+
+            if (includeSubs && oneFilePerMbox)
+            {
+                //The directory may be named something other than the mbox file, so we need to find the directory
+                //i.e. if the mbox file is "sample.mbox" or just "sample", the directory may be "sample.sbd"
+
+                var baseDirName = Path.GetFileNameWithoutExtension(sampleFile);
+                var baseDir = Path.GetDirectoryName(sampleFile);
+                var sampleSubDir = string.Empty;
+                if (baseDir != null)
+                {
+                    var subDirs = Directory.GetDirectories(baseDir) ?? Array.Empty<string>();
+                    sampleSubDir = subDirs.Where(d => Path.GetFileNameWithoutExtension(d).Equals(baseDirName, StringComparison.OrdinalIgnoreCase)).SingleOrDefault();
+                }
+
+                if (Directory.Exists(sampleSubDir))
                 {
                     //the input path is a directory, so make sure there is one xml output file for each input file
-                    foreach (var file in Directory.GetFiles(sampleFile))
+                    foreach (var file in Directory.GetFiles(sampleSubDir))
                     {
-                        string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(file), "xml"));
+                        xmlPathStr = Path.Combine(outFolder, Path.GetFileName(sampleSubDir), $"{Path.GetFileName(file)}.xml");
                         Assert.IsTrue(File.Exists(xmlPathStr));
                         expectedXmlFiles.Add(xmlPathStr);
 
                         //Output might be split into multiple files
-                        var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
+                        files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
                         if (files != null)
                         {
                             expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
@@ -192,7 +245,7 @@ namespace UIUCLibrary.TestEaPdf
                 Debug.WriteLine(stdErr);
             }
 
-            Assert.AreEqual(0, ret);
+            Assert.AreEqual(0, ret, "VeraPdf validation failed; see output for details;");
             Assert.IsFalse(string.IsNullOrWhiteSpace(stdOut));
             Assert.IsTrue(string.IsNullOrWhiteSpace(stdErr));
 
