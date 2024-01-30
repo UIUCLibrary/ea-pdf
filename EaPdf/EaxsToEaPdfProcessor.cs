@@ -2,6 +2,7 @@
 using System.Xml;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -12,6 +13,8 @@ namespace UIUCLibrary.EaPdf
         private readonly IXsltTransformer _xslt;
         private readonly IXslFoTransformer _xslfo;
         private readonly IPdfEnhancerFactory _enhancerFactory;
+
+        private readonly Dictionary<string, string> _eaxsFilesProcessed = new(); //used to keep track of the EAXS files that have been processed as continuation files
 
         public EaxsToEaPdfProcessorSettings Settings { get; }
 
@@ -35,20 +38,68 @@ namespace UIUCLibrary.EaPdf
 
         }
 
-        public void ConvertEaxsToPdf(string eaxsFilePath, string pdfFilePath)
+        /// <summary>
+        /// Convert the given EAXS file to PDF, returning a dictionary of the EAXS files processed and the PDF files created.
+        /// The dictionary may contain multiple files if the emails are split into multiple files.
+        /// </summary>
+        /// <param name="eaxsFilePath"></param>
+        /// <param name="pdfFilePath"></param>
+        /// <returns></returns>
+        public Dictionary<string, string> ConvertEaxsToPdf(string eaxsFilePath, string pdfFilePath)
         {
+            _eaxsFilesProcessed.Clear();
+
+            ConvertEaxsToPdfInternal(eaxsFilePath, pdfFilePath);
+
+            return _eaxsFilesProcessed;
+        }
+
+        /// <summary>
+        /// Internal method to convert the given EAXS file to PDF, will be called recursively if the EAXS file has a 'ContinuedIn' processing instruction.
+        /// </summary>
+        /// <param name="eaxsFilePath"></param>
+        /// <param name="pdfFilePath"></param>
+        /// <exception cref="Exception"></exception>
+        private void ConvertEaxsToPdfInternal(string eaxsFilePath, string pdfFilePath)
+        {
+            _eaxsFilesProcessed.Add(eaxsFilePath, pdfFilePath);
+
             var foFilePath = Path.ChangeExtension(eaxsFilePath, ".fo");
 
             var eaxsHelpers = new EaxsHelpers(eaxsFilePath);
             //get fonts based on the Unicode scripts used in the text in the EAXS file and the font settings
             var (serifFonts, sansFonts, monoFonts, complexScripts) = eaxsHelpers.GetBaseFontsToUse(Settings);
+            string continuedFrom = eaxsHelpers.ContinuedFromFile;
+            string continuedIn = eaxsHelpers.ContinuedInFile;
+
+            (string nextEaxsFilePath, string nextPdfFilePath) = FilePathHelpers.GetDerivedFilePaths(eaxsFilePath, pdfFilePath, continuedIn);
+            (string prevEaxsFilePath, string prevPdfFilePath) = FilePathHelpers.GetDerivedFilePaths(eaxsFilePath, pdfFilePath, continuedFrom);
+
+
+            if (!string.IsNullOrWhiteSpace(nextEaxsFilePath))
+            {
+                _logger.LogInformation("EAXS file '{eaxsFilePath}' has a 'ContinuedIn' processing instruction, so continuing processing with file '{continueIn}'.", eaxsFilePath, continuedIn);
+
+                //check for infinite loop
+                if (_eaxsFilesProcessed.ContainsKey(nextEaxsFilePath))
+                {
+                    throw new Exception($"'{nextEaxsFilePath}' has already been processed, so there is an infinite loop.");
+                }
+
+                if (_eaxsFilesProcessed.ContainsValue(nextPdfFilePath))
+                {
+                    throw new Exception($"PDF file '{nextPdfFilePath}' has already been created.");
+                }
+            }
 
             var xsltParams = new Dictionary<string, object>
             {
                 { "fo-processor-version", _xslfo.ProcessorVersion },
                 { "SerifFont", serifFonts },
                 { "SansSerifFont", sansFonts },
-                { "MonospaceFont", monoFonts }
+                { "MonospaceFont", monoFonts },
+                { "ContinuedFrom", Path.GetFileName(prevPdfFilePath) },
+                { "ContinuedIn", Path.GetFileName(nextPdfFilePath)}
             };
 
             List<(LogLevel level, string message)> messages = new();
@@ -72,7 +123,7 @@ namespace UIUCLibrary.EaPdf
                 foHelper.SaveFoFile();
 
                 string extraCmdLineParams = "";
-                if(!complexScripts && _xslfo.ProcessorVersion.StartsWith("FOP"))
+                if (!complexScripts && _xslfo.ProcessorVersion.StartsWith("FOP"))
                 {
                     _logger.LogInformation("Disabling '{version}' complex script support; no complex scripts were detected.", _xslfo.ProcessorVersion);
                     extraCmdLineParams = "-nocs";
@@ -108,11 +159,16 @@ namespace UIUCLibrary.EaPdf
 #endif
 
             //Do some post processing to add metadata, cleanup attachments, etc.
-            PostProcessPdf(eaxsFilePath, pdfFilePath, complexScripts);
+            PostProcessPdf(eaxsFilePath, pdfFilePath, complexScripts, prevPdfFilePath, nextPdfFilePath);
+
+            if (!string.IsNullOrWhiteSpace(continuedIn))
+            {
+                ConvertEaxsToPdfInternal(nextEaxsFilePath, nextPdfFilePath);
+            }
         }
 
 
-        private void PostProcessPdf(string eaxsFilePath, string pdfFilePath, bool complexScripts)
+        private void PostProcessPdf(string eaxsFilePath, string pdfFilePath, bool complexScripts, string prevPdfFilePath, string nextPdfFilePath)
         {
             var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 

@@ -7,6 +7,7 @@ namespace UIUCLibrary.EaPdf.Helpers
     {
 
         public XmlDocument EaxsDocument { get; init; } = new();
+        private XmlNamespaceManager Xmlns { get; init; }
 
         private string EaxsFilePath { get; init; } = string.Empty;
 
@@ -14,8 +15,33 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             EaxsFilePath = eaxsFilePath;
             EaxsDocument.Load(EaxsFilePath);
+            Xmlns = new XmlNamespaceManager(EaxsDocument.NameTable);
+            Xmlns.AddNamespace(EmailToEaxsProcessor.XM, EmailToEaxsProcessor.XM_NS);
         }
 
+        /// <summary>
+        /// Get the value of the processing instruction "ContinuedIn" in the EAXS file, if not present return empty string
+        /// </summary>
+        public string ContinuedInFile
+        {
+            get
+            {
+                var continuedInFile = EaxsDocument.SelectSingleNode("//processing-instruction('ContinuedIn')", Xmlns)?.Value ?? String.Empty;
+                return continuedInFile;
+            }
+        }
+
+        /// <summary>
+        /// Get the value of the processing instruction "ContinuedFrom" in the EAXS file, if not present return empty string
+        /// </summary>
+        public string ContinuedFromFile
+        {
+            get
+            {
+                var continuedInFile = EaxsDocument.SelectSingleNode("//processing-instruction('ContinuedFrom')",Xmlns)?.Value ?? String.Empty;
+                return continuedInFile;
+            }
+        }
         /// <summary>
         /// Save the XSL-FO back to the same file as was opened
         /// </summary>

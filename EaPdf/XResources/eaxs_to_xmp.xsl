@@ -17,7 +17,7 @@
 	
 	<xsl:template match="/">
 		<root>
-			<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message]"/>
+			<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]"/>
 		</root>
 	</xsl:template>
 
@@ -25,7 +25,7 @@
 		<folder>
 			<xsl:attribute name="Name"><xsl:value-of select="eaxs:Name"/></xsl:attribute>
 			<xsl:apply-templates select="eaxs:Message"/>
-			<xsl:apply-templates select="eaxs:Folder[eaxs:Message]"/>
+			<xsl:apply-templates select="eaxs:Folder[eaxs:Message or eaxs:Folder]"/>
 		</folder>
 	</xsl:template>
 	

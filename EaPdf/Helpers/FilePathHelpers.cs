@@ -1,5 +1,7 @@
 ﻿using MimeKit;
 using NDepend.Path;
+using Org.BouncyCastle.Ocsp;
+using System.Text.RegularExpressions;
 using Wiry.Base32;
 
 namespace UIUCLibrary.EaPdf.Helpers
@@ -8,6 +10,137 @@ namespace UIUCLibrary.EaPdf.Helpers
     {
 
         public const string XML_WRAPPED_EXT  = ".xmlw";
+
+        /// <summary>
+        /// Get the file path with the given number appended to the file name
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="incrNumber"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static string GetFilePathWithIncrementNumber(string filePath, int incrNumber)
+        {
+            if (incrNumber > 9999)
+                throw new Exception("No more than 9999 files are supported.");
+
+            string ret = filePath;
+
+            if(incrNumber == 0) //use the original file path w/o the number
+            {
+                return ret;
+            }
+
+
+            //Update the filepath to add the file number
+            string directoryPath = Path.GetDirectoryName(filePath) ?? "";
+            string extension = Path.GetExtension(filePath);
+            ret = Path.Combine(directoryPath, Path.GetFileNameWithoutExtension(filePath) + "_" + incrNumber.ToString("0000") + extension);
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Get the file path without the increment number at the end
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static string GetFilePathWithoutIncrementNumber(string filePath)
+        {
+            string ret = filePath;
+
+            //strip off the file number from the end
+            string ext = Path.GetExtension(filePath);
+            string name = Path.GetFileNameWithoutExtension(filePath);
+            string dir = Path.GetDirectoryName(filePath) ?? "";
+
+            if (Regex.IsMatch(name, "_\\d\\d\\d\\d$"))
+            {
+                name = name[..^5];
+                ret = Path.Combine(dir, name + ext);
+            }
+            else
+            {
+                throw new Exception($"Unexpected filename format '{name}{ext}'.  It should end like '*_nnnn{ext}' with exactly 4 digits with leading zeros if needed");
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Try to get the file path without the increment number at the end, return the increment number if found, 
+        /// else returns 0 with the result set to the original file path
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public static int TryGetFilePathWithoutIncrementNumber(string filePath, out string result)
+        {
+            int ret = 0;
+            result = filePath;
+
+            //strip off the file number from the end
+            string ext = Path.GetExtension(filePath);
+            string name = Path.GetFileNameWithoutExtension(filePath);
+            string dir = Path.GetDirectoryName(filePath) ?? "";
+
+            if (Regex.IsMatch(name, "_\\d\\d\\d\\d$"))
+            {
+                ret = int.Parse(name[^4..]);
+                name = name[..^5];
+                result = Path.Combine(dir, name + ext);
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Get new EAXS and PDF file paths with the given number appended to the file name based on the continuation file name
+        /// </summary>
+        /// <param name="baseEaxsFilePath"></param>
+        /// <param name="basePdfFilePath"></param>
+        /// <param name="continuationFileName"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static (string eaxsFilePath, string pdfFilePath) GetDerivedFilePaths(string baseEaxsFilePath, string basePdfFilePath, string continuationFileName)
+        {
+
+            if(string.IsNullOrWhiteSpace(baseEaxsFilePath))
+                throw new ArgumentNullException(nameof(baseEaxsFilePath));
+            if(string.IsNullOrWhiteSpace(basePdfFilePath))
+                throw new ArgumentNullException(nameof(basePdfFilePath));
+
+            if (string.IsNullOrWhiteSpace(continuationFileName))
+                return (string.Empty, string.Empty);
+
+            string derivedEaxsFilePath = Path.Combine(Path.GetDirectoryName(baseEaxsFilePath) ?? "", continuationFileName);
+
+            //sanity check for base file name matching and increment numbers always increasing by one
+            int origEaxsIncrNumber = FilePathHelpers.TryGetFilePathWithoutIncrementNumber(baseEaxsFilePath, out string origEaxsBaseFilename);
+            int derivedEaxsIncrNumber = FilePathHelpers.TryGetFilePathWithoutIncrementNumber(derivedEaxsFilePath, out string derivedEaxsBaseFilename);
+            int origPdfIncrNumber = FilePathHelpers.TryGetFilePathWithoutIncrementNumber(basePdfFilePath, out string origPdfBaseFilename);
+
+            if (Math.Abs(origEaxsIncrNumber - derivedEaxsIncrNumber) != 1) // +1 or -1 is ok depending on whether the continuation is the next or previous file
+            {
+                throw new Exception($"The increment number of the EAXS file '{baseEaxsFilePath}' is more than one away from than the increment number of the next EAXS file '{derivedEaxsFilePath}'.");
+            }
+
+            if (origEaxsBaseFilename != derivedEaxsBaseFilename)
+            {
+                throw new Exception($"The base filename of the EAXS file '{baseEaxsFilePath}' is not the same as the base filename of the next EAXS file '{derivedEaxsFilePath}'.");
+            }
+
+            if (origPdfIncrNumber != origEaxsIncrNumber)
+            {
+                throw new Exception($"The increment number of the PDF file '{basePdfFilePath}' is not the same as the increment number of the EAXS file '{baseEaxsFilePath}'.");
+            }
+
+            //get the next PDF file name with the same increment number as the EAXS file
+            string derivedPdfFilePath = FilePathHelpers.GetFilePathWithIncrementNumber(origPdfBaseFilename, derivedEaxsIncrNumber);
+
+            return (derivedEaxsFilePath, derivedPdfFilePath);
+        }
+
 
         /// <summary>
         /// Determine whether the output path is allowed given the input folder path

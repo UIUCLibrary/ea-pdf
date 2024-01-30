@@ -1,6 +1,7 @@
 ﻿using MimeKit;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using UIUCLibrary.EaPdf.Helpers;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -143,17 +144,11 @@ namespace UIUCLibrary.EaPdf
         public int OutFileNumber { get; private set; } = 0;
         public int IncrementOutFileNumber()
         {
-            var origOutFilePath = OriginalOutFilePath;
-
+            string origFilePath = OriginalOutFilePath; //must get this before incrementing OutFileNumber
             OutFileNumber++;
 
-            if (OutFileNumber > 9999)
-                throw new Exception("No more than 9999 file are supported.");
-            
-            //Update the OutFilePath to add the file number
-            var ext = Path.GetExtension(OutFilePath);
-            OutFilePath = Path.Combine(OutDirectoryName, Path.GetFileNameWithoutExtension(origOutFilePath) + "_" + OutFileNumber.ToString("0000") + ext);
-            
+            OutFilePath = FilePathHelpers.GetFilePathWithIncrementNumber(origFilePath, OutFileNumber);
+
             return OutFileNumber;
         }
 
@@ -187,17 +182,7 @@ namespace UIUCLibrary.EaPdf
                 if (OutFileNumber > 0)
                 {
                     //strip off the file number from the end
-                    var ext = Path.GetExtension(OutFilePath);
-                    var name = Path.GetFileNameWithoutExtension(OutFilePath);
-                    if (Regex.IsMatch(name,"_\\d\\d\\d\\d$"))
-                    {
-                        name = name[..^5];
-                    }
-                    else
-                    {
-                        throw new Exception($"Unexpected filename format '{name}'.  It should end like '*_nnnn'.");
-                    }
-                    ret = Path.Combine(OutDirectoryName, name + ext);
+                    ret = FilePathHelpers.GetFilePathWithoutIncrementNumber(OutFilePath);
                 }
 
                 return ret;
@@ -305,7 +290,8 @@ namespace UIUCLibrary.EaPdf
         {
             get
             {
-                var ret = new Uri(Path.GetRelativePath(OutDirectoryName, MessageFilePath), UriKind.Relative);
+                var relPath = Path.GetRelativePath(OutDirectoryName, MessageFilePath);
+                var ret = new Uri(relPath, UriKind.Relative);
                 return ret.ToString().Replace('\\', '/');
             }
         }

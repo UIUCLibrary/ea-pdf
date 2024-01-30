@@ -1076,7 +1076,7 @@ namespace UIUCLibrary.EaPdf
 
             WriteFolderClosers(xwriter);
 
-            xwriter.WriteProcessingInstruction("ContinuedIn", $"'{Path.GetFileName(newXmlFilePath)}'");
+            xwriter.WriteProcessingInstruction("ContinuedIn", $"{Path.GetFileName(newXmlFilePath)}");
 
             //close the current xml file and start a new one
             xwriter.WriteEndDocument(); //should write out any unclosed elements
@@ -1096,7 +1096,7 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteStartDocument();
             WriteDocType(xwriter, null);
-            xwriter.WriteProcessingInstruction("ContinuedFrom", $"'{Path.GetFileName(origXmlFilePath)}'");
+            xwriter.WriteProcessingInstruction("ContinuedFrom", $"{Path.GetFileName(origXmlFilePath)}");
 
             WriteAccountHeaderFields(xwriter, msgFileProps.GlobalId, msgFileProps.AccountEmails);
             WriteToLogInfoMessage(xwriter, $"Processing mbox file: {msgFileProps.MessageFilePath}");
@@ -2160,8 +2160,8 @@ namespace UIUCLibrary.EaPdf
             long fileSize;
             byte[]? xmlHash = null;
             long? xmlSize = null;
-            int imageWidth = 0;
-            int imageHeight = 0;
+            int imageWidth;
+            int imageHeight;
 
             if (wrapInXml)
             {
