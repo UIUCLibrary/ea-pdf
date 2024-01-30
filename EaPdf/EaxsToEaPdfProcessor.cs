@@ -133,6 +133,8 @@ namespace UIUCLibrary.EaPdf
 
             enhancer.RemoveUnnecessaryElements();
 
+            enhancer.FixGotoRLinks();
+
             //dispose of the enhancer to make sure files are closed
             enhancer.Dispose();
 

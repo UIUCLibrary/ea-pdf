@@ -64,6 +64,22 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
+        public void FixGotoRLinks()
+        {
+            var externalLinkAnnotations = GetExternalLinkAnnotations();
+
+            foreach(var extLink in externalLinkAnnotations)
+            {
+                foreach(var filespec in extLink.Value)
+                {
+                    var action = filespec.annotation?.GetAsDict(PdfName.A) ?? throw new Exception("Unable to get the annotation action");
+
+                    //instead of the action pointing to a filespec dictionary, just put the external filename there
+                    action.Put(PdfName.F, filespec.filespec.GetAsString(PdfName.F));
+                }
+            }
+        }
+
         public void RemoveUnnecessaryElements()
         {
             _logger.LogTrace("ITextSharpPdfEnhancer: RemoveUnnecessaryElements");
@@ -357,6 +373,67 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             return ret;
         }
 
+        Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>>? _extLinkAnnotations;
+        private Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>> GetExternalLinkAnnotations()
+        {
+
+            lock (locker)
+            {
+                if (_extLinkAnnotations == null)
+                {
+                    _logger.LogTrace("ITextSharpPdfEnhancer: GetExternalLinkAnnotations");
+
+                    _extLinkAnnotations = new();
+
+                    foreach (var page in _pages)
+                    {
+                        PdfDictionary pageDict = page.Value.PageDictionary;
+                        PdfArray annots = pageDict.GetAsArray(PdfName.Annots);
+
+                        if (annots == null)
+                            continue;
+
+                        for (int j = 0; j < annots.Size; j++)
+                        {
+                            PdfDictionary annot = annots.GetAsDict(j) ?? throw new Exception("Unable to retrieve Annot dictionary");
+                            var subtype = annot.GetAsName(PdfName.Subtype);
+                            if (subtype == PdfName.Link)
+                            {
+                                var action = annot.GetAsDict(PdfName.A);
+
+                                if(action == null)
+                                    continue; //no action, so not an external link
+
+                                if(action.GetAsName(PdfName.S) != PdfName.Gotor)
+                                    continue; //not a remote goto action, so not an external link
+
+                                var filespec = action.GetAsDict(PdfName.F) ?? throw new Exception("Unable to retrieve Filespec (F)");
+                                var fileSpecRef = action.GetAsIndirectObject(PdfName.F) ?? throw new Exception("Unable to retrieve Filespec indirect reference (F)");
+                                var indRef = fileSpecRef.IndRef;
+
+                                if (filespec.GetAsName(PdfName.TYPE) != PdfName.Filespec)
+                                    continue;
+
+                                var f = filespec.GetAsString(PdfName.F) ?? throw new Exception("Unable to retrieve Filespec Filename (F)");
+
+                                if (_extLinkAnnotations.ContainsKey(f.ToUnicodeString()))
+                                {
+                                    _extLinkAnnotations[f.ToUnicodeString()].Add((annot, filespec, indRef));
+                                }
+                                else
+                                {
+                                    _extLinkAnnotations.Add(f.ToUnicodeString(), (new List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>() { (annot, filespec, indRef) }));
+                                }
+                            }
+                        }
+
+                    }
+                }
+                return _extLinkAnnotations;
+            }
+        }
+
+
         Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>>? _fileAttachmentAnnotations;
         private Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>> GetFileAttachmentAnnotations()
         {
@@ -503,7 +580,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             var newIndRef = _stamper.Writer.PdfIndirectReference; //get reference to new DPart object
 
-            var newDPartDict = new PdfDictionary();
+            var newDPartDict = new PdfDictionary();  
             newDPartDict.Put(new PdfName("Type"), new PdfName("DPart"));
             newDPartDict.Put(new PdfName("Parent"), parentIndRef);
 

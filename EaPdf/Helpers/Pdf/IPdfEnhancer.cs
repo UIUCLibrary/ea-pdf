@@ -25,5 +25,10 @@
         /// Remove unnecessary or deprecated elements from the PDF file
         /// </summary>
         public void RemoveUnnecessaryElements();
+
+        /// <summary>
+        /// VeraPDF does not like the link GotoR action pointing to a filespec dictionary, just put the external filename there
+        /// </summary>
+        public void FixGotoRLinks();
     }
 }
