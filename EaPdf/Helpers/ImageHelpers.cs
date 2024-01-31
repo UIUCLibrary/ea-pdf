@@ -112,8 +112,13 @@ namespace UIUCLibrary.EaPdf.Helpers
         private static (int width, int height) DecodeTiff(BinaryReader binaryReader, bool isBigEndian, out string msg)
         {
             int offset = ReadInt32(binaryReader, isBigEndian);
-            
-            binaryReader.BaseStream.Seek(offset, SeekOrigin.Begin);
+
+            int startOffset = 8; //magic number (2) + second magic number (2) + offset (4)
+
+            if (binaryReader.BaseStream.CanSeek)
+                binaryReader.BaseStream.Seek(offset, SeekOrigin.Begin);
+            else
+                _ = binaryReader.ReadBytes(offset - startOffset);
 
             int entryCount = ReadInt16(binaryReader, isBigEndian);
 
