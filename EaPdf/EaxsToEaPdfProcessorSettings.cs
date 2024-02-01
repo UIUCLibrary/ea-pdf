@@ -16,15 +16,6 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public string FontsFolder { get; set; } = "Fonts";
 
-        /// <summary>
-        /// Regular expressions to match font names to base font styles, serif, sans-serif, and monospace
-        /// </summary>
-        public Dictionary<Regex, BaseFontFamily> BaseFontMapping { get; set; } = new Dictionary<Regex, BaseFontFamily>()
-        {
-            {new Regex("sans", RegexOptions.IgnoreCase), BaseFontFamily.SansSerif}, //this must be first so that it matches before serif
-            {new Regex("serif", RegexOptions.IgnoreCase), BaseFontFamily.Serif},
-            {new Regex("mono", RegexOptions.IgnoreCase), BaseFontFamily.Monospace}
-        };
 
         /// <summary>
         /// Mapping of unicode language scripts to font families
