@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Xml;
 
 namespace UIUCLibrary.EaPdf
@@ -10,6 +11,32 @@ namespace UIUCLibrary.EaPdf
     {
         public const string MBOX_FILE_EXTENSION = ".mbox";
         public const string EML_FILE_EXTENSION = ".eml";
+
+        public EmailToEaxsProcessorSettings(IConfiguration config)
+        {
+
+            //the ExtraHtmlCharacterEntities will be replaced by any ExtraHtmlCharacterEntities in the configuration file
+            if (config.AsEnumerable().Any(s => s.Key.StartsWith("EmailToEaxsProcessorSettings:ExtraHtmlCharacterEntities:")))
+            {
+                ExtraHtmlCharacterEntities.Clear();
+            }
+
+            config.Bind("EmailToEaxsProcessorSettings", this);
+
+            ValidateSettings();
+
+        }
+
+
+        public EmailToEaxsProcessorSettings()
+        {
+            ValidateSettings();
+        }
+
+        private void ValidateSettings()
+        {
+            //UNDONE:  Add some validation here
+        }
 
         /// <summary>
         /// The name of the HashAlgorithm to use, must be one of the values in the System.Security.Cryptography.HashAlgorithmNames class.
