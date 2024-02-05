@@ -1,10 +1,54 @@
-﻿using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
-using System.Text.RegularExpressions;
+﻿using Microsoft.Extensions.Configuration;
+using UIUCLibrary.EaPdf.Helpers;
+using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
 
 namespace UIUCLibrary.EaPdf
 {
     public class EaxsToEaPdfProcessorSettings
     {
+        public EaxsToEaPdfProcessorSettings(IConfiguration config) 
+        {
+            //the LanguageFontMapping will be replaced by any LanguageFontMapping in the configuration file
+            if (config.AsEnumerable().Any(s => s.Key.StartsWith("EaxsToEaPdfProcessorSettings:LanguageFontMapping:")))
+            {
+                LanguageFontMapping.Clear();
+            }
+
+            config.Bind("EaxsToEaPdfProcessorSettings", this);
+
+            ValidateSettings();
+
+        }
+
+        public EaxsToEaPdfProcessorSettings()
+        {
+            ValidateSettings();
+        }
+
+        private void ValidateSettings()
+        {
+            //make sure supported scripts are in the ISO 15924 list
+            foreach(var script in LanguageFontMapping)
+            {
+                if (!script.Key.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase) && !UnicodeScriptDetector.GetScripts().Any(s=> s.ShortName.Equals(script.Key, StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new Exception($"Script code '{script.Key}' is not a valid ISO 15924 script code");
+                }
+
+                var families = script.Value;
+
+                if(families == null || families.Count  == 0)
+                {
+                    throw new Exception($"Script code '{script.Key}' does not specify any font families");
+                }   
+            }
+
+            //FUTURE: maybe add some other validations here
+
+            
+        }
+
+
         public string XsltFoFilePath { get; set; } = "XResources\\eaxs_to_fo.xsl";
 
         public string XsltXmpFilePath { get; set; } = "XResources\\eaxs_to_xmp.xsl";
@@ -19,13 +63,18 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// Mapping of unicode language scripts to font families
-        /// First key is a comma-separated list of ISO 15924 4-letter codes for scripts, empty string is the default and must be present in the dictionary with all three base font families
-        /// The second key is the base font family, serif, sans-serif, or monospace; the first key is the default if no base font family is specified
-        /// The value is a comma-separated list of font family names; these names must exist in the FO processor's font configuration
+        /// The outer dictionary key is an ISO 15924 4-letter codes for the script.
+        /// A special entry with key 'default' should be in the dictionary with all three base font families specified. 
+        /// This will be used as the default if a script entry is not found in the list.  Usually, this will be fonts with Latin or Western character sets, but could be fonts for a specific language.
+        /// If a 'default' entry is not present, an entry for 'latn' (Latin) will be used as the default.  If neither 'default' nor 'latn' is found, the first entry in the dictionary will be used 
+        /// as the default which may produce unintended results.
+        /// 
+        /// The inner dictionary key is the BaseFontFamily enum, Serif, SansSerif, or Monospace; the first key is the default if no base font family is specified
+        /// The value of the inner dictionary is a comma-separated list of font family names; these names must exist in the FO processor's font configuration
         /// </summary>
-        public Dictionary<string, Dictionary<BaseFontFamily, string>> LanguageFontMapping { get; set; } = new Dictionary<string, Dictionary<BaseFontFamily, string>>()
+        public Dictionary<string, Dictionary<BaseFontFamily, string>> LanguageFontMapping { get; set; } = new Dictionary<string, Dictionary<BaseFontFamily, string>>(StringComparer.OrdinalIgnoreCase)
         {
-            {string.Empty, new Dictionary<BaseFontFamily, string>() //default fonts should cover most western languages; these should be mapped to actual fonts in the FO processor's font configuration
+            {FontHelpers.DEFAULT_SCRIPT, new Dictionary<BaseFontFamily, string>() //default fonts should cover most western languages; these should be mapped to actual fonts in the FO processor's font configuration
                 {
                     {BaseFontFamily.Serif, SERIF},
                     {BaseFontFamily.SansSerif, SANS_SERIF},
@@ -46,7 +95,21 @@ namespace UIUCLibrary.EaPdf
                     {BaseFontFamily.Monospace, "Simplified Arabic Fixed," + MONOSPACE},
                 }
             },
-            {"hira,kana,hrkt", new Dictionary<BaseFontFamily, string>() //Hiragana, Katakana (Japanese)
+            {"hira", new Dictionary<BaseFontFamily, string>() //Hiragana (Japanese)
+                {
+                    {BaseFontFamily.Serif, "Kurinto Text JP"},
+                    {BaseFontFamily.SansSerif, "Kurinto Sans JP"},
+                    {BaseFontFamily.Monospace, "Kurinto Mono JP"}
+                }
+            },
+            {"kana", new Dictionary<BaseFontFamily, string>() //Katakana (Japanese)
+                {
+                    {BaseFontFamily.Serif, "Kurinto Text JP"},
+                    {BaseFontFamily.SansSerif, "Kurinto Sans JP"},
+                    {BaseFontFamily.Monospace, "Kurinto Mono JP"}
+                }
+            },
+            {"hrkt", new Dictionary<BaseFontFamily, string>() //Hiragana or Katakana (Japanese)
                 {
                     {BaseFontFamily.Serif, "Kurinto Text JP"},
                     {BaseFontFamily.SansSerif, "Kurinto Sans JP"},
@@ -71,12 +134,21 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// Get the default font family names for the given base font family
+        /// This is either the 'default' or 'latn' entry in the LanguageFontMapping, or the first entry if neither of those is present
         /// </summary>
         /// <param name="baseFamily"></param>
         /// <returns></returns>
         public string GetDefaultFontFamily(BaseFontFamily baseFamily)
         {
-            return LanguageFontMapping[string.Empty][baseFamily];
+            if(!LanguageFontMapping.TryGetValue(FontHelpers.DEFAULT_SCRIPT, out Dictionary<BaseFontFamily, string>? families))
+            {
+                if(!LanguageFontMapping.TryGetValue("latn", out families))
+                {
+                    families = LanguageFontMapping.First().Value;
+                }
+            }
+
+            return GetFontFamily(families, baseFamily);
         }
 
         /// <summary>
@@ -90,24 +162,31 @@ namespace UIUCLibrary.EaPdf
         {
             string? ret = null;
 
-            foreach (var entry in LanguageFontMapping)
+            if(LanguageFontMapping.TryGetValue(script, out Dictionary<BaseFontFamily,string>? families))
             {
-                // need to iterate bacause the key is a comma-separated list of scripts
-                if (entry.Key.Contains(script, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (entry.Value.ContainsKey(baseFamily))
-                    {
-                        ret = entry.Value[baseFamily];
-                    }
-                    else
-                    {
-                        ret = entry.Value.First().Value; //default to the first base font family in the dictionary
-                    }
-                    break;
-                }
+                ret = GetFontFamily(families, baseFamily);
             }
 
             return ret;
+        }
+
+        /// <summary>
+        /// Get the font family names for the given famlies and base font family
+        /// Returns the first one if the base font family is not found
+        /// </summary>
+        /// <param name="families"></param>
+        /// <param name="baseFamily"></param>
+        /// <returns></returns>
+        private string GetFontFamily(Dictionary<BaseFontFamily, string> families, BaseFontFamily baseFamily)
+        {
+            if (families.TryGetValue(baseFamily, out string? family))
+            {
+                return family;
+            }
+            else
+            {
+                return families.First().Value; //default to the first base font family in the dictionary
+            }
         }
 
         /// <summary>
@@ -117,13 +196,7 @@ namespace UIUCLibrary.EaPdf
         {
             get
             {
-                List<string> ret = new();
-
-                foreach (var entry in LanguageFontMapping)
-                {
-                    ret.AddRange(entry.Key.Split(','));
-                }
-
+                List<string> ret = LanguageFontMapping.Keys.Where(k=>!k.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase)).ToList();
                 return ret;
             }
         } 

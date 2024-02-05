@@ -10,6 +10,8 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public static class FontHelpers
     {
+        public const string DEFAULT_SCRIPT = "default"; //used to indicate the default font families to use for any script not otherwise specified
+        public const string LATIN_SCRIPT = "latn"; //Latin script
 
         public const string SERIF = "serif";
         public const string SANS_SERIF = "sans-serif";
@@ -20,7 +22,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
             Serif = 0,
             SansSerif = 1,
-            Monospace = 2
+            Monospace = 2  
         }
 
         /// <summary>
