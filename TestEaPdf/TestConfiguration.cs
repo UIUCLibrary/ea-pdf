@@ -40,9 +40,10 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual("SkipUntilMessageId", settings.SkipUntilMessageId);
             Assert.IsTrue(string.IsNullOrEmpty(settings.SkipAfterMessageId));
 
-            Assert.AreEqual(2, settings?.ExtraHtmlCharacterEntities?.Count ?? 0);
+            Assert.AreEqual(3, settings?.ExtraHtmlCharacterEntities?.Count ?? 0);
             Assert.AreEqual(44, settings?.ExtraHtmlCharacterEntities?["COMMA"] ?? 0);
             Assert.AreEqual(46, settings?.ExtraHtmlCharacterEntities?["PERIOD"] ?? 0);
+            Assert.AreEqual(0x22, settings?.ExtraHtmlCharacterEntities?["QUOT"] ?? 0);
         }
 
         [TestMethod]
