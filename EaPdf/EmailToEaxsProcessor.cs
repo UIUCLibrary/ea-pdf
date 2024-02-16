@@ -599,7 +599,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     catch (Exception ex)
                     {
-                        WriteToLogErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message}");
+                        WriteToLogErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message} -- MbxParser.ParseMessage");
                         break; //some error we probably can't recover from, so just bail
                     }
 
@@ -699,7 +699,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     catch (Exception ex)
                     {
-                        WriteToLogErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message}");
+                        WriteToLogErrorMessage(xwriter, $"{ex.GetType().Name}: {ex.Message} -- MimeParser.ParseMessage");
                         break; //some error we probably can't recover from, so just bail
                     }
 
