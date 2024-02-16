@@ -1,8 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.CommandLine;
 using UIUCLibrary.EaPdf;
+using UIUCLibrary.EaPdf.Helpers.Pdf;
 
 
 
@@ -28,11 +30,28 @@ var startAt = new Option<long>("--start-at", () => 0, "The starting integer to u
     IsRequired = false
 };
 
+var foProcessor = new Option<FoProcessor>("--fo", () => FoProcessor.ApacheFop, "The XSL-FO processor to use, defaults to Apache FOP")
+{
+    IsRequired = false
+};
+
+
 //TODO: Refine how loglevel is used, maybe use the more standard verbosity param https://learn.microsoft.com/en-us/dotnet/standard/commandline/syntax#the---verbosity-option  
 var logLevel = new Option<LogLevel>("--log-level", () => LogLevel.Information, "The logging level to use")
 {
-    IsRequired=false
+    IsRequired = false
 };
+
+var xmlConfigFile = new Option<string>("--config", "The XML configuration file to use")
+{
+    IsRequired = false
+};
+
+var fontsFolder = new Option<DirectoryInfo>("--fonts-folder", "The folder containing the fonts to use")
+{
+    IsRequired = false
+};
+
 
 //create the root command
 var rootCommand = new RootCommand("Convert email files to XML")
@@ -41,22 +60,77 @@ var rootCommand = new RootCommand("Convert email files to XML")
     outFolder,
     globalId,
     addresses,
-    startAt
+    startAt,
+    xmlConfigFile,
+    fontsFolder,
+    logLevel
 };
 
 //init the host
-var host = Host.CreateDefaultBuilder(args)
-    .Build();
+var hostBldr = Host.CreateDefaultBuilder(args);
+hostBldr.ConfigureAppConfiguration((hostingContext, config) =>
+{
+    var configFilePath = rootCommand.Parse(args).GetValueForOption(xmlConfigFile);
+    if (configFilePath != null)
+    {
+        if (!File.Exists(configFilePath))
+        {
+            throw new ArgumentException($"Configuration file not found: {configFilePath}");
+        }
+    }
+    var ext = Path.GetExtension(configFilePath) ?? "";
+    if (configFilePath != null && (ext.Equals(".xml", StringComparison.OrdinalIgnoreCase) || ext.Equals(".config", StringComparison.OrdinalIgnoreCase)))
+    {
+        config.AddXmlFile(configFilePath, optional: true);
+    }
+    else if (configFilePath != null && ext.Equals(".json", StringComparison.OrdinalIgnoreCase))
+    {
+        config.AddJsonFile(configFilePath, optional: true);
+    }
+    else if (configFilePath != null)
+    {
+        throw new ArgumentException("Invalid configuration file; must be an .xml, .config, or .json file with one of these extensions.");
+    }
+});
+var host = hostBldr.Build();
 
 //get the logger
 var logger = host.Services.GetRequiredService<ILogger<EmailToEaxsProcessor>>();
 
+//get the configuration
+var config = host.Services.GetRequiredService<IConfiguration>();
+
+//set the command handler
 rootCommand.SetHandler((mboxFilePath, outFolderPath, globalId, accntEmails, startingLocalId) => 
+    Process(mboxFilePath, outFolderPath, globalId, accntEmails, startingLocalId),
+    inFileFolder, outFolder, globalId, addresses, startAt);
+
+//run the command
+var ret = await rootCommand.InvokeAsync(args);
+
+host.Dispose();
+
+return ret;
+
+/// <summary>Run the command</summary>
+Task<int> Process(FileSystemInfo mboxFilePath, DirectoryInfo outFolderPath, Uri globalId, IEnumerable<string> accntEmails, long startingLocalId)
 {
+
+    if (!mboxFilePath.Exists)
+    {
+        logger.LogError("The --in '{mboxFilePath}' file or folder does not exist.", mboxFilePath);
+        return Task.FromResult(1);
+    }
+
+    if(mboxFilePath is DirectoryInfo dir)
+    {
+    }
+
     int ret = 0; //Successful return value
-    
-    //TODO: Get settings from command line options
-    var settings = new EmailToEaxsProcessorSettings();
+
+
+    //Init settings from configuration
+    var settings = new EmailToEaxsProcessorSettings(config);
 
     var emailProc = new EmailToEaxsProcessor(logger, settings);
 
@@ -74,13 +148,5 @@ rootCommand.SetHandler((mboxFilePath, outFolderPath, globalId, accntEmails, star
     }
 
 
-    Task.FromResult(ret);
-}, 
-inFileFolder, outFolder, globalId, addresses, startAt);
-
-var ret = await rootCommand.InvokeAsync(args);
-
-host.Dispose();
-
-return ret;
-
+    return Task.FromResult(ret);
+}

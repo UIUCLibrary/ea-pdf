@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "EaPdfCmd": {
+      "commandName": "Project",
+      "commandLineArgs": "--in \"D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\DLF Distributed Library\" --out \"D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\CmdOut\" --global-id mailto:thabing@illinois.edu --fonts-folder junkd --log-level Warning"
+    }
+  }
+}
