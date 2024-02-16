@@ -2,6 +2,16 @@
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
+    /// <summary>
+    /// The XSL-FO processors that can be used
+    /// When a new processor is added, add it to this enum 
+    /// </summary>
+    public enum FoProcessor
+    {
+        ApacheFop,
+        RenderXXep
+    }
+
     public interface IXslFoTransformer
     {
 

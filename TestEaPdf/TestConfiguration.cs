@@ -23,6 +23,21 @@ namespace UIUCLibrary.TestEaPdf
             CheckEmailToEaxsProcessorSettings(settings);
         }
 
+        [TestMethod]
+        public void TestAppSettingsJson()
+        {
+            var config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+                .Build();
+
+            var settings1 = new EmailToEaxsProcessorSettings(config);
+
+            var settings2 = new EaxsToEaPdfProcessorSettings(config);
+
+            CheckEmailToEaxsProcessorSettings(settings1);
+            CheckEaxsToEaPdfProcessorSettings(settings2);
+        }
+
         private void CheckEmailToEaxsProcessorSettings(EmailToEaxsProcessorSettings settings)
         {
             Assert.AreEqual("MD5", settings.HashAlgorithmName);
