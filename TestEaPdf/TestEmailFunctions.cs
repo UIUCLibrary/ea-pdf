@@ -68,15 +68,15 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, false, 0, 0, 384, DisplayName = "moz-dlf-sha1")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, false, false, 0, 0, 384, DisplayName = "moz-dlf-sha256")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, false, false, 0, 0, 475, DisplayName = "moz-dlf-sha256-ext")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, false, true, false, 0, 11, 852, DisplayName = "moz-dlf-sha256-ext---includeSubs")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap--includeSubs", "SHA256", true, true, false, false, true, false, 0, 11, 852, DisplayName = "moz-dlf-sha256-ext-wrap--includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, false, true, false, 0, 20, 852, DisplayName = "moz-dlf-sha256-ext---includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap--includeSubs", "SHA256", true, true, false, false, true, false, 0, 20, 852, DisplayName = "moz-dlf-sha256-ext-wrap--includeSubs")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, false, false, 0, 0, 475, DisplayName = "moz-dlf-sha256-ext-wrap")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEncBin", "SHA256", true, true, true, false, false, false, 0, 0, 475, DisplayName = "moz-dlf-sha256-ext-wrap-presvEncBin")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEncBoth", "SHA256", true, true, true, true, false, false, 0, 0, 475, DisplayName = "moz-dlf-sha256-ext-wrap-presvEncBoth")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEncText", "SHA256", true, true, false, true, false, false, 0, 0, 475, DisplayName = "moz-dlf-sha256-ext-wrap-presvEncText")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, false, true, false, 0, 11, 705, DisplayName = "moz-dlf-sha256----includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, false, true, false, 0, 20, 705, DisplayName = "moz-dlf-sha256----includeSubs")]
         //Test maximum output file size
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000", "SHA256", false, false, false, false, true, false, 0, 11, 705, false, 10000000, DisplayName = "moz-dlf-sha256----includeSubs-10000000")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000", "SHA256", false, false, false, false, true, false, 0, 20, 705, false, 10000000, DisplayName = "moz-dlf-sha256----includeSubs-10000000")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEncBin", "SHA256", false, false, true, false, false, false, 0, 0, 384, DisplayName = "moz-dlf-sha256---presvEncBin")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEncBoth", "SHA256", false, false, true, true, false, false, 0, 0, 384, DisplayName = "moz-dlf-sha256---presvEncBoth")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEncText", "SHA256", false, false, false, true, false, false, 0, 0, 384, DisplayName = "moz-dlf-sha256---presvEncText")]
@@ -84,13 +84,13 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, false, false, 0, 0, 26, DisplayName = "moz-drafts")]
         [DataRow("MozillaThunderbird\\Inbox", "", "SHA256", false, false, false, false, false, false, 0, 0, 21, DisplayName = "moz-inbox")]
         //Mozilla include subs and one file per file
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext--oneper-includeSubs", "SHA256", true, false, false, false, true, true, 0, 11, 852, DisplayName = "moz-dlf-sha256-ext--oneper-includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext--oneper-includeSubs", "SHA256", true, false, false, false, true, true, 0, 20, 852, DisplayName = "moz-dlf-sha256-ext--oneper-includeSubs")]
 
         //Pine mbox folder
-        [DataRow("Pine", "pine-out-ext", "SHA256", true, false, false, false, false, false, 0, 70, 22910, DisplayName = "pine-folder-one-file-ext")]
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 70, 20799, DisplayName = "pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 70, 20799, DisplayName = "pine-folder-one-file-in-subfolder")]
-        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 70, 20799, DisplayName = "pine-folder-one-file-per-in-subfolder")]
+        [DataRow("Pine", "pine-out-ext", "SHA256", true, false, false, false, false, false, 0, 69, 22910, DisplayName = "pine-folder-one-file-ext")]
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 69, 20799, DisplayName = "pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 69, 20799, DisplayName = "pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 69, 20799, DisplayName = "pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 6, 1301, DisplayName = "pine-sent-mail-aug-2007")] //not an mbox file
         [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000", "SHA256", false, false, false, false, false, false, 0, 1, 100, DisplayName = "pine-sent-mail-mar-2000")] //incomplete message because of unmangled 'From ' line
@@ -107,6 +107,20 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Weird\\virus_notif.mbox", "", "SHA256", false, false, false, false, false, false, 0, 1, 2, DisplayName = "weird-virus-notif-mbox")] //weird virus notification with multipart/report, message/delivery-report. and text/rfc822-headers content types
         [DataRow("Weird\\virus_payload.mbox", "out_virus_payload", "SHA256", true, false, false, false, false, false, 0, 1, 2, DisplayName = "weird-virus-payload-mbox")] //message from very large mbox which contains a virus payload
         [DataRow("Weird\\bad-dates.mbox", "out_bad-dates", "SHA256", true, false, false, false, false, false, 0, 11, 70, DisplayName = "weird-bad-dates-mbox")] //messages with deliberately bad date formats, or missing dates
+
+        //forceParse false, if file does not appear to be an mbox file, it will not be parsed
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs-noforce", "SHA256", true, false, false, false, true, false, 0, 11, 852, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "moz-dlf-sha256-ext---includeSubs-noforce")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext--oneper-includeSubs-noforce", "SHA256", true, false, false, false, true, true, 0, 11, 852, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "moz-dlf-sha256-ext--oneper-includeSubs-noforce")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap--includeSubs-noforce", "SHA256", true, true, false, false, true, false, 0, 11, 852, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "moz-dlf-sha256-ext-wrap--includeSubs-noforce")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-noforce", "SHA256", false, false, false, false, true, false, 0, 11, 705, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "moz-dlf-sha256----includeSubs-noforce")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000-noforce", "SHA256", false, false, false, false, true, false, 0, 11, 705, false, 10000000, false, null, MimeFormat.Mbox, false, DisplayName = "moz-dlf-sha256----includeSubs-10000000-noforce")]
+
+        [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007-noforce", "SHA256", false, false, false, false, false, false, 0, 6, 1301, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "pine-sent-mail-aug-2007-noforce")] //not an mbox file
+        [DataRow("Pine\\sent-mail-mar-2000", "pine-sent-mail-mar-2000-noforce", "SHA256", false, false, false, false, false, false, 0, 1, 100, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "pine-sent-mail-mar-2000-noforce")] //incomplete message because of unmangled 'From ' line
+        [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006-noforce", "SHA256", false, false, false, false, false, false, 0, 0, 466, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "pine-sent-mail-jul-2006-noforce")] //not an mbox file
+        [DataRow("Pine\\sent-mail-jun-2004", "pine-sent-mail-jun-2004-noforce", "SHA256", false, false, false, false, false, false, 0, 1, 418, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "pine-sent-mail-jun-2004-noforce")] //not an mbox file
+        [DataRow("Pine\\sent-mail-jun-2000", "pine-sent-mail-jun-2000-noforce", "SHA256", false, false, false, false, false, false, 0, 0, 122, false, 0, false, null, MimeFormat.Mbox, false, DisplayName = "pine-sent-mail-jun-2000-noforce")] //LF and UNKNOWN Eols
+
 
         [DataTestMethod]
         public void TestSampleMboxFiles
@@ -127,7 +141,8 @@ namespace UIUCLibrary.TestEaPdf
             long maxOutFileSize = 0,
             bool xhtml = false, //default to not creating the xhtml content
             string? oneMsgId = null, //just process the one message with this id 
-            MimeFormat format = MimeFormat.Mbox
+            MimeFormat format = MimeFormat.Mbox,
+            bool forceParse = true //default to forcing the parser to parse the file even if it doesn't look like the right format
             )
         {
 
@@ -152,7 +167,8 @@ namespace UIUCLibrary.TestEaPdf
                     MaximumXmlFileSize = maxOutFileSize,
                     SaveTextAsXhtml = xhtml,
                     SkipUntilMessageId = skipUntilMessageId,
-                    SkipAfterMessageId = skipAfterMessageId
+                    SkipAfterMessageId = skipAfterMessageId,
+                    ForceParse = forceParse
                 };
 
                 //Also save the sample test files in the test project and automate the folder setup and cleanup
@@ -170,11 +186,18 @@ namespace UIUCLibrary.TestEaPdf
 
                 var validMessageCount = ConvertMessagesAndCheckCounts(eProc, format, sampleFile, outFolder, expectedCounts);
 
-                List<string> expectedXmlFiles = CheckOutputFolderAndGetXmlFiles(expectedOutFolder, outFolder, sampleFile, includeSubs, oneFilePerMbox);
+                InputFileType ftype = format switch
+                {
+                    MimeFormat.Mbox => InputFileType.MboxFile,
+                    MimeFormat.Entity => InputFileType.EmlFile,
+                    _ => InputFileType.UnknownFile
+                };
+
+                List<string> expectedXmlFiles = CheckOutputFolderAndGetXmlFiles(expectedOutFolder, outFolder, sampleFile, includeSubs, oneFilePerMbox, forceParse, ftype);
 
                 if (quick) return;
 
-                ValidateXmlFiles(logger, expectedXmlFiles, outFolder, settings, hashAlg, expectedErrors, expectedWarnings, validMessageCount, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, relInPath);
+                ValidateXmlFiles(logger, expectedXmlFiles, outFolder, settings, hashAlg, expectedErrors, expectedWarnings, validMessageCount, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, relInPath, forceParse);
 
             }
             else
@@ -184,7 +207,8 @@ namespace UIUCLibrary.TestEaPdf
         }
 
         //An EML file without the 'From ' header should not work if parsed with the Mbox parser
-        [DataRow("Gmail\\true_eml_files\\2016-06-23 135245 d87d0cbbd2.eml", "..\\eml_out_as_mbox", "SHA256", false, false, false, false, false, false, 0, 1, 0, DisplayName = "parse-eml-as-mbox")] //EML file without the mbox 'From ' line
+        [DataRow("Gmail\\true_eml_files\\2016-06-23 135245 d87d0cbbd2.eml", "..\\eml_out_as_mbox_force", "SHA256", false, false, false, false, false, false, 0, 2, 0, true, DisplayName = "parse-eml-as-mbox-force")] //EML file without the mbox 'From ' line, force parse
+        [DataRow("Gmail\\true_eml_files\\2016-06-23 135245 d87d0cbbd2.eml", "..\\eml_out_as_mbox", "SHA256", false, false, false, false, false, false, 1, 0, 0, false, DisplayName = "parse-eml-as-mbox")] //EML file without the mbox 'From ' line
 
         [DataTestMethod]
         public void TestEmlAsMbox(
@@ -200,26 +224,87 @@ namespace UIUCLibrary.TestEaPdf
             int expectedErrors,
             int expectedWarnings,
             int expectedCounts, //default to check everything
+            bool forceParse, //default to forcing the parser to parse the file even if it doesn't look like the right format
             bool quick = false, //default to no max
             long maxOutFileSize = 0,
             bool xhtml = false, //default to not creating the xhtml content
             string? oneMsgId = null //just process the one message with this id 
             )
         {
+            MimeFormat format = MimeFormat.Mbox;
             TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Mbox);
+                quick, maxOutFileSize, xhtml, oneMsgId, format, forceParse);
 
-            var wrn = loggedLines.Where(l => l.Contains("Failed to find mbox From marker"));
+            var wrn = loggedLines.Where(l => l.Contains($"does not appear to be an '{MimeKitHelpers.GetFormatName(format)}' file"));
             Assert.IsNotNull(wrn);
             Assert.AreEqual(1, wrn.Count());
+
+            var wrn2 = loggedLines.Where(l => l.Contains("Failed to find mbox From marker"));
+            Assert.IsNotNull(wrn2);
+            if (forceParse)
+            {
+                Assert.AreEqual(1, wrn2.Count());
+            }
+            else
+            {
+                Assert.AreEqual(0, wrn2.Count());
+            }
+
+
         }
 
         //An mbox file with the 'From ' header should not work if parsed with the Entity parser
         //The Entity parser will correctly parse the first message in the file, but will fail to parse the second message, instead the Epilogue of the first messages body will contain all the text from the remaining messages
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "DLF_ENTITY", "SHA256", false, false, false, false, false, false, 1, 1, 1, DisplayName = "parse-mbox-as-eml")] //mbox file with the 'From ' lines separating the messages
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "DLF_ENTITY_FORCE", "SHA256", false, false, false, false, false, false, 1, 2, 1, true, DisplayName = "parse-mbox-as-eml-force")] //mbox file with the 'From ' lines separating the messages, force parsing
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "DLF_ENTITY", "SHA256", false, false, false, false, false, false, 1, 0, 0, false, DisplayName = "parse-mbox-as-eml")] //mbox file with the 'From ' lines separating the messages
 
         [DataTestMethod]
         public void TestMboxAsEml(
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool forceParse, //default to forcing the parser to parse the file even if it doesn't look like the right format
+            bool quick = false, //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
+            )
+        {
+            MimeFormat format = MimeFormat.Entity;
+            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId, format, forceParse);
+
+            var wrn = loggedLines.Where(l => l.Contains($"does not appear to be an '{MimeKitHelpers.GetFormatName(format)}' file"));
+            Assert.IsNotNull(wrn);
+            Assert.AreEqual(1, wrn.Count());
+
+            var err = loggedLines.Where(l => l.Contains("The file may be corrupt"));
+            Assert.IsNotNull(err);
+            if(forceParse)
+            {
+                Assert.AreEqual(1, err.Count());
+            }
+            else
+            {
+                Assert.AreEqual(0, err.Count());
+            }
+        }
+
+
+        //When the MBOX file has leading whitespace or other junk text before the first 'From ' line, the MimeKit parser will skip over the whitespace and junk and parse the file correctly
+        [DataRow("MozillaThunderbird\\Inbox_leading_whitespaces", "DLF_LEADING_SP", "SHA256", false, false, false, false, false, false, 0, 1, 21, DisplayName = "parse-mbox-with-leading-sp")] //mbox file with leading whitespace before the first 'From ' lines separating the messages
+
+        [DataTestMethod]
+        public void TestMboxWithLeadingWhitespace(
             string relInPath,
             string relOutPath,
             string hashAlg,
@@ -238,13 +323,69 @@ namespace UIUCLibrary.TestEaPdf
             string? oneMsgId = null //just process the one message with this id 
             )
         {
+            MimeFormat format = MimeFormat.Mbox;
             TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId, MimeFormat.Entity);
+                quick, maxOutFileSize, xhtml, oneMsgId, format);
 
-            var err = loggedLines.Where(l => l.Contains("The file may be corrupt"));
-            Assert.IsNotNull(err);
-            Assert.AreEqual(1, err.Count());
+            var wrn = loggedLines.Where(l => l.Contains("the leading characters were ignored"));
+            Assert.IsNotNull(wrn);
+            Assert.AreEqual(1, wrn.Count());
+
+
         }
+
+        //When the EML file has leading whitespace before the first headers, the MimeKit parser will fail with a "FormatException: End of stream" and the email converter will treat the whole message,
+        //including subsequent headers, as a single body w/o any headers at all.  There will also be warnings about the missing headers
+        [DataRow("Gmail\\leading_white_space.eml", "LEADING_SP_FORCE", "SHA256", false, false, false, false, false, false, 1, 4, 1, true, DisplayName = "parse-eml-with-leading-sp-force")] //eml file with leading whitespace before the first header line, force parsing
+        [DataRow("Gmail\\leading_white_space.eml", "LEADING_SP", "SHA256", false, false, false, false, false, false, 1, 0, 0, false, DisplayName = "parse-eml-with-leading-sp")] //eml file with leading whitespace before the first header line
+
+        [DataTestMethod]
+        public void TestEmlWithLeadingWhitespace(
+            string relInPath,
+            string relOutPath,
+            string hashAlg,
+            bool extContent,
+            bool wrapExtInXml,
+            bool preserveBinaryEnc,
+            bool preserveTextEnc,
+            bool includeSub,
+            bool oneFilePerMbox,
+            int expectedErrors,
+            int expectedWarnings,
+            int expectedCounts, //default to check everything
+            bool forceParse, //default to forcing the parser to parse the file even if it doesn't look like the right format
+            bool quick = false, //default to no max
+            long maxOutFileSize = 0,
+            bool xhtml = false, //default to not creating the xhtml content
+            string? oneMsgId = null //just process the one message with this id 
+            )
+        {
+
+            string tempBase = testFilesBaseDirectory;
+
+            MimeFormat format = MimeFormat.Entity;
+            //Settings.ForceParse = true;
+            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+                quick, maxOutFileSize, xhtml, oneMsgId, format, forceParse);
+
+            var wrn = loggedLines.Where(l => l.Contains($"does not appear to be an '{MimeKitHelpers.GetFormatName(format)}' file"));
+            Assert.IsNotNull(wrn);
+            Assert.AreEqual(1, wrn.Count());
+
+            var err = loggedLines.Where(l => l.Contains("FormatException: End of stream"));
+            Assert.IsNotNull(err);
+            if (forceParse)
+            {
+                Assert.AreEqual(1, err.Count());
+            }
+            else
+            {
+                Assert.AreEqual(0, err.Count());
+            }
+
+
+        }
+
 
 
         //A single normal EML file 
@@ -298,13 +439,13 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha1", "SHA1", false, false, false, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha1")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256", "SHA256", false, false, false, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha256")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext", "SHA256", true, false, false, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, false, true, false, 0, 53, 852, DisplayName = "xhtml-moz-dlf-sha256-ext---includeSubs")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap--includeSubs", "SHA256", true, true, false, false, true, false, 0, 53, 852, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap--includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext---includeSubs", "SHA256", true, false, false, false, true, false, 0, 62, 852, DisplayName = "xhtml-moz-dlf-sha256-ext---includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap--includeSubs", "SHA256", true, true, false, false, true, false, 0, 62, 852, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap--includeSubs")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap", "SHA256", true, true, false, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256-ext-wrap-presvEnc", "SHA256", true, true, true, false, false, false, 0, 9, 475, DisplayName = "xhtml-moz-dlf-sha256-ext-wrap-presvEnc")]
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, false, true, false, 0, 53, 705, DisplayName = "xhtml-moz-dlf-sha256----includeSubs")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs", "SHA256", false, false, false, false, true, false, 0, 62, 705, DisplayName = "xhtml-moz-dlf-sha256----includeSubs")]
         //Test maximum output file size
-        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000", "SHA256", false, false, false, false, true, false, 0, 53, 705, false, 10000000, DisplayName = "xhtml-moz-dlf-sha256----includeSubs-10000000")]
+        [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256----includeSubs-10000000", "SHA256", false, false, false, false, true, false, 0, 62, 705, false, 10000000, DisplayName = "xhtml-moz-dlf-sha256----includeSubs-10000000")]
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "dlf-sha256---presvEnc", "SHA256", false, false, true, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha256---presvEnc")]
         //Mozilla special files
         [DataRow("MozillaThunderbird\\Drafts", "", "SHA256", false, false, false, false, false, false, 0, 0, 26, DisplayName = "xhtml-moz-drafts")]
@@ -312,9 +453,9 @@ namespace UIUCLibrary.TestEaPdf
 
 
         //Pine mbox folder
-        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 584, 20799, DisplayName = "xhtml-pine-folder-one-file")]
-        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 584, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
-        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 584, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
+        [DataRow("Pine", "", "SHA256", false, false, false, false, false, false, 0, 583, 20799, DisplayName = "xhtml-pine-folder-one-file")]
+        [DataRow("Pine", "pine-out-one", "SHA256", false, false, false, false, false, false, 0, 583, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "pine-out-many", "SHA256", false, false, false, false, false, true, 0, 583, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-aug-2007", "pine-sent-mail-aug-2007", "SHA256", false, false, false, false, false, false, 0, 278, 1301, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
         [DataRow("Pine\\sent-mail-jul-2006", "pine-sent-mail-jul-2006", "SHA256", false, false, false, false, false, false, 0, 1, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
@@ -404,7 +545,8 @@ namespace UIUCLibrary.TestEaPdf
             bool quick = false, //if true, it skips the xml validation
             long maxOutFileSize = 0,
             bool xhtml = true, //default to not creating the xhtml content
-            string? oneMsgId = null
+            string? oneMsgId = null,
+            bool forceParse = true //TODO: run the tests with forceParse = false
             )
         {
             TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSubs, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
@@ -417,7 +559,7 @@ namespace UIUCLibrary.TestEaPdf
                 var sampleFile = Path.Combine(testFilesBaseDirectory, testFileName);
                 (_, string outFolder) = GetOutFolder(sampleFile, relOutPath);
 
-                validXml = ValidateXmlDocuments(includeSubs, oneFilePerMbox, sampleFile, outFolder);
+                validXml = ValidateXmlDocuments(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, InputFileType.MboxFile);
 
                 Assert.IsTrue(validXml, "Invalid XML file.");
 
@@ -540,7 +682,7 @@ namespace UIUCLibrary.TestEaPdf
             return validMessageCount;
         }
 
-        private static List<string> CheckOutputFolderAndGetXmlFiles(string expectedOutFolder, string outFolder, string sampleFile, bool includeSubs, bool oneFilePerMbox)
+        private static List<string> CheckOutputFolderAndGetXmlFiles(string expectedOutFolder, string outFolder, string sampleFile, bool includeSubs, bool oneFilePerMbox, bool forceParse, InputFileType ftype)
         {
             //make sure output folders and files exist
             Assert.AreEqual(expectedOutFolder, outFolder);
@@ -549,7 +691,7 @@ namespace UIUCLibrary.TestEaPdf
             string csvPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "csv"));
             Assert.IsTrue(File.Exists(csvPathStr));
 
-            List<string> expectedXmlFiles = Helpers.GetExpectedFiles(includeSubs, oneFilePerMbox, sampleFile, outFolder);
+            List<string> expectedXmlFiles = Helpers.GetExpectedFiles(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, ftype);
 
             Assert.IsTrue(expectedXmlFiles.Count > 0, "Expected at least one xml file");
 
@@ -568,7 +710,8 @@ namespace UIUCLibrary.TestEaPdf
             bool wrapExtInXml,
             bool preserveBinaryEnc,
             bool preserveTextEnc,
-            string relInPath
+            string relInPath, 
+            bool forceParse
             )
         {
             ValidateErrorAndWarningCounts(expectedErrors, expectedWarnings);
@@ -672,6 +815,11 @@ namespace UIUCLibrary.TestEaPdf
 
                 ValidatePhantomBodies(xDoc, xmlns);
 
+                if (!forceParse)
+                {
+                    ValidateSkippedFiles(xDoc, xmlns);
+                }
+
                 if (relInPath == "MozillaThunderbird\\Drafts")
                 {
                     //make sure each message is marked as draft
@@ -682,6 +830,26 @@ namespace UIUCLibrary.TestEaPdf
 
             }
 
+        }
+
+        //make sure there are no empty folders for skipped files
+        private static void ValidateSkippedFiles(XmlDocument xDoc, XmlNamespaceManager xmlns)
+        {
+            var foldersNoMessages = xDoc.SelectNodes("//xm:Folder[not(xm:Message) and not(xm:Folder)]", xmlns);
+            if(foldersNoMessages != null)
+            {
+                foreach (XmlElement folder in foldersNoMessages)
+                {
+                    var comments = folder.SelectNodes("comment()[starts-with(. , 'WARNING:') or starts-with(. , 'ERROR:')]", xmlns);
+                    if(comments != null)
+                    {
+                        foreach(XmlNode comment in comments)
+                        {
+                            Assert.IsFalse(comment.InnerText.Contains("does not appear to be an"));
+                        }
+                    }
+                }
+            }
         }
 
         private static void ValidatePhantomBodies(XmlDocument xDoc, XmlNamespaceManager xmlns)
@@ -1043,12 +1211,15 @@ namespace UIUCLibrary.TestEaPdf
             XmlNode? relPath = msgFilePropElem.SelectSingleNode("xm:RelPath", xmlns);
             string absPath = Path.Combine(outFolder, relPath?.InnerText ?? "");
 
-            //make sure hashes match
-            Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
-            Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
+            if(hashFuncNd != null && hashValueNd != null )
+            {
+                //if there is a hash, make sure hashes match
+                Assert.AreEqual(settings.HashAlgorithmName, hashFuncNd?.InnerText);
+                Assert.AreEqual(hashAlg, hashFuncNd?.InnerText);
 
-            var expectedHash = Helpers.CalculateHash(hashAlg, absPath);
-            Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
+                var expectedHash = Helpers.CalculateHash(hashAlg, absPath);
+                Assert.AreEqual(expectedHash, hashValueNd?.InnerText);
+            }
 
             //make sure size match
             FileInfo fi = new(absPath);
@@ -1112,9 +1283,9 @@ namespace UIUCLibrary.TestEaPdf
         /// <param name="sampleFile"></param>
         /// <param name="outFolder"></param>
         /// <returns></returns>
-        private bool ValidateXmlDocuments(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder)
+        private bool ValidateXmlDocuments(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, InputFileType ftype)
         {
-            List<string> expectedXmlFiles = Helpers.GetExpectedFiles(includeSubs,oneFilePerMbox, sampleFile, outFolder);
+            List<string> expectedXmlFiles = Helpers.GetExpectedFiles(includeSubs,oneFilePerMbox, sampleFile, outFolder, forceParse, ftype);
 
             validXml = true;
 

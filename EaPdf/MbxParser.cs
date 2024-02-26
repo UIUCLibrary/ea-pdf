@@ -1,7 +1,9 @@
 ﻿using MimeKit;
+using System;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using UIUCLibrary.EaPdf.Helpers;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -45,6 +47,12 @@ namespace UIUCLibrary.EaPdf
             //skip the first 2048 bytes, which is the mbx file header
             var mbxHeader = new byte[2048];
             _cryptoStream.Read(mbxHeader, 0, mbxHeader.Length);
+
+            //make sure the file is in the Pine email format by looking for magic header
+            if (!MimeKitHelpers.PineMbxMagicHeader.SequenceEqual(mbxHeader[0..5]))
+            {
+                throw new FormatException("File is not in Pine email format");
+            }
 
             _prevMessageState = MbxParserState.Normal;
         }

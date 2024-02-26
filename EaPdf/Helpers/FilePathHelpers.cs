@@ -1,6 +1,5 @@
 ﻿using MimeKit;
 using NDepend.Path;
-using Org.BouncyCastle.Ocsp;
 using System.Text.RegularExpressions;
 using Wiry.Base32;
 
@@ -8,6 +7,62 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public static class FilePathHelpers
     {
+
+        /// <summary>
+        /// Look for a subfolder name which matches the given file name, ignoring extensions
+        /// i.e. Mozilla Thunderbird will append the extension '.sbd' to the folder name
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static string? GetSubfolderNameMatchingFileName(string filePath, out string message)
+        {
+            message = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentNullException(nameof(filePath));
+
+            string dirName = Path.GetDirectoryName(filePath) ?? "";
+            if(string.IsNullOrWhiteSpace(dirName))
+                throw new ArgumentException($"The directory name of '{filePath}' is empty; filePath must be the absolute path of a file.");
+
+            string fileName = Path.GetFileName(filePath);
+            if (string.IsNullOrWhiteSpace(fileName))
+                throw new ArgumentException($"The file name of '{filePath}' is empty; filePath must be the absolute path of a file.");
+
+
+            string? subfolderName = null;
+
+            string[]? subfolders = Directory.GetDirectories(dirName, $"{fileName}.*"); //first look for folders matching the parent name, including extension
+            if (subfolders == null || subfolders.Length == 0)
+            {
+                //if not found, look for names matching the parent without extension
+                subfolders = Directory.GetDirectories(dirName, $"{Path.GetFileNameWithoutExtension(fileName)}.*");
+            }
+
+            if (subfolders != null)
+            {
+                try
+                {
+                    subfolderName = subfolders.SingleOrDefault();
+                }
+                catch (InvalidOperationException)
+                {
+                    message = $"There is more than one folder that matches '{fileName}.*'; skipping all subfolders";
+                    subfolderName = null;
+                }
+                catch (Exception ex)
+                {
+                    message = $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}";
+                    subfolderName = null;
+                }
+            }
+
+            return subfolderName;
+        }
+
+
 
         public const string XML_WRAPPED_EXT  = ".xmlw";
 
@@ -47,13 +102,13 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <exception cref="Exception"></exception>
         public static string GetFilePathWithoutIncrementNumber(string filePath)
         {
-            string ret = filePath;
 
             //strip off the file number from the end
             string ext = Path.GetExtension(filePath);
             string name = Path.GetFileNameWithoutExtension(filePath);
             string dir = Path.GetDirectoryName(filePath) ?? "";
 
+            string ret;
             if (Regex.IsMatch(name, "_\\d\\d\\d\\d$"))
             {
                 name = name[..^5];

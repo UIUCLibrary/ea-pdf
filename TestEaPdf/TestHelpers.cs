@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RoyT.TrueType;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UIUCLibrary.EaPdf.Helpers;
 using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
@@ -12,6 +13,103 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestHelpers
     {
+        [TestMethod]
+        public void TestIsMbox()
+        {
+            string sampleMboxFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\inbox";
+            string sampleMboxSpFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\Inbox_leading_whitespaces";
+            string sampleMbxFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\Pine\\sent-mail-sep-2006";
+            string sampleEmlFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\Non-Western\\Arabic\\FW Arabic email testing.eml";
+            string sampleEmlSpFile = "D:\\EmailsForTesting\\SampleFiles\\Testing\\Gmail\\leading_white_space.eml";
+
+            Assert.IsTrue(MimeKitHelpers.IsMboxFile(sampleMboxFile, out string leader1));
+            Assert.IsTrue(string.IsNullOrEmpty(leader1));
+            Assert.IsTrue(MimeKitHelpers.IsMboxFile(sampleMboxSpFile, out string leader2)); //leading white space is a valid mbox file
+            Assert.IsFalse(string.IsNullOrEmpty(leader2));
+            Assert.IsFalse(MimeKitHelpers.IsMboxFile(sampleMbxFile, out string leader3));
+            Assert.IsTrue(string.IsNullOrEmpty(leader3));
+            Assert.IsFalse(MimeKitHelpers.IsMboxFile(sampleEmlFile, out string leader4));
+            Assert.IsTrue(string.IsNullOrEmpty(leader4));
+            Assert.IsFalse(MimeKitHelpers.IsMboxFile(sampleEmlSpFile, out string leader5));
+            Assert.IsTrue(string.IsNullOrEmpty(leader5));
+
+            Assert.IsFalse(MimeKitHelpers.IsEmlFile(sampleMboxFile));
+            Assert.IsFalse(MimeKitHelpers.IsEmlFile(sampleMboxSpFile));
+            Assert.IsFalse(MimeKitHelpers.IsEmlFile(sampleMbxFile));
+            Assert.IsTrue(MimeKitHelpers.IsEmlFile(sampleEmlFile));
+            Assert.IsFalse(MimeKitHelpers.IsEmlFile(sampleEmlSpFile));  //leading white space is not a valid eml file
+
+            Assert.IsFalse(MimeKitHelpers.IsPineMbxFile(sampleMboxFile));
+            Assert.IsFalse(MimeKitHelpers.IsPineMbxFile(sampleMboxSpFile));
+            Assert.IsTrue(MimeKitHelpers.IsPineMbxFile(sampleMbxFile));
+            Assert.IsFalse(MimeKitHelpers.IsPineMbxFile(sampleEmlFile));
+            Assert.IsFalse(MimeKitHelpers.IsPineMbxFile(sampleEmlSpFile));
+
+            var typ1 = MimeKitHelpers.DetermineInputType(sampleMboxFile, out string leadin1);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin1));
+            Assert.AreEqual(InputType.MboxFile, typ1);
+            var typ2 = MimeKitHelpers.DetermineInputType(sampleMboxSpFile, out string leadin2);
+            Assert.IsFalse(string.IsNullOrEmpty(leadin2));
+            Assert.AreEqual(InputType.MboxFile, typ2);
+            var typ3 = MimeKitHelpers.DetermineInputType(sampleMbxFile, out string leadin3);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin3));
+            Assert.AreEqual(InputType.MboxFile, typ3);
+            var typ4 = MimeKitHelpers.DetermineInputType(sampleEmlFile, out string leadin4);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin4));
+            Assert.AreEqual(InputType.EmlFile, typ4);
+            var typ5 = MimeKitHelpers.DetermineInputType(sampleEmlSpFile, out string leadin5);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin5));
+            Assert.AreEqual(InputType.UnknownFile, typ5); //leading white space is not a valid eml file
+
+            var typ1d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMboxFile) ?? ".", out string leadin1d);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin1d));
+            Assert.AreEqual(InputType.MboxFolder, typ1d);
+            var typ2d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMboxSpFile) ?? ".", out string leadin2d);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin2d));
+            Assert.AreEqual(InputType.MboxFolder, typ2d);
+            var typ3d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMbxFile) ?? ".", out string leadin3d);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin3d));
+            Assert.AreEqual(InputType.MixedFolder, typ3d); //mixed folder because the Pine folder contains both mbox and eml files
+            var typ4d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlFile) ?? ".", out string leadin4d);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin4d));
+            Assert.AreEqual(InputType.EmlFolder, typ4d);
+            var typ5d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlSpFile) ?? ".", out string leadin5d);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin5d));
+            Assert.AreEqual(InputType.MboxFolder, typ5d); //leading white space is not a valid eml file, but the folder contains other valid mbox files
+
+            var typ1s = MimeKitHelpers.DetermineInputType(sampleMboxFile, true, out string leadin1s);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin1s));
+            Assert.AreEqual(InputType.MboxFile, typ1s);
+            var typ2s = MimeKitHelpers.DetermineInputType(sampleMboxSpFile, true, out string leadin2s);
+            Assert.IsFalse(string.IsNullOrEmpty(leadin2s));
+            Assert.AreEqual(InputType.MboxFile, typ2s);
+            var typ3s = MimeKitHelpers.DetermineInputType(sampleMbxFile, true, out string leadin3s);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin3s));
+            Assert.AreEqual(InputType.MboxFile, typ3s);
+            var typ4s = MimeKitHelpers.DetermineInputType(sampleEmlFile, true, out string leadin4s);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin4s));
+            Assert.AreEqual(InputType.EmlFile, typ4s);
+            var typ5s = MimeKitHelpers.DetermineInputType(sampleEmlSpFile, true, out string leadin5s);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin5s));
+            Assert.AreEqual(InputType.UnknownFile, typ5s); //leading white space is not a valid eml file
+
+            var typ1ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMboxFile) ?? ".", true, out string leadin1ds);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin1ds));
+            Assert.AreEqual(InputType.MboxFolder, typ1ds);
+            var typ2ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMboxSpFile) ?? ".", true, out string leadin2ds);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin2ds));
+            Assert.AreEqual(InputType.MboxFolder, typ2ds);
+            var typ3ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMbxFile) ?? ".", true, out string leadin3ds);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin3ds));
+            Assert.AreEqual(InputType.MixedFolder, typ3ds); //mixed folder because the Pine folder contains both mbox and eml files
+            var typ4ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlFile) ?? ".", true, out string leadin4ds);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin4ds));
+            Assert.AreEqual(InputType.EmlFolder, typ4ds);
+            var typ5ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlSpFile) ?? ".", true, out string leadin5ds);
+            Assert.IsTrue(string.IsNullOrEmpty(leadin5ds));
+            Assert.AreEqual(InputType.MixedFolder, typ5ds); //mixed folder because the Gmail folder contains both mbox and eml files
+        }
+
         [TestMethod]
         public void TestGetFilePathWithIncrementNumber()
         {

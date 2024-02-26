@@ -73,7 +73,8 @@ namespace UIUCLibrary.EaPdf
         public bool PreserveTextAttachmentTransferEncoding { get; set; } = false;
 
         /// <summary>
-        /// If true, any subfolders (if any) in the same directory as the mbox file and which match the name of the mbox file will also be processed, including all of its files and subfolders recursively
+        /// For mbox files, subfolders in the same directory as the mbox file and which match the name of the mbox file will also be processed, including all of its files and subfolders recursively
+        /// For a folder of eml files, all subfolders will also be processed recursively
         /// </summary>
         public bool IncludeSubFolders { get; set; } = true;
 
@@ -150,6 +151,12 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public Dictionary<string, int>? ExtraHtmlCharacterEntities { get; set; } = new Dictionary<string, int>() { { "QUOT", 0x22 } };
 
+        /// <summary>
+        /// Force the message parser to run even if the file does not appear to be a valid message file format,
+        /// Might be useful for debugging
+        /// </summary>
+        public bool ForceParse { get; set; } = true;
+
         public void WriteSettings(XmlWriter xwriter)
         {
             xwriter.WriteComment("Settings for the mbox to XML conversion:");
@@ -169,6 +176,7 @@ namespace UIUCLibrary.EaPdf
                 xwriter.WriteProcessingInstruction("SkipUntilMessageId", SkipUntilMessageId);
             if (SkipAfterMessageId != null)
                 xwriter.WriteProcessingInstruction("SkipAfterMessageId", SkipAfterMessageId);
+            xwriter.WriteProcessingInstruction("ForceParse", ForceParse.ToString());
         }
     }
 }

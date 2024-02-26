@@ -2,8 +2,10 @@
 using MimeKit;
 using MimeKit.Encodings;
 using MimeKit.Text;
+using NDepend.Path;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers
@@ -101,6 +103,12 @@ namespace UIUCLibrary.EaPdf.Helpers
         const string MAILER_UNKNOWN = "Unknown";
 
         /// <summary>
+        /// "*mbx*" - Pine email format
+        /// </summary>
+        public static readonly byte[] PineMbxMagicHeader = { 0x2a, 0x6d, 0x62, 0x78, 0x2a }; // "*mbx*"
+
+
+        /// <summary>
         /// Return true if the stream contains a Pine *mbx* file
         /// </summary>
         /// <param name="stream"></param>
@@ -124,10 +132,9 @@ namespace UIUCLibrary.EaPdf.Helpers
             //see if the stream contains an *mbx* header at the beginning
             var origPos = stream.Position;
             stream.Position = 0;
-            byte[] magic = new byte[5];
-            byte[] mbx = { 0x2a, 0x6d, 0x62, 0x78, 0x2a }; // *mbx* - Pine email format
-            stream.Read(magic, 0, magic.Length);
-            if (magic.SequenceEqual(mbx))
+            byte[] magic = new byte[PineMbxMagicHeader.Length];
+            stream.Read(magic, 0, PineMbxMagicHeader.Length);
+            if (magic.SequenceEqual(PineMbxMagicHeader))
             {
                 ret = true;
             }
@@ -298,7 +305,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                         status = ret;
                     }
                     break;
-                    
+
                 case MAILER_PINE:
                 default:
                     var mimeStatus = message.Headers[HeaderId.Status] + message.Headers[HeaderId.XStatus];
@@ -700,5 +707,315 @@ namespace UIUCLibrary.EaPdf.Helpers
             return htmlText;
         }
 
+        #region DetermineMessageFileTypes
+
+        /// <summary>
+        /// These methods attempt to determine the type of file or folder based on the file or folder path
+        /// Message formats are pretty loosely defined, so they are not perfect, and may return false positives; they are intended to be used as a first pass to determine the type of input.
+        /// The detailed message parsers will be more accurate, but are also more time consuming.
+        /// </summary>
+
+        /// <summary>
+        /// RFC 5322 header field name and value "key: value" regex
+        /// </summary>
+        private readonly static string HEADER_REGEX = @"^([\x21-\x39,\x3b-\x7e]+):([\x09,\x20-\x7e]+)$";
+
+        /// <summary>
+        /// Some initial "key: value" headers do not indicate an email, e.g. "begin:vcard" or "begin:vcalendar"
+        /// </summary>
+        private readonly static List<(string key, string value)> ignoredHeaders = new()
+        {
+            ("begin", "vcard"),
+            ("begin", "vcalendar")
+        };
+
+        /// <summary>
+        /// Determine whether the file is an mbox file by looking for a "From " line near the beginning of the file immediately followed by an email header line;
+        /// The MimeKit parser will skip over lines at the beginning of the file that don't start with "From " and will fail to parse the file correctly if 
+        /// the line immediately after the "From " header doesn't start with a valid email header.
+        /// Any skipped lines will be in the out variable leader.
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="leader">any leading characters that were ignored, may be useful in warning messages</param>
+        /// <returns></returns>
+        public static bool IsMboxFile(string filePath, out string leader)
+        {
+            bool ret = false;
+            StringBuilder leaderBuilder = new();
+
+            using var fs = File.OpenRead(filePath);
+            using var rdr = new StreamReader(fs, Encoding.ASCII);
+            int charCnt = 1000; //stop after 1000 characters
+            while (!rdr.EndOfStream)
+            {
+                string? line = rdr.ReadLine();
+                if (line != null)
+                {
+                    if (line.StartsWith("From ", StringComparison.Ordinal))
+                    {
+                        string? nextLine = rdr.ReadLine();
+                        if (IsValidMessageHeader(nextLine))
+                        {
+                            ret = true;
+                            break;
+                        }
+                        else
+                        {
+                            leaderBuilder.AppendLine(line);
+                            leaderBuilder.AppendLine(nextLine);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        leaderBuilder.AppendLine(line);
+                    }
+                }
+                charCnt -= line?.Length ?? 0;
+                if (charCnt <= 0)
+                {
+                    break;
+                }
+            }
+
+            if (ret == true)
+            {
+                //only return the leader if the file is an mbox file
+                leader = leaderBuilder.ToString();
+            }
+            else
+            {
+                //if it is not an mbox file, then the leader is not useful
+                leader = "";
+            }
+
+            rdr.Close();
+            rdr.Dispose();
+            fs.Dispose();
+
+            return ret; ;
+        }
+
+
+        private static bool IsValidMessageHeader(string? line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return false;
+            }
+
+            var ms = Regex.Match(line, HEADER_REGEX);
+            if (ms.Success)
+            {
+                var key = ms.Groups[1].Value.Trim();
+                var value = ms.Groups[2].Value.Trim();
+                //some headers do not indictate an email, e.g. "begin:vcard"
+                if (ignoredHeaders.Any(kv => kv.key.Equals(key, StringComparison.OrdinalIgnoreCase) && kv.value.Equals(value, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+
+
+        /// <summary>
+        /// Determine whether the file is an eml file by looking for a "field-name: field-value" line at the beginning of the file
+        /// The MimeKit parser will fail to parse the file if it doesn't start with a valid email header, the email to xml conversion will 
+        /// create an EAXS XML file with no headers, but the entire email, including headers, as the body of the message
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public static bool IsEmlFile(string filePath)
+        {
+            using var fs = File.OpenRead(filePath);
+            using var sr = new StreamReader(fs, Encoding.ASCII);
+            string? line = sr.ReadLine();
+
+            bool ret;
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                ret = false;
+            }
+            else
+            {
+                ret = IsValidMessageHeader(line);
+            }
+            sr.Close();
+            sr.Dispose();
+            fs.Dispose();
+            return ret;
+        }
+
+
+        /// <summary>
+        /// Determine whether the file is a Pine mbx file by looking for "*mbx*" at the beginning of the file
+        /// This is different than an mbox file, which starts with "From "
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public static bool IsPineMbxFile(string filePath)
+        {
+            using var fs = File.OpenRead(filePath);
+            bool ret = IsStreamAnMbx(fs);
+            fs.Close();
+            fs.Dispose();
+            return ret;
+        }
+
+
+        public static InputType DetermineInputType(string inputPath, out string message)
+        {
+            return DetermineInputType(inputPath, false, out message);
+        }
+
+        /// <summary>
+        /// Determine the type of input based on the file or folder path
+        /// </summary>
+        /// <param name="inputPath"></param>
+        /// <param name="includeSubfolders"></param>
+        /// <param name="warningMessage">In determining the input type there may be warning messages</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static InputType DetermineInputType(string inputPath, bool includeSubfolders, out string warningMessage)
+        {
+            warningMessage = "";
+
+            if (string.IsNullOrWhiteSpace(inputPath))
+                throw new ArgumentNullException(nameof(inputPath));
+
+            InputType ret;
+            if (inputPath.TryGetAbsoluteDirectoryPath(out var absDirPath, out string failureReasonDir) && absDirPath.Exists)
+            {
+                ret = InputType.UnknownFolder;
+
+                //look at files in the directory to determine the type
+                var files = absDirPath.ChildrenFilesPath;
+                foreach (var file in files)
+                {
+                    var type = DetermineInputType(file.ToStringOrIfNullToEmptyString(), includeSubfolders, out _); //ignore the warning message if inputPath is a folder
+                    if (type != InputType.UnknownFile)
+                    {
+                        if (ret == InputType.UnknownFolder)
+                        {
+                            ret = type;
+                        }
+                        else if (ret != type)
+                        {
+                            ret = InputType.MixedFolder;
+                            break;
+                        }
+                    }
+                }
+                if (ret == InputType.MboxFile || ret == InputType.EmlFile)
+                {
+                    ret = (ret == InputType.MboxFile ? InputType.MboxFolder : InputType.EmlFolder);
+                }
+
+                if (includeSubfolders)
+                {
+                    var dirs = absDirPath.ChildrenDirectoriesPath;
+                    foreach (var dir in dirs)
+                    {
+                        var type = DetermineInputType(dir.ToStringOrIfNullToEmptyString(), includeSubfolders, out _); //ignore the warning message if inputPath is a folder
+                        if (type != InputType.UnknownFolder)
+                        {
+                            if (ret == InputType.UnknownFolder)
+                            {
+                                ret = type;
+                            }
+                            else if (ret != type)
+                            {
+                                ret = InputType.MixedFolder;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (inputPath.TryGetAbsoluteFilePath(out var absFilePath, out string failureReasonFile) && absFilePath.Exists)
+            {
+                //look at the file to determine the type
+                if (IsMboxFile(inputPath, out string leadIn))
+                {
+                    ret = InputType.MboxFile;
+                    if (!string.IsNullOrWhiteSpace(leadIn))
+                    {
+                        warningMessage = $"The file '{inputPath}' was determined to be an mbox file, but the leading characters were ignored:\r\n{leadIn}\r\n";
+                    }
+                }
+                else if (IsPineMbxFile(inputPath))
+                {
+                    ret = InputType.MboxFile;
+                }
+                else if (IsEmlFile(inputPath))
+                {
+                    ret = InputType.EmlFile;
+                }
+                else
+                {
+                    ret = InputType.UnknownFile;
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"'{inputPath}' is not a valid file or folder path: {(string.IsNullOrWhiteSpace(failureReasonDir + failureReasonFile) ? "File or folder not found" : failureReasonDir + " " + failureReasonFile)}");
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Return a more human-readable name for the MessageFormat
+        /// </summary>
+        public static string GetFormatName(MimeFormat format)
+        {
+            return (format == MimeFormat.Entity ? "EML" : "MBOX");
+        }
+
+        #endregion DetermineMessageFileTypes
     }
+
+
+
+    public enum InputType
+    {
+        UnknownFile,
+        MboxFile, //Also Pine mbx files
+        EmlFile,
+
+        UnknownFolder,
+        MboxFolder, //Also Pine mbx files
+        EmlFolder,
+        MixedFolder
+    }
+
+    //must correspond to the InputType enum
+    public enum InputFileType
+    {
+        UnknownFile = InputType.UnknownFile,
+        MboxFile = InputType.MboxFile,
+        EmlFile = InputType.EmlFile
+    }
+
+    //must correspond to the InputType enum
+    public enum InputFolderType
+    {
+        UnknownFolder = InputType.UnknownFolder,
+        MboxFolder = InputType.MboxFolder,
+        EmlFolder = InputType.EmlFolder,
+        MixedFolder = InputType.MixedFolder
+    }
+
+
+
 }

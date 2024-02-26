@@ -46,7 +46,7 @@ namespace UIUCLibrary.EaPdf
 
         public EmailToEaxsProcessorSettings Settings { get; }
 
-        //stats used for development and debuging
+        //stats used for development and debugging
         private readonly Dictionary<string, int> contentTypeCounts = new();
         private readonly Dictionary<string, int> xGmailLabelCounts = new();
         private readonly Dictionary<string, int> xGmailLabelComboCounts = new();
@@ -220,6 +220,34 @@ namespace UIUCLibrary.EaPdf
             return (msgFileProps, xstream, xwriter);
         }
 
+        /// <summary>
+        /// Input can either be a file or a folder path, the program will detect which and the type of files, and process them accordingly
+        /// </summary>
+        /// <param name="fileOrFolderPath"></param>
+        /// <param name="outFolderPath"></param>
+        /// <param name="globalId"></param>
+        /// <param name="accntEmails"></param>
+        /// <param name="startingLocalId"></param>
+        /// <param name="messageList"></param>
+        /// <param name="saveCsv"></param>  
+        /// <returns></returns>
+        public long ConvertMixedMessagesToEaxs(string fileOrFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        {
+            //UNDONE: Implement this function
+            return 0;
+        }
+
+        /// <summary>
+        /// Convert a folder of eml files into an archival email XML file
+        /// </summary>
+        /// <param name="emlFolderPath"></param>
+        /// <param name="outFolderPath"></param>
+        /// <param name="globalId"></param>
+        /// <param name="accntEmails"></param>
+        /// <param name="startingLocalId"></param>
+        /// <param name="messageList"></param>
+        /// <param name="saveCsv"></param>
+        /// <returns></returns>
         public long ConvertFolderOfEmlToEaxs(string emlFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
         {
             (string fullEmlFolderPath, string fullOutFolderPath) = MessageFolderSetup(emlFolderPath, outFolderPath, globalId);
@@ -364,7 +392,9 @@ namespace UIUCLibrary.EaPdf
         /// <param name="outFolderPath">the path to the output folder, must be different than the messageFolderPath</param>
         /// <param name="globalId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
-        /// <param name="includeSubFolders">if true subfolders in the directory will also be processed</param>
+        /// <param name="startingLocalId">the number to start the localId number at</param>
+        /// <param name="messageList">a list of MessageBrief objects to be used to create a CSV file</param>
+        /// <param name="saveCsv">whether to save the CSV file after converting the mbox folder</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
         public long ConvertFolderOfMboxToEaxs(string mboxFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
         {
@@ -558,8 +588,50 @@ namespace UIUCLibrary.EaPdf
             return retId;
         }
 
+        /// <summary>
+        /// Check whether the file is in the expected format and log some warnings if it is not
+        /// </summary>
+        /// <param name="msgFileProps"></param>
+        /// <param name="xwriter"></param>
+        /// <returns>True if file is in expected format</returns>
+        private bool CheckIfFileIsCorrectFormat(MessageFileProperties msgFileProps, ref XmlWriter xwriter)
+        {
+            bool validFile = msgFileProps.DoesMimeFormatMatchInputFileType(out string message);
+
+            if(!string.IsNullOrWhiteSpace(message))
+            {
+                WriteToLogWarningMessage(xwriter, message);
+            }
+
+            if (!validFile)
+            {
+                string msg = $"The file '{msgFileProps.MessageFilePath}' does not appear to be an '{msgFileProps.MessageFormatName}' file; it appears to be an '{msgFileProps.GetInputFileType(out _)}'";
+                if (Settings.ForceParse)
+                {
+                    msg += "; the ForceParse setting is true, so it is being processed anyway; look for additional errors or warnings in the log";
+                    WriteToLogWarningMessage(xwriter, msg);
+                }
+                else
+                {
+                    msg += "; skipping file";
+                    WriteToLogErrorMessage(xwriter, msg);
+                }
+            }
+
+            return validFile;
+        }
+
         private long ProcessFile(MessageFileProperties msgFileProps, ref XmlWriter xwriter, ref Stream xstream, long localId, List<MessageBrief> messageList)
         {
+            var validFile = CheckIfFileIsCorrectFormat(msgFileProps, ref xwriter);
+
+            if (!validFile && !Settings.ForceParse)
+            {
+                msgFileProps.FileWasSkipped = true;
+                return localId;
+            }
+
+            msgFileProps.FileWasSkipped = false;
             msgFileProps.ResetEolCounts(); //reset counts to zero for each file
 
             //Keep track of properties for an individual message, such as Eol and Hash
@@ -688,7 +760,7 @@ namespace UIUCLibrary.EaPdf
                         if (msgFileProps.MessageCount > 0)
                         {
                             var msg = $"{fex2.Message} The content of the message is probably incomplete because of an unmangled 'From ' line in the message body. Content starting from offset {mboxParser.MboxMarkerOffset} to the beginning of the next message will be skipped.";
-                            _logger.LogWarning("{message}",msg);
+                            _logger.LogWarning("{message}", msg);
                             mimeMsgProps.Incomplete(msg, $"Stream Position: {mboxParser.MboxMarkerOffset}");
 
                             //FUTURE: Maybe try to recover lost message content when this happens.  This is probably very tricky except for the most basic cases of content-type: text/plain with no multipart messages or binary attachments
@@ -784,7 +856,10 @@ namespace UIUCLibrary.EaPdf
                 }
                 else
                 {
-                    WriteToLogWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
+                    if(!msgFileProps.FileWasSkipped)
+                    {
+                        WriteToLogWarningMessage(xwriter, $"Unable to calculate the hash value for the Mbox");
+                    }
                 }
 
                 if (msgFileProps.FileInfo != null)
@@ -841,7 +916,7 @@ namespace UIUCLibrary.EaPdf
                         MessageFilePath = Path.Combine(dir, Guid.NewGuid().ToString()) // use Guid to ensure its not a real file; this is a dummy file path that will be overwritten in the foreach loop below, but is needed to initialize the MessageFileProperties object with the correct file directory
                     };
 
-                WriteFolderOpen(xwriter, msgFileProps2);
+                    WriteFolderOpen(xwriter, msgFileProps2);
 
                     string[]? files = null;
                     try
@@ -862,6 +937,7 @@ namespace UIUCLibrary.EaPdf
                             WriteToLogInfoMessage(xwriter, $"Processing EML file: {file}");
                             msgFileProps2.MessageFilePath = file;
                             msgFileProps2.MessageCount = 0;
+                            msgFileProps2.FileWasSkipped = false;
                             localId = ProcessEml(msgFileProps2, ref xwriter, ref xstream, localId, messageList);
                         }
                     }
@@ -874,6 +950,7 @@ namespace UIUCLibrary.EaPdf
 
             return localId;
         }
+
         /// <summary>
         /// Look for a subfolder named the same as the mbox file ignoring extensions
         /// i.e. Mozilla Thunderbird will append the extension '.sbd' to the folder name
@@ -889,31 +966,12 @@ namespace UIUCLibrary.EaPdf
                 throw new Exception($"Unexpected MessageFormat '{msgFileProps.MessageFormat}'; skipping file ");
             }
 
-            string? subfolderName = null;
+            string? subfolderName = FilePathHelpers.GetSubfolderNameMatchingFileName(msgFileProps.MessageFilePath, out string message);
 
-            string[]? subfolders = Directory.GetDirectories(msgFileProps.MessageDirectoryName, $"{msgFileProps.MessageFileName}.*"); //first look for folders matching the parent name, including extension
-            if (subfolders == null || subfolders.Length == 0)
+            if (!string.IsNullOrWhiteSpace(message))
             {
-                //if not found, look for names matching the parent without extension
-                subfolders = Directory.GetDirectories(msgFileProps.MessageDirectoryName, $"{Path.GetFileNameWithoutExtension(msgFileProps.MessageFileName)}.*");
-            }
-
-            if (subfolders != null)
-            {
-                try
-                {
-                    subfolderName = subfolders.SingleOrDefault();
-                }
-                catch (InvalidOperationException)
-                {
-                    WriteToLogErrorMessage(xwriter, $"There is more than one folder that matches '{msgFileProps.MessageFileName}.*'; skipping all subfolders");
-                    subfolderName = null;
-                }
-                catch (Exception ex)
-                {
-                    WriteToLogErrorMessage(xwriter, $"Skipping subfolders. {ex.GetType().Name}: {ex.Message}");
-                    subfolderName = null;
-                }
+                WriteToLogErrorMessage(xwriter, message);
+                subfolderName = null;
             }
 
             return subfolderName;
@@ -972,12 +1030,20 @@ namespace UIUCLibrary.EaPdf
                         };
                         SetHashAlgorithm(childMsgFileProps, xwriter);
 
-                        if (Settings.OneFilePerMessageFile)
+                        if(Settings.ForceParse || childMsgFileProps.DoesMimeFormatMatchInputFileType())
                         {
-                            childMsgFileProps.OutFilePath = Path.Combine(childMsgFileProps.OutDirectoryName, Path.GetFileName(Path.GetDirectoryName(childMbox) ?? ""), Path.GetFileName(childMbox)) + ".xml";
-                            StartNewXmlFile(ref xwriter, ref xstream, msgFileProps, childMsgFileProps);
+                            if (Settings.OneFilePerMessageFile)
+                            {
+                                childMsgFileProps.OutFilePath = Path.Combine(childMsgFileProps.OutDirectoryName, Path.GetFileName(Path.GetDirectoryName(childMbox) ?? ""), Path.GetFileName(childMbox)) + ".xml";
+                                StartNewXmlFile(ref xwriter, ref xstream, msgFileProps, childMsgFileProps);
+                            }
+                            localId = ProcessMbox(childMsgFileProps, ref xwriter, ref xstream, localId, messageList);
                         }
-                        localId = ProcessMbox(childMsgFileProps, ref xwriter, ref xstream, localId, messageList);
+                        else
+                        {
+                            WriteToLogWarningMessage(xwriter, $"Skipping file '{childMbox}' because it does not appear to be an MBOX file");
+                        }
+
                     }
                 }
 
@@ -1154,7 +1220,7 @@ namespace UIUCLibrary.EaPdf
         private static void WriteDocType(XmlWriter xwriter, string? namedEntFile)
         {
             //This is only needed if we use named entities in the XML
-            if(!string.IsNullOrWhiteSpace(namedEntFile))
+            if (!string.IsNullOrWhiteSpace(namedEntFile))
                 xwriter.WriteDocType("Account", null, null, $"<!ENTITY % xhtml-lat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \"{namedEntFile}\" > %xhtml-lat1;");
         }
 
@@ -1959,7 +2025,7 @@ namespace UIUCLibrary.EaPdf
 
             if (!string.IsNullOrWhiteSpace(mimeEntity.ContentType.MimeType))
             {
-                if(!MimeTypeMap.ValidMediaTypes.Contains(mimeEntity.ContentType.MediaType, StringComparer.OrdinalIgnoreCase) && !mimeEntity.ContentType.MediaType.StartsWith("x-", StringComparison.OrdinalIgnoreCase))
+                if (!MimeTypeMap.ValidMediaTypes.Contains(mimeEntity.ContentType.MediaType, StringComparer.OrdinalIgnoreCase) && !mimeEntity.ContentType.MediaType.StartsWith("x-", StringComparison.OrdinalIgnoreCase))
                 {
                     WriteToLogWarningMessage(xwriter, $"The MIME type '{mimeEntity.ContentType.MimeType}' has an invalid media type '{mimeEntity.ContentType.MediaType}'.  Allowed values are '{string.Join("','", MimeTypeMap.ValidMediaTypes)}'.");
                 }
@@ -2064,10 +2130,10 @@ namespace UIUCLibrary.EaPdf
 
             //If the content is an image, get the width and height and write them to the XML
             (int width, int height) imageDims = (0, 0);
-            if(ImageHelpers.SupportedMimeTypes.Contains(part.ContentType.MimeType.Trim(), StringComparer.OrdinalIgnoreCase))
+            if (ImageHelpers.SupportedMimeTypes.Contains(part.ContentType.MimeType.Trim(), StringComparer.OrdinalIgnoreCase))
             {
                 imageDims = ImageHelpers.GetImageSize(ms, out string message);
-                if(!string.IsNullOrWhiteSpace(message))
+                if (!string.IsNullOrWhiteSpace(message))
                 {
                     WriteToLogWarningMessage(xwriter, message);
                 }
@@ -2125,7 +2191,7 @@ namespace UIUCLibrary.EaPdf
 
             xwriter.WriteElementString("Size", XM_NS, fileSize.ToString());
 
-            if(imageDims.width > 0 && imageDims.height > 0)
+            if (imageDims.width > 0 && imageDims.height > 0)
             {
                 xwriter.WriteStartElement("ImageProperties", XM_NS);
                 xwriter.WriteElementString("Width", XM_NS, imageDims.width.ToString());
@@ -2272,7 +2338,7 @@ namespace UIUCLibrary.EaPdf
             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);
 
             (int width, int height) imageDims = (0, 0);
-            if(ImageHelpers.SupportedMimeTypes.Contains(part.ContentType.MimeType.Trim(), StringComparer.OrdinalIgnoreCase))
+            if (ImageHelpers.SupportedMimeTypes.Contains(part.ContentType.MimeType.Trim(), StringComparer.OrdinalIgnoreCase))
             {
                 imageDims = ImageHelpers.GetImageSize(content.Open(), out string message);
                 if (!string.IsNullOrWhiteSpace(message))

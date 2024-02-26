@@ -44,20 +44,26 @@ namespace UIUCLibrary.EaPdf
             return this.MemberwiseClone();
         }
 
+        /// <summary>
+        /// If true, the file was skipped during processing
+        /// </summary>
+        public bool FileWasSkipped { get; set; } = false;
+
         private string _messageFilepath = "";
         /// <summary>
         /// The full path to the message file being processed
         /// </summary>
-        public string MessageFilePath 
+        public string MessageFilePath
         {
-            get 
-            { 
+            get
+            {
                 return _messageFilepath;
             }
-            set 
-            { 
+            set
+            {
                 _messageFilepath = value;
                 _fileInfo = null; //clear the cached FileInfo object
+                _inputFileType = null; //clear the cached InputType
             }
         }
 
@@ -80,7 +86,7 @@ namespace UIUCLibrary.EaPdf
         {
             get
             {
-                if(MessageFormat== MimeFormat.Mbox)
+                if (MessageFormat == MimeFormat.Mbox)
                 {
                     return MessageFileName;
                 }
@@ -173,7 +179,7 @@ namespace UIUCLibrary.EaPdf
         /// <summary>
         /// Return the original OutFilePath prior to any FileNumber increments
         /// </summary>
-        public string OriginalOutFilePath 
+        public string OriginalOutFilePath
         {
             get
             {
@@ -281,10 +287,6 @@ namespace UIUCLibrary.EaPdf
         /// </summary>
         public int MessageCount { get; set; } = 0;
 
-        /// <summary>
-        /// The format of the message file, either a single EML message or a MBOX file
-        /// </summary>
-        public MimeFormat MessageFormat { get; set; } = MimeFormat.Mbox;
 
         public string RelativePath
         {
@@ -320,6 +322,53 @@ namespace UIUCLibrary.EaPdf
                 else
                     return null;
             }
+        }
+
+        /// <summary>
+        /// The format of the message file, either a single EML message or a MBOX file
+        /// </summary>
+        public MimeFormat MessageFormat { get; set; } = MimeFormat.Mbox;    //This is the same as MBox //TODO: Maybe check the InputFileType to determine this
+
+        /// <summary>
+        /// Return a more human-readable name for the MessageFormat
+        /// </summary>
+        public string MessageFormatName
+        {
+            get
+            {
+                return MimeKitHelpers.GetFormatName(MessageFormat);
+            }
+        }
+
+        /// <summary>
+        /// Determine the input file type using the MimeKitHelpers.DetermineInputType function
+        /// </summary>
+        /// <param name="message">possible warning message associated with determnining the file type</param>
+        InputFileType? _inputFileType;
+        public InputFileType? GetInputFileType(out string message)
+        {
+            message = "";
+            if (_inputFileType == null)
+            {
+                if (FileInfo != null)
+                {
+                    _inputFileType = (InputFileType?)MimeKitHelpers.DetermineInputType(FileInfo.FullName, out message);
+                }
+            }
+            return _inputFileType;
+        }
+
+        public bool DoesMimeFormatMatchInputFileType()
+        {
+            return DoesMimeFormatMatchInputFileType(out _);
+        }
+
+        public bool DoesMimeFormatMatchInputFileType(out string message)
+        {
+                InputFileType? inputType = GetInputFileType(out message);
+
+                return (MessageFormat == MimeFormat.Entity && inputType == Helpers.InputFileType.EmlFile) ||
+                    (MessageFormat == MimeFormat.Mbox && inputType == Helpers.InputFileType.MboxFile);
         }
 
 
