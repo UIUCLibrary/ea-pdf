@@ -355,10 +355,14 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, Path.ChangeExtension(filePath, "xml"));
 
                 var inFile = Path.Combine(testFilesBaseDirectory, filePath);
                 var outFolder = Path.GetDirectoryName(inFile);
+
+                if(outFolder == null)
+                    Assert.Fail("Could not get directory name from " + inFile);
+
+                var xmlFile = FilePathHelpers.GetXmlOutputFilePath(outFolder, inFile);
 
                 if (outFolder == null)
                     Assert.Fail("Could not get directory name from " + inFile);

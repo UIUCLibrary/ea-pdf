@@ -974,6 +974,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             return ret;
         }
 
+        public static bool DoesMimeFormatMatchInputFileType(MimeFormat mimeFormat, InputFileType inputFileType)
+        {
+            return (mimeFormat == MimeFormat.Entity && inputFileType == Helpers.InputFileType.EmlFile) ||
+                (mimeFormat == MimeFormat.Mbox && inputFileType == Helpers.InputFileType.MboxFile);
+        }
+
         /// <summary>
         /// Return a more human-readable name for the MessageFormat
         /// </summary>

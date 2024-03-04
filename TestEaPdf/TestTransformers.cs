@@ -57,7 +57,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                var xmlFile = Path.Combine(testFilesBaseDirectory, "Transforms\\DLF Distributed Library_short_test.xml");
                 var xsltFile = "XResources\\eaxs_to_fo.xsl";
                 var foFile = Path.ChangeExtension(xmlFile, "fop");
 
@@ -96,7 +96,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                var foFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.fop");
+                var foFile = Path.Combine(testFilesBaseDirectory, "Transforms\\DLF Distributed Library_short_test.fop");
                 var configFile = Path.GetFullPath("XResources\\fop.xconf");
                 var pdfFile = Path.ChangeExtension(foFile, "fop.pdf");
 
@@ -137,7 +137,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                var xmlFile = Path.Combine(testFilesBaseDirectory, "Transforms\\DLF Distributed Library_short_test.xml");
                 var xsltFile = "XResources\\eaxs_to_fo.xsl";
                 var foFile = Path.ChangeExtension(xmlFile, ".xep");
 
@@ -176,7 +176,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                var foFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xep");
+                var foFile = Path.Combine(testFilesBaseDirectory, "Transforms\\DLF Distributed Library_short_test.xep");
                 var configFile = Path.GetFullPath("XResources\\xep.xml");
                 var pdfFile = Path.ChangeExtension(foFile, "xep.pdf");
 
@@ -217,7 +217,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (logger != null)
             {
-                var xmlFile = Path.Combine(testFilesBaseDirectory, "MozillaThunderbird\\short-test\\DLF Distributed Library_short_test.xml");
+                var xmlFile = Path.Combine(testFilesBaseDirectory, "Transforms\\DLF Distributed Library_short_test.xml");
                 var xsltFile = "XResources\\eaxs_to_fo.xsl";
                 var foFile = Path.ChangeExtension(xmlFile, "fop");
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MimeKit;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -27,7 +28,7 @@ namespace UIUCLibrary.TestEaPdf
                 using var fstream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
                 hash = alg.ComputeHash(fstream);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
                 hash = Array.Empty<byte>();
@@ -74,17 +75,17 @@ namespace UIUCLibrary.TestEaPdf
         }
 
 
-        public static List<string> GetExpectedFiles(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, InputFileType ftype)
+        public static List<string> GetExpectedFiles(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, InputFileType inFileType, MimeFormat mimeFormat)
         {
             List<string> expectedXmlFiles = new();
 
             if (File.Exists(sampleFile))
             {
-                expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, ftype));
+                expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, mimeFormat));
             }
             else if (Directory.Exists(sampleFile))
             {
-                expectedXmlFiles.AddRange(GetExpectedFilesForDirectory(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, ftype));
+                expectedXmlFiles.AddRange(GetExpectedFilesForDirectory(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, mimeFormat));
             }
             else
             {
@@ -95,7 +96,7 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
-        private static List<string> GetExpectedFilesForDirectory(bool includeSubs, bool oneFilePerMbox, string sampleDir, string outFolder, bool forceParse, InputFileType ftype)
+        private static List<string> GetExpectedFilesForDirectory(bool includeSubs, bool oneFilePerMbox, string sampleDir, string outFolder, bool forceParse, MimeFormat mimeFormat)
         {
             List<string> expectedXmlFiles = new();
 
@@ -105,12 +106,12 @@ namespace UIUCLibrary.TestEaPdf
                 var files = Directory.GetFiles(sampleDir, "*", new EnumerationOptions() { RecurseSubdirectories = includeSubs });
                 foreach (var file in files)
                 {
-                    expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, file, outFolder, forceParse, ftype));
+                    expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, file, outFolder, forceParse, mimeFormat));
                 }
             }
             else
             {
-                expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, sampleDir, outFolder, forceParse, ftype));
+                expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, sampleDir, outFolder, forceParse, mimeFormat));
             }
 
 
@@ -118,57 +119,63 @@ namespace UIUCLibrary.TestEaPdf
         }
 
 
-        private static List<string> GetExpectedFilesForFile(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, InputFileType ftype)
+        private static List<string> GetExpectedFilesForFile(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, MimeFormat mimeFormat)
         {
             List<string> expectedXmlFiles = new();
 
-            string xmlPathStr = Path.Combine(outFolder, Path.ChangeExtension(Path.GetFileName(sampleFile), "xml"));
-            Assert.IsTrue(File.Exists(xmlPathStr));
-            expectedXmlFiles.Add(xmlPathStr);
+            string xmlPathStr = FilePathHelpers.GetXmlOutputFilePath(outFolder, sampleFile); 
 
-            //Output might be split into multiple files
-            var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-            if (files != null)
+            var inFileType = (InputFileType)MimeKitHelpers.DetermineInputType(sampleFile, out _);
+
+            if (forceParse || MimeKitHelpers.DoesMimeFormatMatchInputFileType(mimeFormat, inFileType)) //If we are forcing the parse or if the file type matches what is expected, we expect the xml file to be created
             {
-                expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
-            }
+                Assert.IsTrue(File.Exists(xmlPathStr));
+                expectedXmlFiles.Add(xmlPathStr);
 
-            if (includeSubs && oneFilePerMbox)
-            {
-                //The directory may be named something other than the mbox file, so we need to find the directory
-                //i.e. if the mbox file is "sample.mbox" or just "sample", the directory may be "sample.sbd"
-
-                var baseDirName = Path.GetFileNameWithoutExtension(sampleFile);
-                var baseDir = Path.GetDirectoryName(sampleFile);
-                var sampleSubDir = string.Empty;
-                if (baseDir != null)
+                //Output might be split into multiple files
+                var files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
+                if (files != null)
                 {
-                    var subDirs = Directory.GetDirectories(baseDir) ?? Array.Empty<string>();
-                    sampleSubDir = subDirs.Where(d => Path.GetFileNameWithoutExtension(d).Equals(baseDirName, StringComparison.OrdinalIgnoreCase)).SingleOrDefault();
+                    expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
                 }
 
-                if (Directory.Exists(sampleSubDir))
+                if (includeSubs && oneFilePerMbox)
                 {
-                    //the input path is a directory, so make sure there is one xml output file for each input file
-                    foreach (var file in Directory.GetFiles(sampleSubDir))
-                    {
-                        //TODO: If forceParse is false, do not include files that are not mbox or eml
-                        if(forceParse || (InputFileType)MimeKitHelpers.DetermineInputType(file,includeSubs, out _) == ftype)
-                        {
-                            xmlPathStr = Path.Combine(outFolder, Path.GetFileName(sampleSubDir), $"{Path.GetFileName(file)}.xml");
-                            Assert.IsTrue(File.Exists(xmlPathStr));
-                            expectedXmlFiles.Add(xmlPathStr);
+                    //The directory may be named something other than the mbox file, so we need to find the directory
+                    //i.e. if the mbox file is "sample.mbox" or just "sample", the directory may be "sample.sbd"
 
-                            //Output might be split into multiple files
-                            files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
-                            if (files != null)
+                    var baseDirName = Path.GetFileNameWithoutExtension(sampleFile);
+                    var baseDir = Path.GetDirectoryName(sampleFile);
+                    var sampleSubDir = string.Empty;
+                    if (baseDir != null)
+                    {
+                        var subDirs = Directory.GetDirectories(baseDir) ?? Array.Empty<string>();
+                        sampleSubDir = subDirs.Where(d => Path.GetFileNameWithoutExtension(d).Equals(baseDirName, StringComparison.OrdinalIgnoreCase)).SingleOrDefault();
+                    }
+
+                    if (Directory.Exists(sampleSubDir))
+                    {
+                        //the input path is a directory, so make sure there is one xml output file for each input file
+                        foreach (var file in Directory.GetFiles(sampleSubDir))
+                        {
+                            //TODO: If forceParse is false, do not include files that are not mbox or eml
+                            if (forceParse || (InputFileType)MimeKitHelpers.DetermineInputType(file, includeSubs, out _) == inFileType)
                             {
-                                expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
+                                xmlPathStr = Path.Combine(outFolder, Path.GetFileName(sampleSubDir), $"{Path.GetFileName(file)}.xml");
+                                Assert.IsTrue(File.Exists(xmlPathStr));
+                                expectedXmlFiles.Add(xmlPathStr);
+
+                                //Output might be split into multiple files
+                                files = Directory.GetFiles(outFolder, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_????.xml");
+                                if (files != null)
+                                {
+                                    expectedXmlFiles.AddRange(files.Where(f => Regex.IsMatch(f, $"{Path.GetFileNameWithoutExtension(xmlPathStr)}_\\d{{4}}.xml")).ToList());
+                                }
                             }
                         }
                     }
-                }
 
+                }
             }
 
             return expectedXmlFiles;

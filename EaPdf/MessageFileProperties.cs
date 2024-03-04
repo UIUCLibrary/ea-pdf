@@ -365,10 +365,14 @@ namespace UIUCLibrary.EaPdf
 
         public bool DoesMimeFormatMatchInputFileType(out string message)
         {
-                InputFileType? inputType = GetInputFileType(out message);
-
-                return (MessageFormat == MimeFormat.Entity && inputType == Helpers.InputFileType.EmlFile) ||
-                    (MessageFormat == MimeFormat.Mbox && inputType == Helpers.InputFileType.MboxFile);
+            bool ret = false;
+            message = "";
+            if(FileInfo != null)
+            {
+                var inputFileType = GetInputFileType(out message);
+                ret = MimeKitHelpers.DoesMimeFormatMatchInputFileType( MessageFormat, inputFileType ?? InputFileType.UnknownFile);
+            }
+            return ret;
         }
 
 

@@ -9,6 +9,30 @@ namespace UIUCLibrary.EaPdf.Helpers
     {
 
         /// <summary>
+        /// Given the output folder path, input file path, and a set of created files, get the output file path for the XML file
+        /// </summary>
+        /// <param name="fullOutFolderPath"></param>
+        /// <param name="fullInFilePath"></param>
+        /// <param name="createdFiles">dictionary of previously created files, may be null</param>
+        /// <returns></returns>
+        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath, Dictionary<string,string>? createdFiles)
+        {
+            //simplest way to ensure unique output filenames is by appending .xml (not replacing) as the new file extension
+            var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(fullInFilePath) + ".xml");
+
+            createdFiles?.Add(xmlFilePath, fullInFilePath);
+
+            return xmlFilePath;
+        }
+
+        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath)
+        {
+            return GetXmlOutputFilePath(fullOutFolderPath, fullInFilePath, null);
+        }
+
+
+
+        /// <summary>
         /// Look for a subfolder name which matches the given file name, ignoring extensions
         /// i.e. Mozilla Thunderbird will append the extension '.sbd' to the folder name
         /// </summary>

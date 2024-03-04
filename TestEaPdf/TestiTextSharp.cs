@@ -11,8 +11,8 @@ namespace UIUCLibrary.TestEaPdf
         [TestMethod]
         public void TestExtraCatalog()
         {
-            string sourcePdf = "D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\short-test\\in.pdf";
-            string destPdf   = "D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\short-test\\out.pdf";
+            string sourcePdf = "D:\\EmailsForTesting\\SampleFiles\\Testing\\PDFs\\in.pdf";
+            string destPdf   = "D:\\EmailsForTesting\\SampleFiles\\Testing\\PDFs\\out.pdf";
 
             var destStrm = new FileStream(destPdf, FileMode.Create);
             var reader = new PdfReader(sourcePdf);
