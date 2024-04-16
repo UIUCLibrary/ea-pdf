@@ -7,8 +7,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
     public class XepToPdfTransformer : JavaRunner, IXslFoTransformer
     {
-        public const string CLASS_PATH = "C:\\Program Files\\RenderX\\XEP\\lib\\xep.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon-xml-apis.jar;C:\\Program Files\\RenderX\\XEP\\lib\\xt.jar";
-        public const string MAIN_CLASS = "com.renderx.xep.XSLDriver";
+        const string CLASS_PATH = "C:\\Program Files\\RenderX\\XEP\\lib\\xep.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon-xml-apis.jar;C:\\Program Files\\RenderX\\XEP\\lib\\xt.jar";
+        const string MAIN_CLASS = "com.renderx.xep.XSLDriver";
 
         public XepToPdfTransformer(string classPath, string configFilePath) : base(classPath)
         {
@@ -53,8 +53,14 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         {
             List<(LogLevel level, string message)> tempMessages = new();
 
+            string config = "";
+            if (!string.IsNullOrWhiteSpace(ConfigFilePath))
+            {
+                config = $"\"-DCONFIG={ConfigFilePath}\" ";
+            }
+
             //-quiet option to suppress output except warnings and errors
-            var args = $"\"-DCONFIG={ConfigFilePath}\" -quiet {extraCommandLineParams} -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+            var args = $"{config} -quiet {extraCommandLineParams} -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
 
             int status = RunMainClass(MAIN_CLASS, args, ref tempMessages);
 
@@ -73,6 +79,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         {
             //In quiet mode, XEP has one message per line which should all be errors or warnings
             //Except for exceptions, which are multiple lines with the first line being "...something.somethingException" and subsequent lines beginning with tab and being the stack trace
+            //Debug and Trace messages are always just one line
 
             List<(LogLevel level, string message)> ret = new();
 
@@ -81,16 +88,24 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             foreach ((LogLevel level, string message) message in messages)
             {
-                //Date Format:  Jul 19, 2023 11:55:07 AM or Jul 19, 2023 1:55:07 AM (one-digit hour)
-                if (!message.message.StartsWith('\t') && message.message.StartsWith("[warning]"))
+                if (message.level == LogLevel.Trace || message.level==LogLevel.Debug)
+                {
+                    StartNewMessage(message.message, message.level, ref logLevel, ref messageAccumulator, ref ret);
+                }
+                else if (!message.message.StartsWith('\t') && message.message.StartsWith("[warning]"))
                 {
                     StartNewMessage(message.message, LogLevel.Warning, ref logLevel, ref messageAccumulator, ref ret);
                 }
-                else if (!message.message.StartsWith('\t') && (message.message.StartsWith("[error]") || message.message.StartsWith("error:") || message.message.StartsWith("Parse error:")))
+                else if (!message.message.StartsWith('\t') && 
+                    (message.message.StartsWith("[error]") || message.message.StartsWith("error:") || 
+                    message.message.StartsWith("Parse error:") || message.message.StartsWith("Formatter initialization failed:"))
+                    )
                 {
                     StartNewMessage(message.message, LogLevel.Error, ref logLevel, ref messageAccumulator, ref ret);
                 }
-                else if (!message.message.StartsWith('\t') && Regex.IsMatch(message.message, @"^[\w\.]+\.[\w]+Exception\s*$"))
+                else if (!message.message.StartsWith('\t') && 
+                    (Regex.IsMatch(message.message, @"^[\w\.]+\.[\w]+Exception\s*$") || Regex.IsMatch(message.message, @"^[\w\.]+\.[\w]+Exception:"))
+                    )
                 {
                     StartNewMessage(message.message, LogLevel.Error, ref logLevel, ref messageAccumulator, ref ret);
                 }

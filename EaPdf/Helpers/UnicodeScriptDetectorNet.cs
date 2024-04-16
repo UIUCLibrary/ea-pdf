@@ -1,4 +1,6 @@
-﻿using Microsoft.Net.Http.Headers;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
+using System.Reflection.Emit;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
@@ -111,9 +113,11 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="testText">Text to evaluate</param>
         /// <param name="ignoreInherited">If true: special characters that inherit their Script from the preceeding character are not counted</param>
         /// <returns>Result list</returns>
-        static public Results GetUsedScripts(string testText, bool ignoreInherited = true /*, bool useExtendedProperties = false*/ )
+        static public Results GetUsedScripts(string testText, ref List<(LogLevel level, string message)> messages, bool ignoreInherited = true /*, bool useExtendedProperties = false*/)
         {
             // for logic and technical details, see http://www.unicode.org/reports/tr24/
+
+            messages = new List<(LogLevel level, string message)>();
 
             if (testText == null || testText.Length == 1)
                 return new Results();
@@ -173,7 +177,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     float p = (float)bucket / totalRelevantCharacters;
                     var scriptName = Scripts.Where(sn => sn.TempIndex == i).First();
 
-                    Console.WriteLine($"Script {scriptName.LongName}: {p:P0}");
+                    messages.Add((LogLevel.Information, $"Script {scriptName.LongName}: {p:P0}"));
 
                     results.Add(new Result
                     {

@@ -517,19 +517,21 @@
 				<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="$producer"/></fo:block></fo:list-item-body>
 			</fo:list-item>
 			
-			<fo:list-item>
-				<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Accounts (<xsl:value-of select="count(/eaxs:Account/eaxs:EmailAddress)"/>): </fo:block></fo:list-item-label>
-				<fo:list-item-body>
-					<fo:list-block margin-top="2em" margin-left="1em">
-						<xsl:for-each select="/eaxs:Account/eaxs:EmailAddress">
-							<fo:list-item>
-								<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
-								<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><xsl:apply-templates/></fo:block></fo:list-item-body>
-							</fo:list-item>
-						</xsl:for-each>
-					</fo:list-block>
-				</fo:list-item-body>
-			</fo:list-item>
+			<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
+				<fo:list-item>
+					<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Accounts (<xsl:value-of select="count(/eaxs:Account/eaxs:EmailAddress)"/>): </fo:block></fo:list-item-label>
+					<fo:list-item-body>
+						<fo:list-block margin-top="2em" margin-left="1em">
+							<xsl:for-each select="/eaxs:Account/eaxs:EmailAddress">
+								<fo:list-item>
+									<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
+									<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><xsl:apply-templates/></fo:block></fo:list-item-body>
+								</fo:list-item>
+							</xsl:for-each>
+						</fo:list-block>
+					</fo:list-item-body>
+				</fo:list-item>
+			</xsl:if>
 			
 			<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
 				<fo:list-item-label><fo:block>Global Id: </fo:block></fo:list-item-label>

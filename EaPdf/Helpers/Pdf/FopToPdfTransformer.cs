@@ -5,7 +5,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
     public class FopToPdfTransformer : JavaRunner, IXslFoTransformer
     {
-        public const string JAR_FILE = "C:\\Program Files\\Apache FOP\\fop-2.8\\fop\\build\\fop.jar";
+        const string JAR_FILE = "C:\\Program Files\\Apache FOP\\fop-2.8\\fop\\build\\fop.jar";
 
         public FopToPdfTransformer(string jarFilePath, string configFilePath)
         {
@@ -54,8 +54,13 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         {
             List<(LogLevel level, string message)> tempMessages = new();
 
+            string config = "";
+            if (!string.IsNullOrWhiteSpace(ConfigFilePath))
+            {
+                config = $"-c \"{ConfigFilePath}\"";
+            }
             //-q option to suppress output except warnings and errors; unfortunately doesn't seem to make a difference
-            var args = $" -q {extraCommandLineParams} -c \"{ConfigFilePath}\" -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
+            var args = $" -q {extraCommandLineParams} {config} -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
 
             int status = RunExecutableJar(JarFilePath, args, ref tempMessages);
 
@@ -74,6 +79,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             //FOP has one log message per multiple lines which could be info, warn, or error
             //The first line of the message is the date and time, the second line is the log level, and the rest of the lines are the message
+            //Debug and Trace messages are always on their own line
 
             List<(LogLevel level, string message)> ret = new();
 
@@ -83,7 +89,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             foreach ((LogLevel level, string message) message in messages)
             {
                 //Date Format:  Jul 19, 2023 11:55:07 AM or Jul 19, 2023 1:55:07 AM (one-digit hour)
-                if (message.message == "USAGE" || (message.message.Length >=24 && DateTime.TryParseExact(message.message[..24], "MMM dd, yyyy h:mm:ss tt", null, System.Globalization.DateTimeStyles.AssumeLocal | System.Globalization.DateTimeStyles.AllowTrailingWhite, out DateTime dateTime)))
+                if (message.level == LogLevel.Trace || message.level == LogLevel.Debug || message.message == "USAGE" || (message.message.Length >=24 && DateTime.TryParseExact(message.message[..24], "MMM dd, yyyy h:mm:ss tt", null, System.Globalization.DateTimeStyles.AssumeLocal | System.Globalization.DateTimeStyles.AllowTrailingWhite, out DateTime dateTime)))
                 {
                     //start of new message
                     if (messageAccumulator.Length > 0)
@@ -92,6 +98,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     }
 
                     messageAccumulator.AppendLine(message.message);
+
+                    if (message.level == LogLevel.Trace || message.level == LogLevel.Debug) //these are always on their own line
+                        logLevel = message.level;
+
                 }
                 else if(messageAccumulator.Length > 0)
                 {

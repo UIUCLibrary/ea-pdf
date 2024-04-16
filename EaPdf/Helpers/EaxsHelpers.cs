@@ -1,5 +1,6 @@
 ﻿using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
 using System.Xml;
+using Microsoft.Extensions.Logging;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
@@ -65,7 +66,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="eaxsFilePath"></param>
         /// <param name="settings"></param>
         /// <returns>4-tuple with comma-separated lists of serif, sans-serif, and monospace font names, plus a bool indicating whether complex scripts are present</returns>
-        public (string serifFonts, string sansFonts, string monoFonts, bool complexScripts) GetBaseFontsToUse(EaxsToEaPdfProcessorSettings settings)
+        public (string serifFonts, string sansFonts, string monoFonts, bool complexScripts) GetBaseFontsToUse(EaxsToEaPdfProcessorSettings settings, ref List<(LogLevel level, string message)> messages)
         {
             HashSet<string> serifFonts = new() { SERIF };
             HashSet<string> sansSerifFonts = new() { SANS_SERIF };
@@ -77,7 +78,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (text != null)
             {
                 //get the list of all scripts used in the text, ranked by how commonly they occur
-                var scripts = UnicodeScriptDetector.GetUsedScripts(text);
+                var scripts = UnicodeScriptDetector.GetUsedScripts(text, ref messages);
 
                 foreach (var script in scripts)
                 {

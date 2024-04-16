@@ -2,7 +2,7 @@
   "profiles": {
     "EaPdfCmd": {
       "commandName": "Project",
-      "commandLineArgs": "--in \"D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\DLF Distributed Library\" --out \"D:\\EmailsForTesting\\SampleFiles\\Testing\\MozillaThunderbird\\CmdOut\" --global-id mailto:thabing@illinois.edu --fonts-folder junkd --log-level Warning"
+      "commandLineArgs": "--in d:\\EmailsForTesting\\CommandLineTests\\MBOXes\\test_a.mbox --out d:\\EmailsForTesting\\CommandLineTests\\MBOXesOUT -g mailto:someone@sample.org --log-level trace --fo-processor FOP "
     }
   }
 }

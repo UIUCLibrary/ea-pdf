@@ -1,4 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
+using NDepend.Path;
+using PdfTemplating.SystemCustomExtensions;
 using UIUCLibrary.EaPdf.Helpers;
 using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
 
@@ -6,7 +9,7 @@ namespace UIUCLibrary.EaPdf
 {
     public class EaxsToEaPdfProcessorSettings
     {
-        public EaxsToEaPdfProcessorSettings(IConfiguration config) 
+        public EaxsToEaPdfProcessorSettings(IConfiguration config)
         {
             //the LanguageFontMapping will be replaced by any LanguageFontMapping in the configuration file
             if (config.AsEnumerable().Any(s => s.Key.StartsWith("EaxsToEaPdfProcessorSettings:LanguageFontMapping:")))
@@ -28,24 +31,42 @@ namespace UIUCLibrary.EaPdf
         private void ValidateSettings()
         {
             //make sure supported scripts are in the ISO 15924 list
-            foreach(var script in LanguageFontMapping)
+            foreach (var script in LanguageFontMapping)
             {
-                if (!script.Key.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase) && !UnicodeScriptDetector.GetScripts().Any(s=> s.ShortName.Equals(script.Key, StringComparison.OrdinalIgnoreCase)))
+                if (!script.Key.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase) && !UnicodeScriptDetector.GetScripts().Any(s => s.ShortName.Equals(script.Key, StringComparison.OrdinalIgnoreCase)))
                 {
                     throw new Exception($"Script code '{script.Key}' is not a valid ISO 15924 script code");
                 }
 
                 var families = script.Value;
 
-                if(families == null || families.Count  == 0)
+                if (families == null || families.Count == 0)
                 {
                     throw new Exception($"Script code '{script.Key}' does not specify any font families");
-                }   
+                }
+            }
+
+            //make sure the needed files are present
+            if (!string.IsNullOrWhiteSpace(XsltFoFilePath) && !File.Exists(XsltFoFilePath))
+            {
+                throw new Exception($"XSLT file '{XsltFoFilePath}' not found");
+            }
+            if(!string.IsNullOrWhiteSpace(XsltXmpFilePath) && !File.Exists(XsltXmpFilePath))
+            {
+                throw new Exception($"XSLT file '{XsltXmpFilePath}' not found");
+            }
+            if(!string.IsNullOrWhiteSpace(XsltRootXmpFilePath) && !File.Exists(XsltRootXmpFilePath))
+            {
+                throw new Exception($"XSLT file '{XsltRootXmpFilePath}' not found");
+            }
+            if(!string.IsNullOrWhiteSpace(FontsFolder) && !Directory.Exists(FontsFolder))
+            {
+                throw new Exception($"Fonts folder '{FontsFolder}' not found");
             }
 
             //FUTURE: maybe add some other validations here
 
-            
+
         }
 
 
@@ -85,7 +106,7 @@ namespace UIUCLibrary.EaPdf
                 {
                     {BaseFontFamily.Serif, SERIF},
                     {BaseFontFamily.SansSerif, SANS_SERIF},
-                    {BaseFontFamily.Monospace, MONOSPACE},  
+                    {BaseFontFamily.Monospace, MONOSPACE},
                 }
             },
             {"arab", new Dictionary<BaseFontFamily, string>() //Arabic
@@ -140,9 +161,9 @@ namespace UIUCLibrary.EaPdf
         /// <returns></returns>
         public string GetDefaultFontFamily(BaseFontFamily baseFamily)
         {
-            if(!LanguageFontMapping.TryGetValue(FontHelpers.DEFAULT_SCRIPT, out Dictionary<BaseFontFamily, string>? families))
+            if (!LanguageFontMapping.TryGetValue(FontHelpers.DEFAULT_SCRIPT, out Dictionary<BaseFontFamily, string>? families))
             {
-                if(!LanguageFontMapping.TryGetValue("latn", out families))
+                if (!LanguageFontMapping.TryGetValue("latn", out families))
                 {
                     families = LanguageFontMapping.First().Value;
                 }
@@ -162,7 +183,7 @@ namespace UIUCLibrary.EaPdf
         {
             string? ret = null;
 
-            if(LanguageFontMapping.TryGetValue(script, out Dictionary<BaseFontFamily,string>? families))
+            if (LanguageFontMapping.TryGetValue(script, out Dictionary<BaseFontFamily, string>? families))
             {
                 ret = GetFontFamily(families, baseFamily);
             }
@@ -196,10 +217,10 @@ namespace UIUCLibrary.EaPdf
         {
             get
             {
-                List<string> ret = LanguageFontMapping.Keys.Where(k=>!k.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase)).ToList();
+                List<string> ret = LanguageFontMapping.Keys.Where(k => !k.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase)).ToList();
                 return ret;
             }
-        } 
+        }
 
 
     }

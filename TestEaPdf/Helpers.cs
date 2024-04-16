@@ -17,6 +17,7 @@ namespace UIUCLibrary.TestEaPdf
     {
         const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf_1.24\\verapdf.bat";
 
+
         public static string CalculateHash(string algName, string filePath)
         {
             byte[] hash = Array.Empty<byte>();

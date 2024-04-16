@@ -1,3 +1,8 @@
+#Command Line Parsing
+https://learn.microsoft.com/en-us/dotnet/standard/commandline/
+https://learn.microsoft.com/en-us/archive/msdn-magazine/2019/march/net-parse-the-command-line-with-system-commandline
+https://intellitect.com/blog/demystified-system-commandline/
+
 # _Dev Tools_
 Logging in Unit Tests:
 https://codeburst.io/unit-testing-with-net-core-ilogger-t-e8c16c503a80

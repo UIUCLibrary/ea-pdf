@@ -145,7 +145,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 {
                     messages.Add((LogLevel.Warning, $"For color '{match.Value}' the alpha value '{a}' is less than 1.  XSL FO does not support transparency; the alpha channel was dropped."));
                 }
-                messages.Add((LogLevel.Debug, $"Color '{match.Value}' was converted to color '{rgb}'; the alpha channel was dropped."));
+                messages.Add((LogLevel.Trace, $"Color '{match.Value}' was converted to color '{rgb}'; the alpha channel was dropped."));
             }
 
             return rgb;
@@ -955,7 +955,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     }
                     catch (Exception ex)
                     {
-                        messages.Add((LogLevel.Debug, $"Parsing selector '{selectorText}'; {ex.Message}"));
+                        messages.Add((LogLevel.Trace, $"Parsing selector '{selectorText}'; {ex.Message}"));
                         nodes = null;
                     }
 
@@ -970,7 +970,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                                 var newStyleText = string.Join("; ", newStyle.Select(p => p.Name + ":" + p.Value)) + "; ";
 
                                 node.Attributes.Add("style", newStyleText);
-                                messages.Add((LogLevel.Debug, $"Node: {node.XPath}, Inlining style:  {selectorText} {{{styleText}}}, new style attribute"));
+                                messages.Add((LogLevel.Trace, $"Node: {node.XPath}, Inlining style:  {selectorText} {{{styleText}}}, new style attribute"));
                             }
                             else
                             {
@@ -984,7 +984,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                                     if (!currentStyle.Contains(newProperty, new AngleSharpCssPropertyComparer()))
                                     {
                                         currentStyleText += newProperty.Name + ":" + newProperty.Value + "; ";
-                                        messages.Add((LogLevel.Debug, $"Node: {node.XPath}, Inlining style: {selectorText} {{{styleText}}}, modify style attribute"));
+                                        messages.Add((LogLevel.Trace, $"Node: {node.XPath}, Inlining style: {selectorText} {{{styleText}}}, modify style attribute"));
                                     }
                                 }
 

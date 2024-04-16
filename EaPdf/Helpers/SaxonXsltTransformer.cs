@@ -12,6 +12,10 @@ namespace UIUCLibrary.EaPdf.Helpers
         {
         }
 
+        public SaxonXsltTransformer(string classPath) : base(classPath)
+        {
+        }
+
         public string ProcessorVersion
         {
             get

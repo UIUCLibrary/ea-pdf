@@ -1,8 +1,13 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
+using Microsoft.Extensions.Configuration.Memory;
+using Microsoft.Extensions.Configuration.Xml;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RoyT.TrueType;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using UIUCLibrary.EaPdf.Helpers;
@@ -13,6 +18,139 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestHelpers
     {
+
+        [DataRow("json", DisplayName = "appsettings.json")]
+        [DataRow("xml", DisplayName = "app.config")]
+        [DataRow("json_xml", DisplayName = "appsettings.json and app.config")]
+        [DataRow("xml_json", DisplayName = "app.config and appsettings.json")]
+        [DataRow("mem", DisplayName = "memory")]
+        [DataRow("mem_json", DisplayName = "memory and appsettings.json")]
+        [DataRow("json_mem", DisplayName = "appsettings.json and memory")]
+        [DataTestMethod]
+        public void TestMakeConfigPathAbsolute(string type)
+        {
+            string startingCurrDir = Directory.GetCurrentDirectory();
+
+            string key = "EaxsToEaPdfProcessorSettings:XsltFoFilePath";
+            string val = "XResources\\eaxs_to_fo.xsl";
+
+            var configBldr = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory());
+
+            switch (type)
+            {
+                case "json":
+                    configBldr.AddJsonFile("appsettings.json", optional: false);
+                    break;
+                case "xml":
+                    configBldr.AddXmlFile("app.config", optional: false);
+                    break;
+                case "json_xml":
+                    configBldr.AddJsonFile("appsettings.json", optional: false);
+                    configBldr.AddXmlFile("app.config", optional: false);
+                    break;
+                case "xml_json":
+                    configBldr.AddXmlFile("app.config", optional: false);
+                    configBldr.AddJsonFile("appsettings.json", optional: false);
+                    break;
+                case "mem":
+                    var kvp = new Dictionary<string, string?>
+                    {
+                        {"test-key-1",  "test-value-1" },
+                        { key, val },
+                        {"test-key-2", "test-value-2" }
+                    };
+                    configBldr.AddInMemoryCollection(kvp);
+                    break;
+                case "mem_json":
+                    kvp = new Dictionary<string, string?>
+                    {
+                        {"test-key-1",  "test-value-1" },
+                        { key, val },
+                        {"test-key-2", "test-value-2" }
+                    };
+                    configBldr.AddInMemoryCollection(kvp);
+                    configBldr.AddJsonFile("appsettings.json", optional: false);
+                    break;
+                case "json_mem":
+                    kvp = new Dictionary<string, string?>
+                    {
+                        {"test-key-1",  "test-value-1" },
+                        { key, val },
+                        {"test-key-2", "test-value-2" }
+                    };
+                    configBldr.AddJsonFile("appsettings.json", optional: false);
+                    configBldr.AddInMemoryCollection(kvp);
+                    break;
+                default:
+                    throw new ArgumentException("Invalid type", nameof(type));
+            }
+
+            var config = configBldr.Build();
+
+
+            var tempDir = Path.GetTempPath();
+            Directory.SetCurrentDirectory(tempDir); //set the current directory to the temp directory so can test relative paths
+
+            string? origPath = config[key];
+            Assert.IsNotNull(origPath);
+            Assert.IsFalse(Path.IsPathRooted(origPath));
+            Assert.IsFalse(Path.IsPathFullyQualified(origPath));
+
+            string? absPath = ConfigHelpers.MakeConfigPathAbsolute(config, key);
+
+            Assert.IsNotNull(absPath);
+            Assert.AreNotEqual(origPath, absPath);
+            Assert.IsTrue(Path.IsPathRooted(absPath));
+            Assert.IsTrue(Path.IsPathFullyQualified(absPath));
+
+            if (!type.EndsWith("mem"))
+            {
+                Assert.IsTrue(absPath.StartsWith(startingCurrDir));
+            }
+            else
+            {
+                Assert.IsTrue(absPath.StartsWith(tempDir));
+            }
+
+            Assert.AreEqual(absPath, config[key]);
+
+            string? newPath = null;
+
+            var provider = config.Providers.Reverse().FirstOrDefault(p => p.TryGet(key, out newPath));
+
+            switch (type)
+            {
+                case "json":
+                    Assert.IsInstanceOfType(provider, typeof(JsonConfigurationProvider));
+                    break;
+                case "xml":
+                    Assert.IsInstanceOfType(provider, typeof(XmlConfigurationProvider));
+                    break;
+                case "json_xml":
+                    Assert.IsInstanceOfType(provider, typeof(XmlConfigurationProvider));
+                    break;
+                case "xml_json":
+                    Assert.IsInstanceOfType(provider, typeof(JsonConfigurationProvider));
+                    break;
+                case "mem":
+                    Assert.IsInstanceOfType(provider, typeof(MemoryConfigurationProvider));
+                    break;
+                case "mem_json":
+                    Assert.IsInstanceOfType(provider, typeof(JsonConfigurationProvider));
+                    break;
+                case "json_mem":
+                    Assert.IsInstanceOfType(provider, typeof(MemoryConfigurationProvider));
+                    break;
+                default:
+                    throw new ArgumentException("Invalid type", nameof(type));
+            }
+
+            Assert.AreEqual(absPath, newPath);
+
+            Directory.SetCurrentDirectory(startingCurrDir); //reset the current directory
+        }
+
+
         [TestMethod]
         public void TestIsMbox()
         {
@@ -69,7 +207,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(InputType.MboxFolder, typ2d);
             var typ3d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMbxFile) ?? ".", out string leadin3d);
             Assert.IsTrue(string.IsNullOrEmpty(leadin3d));
-            Assert.AreEqual(InputType.MboxFolder, typ3d); 
+            Assert.AreEqual(InputType.MboxFolder, typ3d);
             var typ4d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlFile) ?? ".", out string leadin4d);
             Assert.IsTrue(string.IsNullOrEmpty(leadin4d));
             Assert.AreEqual(InputType.EmlFolder, typ4d);
@@ -101,7 +239,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(InputType.MboxFolder, typ2ds);
             var typ3ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMbxFile) ?? ".", true, out string leadin3ds);
             Assert.IsTrue(string.IsNullOrEmpty(leadin3ds));
-            Assert.AreEqual(InputType.MboxFolder, typ3ds); 
+            Assert.AreEqual(InputType.MboxFolder, typ3ds);
             var typ4ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlFile) ?? ".", true, out string leadin4ds);
             Assert.IsTrue(string.IsNullOrEmpty(leadin4ds));
             Assert.AreEqual(InputType.EmlFolder, typ4ds);
@@ -231,7 +369,7 @@ namespace UIUCLibrary.TestEaPdf
             var ttf = TrueTypeFont.FromFile(ttfFile);
             Assert.IsNotNull(ttf);
 
-            char latin_a = 'a'; 
+            char latin_a = 'a';
             Assert.IsTrue(FontHelpers.FontContainsCharacter(ttf, latin_a));
 
             char arabic_comma = '\x060C'; //not in the Arial Black font
@@ -251,27 +389,28 @@ namespace UIUCLibrary.TestEaPdf
             //const string SP2 = "  ";
 
             //const string ARAB_COMMA = "\x060C"; //this character has the common (Zyyy) script property,
-                                                //but it has extended properties and applies to just the "Arab", "Rohg", "Syrc", or "Thaa" scripts (note: arab is first in the list)
+            //but it has extended properties and applies to just the "Arab", "Rohg", "Syrc", or "Thaa" scripts (note: arab is first in the list)
 
             //const string ARAB_TATWEEL = "\x0640"; //this character has the common (Zyyy) script property,
-                                                  //but it has extended properties and applies to just the "Adlm", "Arab", "Mand", "Mani", "Phlp", "Rohg", "Sogd", "Syrc" scripts (note: arab is second in the list)
+            //but it has extended properties and applies to just the "Adlm", "Arab", "Mand", "Mani", "Phlp", "Rohg", "Sogd", "Syrc" scripts (note: arab is second in the list)
 
+            List<(LogLevel level, string message)> messages = new();
             var text = LATIN_TXT;
-            var results = GetUsedScripts(text);
+            var results = GetUsedScripts(text, ref messages);
             Assert.IsNotNull(results);
             Assert.AreEqual(1, results.Count);
             Assert.AreEqual(LATIN_CD, results[0].ScriptNameShort);
             Assert.AreEqual(1, results[0].Probabilty);
 
             text = ARABIC_TXT;
-            results = GetUsedScripts(text);
+            results = GetUsedScripts(text, ref messages);
             Assert.IsNotNull(results);
             Assert.AreEqual(1, results.Count);
             Assert.AreEqual(ARABIC_CD, results[0].ScriptNameShort);
             Assert.AreEqual(1, results[0].Probabilty);
 
             text = LATIN_TXT + ARABIC_TXT;
-            results = GetUsedScripts(text);
+            results = GetUsedScripts(text, ref messages);
             Assert.IsNotNull(results);
             Assert.AreEqual(2, results.Count);
             Assert.AreEqual(ARABIC_CD, results[0].ScriptNameShort); //this is first because there are more arabic characters than latin characters
@@ -284,7 +423,7 @@ namespace UIUCLibrary.TestEaPdf
         [TestMethod]
         public void TestUnicodeScriptsExtended()
         {
-            
+
             const string LATIN_CD = "Latn";
             const string LATIN_TXT = "Latin";
 
@@ -295,10 +434,10 @@ namespace UIUCLibrary.TestEaPdf
             const string SP2 = "  ";
 
             const string ARAB_COMMA = "\x060C"; //this character has the common (Zyyy) script property,
-                                           //but it has extended properties and applies to just the "Arab", "Rohg", "Syrc", or "Thaa" scripts (note: arab is first in the list)
+                                                //but it has extended properties and applies to just the "Arab", "Rohg", "Syrc", or "Thaa" scripts (note: arab is first in the list)
 
             const string ARAB_TATWEEL = "\x0640"; //this character has the common (Zyyy) script property,
-                                             //but it has extended properties and applies to just the "Adlm", "Arab", "Mand", "Mani", "Phlp", "Rohg", "Sogd", "Syrc" scripts (note: arab is second in the list)
+                                                  //but it has extended properties and applies to just the "Adlm", "Arab", "Mand", "Mani", "Phlp", "Rohg", "Sogd", "Syrc" scripts (note: arab is second in the list)
 
             int codePoint = char.ConvertToUtf32(ARAB_COMMA, 0);
 
@@ -366,7 +505,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(1, offsets.Count);
             Assert.AreEqual(0, offsets[0].range.Start);
             Assert.AreEqual(test.Length, offsets[0].range.End);
-            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName);
 
             test = ARAB_COMMA + ARABIC_TXT;
             offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
@@ -386,7 +525,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(1, offsets.Count);
             Assert.AreEqual(0, offsets[0].range.Start);
             Assert.AreEqual(test.Length, offsets[0].range.End);
-            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName);
 
             test = ARAB_TATWEEL + ARABIC_TXT + ARAB_COMMA;
             offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
@@ -396,7 +535,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(1, offsets.Count);
             Assert.AreEqual(0, offsets[0].range.Start);
             Assert.AreEqual(test.Length, offsets[0].range.End);
-            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName);
 
             test = ARAB_TATWEEL + ARABIC_TXT + ARAB_COMMA + SP2 + ARABIC_TXT;
             offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
@@ -406,7 +545,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(1, offsets.Count);
             Assert.AreEqual(0, offsets[0].range.Start);
             Assert.AreEqual(test.Length, offsets[0].range.End);
-            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName);
 
             test = SP2 + ARAB_TATWEEL + ARABIC_TXT + ARAB_COMMA + SP2 + ARABIC_TXT + SP2;
             offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
@@ -416,7 +555,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(1, offsets.Count);
             Assert.AreEqual(0, offsets[0].range.Start);
             Assert.AreEqual(test.Length, offsets[0].range.End);
-            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName); 
+            Assert.AreEqual(ARABIC_CD, offsets[0].scriptName);
 
             test = SP2 + LATIN_TXT + SP2 + ARAB_TATWEEL + ARABIC_TXT + ARAB_COMMA + SP2 + ARABIC_TXT + SP2;
             offsets = UnicodeHelpers.PartitionTextByUnicodeScript(test, out messages);
@@ -426,10 +565,10 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual(2, offsets.Count);
             Assert.AreEqual(0, offsets[0].range.Start);
             Assert.AreEqual((SP2 + LATIN_TXT + SP2).Length, offsets[0].range.End);
-            Assert.AreEqual(LATIN_CD, offsets[0].scriptName); 
+            Assert.AreEqual(LATIN_CD, offsets[0].scriptName);
             Assert.AreEqual((SP2 + LATIN_TXT + SP2).Length, offsets[1].range.Start);
             Assert.AreEqual(test.Length, offsets[1].range.End);
-            Assert.AreEqual(ARABIC_CD, offsets[1].scriptName); 
+            Assert.AreEqual(ARABIC_CD, offsets[1].scriptName);
 
         }
 

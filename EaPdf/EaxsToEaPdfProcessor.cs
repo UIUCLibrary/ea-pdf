@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using System.Xml;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -25,7 +25,7 @@ namespace UIUCLibrary.EaPdf
         /// <param name="settings"></param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
-        public EaxsToEaPdfProcessor(ILogger<EaxsToEaPdfProcessor> logger, IXsltTransformer xslt, IXslFoTransformer xslfo, IPdfEnhancerFactory enhancerFactory, EaxsToEaPdfProcessorSettings settings)
+        public EaxsToEaPdfProcessor(ILogger logger, IXsltTransformer xslt, IXslFoTransformer xslfo, IPdfEnhancerFactory enhancerFactory, EaxsToEaPdfProcessorSettings settings)
         {
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
@@ -39,6 +39,73 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
+        /// Create a processor for converting email xml archive to an EA-PDF file, initializing the logger and settings using the configuration
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <param name="settings"></param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public EaxsToEaPdfProcessor(ILogger logger, IConfiguration config)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            Settings = new EaxsToEaPdfProcessorSettings(config);
+
+            string xsltProc = config["XsltProcessors:Default"] ?? "Saxon";
+            if(xsltProc.Equals("Saxon", StringComparison.OrdinalIgnoreCase))
+            {
+                string? classPath = config["XsltProcessors:Saxon:ClassPath"];
+                if(string.IsNullOrWhiteSpace(classPath))
+                {
+                    _xslt = new SaxonXsltTransformer(); 
+                }
+                else
+                {
+                    _xslt = new SaxonXsltTransformer(classPath);
+                }
+            }
+            else
+            {
+                throw new Exception($"Unknown XSLT processor '{xsltProc}'.");
+            }
+
+            string foProc = config["FoProcessors:Default"] ?? "Fop";
+            string? configFilePath = config[$"FoProcessors:{foProc}:ConfigFilePath"] ?? "";
+
+            if (foProc.Equals("Fop", StringComparison.OrdinalIgnoreCase))
+            {
+                string? jarFilePath = config["FoProcessors:Fop:JarFilePath"];
+                if (string.IsNullOrWhiteSpace(jarFilePath))
+                {
+                    _xslfo = new FopToPdfTransformer(configFilePath);
+                }
+                else
+                {
+                    _xslfo = new FopToPdfTransformer(jarFilePath, configFilePath);
+                }
+            }
+            else if(foProc.Equals("Xep", StringComparison.OrdinalIgnoreCase))
+            {
+                string? classPath = config["FoProcessors:Xep:ClassPath"];
+                if (string.IsNullOrWhiteSpace(classPath))
+                {
+                    _xslfo = new XepToPdfTransformer(configFilePath);
+                }
+                else
+                {
+                    _xslfo = new XepToPdfTransformer(classPath, configFilePath);
+                }
+            }
+            else
+            {
+                throw new Exception($"Unknown XSL-FO processor '{foProc}'.");
+            }
+
+            _enhancerFactory = new ITextSharpPdfEnhancerFactory();
+
+            _logger.LogTrace("{typeName} Created", this.GetType().Name);
+        }
+
+        /// <summary>
         /// Convert the given EAXS file to PDF, returning a dictionary of the EAXS files processed and the PDF files created.
         /// The dictionary may contain multiple files if the emails are split into multiple files.
         /// </summary>
@@ -49,7 +116,7 @@ namespace UIUCLibrary.EaPdf
         {
             _eaxsFilesProcessed.Clear();
 
-            ConvertEaxsToPdfInternal(eaxsFilePath, pdfFilePath);
+              ConvertEaxsToPdfInternal(eaxsFilePath, pdfFilePath);
 
             return _eaxsFilesProcessed;
         }
@@ -62,13 +129,21 @@ namespace UIUCLibrary.EaPdf
         /// <exception cref="Exception"></exception>
         private void ConvertEaxsToPdfInternal(string eaxsFilePath, string pdfFilePath)
         {
+            List<(LogLevel level, string message)> messages = new();
+
             _eaxsFilesProcessed.Add(eaxsFilePath, pdfFilePath);
 
             var foFilePath = Path.ChangeExtension(eaxsFilePath, ".fo");
 
             var eaxsHelpers = new EaxsHelpers(eaxsFilePath);
             //get fonts based on the Unicode scripts used in the text in the EAXS file and the font settings
-            var (serifFonts, sansFonts, monoFonts, complexScripts) = eaxsHelpers.GetBaseFontsToUse(Settings);
+            var (serifFonts, sansFonts, monoFonts, complexScripts) = eaxsHelpers.GetBaseFontsToUse(Settings, ref messages);
+            foreach (var (level, message) in messages)
+            {
+                _logger.Log(level, "{message}", message);
+            }
+            messages.Clear();
+
             string continuedFrom = eaxsHelpers.ContinuedFromFile;
             string continuedIn = eaxsHelpers.ContinuedInFile;
 
@@ -101,8 +176,6 @@ namespace UIUCLibrary.EaPdf
                 { "ContinuedFrom", Path.GetFileName(prevPdfFilePath) },
                 { "ContinuedIn", Path.GetFileName(nextPdfFilePath)}
             };
-
-            List<(LogLevel level, string message)> messages = new();
 
             //first transform the EAXS to FO using XSLT
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltFoFilePath, foFilePath, xsltParams, null, ref messages);
@@ -140,12 +213,12 @@ namespace UIUCLibrary.EaPdf
                 }
                 if (status2 != 0)
                 {
-                    throw new Exception($"FO transformation to PDF failed, status-{status2}; review log details.");
+                    throw new Exception($"FO transformation to PDF failed, status: {status2}; review log for details.");
                 }
             }
             else
             {
-                throw new Exception($"EAXS transformation to FO failed, status-{status}; review log details.");
+                throw new Exception($"EAXS transformation to FO failed, status: {status}; review log details.");
             }
 
 #if !DEBUG

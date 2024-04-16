@@ -100,8 +100,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (!string.IsNullOrWhiteSpace(workingDir))
                 psi.WorkingDirectory = workingDir;
 
-            Console.WriteLine($"Running: {psi.FileName} {psi.Arguments}");
-            Console.WriteLine($"Working Directory: {psi.WorkingDirectory}");
+            messages.Add((LogLevel.Trace, $"Running: {psi.FileName} {psi.Arguments}"));
+            if (!string.IsNullOrWhiteSpace(psi.WorkingDirectory))
+            {
+                messages.Add((LogLevel.Trace, $"Working Directory: {psi.WorkingDirectory}"));
+            }
+            messages.Add((LogLevel.Trace, $"Current Directory: {Directory.GetCurrentDirectory()}"));
 
             using var proc = new Process
             {
@@ -127,7 +131,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             proc.WaitForExit();
 
-            messages.AddRange(msgs);
+            messages.InsertRange(0, msgs); //insert the messages at the beginning of the list
 
             return proc.ExitCode;
 

@@ -40,7 +40,7 @@ namespace UIUCLibrary.TestEaPdf
             loggerFactory.AddStringListLogger(loggedLines, false, (s, lvl) => { if (lvl >= minLogLvl) return true; else return false; });
 
             logger = loggerFactory.CreateLogger<EmailToEaxsProcessor>();
-            logger.LogDebug("Starting Test");  //all loging done by the test scripts are debug level
+            logger.LogDebug("Starting Test");  //all logging done by the test scripts are debug level
         }
 
         [TestCleanup]
