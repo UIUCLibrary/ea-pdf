@@ -31,14 +31,30 @@ namespace EaPdfCmd
         Xep
     }
 
+    public enum TrueFalse
+    {
+        True = 1,
+        False = 0
+    }
+
     public static class CommandLineHelpers
     {
         const int DefaultMaximumLength = 80;
         const int DefaultIndent = 2;
 
+        public static bool ToBoolean(this TrueFalse value)
+        {
+            switch (value)
+            {
+                case TrueFalse.True: return true;
+                case TrueFalse.False: return false;
+                default: throw new ArgumentOutOfRangeException(nameof(value));
+            }
+        }
+
         public static ReturnValue LoadCmdLineParamsAndConfig(IHostApplicationBuilder hostBldr, string[] args)
         {
-            var cmdLineParams = CommandLineHelpers.ParseCommandLineParams(args);
+            var cmdLineParams = ParseCommandLineParams(args);
 
             if (cmdLineParams == null)
             {
@@ -134,6 +150,11 @@ namespace EaPdfCmd
 
         }
 
+        /// <summary>
+        /// Some command line arguments will override configuration settings
+        /// </summary>
+        /// <param name="hostBldr"></param>
+        /// <param name="cmdLineParams"></param>
         private static void ConvertCommandLineParmsIntoConfig(IHostApplicationBuilder hostBldr, ICommandLineParams cmdLineParams)
         {
             //set some config values from the command line
@@ -144,10 +165,23 @@ namespace EaPdfCmd
             {
                 parms.Add("Logging:LogLevel:Default", cmdLineParams.LogLevel.ToString());
             }
+
             //set the FoProcessor:Default from the command line
             if (cmdLineParams.FoProcessor != null)
             {
                 parms.Add("FoProcessors:Default", cmdLineParams.FoProcessor.ToString());
+            }
+
+            //set the EmailToEaxsProcessorSettings:IncludeSubFolders from the command line
+            if (cmdLineParams.IncludeSubFolders != null)
+            {
+                parms.Add("EmailToEaxsProcessorSettings:IncludeSubFolders", cmdLineParams.IncludeSubFolders.ToString());
+            }
+
+            //set the EmailToEaxsProcessorSettings:OneFilePerMessageFile from the command line
+            if (cmdLineParams.OneFilePerMessageFile != null)
+            {
+                parms.Add("EmailToEaxsProcessorSettings:OneFilePerMessageFile", cmdLineParams.OneFilePerMessageFile.ToString());
             }
 
             hostBldr.Configuration.AddInMemoryCollection(parms);

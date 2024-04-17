@@ -17,5 +17,9 @@ namespace EaPdfCmd
         LogLevel? LogLevel { get; set; } 
 
         FoProcessor? FoProcessor { get; set; }
+
+        TrueFalse? IncludeSubFolders { get; set; }
+
+        TrueFalse? OneFilePerMessageFile { get; set; }
     }
 }

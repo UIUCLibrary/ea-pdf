@@ -2,7 +2,7 @@
   "profiles": {
     "EaPdfCmd": {
       "commandName": "Project",
-      "commandLineArgs": "--in d:\\EmailsForTesting\\CommandLineTests\\MBOXes\\test_a.mbox --out d:\\EmailsForTesting\\CommandLineTests\\MBOXesOUT -g mailto:someone@sample.org --log-level trace --fo-processor FOP "
+      "commandLineArgs": "--in d:\\EmailsForTesting\\CommandLineTests\\emls --out d:\\EmailsForTesting\\CommandLineTests\\out\\ -g mailto:thabing@gmail.com -m"
     }
   }
 }

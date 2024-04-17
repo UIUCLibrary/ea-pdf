@@ -37,6 +37,12 @@ namespace EaPdfCmd
         [Option('f', "fo-processor", Required = false, HelpText = "Which XSL-FO processor to use.")]
         public FoProcessor? FoProcessor { get; set; }
 
+        [Option('s', "include-sub-folders", Required = false, HelpText = "Include sub-folders.")]
+        public TrueFalse? IncludeSubFolders { get; set; }
+
+        [Option('m', "one-file-per-message-file", Required = false, HelpText = "Output one file per message file.")]
+        public TrueFalse? OneFilePerMessageFile { get; set; }
+
         /// <summary>
         /// Validate whether the command line parameters are valid.
         /// </summary>
@@ -59,7 +65,7 @@ namespace EaPdfCmd
                 ret.AppendLine($"The --out '{ShortenedPath(Out.FullName)}' folder is not valid given the --in '{ShortenedPath(In.FullName)}' file; it cannot be the same as or a child of the input file taken as a folder name, ignoring any extensions");
             }
 
-            if(In.Exists)
+            if (In.Exists)
             {
                 var inType = MimeKitHelpers.DetermineInputType(In.FullName, out _);
 
@@ -101,7 +107,7 @@ namespace EaPdfCmd
             var dir = Path.GetFileName(Path.GetDirectoryName(path)) ?? ".";
             var file = Path.GetFileName(path);
             var ret = Path.Combine(Path.GetFileName(dir), file);
-            if(ret.Length < path.Length)
+            if (ret.Length < path.Length)
             {
                 ret = $"...\\{ret}";
             }

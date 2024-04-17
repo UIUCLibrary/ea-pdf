@@ -87,6 +87,7 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "out_dlf-sha256-ext--oneper-includeSubs", "SHA256", true, false, false, false, true, true, 9, 11, 852, DisplayName = "moz-dlf-sha256-ext--oneper-includeSubs")]
 
         //Pine mbox folder
+        [DataRow("Pine\\FolderTest\\", "out_foldertest_slash\\", "SHA256", true, false, false, false, false, false, 0, -1, -1, DisplayName = "pine-folder-slash")] //input and output folder with trailing slash
         [DataRow("Pine", "out_pine-ext", "SHA256", true, false, false, false, false, false, 0, 69, 22910, DisplayName = "pine-folder-one-file-ext")]
         [DataRow("Pine", "out-pine", "SHA256", false, false, false, false, false, false, 0, 69, 20799, DisplayName = "pine-folder-one-file")]
         [DataRow("Pine", "out_pine-one", "SHA256", false, false, false, false, false, false, 0, 69, 20799, DisplayName = "pine-folder-one-file-in-subfolder")]
