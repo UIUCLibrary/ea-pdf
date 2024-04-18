@@ -15,7 +15,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEmailToEaxsProcessorSettings()
         {
             var config = new ConfigurationBuilder()
-                .AddXmlFile("App.config", optional: false, reloadOnChange: false)
+                .AddXmlFile("TEST_App.config", optional: false, reloadOnChange: false)
                 .Build();
 
             var settings = new EmailToEaxsProcessorSettings(config);
@@ -27,7 +27,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestAppSettingsJson()
         {
             var config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+                .AddJsonFile("TEST_appsettings.json", optional: false, reloadOnChange: false)
                 .Build();
 
             var settings1 = new EmailToEaxsProcessorSettings(config);
@@ -65,7 +65,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToEaPdfProcessorSettings()
         {
             var config = new ConfigurationBuilder()
-                .AddXmlFile("App.config", optional: false, reloadOnChange: false)
+                .AddXmlFile("TEST_App.config", optional: false, reloadOnChange: false)
                 .Build();
 
             var settings = new EaxsToEaPdfProcessorSettings(config);
@@ -77,7 +77,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToEaPdfProcessorSettingsInvalidBaseFont()
         {
             var config = new ConfigurationBuilder()
-                .AddXmlFile("App_Extra_BaseFont.config", optional: false, reloadOnChange: false)
+                .AddXmlFile("TEST_App_Extra_BaseFont.config", optional: false, reloadOnChange: false)
                 .Build();
 
             //The extra base font should be ignored
@@ -88,10 +88,10 @@ namespace UIUCLibrary.TestEaPdf
 
         private void CheckEaxsToEaPdfProcessorSettings(EaxsToEaPdfProcessorSettings settings)
         {
-            Assert.AreEqual("aaa\\XResources\\eaxs_to_fo.xsl", settings.XsltFoFilePath);
-            Assert.AreEqual("bbb\\XResources\\eaxs_to_xmp.xsl", settings.XsltXmpFilePath);
-            Assert.AreEqual("ccc\\XResources\\eaxs_to_root_xmp.xsl", settings.XsltRootXmpFilePath);
-            Assert.AreEqual("ddd\\Fonts", settings.FontsFolder);
+            Assert.AreEqual("XResources\\aaa.xsl", settings.XsltFoFilePath);
+            Assert.AreEqual("XResources\\bbb.xsl", settings.XsltXmpFilePath);
+            Assert.AreEqual("XResources\\ccc.xsl", settings.XsltRootXmpFilePath);
+            Assert.AreEqual("XResources", settings.FontsFolder);
 
             Assert.AreEqual(2, settings.LanguageFontMapping.Count);
             Assert.IsTrue(settings.LanguageFontMapping.ContainsKey(FontHelpers.DEFAULT_SCRIPT));
@@ -116,7 +116,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToEaPdfProcessorSettingsBadScript()
         {
             var config = new ConfigurationBuilder()
-                .AddXmlFile("App_bad_script.config", optional: false, reloadOnChange: false)
+                .AddXmlFile("TEST_App_bad_script.config", optional: false, reloadOnChange: false)
                 .Build();
             _ = new EaxsToEaPdfProcessorSettings(config);
         }
@@ -126,7 +126,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToEaPdfProcessorSettingsMissingFamilies()
         {
             var config = new ConfigurationBuilder()
-                .AddXmlFile("App_Missing_Families.config", optional: false, reloadOnChange: false)
+                .AddXmlFile("TEST_App_Missing_Families.config", optional: false, reloadOnChange: false)
                 .Build();
 
             _ = new EaxsToEaPdfProcessorSettings(config);

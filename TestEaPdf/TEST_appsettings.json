@@ -1,0 +1,79 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  },
+
+  "XsltProcessors": {
+    "Default": "Saxon", // "Saxon" is currently the only supported XSLT processor
+    "Saxon": {
+      "ClassPath": "C:\\Program Files\\SaxonHE11-5J\\saxon-he-11.5.jar"
+    }
+  },
+
+  "FoProcessors": {
+    "Default": "FOP", // "Fop" or "Xep"
+    "Fop": {
+      "JarFilePath": "C:\\Program Files\\Apache FOP\\fop-2.8\\fop\\build\\fop.jar",
+      "ConfigFilePath": "XResources\\fop.xconf"
+    },
+    "Xep": {
+      "ClassPath": "C:\\Program Files\\RenderX\\XEP\\lib\\xep.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon.jar;C:\\Program Files\\RenderX\\XEP\\lib\\saxon6.5.5\\saxon-xml-apis.jar;C:\\Program Files\\RenderX\\XEP\\lib\\xt.jar",
+      "ConfigFilePath": "XResources\\xep.xml"
+    }
+  },
+
+  "EmailToEaxsProcessorSettings": {
+    "HashAlgorithmName": "MD5",
+    "SaveAttachmentsAndBinaryContentExternally": true,
+    "WrapExternalContentInXml": true, //this must be true if the FO processor is XEP (really only if there are PDF attachments)
+    "PreserveBinaryAttachmentTransferEncodingIfPossible": true,
+    "PreserveTextAttachmentTransferEncoding": true,
+    "IncludeSubFolders": true,
+    "ExternalContentFolder": "ExternalContentFolder",
+    "OneFilePerMessageFile": true,
+    "MaximumXmlFileSize": 100000,
+    "SaveTextAsXhtml": true,
+    "LogToXmlThreshold": "Warning",
+    "DefaultFileExtension": ".mbx",
+    "SkipUntilMessageId": "SkipUntilMessageId",
+    "SkipAfterMessageId": null,
+    "ExtraHtmlCharacterEntities": {
+      "QUOT": 34,
+      "COMMA": 44,
+      "PERIOD": 46
+    },
+    "ForceParse": false
+  },
+
+  "EaxsToEaPdfProcessorSettings": {
+    "XsltFoFilePath": "XResources\\aaa.xsl",
+    "XsltXmpFilePath": "XResources\\bbb.xsl",
+    "XsltRootXmpFilePath": "XResources\\ccc.xsl",
+    "FontsFolder": "XResources",
+
+    /*
+        Mapping of unicode language scripts to font families.  This is used to select the appropriate font family for a given script.  The font family names must exist in the FO processor's font configuration.
+        The outer element name is an ISO 15924 4-letter codes for the script. A special entry with key 'default' should be in the dictionary with all three base font families specified. 
+        This will be used as the default if a script entry is not found in the list.  Usually, this will be fonts with Latin or Western character sets, but could be fonts for a specific language.
+        If a 'default' entry is not present, an entry for 'latn' (Latin) will be used as the default.  If neither 'default' nor 'latn' is found, the first alphabetical entry in the dictionary will be used 
+        as the default which may produce unintended results.  Regardless of original order, the mappings are sorted alphabetically when loaded from the config file.
+		
+        The inner element name is the base font family, <Serif>, <SansSerif>, or <Monospace>; the first element is the default if no base font family is specified
+        The value is a comma-separated list of font family names; these names must exist in the FO processor's font configuration
+    */
+    "LanguageFontMapping": {
+      "Default": { //This will be the default of no other entry matches the script
+        "Serif": "serif1",
+        "SansSerif": "sans-serif1",
+        "Monospace": "monospace1"
+      },
+      "Hebr": { //Hebrew
+        "Serif": "serif2",
+        "SansSerif": "sans-serif2",
+        "Monospace": "monospace2"
+      }
+    }
+  }
+}
