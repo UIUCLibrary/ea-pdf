@@ -10,7 +10,7 @@ attachments, and source files. All EA-PDF files are also archival PDF/A files, e
 
 The EA-PDF specification is being developed by the PDF Association in partnership with the Library of the 
 University of Illinois at Urbana-Champaign and others. Development is being funded by the Institute of 
-Museum and Library Services (IMLS), grant number [LG-250129-OLS-21](https://www.imls.gov/grants/awarded/lg-250129-ols-21).Email2Pdf
+Museum and Library Services (IMLS), grant number [LG-250129-OLS-21](https://www.imls.gov/grants/awarded/lg-250129-ols-21).
 
 The code consists of three projects:
 - Class Library (EaPdf)
