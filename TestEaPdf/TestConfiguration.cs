@@ -18,6 +18,9 @@ namespace UIUCLibrary.TestEaPdf
                 .AddXmlFile("TEST_App.config", optional: false, reloadOnChange: false)
                 .Build();
 
+            var b = config.GetValue<bool?>("junk:bogus:key");
+            Assert.IsNull(b);
+
             var settings = new EmailToEaxsProcessorSettings(config);
 
             CheckEmailToEaxsProcessorSettings(settings);

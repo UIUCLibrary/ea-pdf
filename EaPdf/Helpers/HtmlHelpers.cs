@@ -408,6 +408,12 @@ namespace UIUCLibrary.EaPdf.Helpers
 
                         if (!string.IsNullOrWhiteSpace(newStyle))
                         {
+                            if(newStyle.Contains("!important",StringComparison.OrdinalIgnoreCase) && !ignoreHtmlIssues)
+                            {
+                                messages.Add((LogLevel.Information, $"The style attribute '{style.Value}' contains '!important' which is not supported by XSL-FO; it was removed from node '{elem.XPath}'"));
+                                newStyle = newStyle.Replace("!important", " ",StringComparison.OrdinalIgnoreCase);
+                            }
+
                             style.Value = newStyle;
                         }
                         else

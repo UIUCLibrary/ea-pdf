@@ -49,6 +49,19 @@ namespace EaPdfCmd
                 //Init the email to EAXS processors using the configuration
                 var emailProc = new EmailToEaxsProcessor(_logger, _config);
 
+                //Init EAXS to PDF processors using the configuration
+                var pdfProc = new EaxsToEaPdfProcessor(_logger, _config);
+
+                //check for compatibility between the settings of the two processors
+                string foProc = _config["FoProcessors:Default"] ?? "Fop";
+                if (foProc.Equals("Xep", StringComparison.OrdinalIgnoreCase) && emailProc.Settings.WrapExternalContentInXml== false)
+                {
+                    Errors.Add((LogLevel.Error, $"The 'WrapExternalContentInXml' setting is {emailProc.Settings.WrapExternalContentInXml}, and the 'FoProcessors:Default' setting is '{foProc}'. This is not supported."));
+                    ExitCode = ReturnValue.ConfigurationError;
+                    return (int)ExitCode;
+                }
+
+
                 long ret = 0;
                 switch (inputType)
                 {
@@ -82,8 +95,6 @@ namespace EaPdfCmd
                     var pdfFile = Path.ChangeExtension(xmlFile,".pdf");
                     try
                     {
-                        //Init EAXS to PDF processors using the configuration
-                        var pdfProc = new EaxsToEaPdfProcessor(_logger, _config);
                         var files = pdfProc.ConvertEaxsToPdf(xmlFile, pdfFile);
                     }
                     catch (Exception ex)

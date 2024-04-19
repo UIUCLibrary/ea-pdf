@@ -18,8 +18,8 @@ namespace EaPdfCmd
 
         FoProcessor? FoProcessor { get; set; }
 
-        TrueFalse? IncludeSubFolders { get; set; }
+        //TrueFalse? IncludeSubFolders { get; set; }
 
-        TrueFalse? OneFilePerMessageFile { get; set; }
+        //TrueFalse? OneFilePerMessageFile { get; set; }
     }
 }

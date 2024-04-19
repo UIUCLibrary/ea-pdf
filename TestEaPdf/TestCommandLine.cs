@@ -54,7 +54,8 @@ namespace UIUCLibrary.TestEaPdf
             var inFilePath = args[1];
             var outFilePath = args[3];
 
-            Directory.Delete(outFilePath, true);
+            if(Directory.Exists(outFilePath))
+                Directory.Delete(outFilePath, true);
 
             var xmlFile = new FileInfo(FilePathHelpers.GetXmlOutputFilePath(Path.GetFullPath(outFilePath), Path.GetFullPath(inFilePath)));
             var pdfFile = new FileInfo(Path.ChangeExtension(xmlFile.FullName, ".pdf"));

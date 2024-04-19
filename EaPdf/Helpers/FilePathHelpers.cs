@@ -7,6 +7,23 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public static class FilePathHelpers
     {
+        /// <summary>
+        /// Shorten the path to just the outer directory name and the file name; useful for logging and error messages
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public static string ShortenedPath(string path)
+        {
+            var dir = Path.GetFileName(Path.GetDirectoryName(path)) ?? ".";
+            var file = Path.GetFileName(path);
+            var ret = Path.Combine(Path.GetFileName(dir), file);
+            if (ret.Length < path.Length)
+            {
+                ret = $"...\\{ret}";
+            }
+            return ret;
+        }
+
 
         /// <summary>
         /// Given the output folder path, input file path, and a set of created files, get the output file path for the XML file

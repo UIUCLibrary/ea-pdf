@@ -2,7 +2,7 @@
   "profiles": {
     "EaPdfCmd": {
       "commandName": "Project",
-      "commandLineArgs": "--in d:\\EmailsForTesting\\CommandLineTests\\emls --out d:\\EmailsForTesting\\CommandLineTests\\out\\ -g mailto:thabing@gmail.com -m"
+      "commandLineArgs": "--in D:\\EmailsForTesting\\CommandLineTests\\emls\\test_a.eml --out D:\\EmailsForTesting\\CommandLineTests\\out\\emls_3 --global-id mailto:someone@sample.org --email someone@sample.org -f xep"
     }
   }
 }

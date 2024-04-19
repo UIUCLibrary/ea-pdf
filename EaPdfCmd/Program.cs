@@ -1,13 +1,5 @@
-﻿using CommandLine;
-using CommandLine.Text;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Pastel;
-using System.Text;
-using System.Text.RegularExpressions;
-using UIUCLibrary.EaPdf.Helpers;
 
 namespace EaPdfCmd
 {
@@ -41,8 +33,11 @@ namespace EaPdfCmd
 
             //add the email processor as a hosted service
             hostBldr.Services.AddHostedService<EmailToEaPdfProcessor>();
+
+            //build the host
             IHost host = hostBldr.Build();
 
+            //get the processor for later use
             var processor = host.Services.GetService<IHostedService>() as EmailToEaPdfProcessor;
 
             await host.RunAsync();

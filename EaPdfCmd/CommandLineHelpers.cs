@@ -31,6 +31,14 @@ namespace EaPdfCmd
         Xep
     }
 
+    public enum XsltProcessor
+    {
+        Saxon
+    }
+
+    /// <summary>
+    /// Just so that commandlineparser display the acceptable values in the help text for bools
+    /// </summary>
     public enum TrueFalse
     {
         True = 1,
@@ -42,6 +50,12 @@ namespace EaPdfCmd
         const int DefaultMaximumLength = 80;
         const int DefaultIndent = 2;
 
+        /// <summary>
+        /// So you can use the TrueFalse enum as a boolean
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
         public static bool ToBoolean(this TrueFalse value)
         {
             switch (value)
@@ -58,7 +72,7 @@ namespace EaPdfCmd
 
             if (cmdLineParams == null)
             {
-                if(args.Contains("--help") || args.Contains("--version"))
+                if (args.Contains("--help") || args.Contains("--version"))
                 {
                     //normal exit for help/version
                     return ReturnValue.HelpOrVersionRequest;
@@ -172,17 +186,17 @@ namespace EaPdfCmd
                 parms.Add("FoProcessors:Default", cmdLineParams.FoProcessor.ToString());
             }
 
-            //set the EmailToEaxsProcessorSettings:IncludeSubFolders from the command line
-            if (cmdLineParams.IncludeSubFolders != null)
-            {
-                parms.Add("EmailToEaxsProcessorSettings:IncludeSubFolders", cmdLineParams.IncludeSubFolders.ToString());
-            }
+            ////set the EmailToEaxsProcessorSettings:IncludeSubFolders from the command line
+            //if (cmdLineParams.IncludeSubFolders != null)
+            //{
+            //    parms.Add("EmailToEaxsProcessorSettings:IncludeSubFolders", cmdLineParams.IncludeSubFolders.ToString());
+            //}
 
-            //set the EmailToEaxsProcessorSettings:OneFilePerMessageFile from the command line
-            if (cmdLineParams.OneFilePerMessageFile != null)
-            {
-                parms.Add("EmailToEaxsProcessorSettings:OneFilePerMessageFile", cmdLineParams.OneFilePerMessageFile.ToString());
-            }
+            ////set the EmailToEaxsProcessorSettings:OneFilePerMessageFile from the command line
+            //if (cmdLineParams.OneFilePerMessageFile != null)
+            //{
+            //    parms.Add("EmailToEaxsProcessorSettings:OneFilePerMessageFile", cmdLineParams.OneFilePerMessageFile.ToString());
+            //}
 
             hostBldr.Configuration.AddInMemoryCollection(parms);
         }
@@ -206,7 +220,7 @@ namespace EaPdfCmd
 
         private static ReturnValue ValidateConfiguration(IConfiguration config, ILogger logger)
         {
-            //check that file exist
+            //check that files exist
             if (!FileExists(config, "EaxsToEaPdfProcessorSettings:XsltFoFilePath", logger))
             {
                 return ReturnValue.FileNotFound;
@@ -262,13 +276,63 @@ namespace EaPdfCmd
                 }
             }
 
-            //check for invalid configuration combinations
-            //TODO: need to add a command line arg for the FO Processor
-            var foProc = config["FoProcessors:Default"] ?? "";
-            var wrap = config.GetValue<bool>("EmailToEaxsProcessorSettings:WrapExternalContentInXml");
-            if (!wrap && foProc.Equals("Xep", StringComparison.OrdinalIgnoreCase))
+            //check for valid FO processor
+            var foProcStr = config["FoProcessors:Default"] ?? "";
+            if (!string.IsNullOrWhiteSpace(foProcStr) && !Enum.TryParse<FoProcessor>(foProcStr, true, out _))
             {
-                logger.LogError($"The 'EmailToEaxsProcessorSettings:WrapExternalContentInXml' setting is false, and the 'FoProcessors:Default' setting is 'Xep'. This is not supported.");
+                logger.LogError($"Invalid value for 'FoProcessors:Default':'{foProcStr}'; must be one of these values: {string.Join(", ", Enum.GetNames(typeof(FoProcessor)))}");
+                return ReturnValue.ConfigurationError;
+            }
+
+            //check for valid XSLT processor
+            var xsltProcStr = config["XsltProcessors:Default"] ?? "";
+            if (!string.IsNullOrWhiteSpace(xsltProcStr) && !Enum.TryParse<XsltProcessor>(xsltProcStr, true, out _))
+            {
+                logger.LogError($"Invalid value for 'XsltProcessors:Default':'{xsltProcStr}'; must be one of these values: {string.Join(", ", Enum.GetNames(typeof(XsltProcessor)))}");
+                return ReturnValue.ConfigurationError;
+            }
+
+            //check for invalid configuration combinations
+            var wrap = config.GetValue<bool?>("EmailToEaxsProcessorSettings:WrapExternalContentInXml");
+            if (wrap != null && wrap == false && foProcStr.Equals("Xep", StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogError($"The 'EmailToEaxsProcessorSettings:WrapExternalContentInXml' setting is {wrap}, and the 'FoProcessors:Default' setting is '{foProcStr}'. This is not supported.");
+                return ReturnValue.ConfigurationError;
+            }
+
+            //prevent some defaults from being changed
+            var preserveBinary = config.GetValue<bool?>("EmailToEaxsProcessorSettings:PreserveBinaryAttachmentTransferEncodingIfPossible");
+            if (preserveBinary != null && preserveBinary == true)
+            {
+                logger.LogError($"The 'EmailToEaxsProcessorSettings:PreserveBinaryAttachmentTransferEncodingIfPossible' setting is {preserveBinary}. This is not currently supported.");
+                return ReturnValue.ConfigurationError;
+            }
+
+            var preserveText = config.GetValue<bool?>("EmailToEaxsProcessorSettings:PreserveTextAttachmentTransferEncoding");
+            if (preserveText != null & preserveText == true)
+            {
+                logger.LogError($"The 'EmailToEaxsProcessorSettings:PreserveTextAttachmentTransferEncoding' setting is {preserveText}. This is not currently supported.");
+                return ReturnValue.ConfigurationError;
+            }
+
+            var includeSubFolders = config.GetValue<bool?>("EmailToEaxsProcessorSettings:IncludeSubFolders");
+            if (includeSubFolders != null && includeSubFolders == true)
+            {
+                logger.LogError($"The 'EmailToEaxsProcessorSettings:IncludeSubFolders' setting is {includeSubFolders}. This is not currently supported.");
+                return ReturnValue.ConfigurationError;
+            }
+
+            var oneFilePerMessageFile = config.GetValue<bool?>("EmailToEaxsProcessorSettings:OneFilePerMessageFile");
+            if (oneFilePerMessageFile != null && oneFilePerMessageFile == true)
+            {
+                logger.LogError($"The 'EmailToEaxsProcessorSettings:OneFilePerMessageFile' setting is {oneFilePerMessageFile}. This is not currently supported.");
+                return ReturnValue.ConfigurationError;
+            }
+
+            var maxFileSize = config.GetValue<int?>("EmailToEaxsProcessorSettings:MaxFileSize");
+            if (maxFileSize != null && maxFileSize > 0)
+            {
+                logger.LogError($"The 'EmailToEaxsProcessorSettings:MaxFileSize' setting is {maxFileSize}. This is not currently supported.");
                 return ReturnValue.ConfigurationError;
             }
 
@@ -356,6 +420,7 @@ namespace EaPdfCmd
                         e.AddEnumValuesToHelpText = true;
                         e.Heading = "";
                         e.Copyright = "";
+                        e.AddDashesToOption = true;
                         if (!string.IsNullOrWhiteSpace(argErrors))
                         {
                             e.AddPreOptionsLine(errHdr.Pastel(ConsoleColor.Red));
