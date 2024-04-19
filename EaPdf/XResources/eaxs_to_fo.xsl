@@ -106,9 +106,9 @@
 				</fo:flow>
 			</fo:page-sequence>
 			
-			<fo:page-sequence master-reference="message-page">
-				<xsl:call-template name="static-content"/>
-				<xsl:for-each select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]">
+			<xsl:for-each select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]">
+				<fo:page-sequence master-reference="message-page">
+					<xsl:call-template name="static-content"/>
 					<fo:flow flow-name="xsl-region-body">
 						<fo:block><!-- empty block just to use as link destination -->
 							<xsl:call-template name="tag-artifact"/>
@@ -117,8 +117,8 @@
 						</fo:block>
 						<xsl:apply-templates select="." mode="RenderContent"/>
 					</fo:flow>
-				</xsl:for-each>
-			</fo:page-sequence>
+				</fo:page-sequence>
+			</xsl:for-each>
 			
 			<xsl:if test="$list-of-attachments='true'">
 				<fo:page-sequence master-reference="message-page" xml:lang="en">

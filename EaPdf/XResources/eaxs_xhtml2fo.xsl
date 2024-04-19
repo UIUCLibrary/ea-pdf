@@ -635,6 +635,10 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
       </fo:flow>
     </fo:page-sequence>
   </xsl:template>
+  
+  <xsl:template match="html:style">
+    <!-- do nothing, all styles should have been inlined before getting to this XSLT -->
+  </xsl:template>
 
   <!--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
    process common attributes and children
@@ -1403,9 +1407,12 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
     </xsl:if>
     <xsl:if test="@border or @frame">
       <xsl:choose>
+        <xsl:when test="number(@border) != number(@border)"><!-- TGH Test for non-standard value for HTML -->
+          <xsl:attribute name="border"><xsl:value-of select="@border"/></xsl:attribute>
+          <xsl:message terminate="no">Attribute border='<xsl:value-of select="@border"/>' is not a number; using it as is in the FO</xsl:message>
+        </xsl:when>
         <xsl:when test="@border &gt; 0">
-          <xsl:attribute name="border">
-            <xsl:value-of select="@border"/>px</xsl:attribute>
+          <xsl:attribute name="border"><xsl:value-of select="@border"/>px</xsl:attribute>
         </xsl:when>
       </xsl:choose>
       <xsl:choose>
