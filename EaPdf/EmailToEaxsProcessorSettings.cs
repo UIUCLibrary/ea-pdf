@@ -53,9 +53,9 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// If true, external content is wrapped inside of an XML file; if false, it is saved as the decoded original file.
-        /// The default is false.
+        /// The default is true.  This must be true if the FO Processor is XEP (technically only if the PDF has other PDFs as attachments).
         /// </summary>
-        public bool WrapExternalContentInXml { get; set; } = false;
+        public bool WrapExternalContentInXml { get; set; } = true;
 
         /// <summary>
         /// This only applies to binary attachments wrapped in XML, internally or externally.  If true, the original Content-Transfer-Encoding for binary 
@@ -76,7 +76,7 @@ namespace UIUCLibrary.EaPdf
         /// For mbox files, subfolders in the same directory as the mbox file and which match the name of the mbox file will also be processed, including all of its files and subfolders recursively
         /// For a folder of eml files, all subfolders will also be processed recursively
         /// </summary>
-        public bool IncludeSubFolders { get; set; } = true;
+        public bool IncludeSubFolders { get; set; } = false;
 
         /// <summary>
         /// The folder to save external content to, always relative to the output folder
@@ -95,7 +95,7 @@ namespace UIUCLibrary.EaPdf
         /// Approximate maximum allowable size for the output XML files, in bytes.  If the size of the XML file exceeds this value, it will be split into multiple files.
         /// A value less than or equal to zero means no limit. The actual file size for splitting will be with 5% of this value.  Output is always split at message boundaries.
         /// </summary>
-        public long MaximumXmlFileSize { get; set; } = 1024 * 1024 * 1024; // 1GB
+        public long MaximumXmlFileSize { get; set; } = 0; //no limit
 
         /// <summary>
         /// If true, all plain and html text will be converted to Xhtml when serialized into the XML
