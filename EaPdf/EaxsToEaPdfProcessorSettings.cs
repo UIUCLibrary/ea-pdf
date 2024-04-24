@@ -59,10 +59,6 @@ namespace UIUCLibrary.EaPdf
             {
                 throw new Exception($"XSLT file '{XsltRootXmpFilePath}' not found");
             }
-            if(!string.IsNullOrWhiteSpace(FontsFolder) && !Directory.Exists(FontsFolder))
-            {
-                throw new Exception($"Fonts folder '{FontsFolder}' not found");
-            }
 
             //FUTURE: maybe add some other validations here
 
@@ -75,11 +71,6 @@ namespace UIUCLibrary.EaPdf
         public string XsltXmpFilePath { get; set; } = "XResources\\eaxs_to_xmp.xsl";
 
         public string XsltRootXmpFilePath { get; set; } = "XResources\\eaxs_to_root_xmp.xsl";
-
-        /// <summary>
-        /// The folder where the fonts are located, may contain subfolders of fonts
-        /// </summary>
-        public string FontsFolder { get; set; } = "Fonts";
 
 
         /// <summary>

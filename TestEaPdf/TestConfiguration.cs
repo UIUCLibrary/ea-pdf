@@ -94,7 +94,6 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual("XResources\\aaa.xsl", settings.XsltFoFilePath);
             Assert.AreEqual("XResources\\bbb.xsl", settings.XsltXmpFilePath);
             Assert.AreEqual("XResources\\ccc.xsl", settings.XsltRootXmpFilePath);
-            Assert.AreEqual("XResources", settings.FontsFolder);
 
             Assert.AreEqual(2, settings.LanguageFontMapping.Count);
             Assert.IsTrue(settings.LanguageFontMapping.ContainsKey(FontHelpers.DEFAULT_SCRIPT));
