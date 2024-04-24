@@ -99,15 +99,18 @@ namespace EaPdfCmd
                 logger.LogTrace($"Loading configuration from '{appPath}'");
                 hostBldr.Configuration.AddJsonFile(appPath);
             }
-
-            appPath = Path.Combine(AppContext.BaseDirectory, "App.config");
-            if (File.Exists(appPath))
+            else
             {
-                logger.LogTrace($"Loading configuration from '{appPath}'");
-                hostBldr.Configuration.AddXmlFile(appPath);
+                appPath = Path.Combine(AppContext.BaseDirectory, "App.config");
+                if (File.Exists(appPath))
+                {
+                    logger.LogTrace($"Loading configuration from '{appPath}'");
+                    hostBldr.Configuration.AddXmlFile(appPath);
+                }
             }
 
             char[] seps = { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
+            //only look for appsettings.json or App.Config in the current directory if the app directory is different from the current directory
             if (!AppContext.BaseDirectory.TrimEnd(seps).Equals(Environment.CurrentDirectory.TrimEnd(seps), Path.DirectorySeparatorChar == Path.AltDirectorySeparatorChar ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase))
             {
                 //look for appsettings.json or App.config in the current directory
@@ -117,12 +120,14 @@ namespace EaPdfCmd
                     logger.LogTrace($"Loading configuration from '{appPath}'");
                     hostBldr.Configuration.AddJsonFile(appPath);
                 }
-
-                appPath = "App.Config";
-                if (File.Exists(appPath))
+                else
                 {
-                    logger.LogTrace($"Loading configuration from '{appPath}'");
-                    hostBldr.Configuration.AddXmlFile(appPath);
+                    appPath = "App.Config";
+                    if (File.Exists(appPath))
+                    {
+                        logger.LogTrace($"Loading configuration from '{appPath}'");
+                        hostBldr.Configuration.AddXmlFile(appPath);
+                    }
                 }
             }
 
@@ -211,7 +216,6 @@ namespace EaPdfCmd
             _ = ConfigHelpers.MakeConfigPathAbsolute(config, "EaxsToEaPdfProcessorSettings:XsltFoFilePath");
             _ = ConfigHelpers.MakeConfigPathAbsolute(config, "EaxsToEaPdfProcessorSettings:XsltXmpFilePath");
             _ = ConfigHelpers.MakeConfigPathAbsolute(config, "EaxsToEaPdfProcessorSettings:XsltRootXmpFilePath");
-            _ = ConfigHelpers.MakeConfigPathAbsolute(config, "EaxsToEaPdfProcessorSettings:FontsFolder");
 
             _ = ConfigHelpers.MakeConfigPathAbsolute(config, "FoProcessors:Fop:ConfigFilePath");
             _ = ConfigHelpers.MakeConfigPathAbsolute(config, "FoProcessors:Xep:ConfigFilePath");
@@ -232,10 +236,6 @@ namespace EaPdfCmd
             if (!FileExists(config, "EaxsToEaPdfProcessorSettings:XsltRootXmpFilePath", logger))
             {
                 return ReturnValue.FileNotFound;
-            }
-            if (!FolderExists(config, "EaxsToEaPdfProcessorSettings:FontsFolder", logger))
-            {
-                return ReturnValue.FolderNotFound;
             }
             if (!FileExists(config, "FoProcessors:Fop:JarFilePath", logger))
             {
