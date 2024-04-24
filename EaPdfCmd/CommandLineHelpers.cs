@@ -395,16 +395,18 @@ namespace EaPdfCmd
             int maxWidth = DefaultMaximumLength;
             int indent = DefaultIndent;
 
+            //don't colorize the help text if the output is redirected
+            if(Console.IsErrorRedirected)
+            {
+                Pastel.ConsoleExtensions.Disable();
+            }
+
             string errHdr = SentenceBuilder.Create().ErrorsHeadingText();
             int colorLength = "".Pastel(ConsoleColor.Red).Length;
 
             string myErrors = "";
             if (argResults.Tag == ParserResultType.NotParsed || !argResults.Value.IsValid(out myErrors))
             {
-                Console.Error.WriteLine(HeadingInfo.Default);
-                if (argResults.Errors.IsVersion())
-                    return true;
-                Console.Error.WriteLine(CopyrightInfo.Default);
 
                 var argErrors = GetArgErrors(argResults);
                 if (!string.IsNullOrWhiteSpace(argErrors))
@@ -442,16 +444,26 @@ namespace EaPdfCmd
                 }
 
 
-                Console.Error.WriteLine(helpText);
 
                 if (argResults.Errors.IsHelp() || argResults.Errors.IsVersion())
                 {
-                    //The parser handles the help/version, so this is a success
+                    //The parser handles the help/version, go to stdout and report this is a success
+                    Console.Out.WriteLine(HeadingInfo.Default);
+                    if (!argResults.Errors.IsVersion())
+                    {
+                        Console.Out.WriteLine(CopyrightInfo.Default);
+                        Console.Out.WriteLine(helpText);
+                    }
                     return true;
                 }
-
-                //Otherwise, there was an argument parsing error
-                return false;
+                else
+                {
+                    //Otherwise, there was an argument parsing error, go stderr and report this is a failure
+                    Console.Error.WriteLine(HeadingInfo.Default);
+                    Console.Error.WriteLine(CopyrightInfo.Default);
+                    Console.Error.WriteLine(helpText);
+                    return false;
+                }
             }
             return true;
         }
