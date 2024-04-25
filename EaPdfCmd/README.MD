@@ -62,6 +62,68 @@ are:
 If you install these applications in different directories, you will need to update the configuration; see below for 
 information on how to configure the application to use these dependencies.
 
+## Usage
+
+The application is intended to be run at the command line.  The distribution zip file contains a Windows executable `EaPdfCmd.exe` that
+can be run from the command line.  On other platforms you can run the application using the `dotnet EaPdfCmd.dll` command.  
+
+The app supports the following parameters:
+
+### Command Line Options
+
+```
+>EaPdfCmd --help
+EaPdfCmd 0.2.0-alpha+7ac2a8e478842b624eef6165034c1a692271e756
+Copyright 2024 University of Illinois Board of Trustees. All Rights Reserved.
+
+
+  -i, --in              Required. Input file or folder.
+
+  -o, --out             Required. Output folder.
+
+  -g, --global-id       Required. Globally unique, permanent, absolute URI
+                        identifying the email archive.
+
+  -c, --config          Configuration file.
+
+  -e, --email           Email address(es) associated with the archive,
+                        repeatable.
+
+  -l, --log-level       Default log level. Valid values: Trace, Debug,
+                        Information, Warning, Error, Critical, None
+
+  -f, --fo-processor    Which XSL-FO processor to use. Valid values: Fop, Xep
+
+  --help                Display this help screen.
+
+  --version             Display version information.
+
+```
+
+Basic command line errors are output to the console stderr stream.  More detailed error messages are written to the log which goes to the
+console stdout stream by default.  The log level can be set using the `-l, --log-level` command line option.  For large email files, you may 
+want to redirect the console output to a file for easier reading.  Use the `> file.txt` operator to redirect the output to a file.
+
+The files created by the application are written to the output folder specified by the `-o, --out` option.  The output folder is created if it does
+not exist.  If the output folder is not empty, the application will overwrite any existing files with the same name.  The output filenames are
+based on the input filenames, but with a new extension appended.
+
+For example if the input file was named `email.mbox`, the application will create these subfolders and files in the output folder:
+
+- `email.mbox.pdf` This is the EA-PDF file that contains the email messages converted to PDF.  This file will conform to the EA-PDF 
+  specification.  This is the primary archival PDF output file.  The remainder of the output folders and files are intermediate supporting files 
+  for this file, and can be discarded if desired.
+
+- `ExtBodyContent`  This folder contains all the external content files, such as attachments, that are saved as separate files.  These are 
+  organized into subfolders based on the first two characters of the checksum of the content.  The files are named with the checksum and 
+  the original file extension, or if the files are wrapped in XML, the `.xmlw` file extension. 
+
+- `email.mbox.xml`  This is the file that contains the email messages converted to XML.  This file will conform to the EAXS XML Schema, 
+  `eaxs_schema_v2.xsd`, which is included with the distribution.
+
+- `email.mbox.csv` This is a comma-separated-value (CSV) file with a row containing brief metadata about each message that was contained in
+  the input file.  
+
 ## Configuration
 
 The application will attempt to load configuration settings, either JSON or XML, from these files in 
@@ -382,16 +444,18 @@ same directory as this XSLT. During post-processing, these metadata are inserted
 
 ##### LanguageFontMapping
 
-This section contains the mapping of unicode language scripts to font families.  This is used to select the appropriate font family for a
-given script.  The font family names must exist in the FO processor's font configuration.  The outer element name is an ISO 15924 4-letter
-codes for the script. A special entry with key 'default' should be in the dictionary with all three base font families specified. This will
-be used as the default if a script entry is not found in the list.  Usually, this will be fonts with Latin or Western character sets, but
-could be fonts for a specific language.  If a 'default' entry is not present, an entry for 'latn' (Latin) will be used as the default.  If
-neither 'default' nor 'latn' is found, the first alphabetical entry in the dictionary will be used as the default which may produce unintended
-results.  Regardless of original order, the mappings are sorted alphabetically when loaded from the config file.
+This section contains the mapping of Unicode language scripts and typefaces (Serif, SansSerif, or Monospace) to font families.  This is used 
+to select the appropriate font family for a given script and desired typeface.  The font family names must exist in the FO processor's font 
+configuration.  The outer element name is an ISO 15924 4-letter codes for the script. A special entry with key `Default` should be in the 
+dictionary with all three typefaces specified. This will be used as the default if a script entry is not found in the list.  Usually, this 
+will be fonts with Latin or Western character sets, but could be fonts for a specific language.  If a `Default` entry is not present, an entry 
+for `Latn` (Latin) will be used as the default.  If neither `Default` nor `Latn` is found, the first alphabetical entry in the dictionary will 
+be used as the default which may produce unintended results.  Regardless of original order, the mappings are sorted alphabetically when 
+loaded from the config file.
 
-The base font families are <Serif>, <SansSerif>, or <Monospace>; the first element is the default if no base font family is specified.  The
-value is a comma-separated list of font family names; these names must exist in the FO processor's font configuration.
+The supported typefaces are `Serif`, `SansSerif`, or `Monospace`. Some scripts may not support all typefaces.  If a given typeface is
+desired but not present in the mapping, the first typeface in the list will be used instead. The typeface value is a comma-separated list 
+of font family names to be used for the script and typeface; these names must exist in the FO processor's font configuration.
 
 Below is an example of the default font mapping:
 
@@ -413,83 +477,14 @@ Below is an example of the default font mapping:
 For the `Default` entry, the `Serif`, `SansSerif`, and `Monospace` typefaces are mapped to the `serif`, `sans-serif`, and `monospace` font 
 families, respectively.
 
-Similarly, `Arab` script characters that need a serif typeface are mapped to the `Traditional Arabic, serif` font families.  If an 
+Similarly, `Arab` scripts that need a `Serif` typeface are mapped to the `Traditional Arabic, serif` font families.  If an 
 appropriate character can be found in the `Traditional Arabic` font, it will be used; if not, the `serif` font will be used.  Similary
 for the `SansSerif` and `Monospace` typefaces.  
 
 Note that in the above example, the `serif`, `san-serif`, `monospace`, `Traditional Arabic`, `Simplified Arabic`, and 
-`Simplified Arabic Fixed` font families must all be declared in the FO processor's font configuration.  `fop.xconf` and `xep.xml` files
+`Simplified Arabic Fixed` font families must all be declared in the FO processor's font configuration.  The `fop.xconf` and `xep.xml` files
 included in the distribution have examples of how to declare these font families.  You should refer to the documentation for the FO
 processor you are using for more information on how to configure fonts.
 
 Also included with the distributed files is a `Fonts` directory that contains various open source fonts that can be used with application.
 
-## Usage
-
-The application is a command line tool that takes the following parameters:
-
-### Command Line Options
-
-```
->EaPdfCmd --help
-EaPdfCmd 0.2.0-alpha+7ac2a8e478842b624eef6165034c1a692271e756
-Copyright 2024 University of Illinois Board of Trustees. All Rights Reserved.
-
-
-  -i, --in              Required. Input file or folder.
-
-  -o, --out             Required. Output folder.
-
-  -g, --global-id       Required. Globally unique, permanent, absolute URI
-                        identifying the email archive.
-
-  -c, --config          Configuration file.
-
-  -e, --email           Email address(es) associated with the archive,
-                        repeatable.
-
-  -l, --log-level       Default log level. Valid values: Trace, Debug,
-                        Information, Warning, Error, Critical, None
-
-  -f, --fo-processor    Which XSL-FO processor to use. Valid values: Fop, Xep
-
-  --help                Display this help screen.
-
-  --version             Display version information.
-
-```
-
-Basic command line errors are output to the console stderr stream.  More detailed error messages are written to the log which goes to the
-console stdout stream by default.  The log level can be set using the `-l, --log-level` command line option.  For large email files, you may 
-want to redirect the console output to a file for easier reading.  Use the `> file.txt` operator to redirect the output to a file.
-
-The files created by the application are written to the output folder specified by the `-o, --out` option.  The output folder is created if it does
-not exist.  If the output folder is not empty, the application will overwrite any existing files with the same name.  The output filenames are
-based on the input filenames, but with a new extension appended.
-
-For example if the input file was named `email.mbox`, the application will create these subfolders and files in the output folder:
-
-- `email.mbox.pdf` This is the EA-PDF file that contains the email messages converted to PDF.  This file will conform to the EA-PDF 
-  specification.  This is the primary archival PDF output file.  The remainder of the output folders and files are intermediate supporting files 
-  for this file, and can be discarded if desired.
-
-- `ExtBodyContent`  This folder contains all the external content files, such as attachments, that are saved as separate files.  These are 
-  organized into subfolders based on the first two characters of the checksum of the content.  The files are named with the checksum and 
-  the original file extension, or if the files are wrapped in XML, the `.xmlw` file extension. 
-
-- `email.mbox.xml`  This is the file that contains the email messages converted to XML.  This file will conform to the EAXS XML Schema, 
-  `eaxs_schema_v2.xsd`, which is included with the distribution.
-
-- `email.mbox.csv` This is a comma-separated-value (CSV) file with a row containing brief metadata about each message that was contained in
-  the input file.  
-
-## Changelog
-
-### 0.2.0-alpha (2024-04-19)
-- Initial release
-- The tool is based on early, non-public drafts of the EA-PDF specification, specifically 0.2 and 0.3.
-- The tool is capable of creating an EA-PDF from a single email message in the EML format or a collection  
-  of email messages in the MBOX format.
-- This is alpha-level software, so expect bugs and missing features.
-  - If you want to report bugs or make feature requests, please us the [GitHub Issue Tracker](https://github.com/UIUCLibrary/ea-pdf/issues).
-  
