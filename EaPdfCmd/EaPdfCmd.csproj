@@ -8,7 +8,7 @@
     <Title>EA-PDF Creation Tool</Title>
     <AssemblyVersion></AssemblyVersion>
 	<VersionPrefix>0.2.5</VersionPrefix>
-	<VersionSuffix>alpha</VersionSuffix>
+	<VersionSuffix>alpha-001</VersionSuffix>
 	<IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion><!-- Include Git Commit ID -->
 	<Company>University of Illinois Board of Trustees</Company>
 	<Copyright>Copyright $([System.DateTime]::Now.ToString('yyyy')) University of Illinois Board of Trustees. All Rights Reserved.</Copyright>
