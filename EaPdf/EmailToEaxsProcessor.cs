@@ -656,10 +656,12 @@ namespace UIUCLibrary.EaPdf
         {
             var csvFilePath = Path.Combine(outDirectoryName, Path.GetFileName(Path.ChangeExtension(messageFilePath, "csv")));
             MessageBrief.SaveMessageBriefsToCsvFile(csvFilePath, messageList);
+#if DEBUG
             csvFilePath = Path.Combine(outDirectoryName, Path.GetFileNameWithoutExtension(messageFilePath) + "_stats.csv");
             SaveStatsToCsv(csvFilePath);
             csvFilePath = Path.Combine(outDirectoryName, Path.GetFileNameWithoutExtension(messageFilePath) + "_outfiles.csv");
             SaveOutFilesToCsv(csvFilePath);
+#endif
         }
 
         private void SaveOutFilesToCsv(string csvFilepath)
