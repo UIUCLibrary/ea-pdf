@@ -327,6 +327,9 @@
     <None Update="Fonts\Kurinto\Fonts_Lang\KurintoTextTC-Rg.ttf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Fonts\Kurinto\License.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="XResources\CountryCodes.xsd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -406,7 +409,7 @@
     <None Update="XResources\images\stamp-renderx.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="XResources\license.xml">
+    <None Update="XResources\xep_license.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="XResources\rolemap.xml">
