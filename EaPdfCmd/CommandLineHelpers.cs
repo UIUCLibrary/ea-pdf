@@ -443,12 +443,18 @@ namespace EaPdfCmd
                     helpText.AddPreOptionsLine(myErrors);
                 }
 
-
+                //Remove the Git Commit ID from the HeadingInfo version
+                string heading = HeadingInfo.Default.ToString();
+                int plus = heading.LastIndexOf("+");
+                if(plus > 0)
+                {
+                    heading = heading[..plus];
+                }
 
                 if (argResults.Errors.IsHelp() || argResults.Errors.IsVersion())
                 {
                     //The parser handles the help/version, go to stdout and report this is a success
-                    Console.Out.WriteLine(HeadingInfo.Default);
+                    Console.Out.WriteLine(heading);
                     if (!argResults.Errors.IsVersion())
                     {
                         Console.Out.WriteLine(CopyrightInfo.Default);
@@ -459,7 +465,7 @@ namespace EaPdfCmd
                 else
                 {
                     //Otherwise, there was an argument parsing error, go stderr and report this is a failure
-                    Console.Error.WriteLine(HeadingInfo.Default);
+                    Console.Error.WriteLine(heading);
                     Console.Error.WriteLine(CopyrightInfo.Default);
                     Console.Error.WriteLine(helpText);
                     return false;
