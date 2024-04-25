@@ -1,6 +1,6 @@
 University of Illinois/NCSA Open Source License
 
-Copyright (c) 2023 University of Illinois Board of Trustees. All rights reserved.
+Copyright (c) 2024 University of Illinois Board of Trustees. All rights reserved.
 
 Developed by: 
 
