@@ -411,6 +411,7 @@
     </None>
     <None Update="XResources\xep_license.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
     <None Update="XResources\rolemap.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
