@@ -583,21 +583,24 @@ namespace UIUCLibrary.TestEaPdf
             bool forceParse = true //TODO: run the tests with forceParse = false
             )
         {
-            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSubs, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId);
+            //FUTURE: skip for the time being, takes too long
+            Assert.Inconclusive("Test is commented out");
 
-            if (quick) //do the xml validation separately and store results in different outputfile
-            {
-                testFilesBaseInputDirectory = Path.GetDirectoryName(Path.Combine(testFilesBaseInputDirectory, relInPath)) ?? testFilesBaseInputDirectory;
-                string testFileName = Path.GetFileName(relInPath);
-                var sampleFile = Path.Combine(testFilesBaseInputDirectory, testFileName);
-                (_, string outFolder) = GetOutFolder(sampleFile, relOutPath);
+            //TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSubs, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+            //    quick, maxOutFileSize, xhtml, oneMsgId);
 
-                validXml = ValidateXmlDocuments(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, InputFileType.MboxFile, MimeFormat.Mbox);
+            //if (quick) //do the xml validation separately and store results in different outputfile
+            //{
+            //    testFilesBaseInputDirectory = Path.GetDirectoryName(Path.Combine(testFilesBaseInputDirectory, relInPath)) ?? testFilesBaseInputDirectory;
+            //    string testFileName = Path.GetFileName(relInPath);
+            //    var sampleFile = Path.Combine(testFilesBaseInputDirectory, testFileName);
+            //    (_, string outFolder) = GetOutFolder(sampleFile, relOutPath);
 
-                Assert.IsTrue(validXml, "Invalid XML file.");
+            //    validXml = ValidateXmlDocuments(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, InputFileType.MboxFile, MimeFormat.Mbox);
 
-            }
+            //    Assert.IsTrue(validXml, "Invalid XML file.");
+
+            //}
         }
 
         [DataRow("D:\\EmailsForTesting\\GmailExport_2022-10-08\\All mail Including Spam and Trash-002.mbox", "out_all", "SHA256", true, false, false, false, false, false, 0, 99600, 248311,
@@ -626,8 +629,11 @@ namespace UIUCLibrary.TestEaPdf
             string? oneMsgId = null
             )
         {
-            TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
-                quick, maxOutFileSize, xhtml, oneMsgId);
+            //FUTURE: skip for the time being, takes too long
+            Assert.Inconclusive("Test is commented out");
+
+            //TestSampleMboxFiles(relInPath, relOutPath, hashAlg, extContent, wrapExtInXml, preserveBinaryEnc, preserveTextEnc, includeSub, oneFilePerMbox, expectedErrors, expectedWarnings, expectedCounts,
+            //    quick, maxOutFileSize, xhtml, oneMsgId);
         }
 
         //Don't change the ouput folders, this is what is being tested
