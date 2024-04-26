@@ -37,7 +37,7 @@
 	<xsl:variable name="fo-processor" select="fn:lower-case(fn:tokenize($fo-processor-version)[1])"/>
 	<xsl:variable name="producer">UIUCLibrary.EaPdf; <xsl:value-of select="$fo-processor-version"/></xsl:variable>
 	
-	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadata -->
+	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadata, this is currently generated during post processing so leave as 'false' -->
 	
 	<xsl:param name="list-of-attachments">true</xsl:param>
 	

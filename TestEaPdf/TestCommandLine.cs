@@ -64,18 +64,24 @@ namespace UIUCLibrary.TestEaPdf
 
             int ret = tsk.Result;
 
-            Assert.AreEqual(0, ret);
+            if (Directory.Exists(inFilePath))
+            {
+                //folders are not yet supported
+                Assert.AreEqual((int)ReturnValue.ArgumentError, ret);
+            }
+            else
+            {
+                Assert.AreEqual(0, ret);
+                Assert.IsTrue(xmlFile.Exists);
+                Assert.IsTrue(pdfFile.Exists);
 
+                //make sure files were created within the last 1 minutes
+                var fileAge = DateTime.Now.Subtract(xmlFile.LastWriteTime);
+                Assert.IsTrue(fileAge.TotalMinutes < 1);
 
-            Assert.IsTrue(xmlFile.Exists);
-            Assert.IsTrue(pdfFile.Exists);
-
-            //make sure files were created within the last 1 minutes
-            var fileAge = DateTime.Now.Subtract(xmlFile.LastWriteTime);
-            Assert.IsTrue(fileAge.TotalMinutes < 1);
-
-            fileAge = DateTime.Now.Subtract(pdfFile.LastWriteTime);
-            Assert.IsTrue(fileAge.TotalMinutes < 1);
+                fileAge = DateTime.Now.Subtract(pdfFile.LastWriteTime);
+                Assert.IsTrue(fileAge.TotalMinutes < 1);
+            }
 
             //FUTURE: other checks???
         }

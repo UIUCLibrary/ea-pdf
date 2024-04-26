@@ -10,6 +10,8 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public static class FontHelpers
     {
+        //TODO: Get rid of the functions that are not used
+
         public const string DEFAULT_SCRIPT = "default"; //used to indicate the default font families to use for any script not otherwise specified
         public const string LATIN_SCRIPT = "latn"; //Latin script
 
