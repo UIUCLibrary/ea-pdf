@@ -86,9 +86,15 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             StringBuilder messageAccumulator = new();
             LogLevel logLevel = LogLevel.None;
 
+            int captureNextLines = 0;
             foreach ((LogLevel level, string message) message in messages)
             {
-                if (message.level == LogLevel.Trace || message.level==LogLevel.Debug)
+                if (captureNextLines > 0)
+                {
+                    messageAccumulator.AppendLine(message.message);
+                    captureNextLines--;
+                }
+                else if (message.level == LogLevel.Trace || message.level==LogLevel.Debug)
                 {
                     StartNewMessage(message.message, message.level, ref logLevel, ref messageAccumulator, ref ret);
                 }
@@ -108,6 +114,11 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     )
                 {
                     StartNewMessage(message.message, LogLevel.Error, ref logLevel, ref messageAccumulator, ref ret);
+                }
+                else if (message.message.StartsWith("License check failed"))
+                {
+                    StartNewMessage(message.message, LogLevel.Critical, ref logLevel, ref messageAccumulator, ref ret);
+                    captureNextLines = 3; // the next three lines are also about the license check
                 }
                 else if (message.message.StartsWith('\t'))
                 {

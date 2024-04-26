@@ -10,7 +10,7 @@
 	<!-- Formatter options                                       -->
 	<!-- ======================================================= -->
 	<options>
-		<option name="LICENSE" value="license.xml"/>
+		<option name="LICENSE" value="xep_license.xml"/>
 		<option name="TMPDIR" value="none"/>
 		<option name="BROKENIMAGE" value="images/404.gif"/>
 		<option name="LOGO" value="images/logo-renderx.svg"/>
