@@ -5,6 +5,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>UIUCLibrary.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>EA-PDF Creation Class Library</Title>
+    <AssemblyVersion></AssemblyVersion>
+	<VersionPrefix>0.2.5</VersionPrefix>
+	<VersionSuffix>alpha.1</VersionSuffix>
+	<IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion><!-- Include Git Commit ID -->
+	<Company>University of Illinois Board of Trustees</Company>
+	<Copyright>Copyright $([System.DateTime]::Now.ToString('yyyy')) University of Illinois Board of Trustees. All Rights Reserved.</Copyright>
+	<PackageId>UIUCLibrary.$(AssemblyName)</PackageId>
+	<Product>UIUCLibrary.$(AssemblyName)</Product>
   </PropertyGroup>
 
   <ItemGroup>

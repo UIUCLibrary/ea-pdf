@@ -31,11 +31,13 @@
 	<xsl:variable name="DefaultFont" select="$SerifFont"/><!-- Used as the default at the root level of the document, and anywhere else that needs a font which can't be definitely determined -->
 	
 	<xsl:param name="icc-profile" select="'file:/C:/Program Files/RenderX/XEP/sRGB2014.icc'"/>
+	
+	<xsl:param name="creator" select="'UIUCLibrary.EaPdf'"/>
 
 	<!-- Which FO Processor -->
 	<xsl:param name="fo-processor-version">FOP Version 2.8</xsl:param> <!-- Values used: fop or xep -->
 	<xsl:variable name="fo-processor" select="fn:lower-case(fn:tokenize($fo-processor-version)[1])"/>
-	<xsl:variable name="producer">UIUCLibrary.EaPdf; <xsl:value-of select="$fo-processor-version"/></xsl:variable>
+	<xsl:variable name="producer"><xsl:value-of select="$fo-processor-version"/></xsl:variable>
 	
 	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadata, this is currently generated during post processing so leave as 'false' -->
 	
@@ -156,7 +158,7 @@
 					<xsl:variable name="xmp"><xsl:call-template name="xmp"></xsl:call-template></xsl:variable>
 					<xsl:value-of select="fn:serialize($xmp)"/>
 				</rx:custom-meta>
-				<!-- other custom metadata fields -->
+				<!-- other custom metadata fields can also be added -->
 				<!-- <rx:meta-field name="NAME_XEP" value="VALUE_XEP"/> -->
 			</rx:meta-info>
 		</xsl:if>
@@ -424,11 +426,11 @@
 				<xsl:call-template name="declarations-attachments"/>
 				<xsl:if test="fn:lower-case(normalize-space($generate-xmp)) = 'true'">
 					<xsl:call-template name="xmp"/>
-					<!-- other custom metadata fields -->
-					<!-- <pdf:info>
-						<pdf:name key="NAME_FOP">VALUE_FOP</pdf:name>
-					</pdf:info> -->
 				</xsl:if>
+				<pdf:info>
+					<!-- other custom metadata fields -->
+					<!-- <pdf:name key="NAME_FOP">VALUE_FOP</pdf:name> -->
+				</pdf:info>
 			</fo:declarations>
 		</xsl:if>
 	</xsl:template>

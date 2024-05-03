@@ -2,6 +2,7 @@
 using iTextSharp.text.pdf;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
@@ -56,7 +57,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         {
                             msg += $"  {kv.Key} = {kv.Value}\r\n";
                         }
-                        _logger.LogTrace("{message}",msg.Trim());
+                        _logger.LogTrace("{message}", msg.Trim());
                         return _pdfInfo;
                     }
                     return _pdfInfo;
@@ -68,9 +69,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         {
             var externalLinkAnnotations = GetExternalLinkAnnotations();
 
-            foreach(var extLink in externalLinkAnnotations)
+            foreach (var extLink in externalLinkAnnotations)
             {
-                foreach(var filespec in extLink.Value)
+                foreach (var filespec in extLink.Value)
                 {
                     var action = filespec.annotation?.GetAsDict(PdfName.A) ?? throw new Exception("Unable to get the annotation action");
 
@@ -401,10 +402,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                             {
                                 var action = annot.GetAsDict(PdfName.A);
 
-                                if(action == null)
+                                if (action == null)
                                     continue; //no action, so not an external link
 
-                                if(action.GetAsName(PdfName.S) != PdfName.Gotor)
+                                if (action.GetAsName(PdfName.S) != PdfName.Gotor)
                                     continue; //not a remote goto action, so not an external link
 
                                 var filespec = action.GetAsDict(PdfName.F) ?? throw new Exception("Unable to retrieve Filespec (F)");
@@ -580,12 +581,34 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             var newIndRef = _stamper.Writer.PdfIndirectReference; //get reference to new DPart object
 
-            var newDPartDict = new PdfDictionary();  
+            var newDPartDict = new PdfDictionary();
             newDPartDict.Put(new PdfName("Type"), new PdfName("DPart"));
             newDPartDict.Put(new PdfName("Parent"), parentIndRef);
 
-            if (!string.IsNullOrWhiteSpace(dpartNode.DpmXmpString))
+            if (dpartNode.DpmXmpXml != null && dpartNode.XmlNamespaces != null)
             {
+                var info = _reader.Info;
+
+                if (dpartNode.Parent == null)
+                {
+                    //This is the root DPart node, representing the top-level document metadata
+                    //Update some values in the XMP metadata from the Document Information dictionary
+
+                    //this is the root DPart node, so we want to update the ModifyDate in the XMP metadata, so it matches the Document Information dictionary  
+                    //which is updated when the file is saved
+                    dpartNode.UpdateElementNodeText("/*/*/*/xmp:ModifyDate", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+
+                    //Producer is automatically populated by FOP or XEP and appended to by iTextSharp
+                    //pdf:Producer is mapped to the Producer field in the Document Information dictionary
+                    if(info != null)
+                    {
+                        var producerStr = info["Producer"];
+                        var iTextStr = ConfigHelpers.GetNamespaceVersionString(_reader);
+                        dpartNode.UpdateElementNodeText("/*/*/*/pdf:Producer", $"{producerStr}; modified using {iTextStr}");
+                    }
+
+                }
+
                 byte[] metaBytes = Encoding.UTF8.GetBytes(dpartNode.DpmXmpString);
                 var newStrm = new PdfStream(metaBytes);
                 newStrm.Put(new PdfName("Type"), new PdfName("Metadata"));
@@ -600,6 +623,52 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     //this is the root DPart node, so replace the catalog metadata with this
                     _reader.Catalog.Remove(PdfName.Metadata);
                     _reader.Catalog.Put(PdfName.Metadata, metaIndObj.IndirectReference);
+
+                    if (info != null)
+                    {
+                        //Copy some of the XMP metadata to Document Information dictionary
+
+                        //dc:title is mapped to the Title field in the Document Information dictionary
+                        var titleNode = dpartNode.DpmXmpXml.SelectSingleNode("/*/*/*/dc:title//rdf:li", dpartNode.XmlNamespaces);
+                        if (titleNode != null)
+                        {
+                            info["Title"] = titleNode.InnerText;
+                        }
+
+                        //dc:description is mapped to the Subject field in the Document Information dictionary
+                        var descrNode = dpartNode.DpmXmpXml.SelectSingleNode("/*/*/*/dc:description//rdf:li", dpartNode.XmlNamespaces);
+                        if (descrNode != null)
+                        {
+                            info["Subject"] = descrNode.InnerText;
+                        }
+
+                        //xmp:CreateDate is mapped to the CreationDate field in the Document Information dictionary
+                        var creDateNode = dpartNode.DpmXmpXml.SelectSingleNode("/*/*/*/xmp:CreateDate", dpartNode.XmlNamespaces);
+                        if (creDateNode != null)
+                        {
+                            info["CreationDate"] = new PdfDate(DateTime.Parse(creDateNode.InnerText)).ToString();
+                        }
+
+                        //iTextSharp automatically updates the ModDate field when the file is saved, so no need to set it here
+
+                        //CreatorTool is mapped to the Creator field in the Document Information dictionary
+                        var creatorNode = dpartNode.DpmXmpXml.SelectSingleNode("/*/*/*/xmp:CreatorTool", dpartNode.XmlNamespaces);
+                        if (creatorNode != null)
+                        {
+                            info["Creator"] = creatorNode.InnerText;
+                        }
+
+                        //get rid of unused metadata fields, setting to null seems to work, but the .Remove method does not
+                        info["Keywords"] = null;
+                        info["Trapped"] = null;
+                        info["Author"] = null;
+
+                        _stamper.MoreInfo = info;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("ITextSharpPdfEnhancer: AddDPartNode: Document Information dictionary not found");
+                    }
                 }
             }
 
@@ -782,7 +851,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     }
                     else if (comp > 0)
                     {
-                        _logger.LogTrace("ITextSharpPdfEnhancer: GetObjFromNameTree ({name}): gone past the name, so stop searching", name);  
+                        _logger.LogTrace("ITextSharpPdfEnhancer: GetObjFromNameTree ({name}): gone past the name, so stop searching", name);
                         break;  //gone past the name, so stop searching
                     }
 

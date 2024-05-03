@@ -1,4 +1,6 @@
-﻿using SkiaSharp;
+﻿using Org.BouncyCastle.Asn1.Pkcs;
+using SkiaSharp;
+using System.Text;
 using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
@@ -7,9 +9,52 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
     public abstract class DPartNode
     {
-        public string DpmXmpString { get; set; } = "";
+        private object locker = new object();
 
-        public XmlDocument? DpmXmpXml 
+        private string _dpmXmpString = "";
+        public string DpmXmpString 
+        {
+            get 
+            {
+                return _dpmXmpString; 
+            }
+            set 
+            {
+                lock (locker) 
+                {
+                    _dpmXmpString = value;
+                    _xmlDoc = null;
+                    _xmlns = null;
+                }
+            }
+        }
+
+        public void UpdateElementNodeText(string xpath, string newVal)
+        {
+            if(DpmXmpXml == null || XmlNamespaces == null)
+            {
+                throw new Exception("The XMP is empty or not valid");
+            }
+
+            var node = DpmXmpXml.SelectSingleNode(xpath, XmlNamespaces);
+            if (node != null && node.NodeType == XmlNodeType.Element && !node.ChildNodes.OfType<XmlElement>().Any())
+            {
+                node.InnerText = newVal;
+                var buffer = new StringBuilder();
+                var writer = XmlWriter.Create(buffer, new XmlWriterSettings { OmitXmlDeclaration = true, Indent = true });
+                DpmXmpXml.Save(writer);
+                writer.Close();
+                DpmXmpString = buffer.ToString();
+            }
+            else
+            {
+                throw new Exception($"The xpath '{xpath}' was not found in the XMP, or it returned a node which is not an element with only text.");
+            }
+        }
+
+        XmlDocument? _xmlDoc = null;
+        XmlNamespaceManager? _xmlns = null;
+        public XmlDocument? DpmXmpXml
         {
             get
             {
@@ -18,9 +63,41 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     return null;
                 }
 
-                XmlDocument ret = new();
-                ret.LoadXml(DpmXmpString);
-                return ret;
+                lock (locker)
+                {
+                    if (_xmlDoc == null)
+                    {
+                        _xmlDoc = new XmlDocument();
+                        _xmlDoc.LoadXml(DpmXmpString);
+
+                        _xmlns = new XmlNamespaceManager(_xmlDoc.NameTable);
+                        _xmlns.AddNamespace("x", "adobe:ns:meta/");
+                        _xmlns.AddNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                        _xmlns.AddNamespace("dc", "http://purl.org/dc/elements/1.1/");
+                        _xmlns.AddNamespace("dcterms", "http://purl.org/dc/terms/");
+                        _xmlns.AddNamespace("foaf", "http://xmlns.com/foaf/0.1/");
+                        _xmlns.AddNamespace("pdf", "http://ns.adobe.com/pdf/1.3/");
+                        _xmlns.AddNamespace("pdfaid", "http://www.aiim.org/pdfa/ns/id/");
+                        _xmlns.AddNamespace("pdfmail", "http://www.pdfa.org/eapdf/");
+                        _xmlns.AddNamespace("pdfmailid", "http://www.pdfa.org/eapdf/ns/id/");
+                        _xmlns.AddNamespace("pdfmailmeta", "http://www.pdfa.org/eapdf/ns/meta/");
+                        _xmlns.AddNamespace("pdfx", "http://ns.adobe.com/pdfx/1.3/");
+                        _xmlns.AddNamespace("xmp", "http://ns.adobe.com/xap/1.0/");
+                    }
+                    return _xmlDoc;
+                }
+            }
+        }
+
+        public XmlNamespaceManager? XmlNamespaces
+        {
+            get
+            {
+                if (DpmXmpXml == null)
+                {
+                    return null;
+                }
+                return _xmlns;
             }
         }
 
@@ -37,7 +114,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             DPartInternalNode ret = new()
             {
                 Parent = parent //this is the root node that refers to the first-level folders of the account
-            }; 
+            };
 
             XmlDocument xdoc = new()
             {

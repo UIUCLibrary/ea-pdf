@@ -3,6 +3,7 @@ using Microsoft.Extensions.FileProviders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,6 +11,24 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public static class ConfigHelpers
     {
+
+        /// <summary>
+        /// Return a string to use in the XMP metadata for the creator tool.
+        /// </summary>
+        public static string GetNamespaceVersionString(object obj)
+        {
+                var typ = obj.GetType();
+                var product = typ.Assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product ?? typ.Namespace ?? typ.Name;
+                var ver = typ.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
+                int i = ver.IndexOf('+');
+                if (i >= 0)
+                {
+                    ver = ver[..i];
+                }
+
+                return $"{product} {ver}";
+        }
+
 
         /// <summary>
         /// If the source of the configuration is a physical file provider, make the path of the key absolute relative to the provider`s root. 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using System.Xml;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
+using System.Reflection;
 
 namespace UIUCLibrary.EaPdf
 {
@@ -17,6 +18,17 @@ namespace UIUCLibrary.EaPdf
         private readonly Dictionary<string, string> _eaxsFilesProcessed = new(); //used to keep track of the EAXS files that have been processed as continuation files
 
         public EaxsToEaPdfProcessorSettings Settings { get; }
+
+        /// <summary>
+        /// Return a string to use in the XMP metadata for the creator tool.
+        /// </summary>
+        public string XmpCreatorTool
+        {
+            get
+            {
+                return ConfigHelpers.GetNamespaceVersionString(this);
+            }
+        }
 
         /// <summary>
         /// Create a processor for converting email xml archive to an EA-PDF file, initializing the logger, converters, and settings
@@ -51,12 +63,12 @@ namespace UIUCLibrary.EaPdf
             Settings = new EaxsToEaPdfProcessorSettings(config);
 
             string xsltProc = config["XsltProcessors:Default"] ?? "Saxon";
-            if(xsltProc.Equals("Saxon", StringComparison.OrdinalIgnoreCase))
+            if (xsltProc.Equals("Saxon", StringComparison.OrdinalIgnoreCase))
             {
                 string? classPath = config["XsltProcessors:Saxon:ClassPath"];
-                if(string.IsNullOrWhiteSpace(classPath))
+                if (string.IsNullOrWhiteSpace(classPath))
                 {
-                    _xslt = new SaxonXsltTransformer(); 
+                    _xslt = new SaxonXsltTransformer();
                 }
                 else
                 {
@@ -83,7 +95,7 @@ namespace UIUCLibrary.EaPdf
                     _xslfo = new FopToPdfTransformer(jarFilePath, configFilePath);
                 }
             }
-            else if(foProc.Equals("Xep", StringComparison.OrdinalIgnoreCase))
+            else if (foProc.Equals("Xep", StringComparison.OrdinalIgnoreCase))
             {
                 string? classPath = config["FoProcessors:Xep:ClassPath"];
                 if (string.IsNullOrWhiteSpace(classPath))
@@ -116,7 +128,7 @@ namespace UIUCLibrary.EaPdf
         {
             _eaxsFilesProcessed.Clear();
 
-              ConvertEaxsToPdfInternal(eaxsFilePath, pdfFilePath);
+            ConvertEaxsToPdfInternal(eaxsFilePath, pdfFilePath);
 
             return _eaxsFilesProcessed;
         }
@@ -613,8 +625,9 @@ namespace UIUCLibrary.EaPdf
 
             Dictionary<string, object> parms = new()
             {
-                { "producer", GetType().Namespace ?? "UIUCLibrary" },
-                {"pdf_a_conf_level", pdfaConfLvl }
+                { "creator", XmpCreatorTool },
+                { "fo-processor-version", foProc },
+                { "pdf_a_conf_level", pdfaConfLvl }
             };
 
 

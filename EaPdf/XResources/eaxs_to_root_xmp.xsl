@@ -11,21 +11,32 @@
 	>
 
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="yes" omit-xml-declaration="yes" />
-
+	
+	<xsl:param name="fo-processor-version">FOP Version 2.8</xsl:param> <!-- Values used: fop or xep -->
+	
 	<xsl:param name="pdf_a_conf_level">A</xsl:param><!-- A, B, or U -->
 	<xsl:variable name="pdf_a_conf_level_norm" select="fn:upper-case(normalize-space($pdf_a_conf_level))"/>
 	
 	<xsl:param name="description">
-		<xsl:text>PDF Email Archive for Account '</xsl:text>
-		<xsl:value-of select="fn:string-join(/eaxs:Account/eaxs:EmailAddress,', ')"/>
-		<xsl:text>' for Folder '</xsl:text>
-		<xsl:value-of select="/eaxs:Account/eaxs:Folder/eaxs:Name"/>
+		<xsl:text>PDF Email Archive </xsl:text>
+		<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
+			<xsl:text>for Account(s) '</xsl:text>
+			<xsl:value-of select="fn:string-join(/eaxs:Account/eaxs:EmailAddress,', ')"/>
+			<xsl:text>'</xsl:text>
+		</xsl:if>
+		<xsl:text> for Folder(s) '</xsl:text>
+		<xsl:value-of select="fn:string-join(/eaxs:Account/eaxs:Folder/eaxs:Name, ',')"/> 
 		<xsl:text>'</xsl:text>
 	</xsl:param>
 	<xsl:param name="global-id" select="/eaxs:Account/eaxs:GlobalId"/>
-	<xsl:param name="producer" select="'UIUCLibrary'"/>
-	<xsl:param name="datetime-string" select="fn:format-dateTime(fn:adjust-dateTime-to-timezone(fn:current-dateTime(),xs:dayTimeDuration('P0D')),'[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
-
+	<!-- subtract one second so that the moddate ends up being different than the creation date; Adobe doesn't seem to properly display these if they are exactly the same -->
+	<xsl:param name="datetime-string" select="fn:format-dateTime(fn:adjust-dateTime-to-timezone(fn:current-dateTime() - xs:dayTimeDuration('PT0H0M1S'),xs:dayTimeDuration('P0D')),'[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
+	
+	<xsl:param name="title" select="'PDF Email Archive'"/>
+	<xsl:param name="profile" select="'PDF/mail-1m'"/>
+	<xsl:param name="creator" select="'UIUCLibrary.EaPdf'"/>
+	<xsl:param name="producer"><xsl:value-of select="$fo-processor-version"/></xsl:param>
+	
 	<xsl:template match="/">
 		<xsl:if test="$pdf_a_conf_level_norm != 'A' and $pdf_a_conf_level_norm != 'B' and $pdf_a_conf_level_norm != 'U'">
 			<xsl:message terminate="yes">The 'pdf_a_conf_level' param must be 'A', 'B', or 'U'; it was '<xsl:value-of select="$pdf_a_conf_level_norm"/>'.</xsl:message>
@@ -52,6 +63,11 @@
 					xmlns:pdfmailid="http://www.pdfa.org/eapdf/ns/id/"
 					xmlns:pdfmailmeta="http://www.pdfa.org/eapdf/ns/meta/"
 					>
+					<dc:title>
+						<rdf:Alt>
+							<rdf:li xml:lang="en"><xsl:value-of select="$title"/> (<xsl:value-of select="$profile"/>)</rdf:li>
+						</rdf:Alt>
+					</dc:title>
 					<dc:description>
 						<rdf:Alt>
 							<rdf:li xml:lang="en"><xsl:value-of select="$description"/></rdf:li>
@@ -82,7 +98,7 @@
 					<pdfmailid:rev>2022</pdfmailid:rev>
 					<pdfmailid:conformance>m</pdfmailid:conformance>
 
-					<xmp:CreatorTool>UIUCLibrary.EaPdf</xmp:CreatorTool>
+					<xmp:CreatorTool><xsl:value-of select="$creator"/></xmp:CreatorTool>
 					<xmp:MetadataDate><xsl:value-of select="$datetime-string"/></xmp:MetadataDate>
 					<xmp:CreateDate><xsl:value-of select="$datetime-string"/></xmp:CreateDate>
 					<xmp:ModifyDate><xsl:value-of select="$datetime-string"/></xmp:ModifyDate>

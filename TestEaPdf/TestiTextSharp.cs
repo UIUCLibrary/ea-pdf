@@ -34,6 +34,37 @@ namespace UIUCLibrary.TestEaPdf
 
         }
 
+        [TestMethod]
+        public void TestGetSetDocumentInfo()
+        {
+            string sourcePdf = "D:\\EmailsForTesting\\SampleFiles\\Testing\\PDFs\\in.pdf";
+            string destPdf = "D:\\EmailsForTesting\\SampleFiles\\Testing\\PDFs\\out.pdf";
+
+            var destStrm = new FileStream(destPdf, FileMode.Create);
+            var reader = new PdfReader(sourcePdf);
+            var stamper = new PdfStamper(reader, destStrm, PdfWriter.VERSION_1_7);
+
+            var info = reader.Info;
+
+            var newKey = "TestInfo";
+            var newVal = "Test Info 123";
+
+            info.Add(newKey, newVal);
+
+            stamper.MoreInfo = info;
+
+            stamper.Close();
+            destStrm.Close();
+            reader.Close();
+
+            var reader2 = new PdfReader(destPdf);
+            var info2 = reader2.Info;
+
+            Assert.IsTrue(info2.ContainsKey(newKey));
+            Assert.AreEqual(newVal, info2[newKey]);
+
+        }
+
 
     }
 }
