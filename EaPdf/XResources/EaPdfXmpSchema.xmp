@@ -12,207 +12,32 @@
 			VeraPDF validator, https://verapdf.org/.  
 			
 			Note: Adobe Preflight does not seem to allow the reuse of a valueType in two different schemas.
+			      Also, VeraPdf seems to fail if namespace are declared in the root <x:xmpmeta> element .
 		-->
 		<pdfaExtension:schemas>
 			<rdf:Bag>
 				<rdf:li>
 					<rdf:Description>
-						<pdfaSchema:schema> Elements from the "Describing Archives: A Content
-							Standard" (DACS) maintained by the Society of American Archivists (SAA).
-							For details see https://saa-ts-dacs.github.io/dacs/. This schema
-							includes all the 'multilevel optimum' elements described in the DACS;
-							the DACS standard requires all of these elements except for
-							administrativeBiographicalHistory, custodialHistory, and
-							immediateSourceOfAcquisition which are considered optimum or value
-							added. The elements may be used at the email account or email folder
-							level. Multiple levels of description are inferred by the PDF DPart
-							hierarchy. The DPart root represents the email account and the nested
-							email folders are represented by DPart branch nodes. Elements left off
-							of a folder level are assumed to be inherited from the parent folder or
-							from the email account level. Some of these elements are internal and
-							can be automatically derived from the email messages contained in the
-							document. </pdfaSchema:schema>
-						<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/dacs/</pdfaSchema:namespaceURI>
-						<pdfaSchema:prefix>dacs</pdfaSchema:prefix>
+						<pdfaSchema:schema>Properties, types, and fields used to describe the core elements for preserving emails
+							as PDF/A files.</pdfaSchema:schema>
+						<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/meta/</pdfaSchema:namespaceURI>
+						<pdfaSchema:prefix>pdfmailmeta</pdfaSchema:prefix>
 						<pdfaSchema:property>
 							<rdf:Seq>
 								<rdf:li>
 									<rdf:Description>
 										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element provides a unique
-											identifier for the unit being described. </pdfaProperty:description>
-										<pdfaProperty:name>referenceCode</pdfaProperty:name>
-										<pdfaProperty:valueType>ArchivalIdentifier</pdfaProperty:valueType>
+										<pdfaProperty:description>An ordered list of embedded source email assets.</pdfaProperty:description>
+										<pdfaProperty:name>assets</pdfaProperty:name>
+										<pdfaProperty:valueType>seq Asset</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 								<rdf:li>
 									<rdf:Description>
 										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element identifies the name
-											and location of the repository that holds the materials
-											being described. </pdfaProperty:description>
-										<pdfaProperty:name>repository</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element provides a word or
-											phrase by which the material being described is known or
-											can be identified. A title may be devised or formal. </pdfaProperty:description>
-										<pdfaProperty:name>title</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>internal</pdfaProperty:category>
-										<pdfaProperty:description> This element identifies and
-											records the date of the earliest email in the unit. For
-											PDF/mail this is an internal property and should be
-											derived from the origination date of the earliest
-											message contained at this level in the document. </pdfaProperty:description>
-										<pdfaProperty:name>dateCreatedEarliest</pdfaProperty:name>
-										<pdfaProperty:valueType>Date</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>internal</pdfaProperty:category>
-										<pdfaProperty:description> This element identifies and
-											records the date of the latest email in the unit. For
-											PDF/mail this is an internal property and should be
-											derived from the origination date of the latest message
-											contained at this level in the document. </pdfaProperty:description>
-										<pdfaProperty:name>dateCreatedLatest</pdfaProperty:name>
-										<pdfaProperty:valueType>Date</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>internal</pdfaProperty:category>
-										<pdfaProperty:description> This element indicates the extent
-											and the physical nature of the materials being
-											described. This is handled in two parts, a number
-											(quantity) and an expression of the extent or material
-											type. For an email archive these can be the number of
-											emails and attachments contained in the account or
-											folder, and may include the total size in bytes. For
-											PDF/mail this is an internal property and should be
-											derived from the messages contained at this level in the
-											document. </pdfaProperty:description>
-										<pdfaProperty:name>extent</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element identifies the
-											corporate bodies, persons, and families associated with
-											the creation, assembly, accumulation, and/or maintenance
-											and use of the materials being described so that they
-											might be appropriately documented and used to create
-											access points by which users can search for and retrieve
-											descriptive records. For PDF/mail this will be the
-											owner(s) of the email account identified by an Agent
-											type with a name and mbox. </pdfaProperty:description>
-										<pdfaProperty:name>creator</pdfaProperty:name>
-										<pdfaProperty:valueType>bag Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element provides information
-											about the nature of the materials and activities
-											reflected in the unit being described to enable users to
-											judge its potential relevance. </pdfaProperty:description>
-										<pdfaProperty:name>scopeAndContent</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element provides information
-											about access restrictions due to the nature of the
-											information in the materials being described, such as
-											those imposed by the donor, by the repository, or by
-											statutory/regulatory requirements. </pdfaProperty:description>
-										<pdfaProperty:name>conditionsGoverningAccess</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element identifies the
-											language(s), script(s), and symbol systems employed in
-											the materials being described, particularly as they may
-											affect its use. For PDF/mail this could be automatically
-											derived from the message and MIME properties of the
-											messages contained at this level in the document, such
-											as Content-Type, Content-Disposition, Content-Language,
-											etc. </pdfaProperty:description>
-										<pdfaProperty:name>languagesAndScripts</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element identifies the
-											conditions under which the archival description itself
-											is available for use and reuse. Repositories should
-											establish a consistent policy about the rights granted. </pdfaProperty:description>
-										<pdfaProperty:name>rightsStatement</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> The purpose of this element is to
-											describe the required elements of a biographical or
-											administrative history note about creators embedded in
-											the description of materials. The
-											administrative/biographical history provides relevant
-											information about corporate bodies, persons, or families
-											who are identified using the Name of Creator(s) Element
-											and who therefore function as nominal access points.
-											This element also describes the relationship of creators
-											to archival materials by providing information about the
-											context in which those materials were created. This is
-											an optional element. </pdfaProperty:description>
-										<pdfaProperty:name>administrativeBiographicalHistory</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element provides information
-											on changes of ownership or custody of the material being
-											described, from the time it left the possession of the
-											creator until it was acquired by the repository, that is
-											significant for its authenticity, integrity, and
-											interpretation. </pdfaProperty:description>
-										<pdfaProperty:name>custodialHistory</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description> This element identifies the
-											source from which the repository directly acquired the
-											materials being described, as well as the date of
-											acquisition, the method of acquisition, and other
-											relevant information. </pdfaProperty:description>
-										<pdfaProperty:name>immediateSourceOfAcquisition</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										<pdfaProperty:description>An ordered list of email messages.</pdfaProperty:description>
+										<pdfaProperty:name>email</pdfaProperty:name>
+										<pdfaProperty:valueType>seq Email</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 							</rdf:Seq>
@@ -221,131 +46,191 @@
 							<rdf:Seq>
 								<rdf:li>
 									<rdf:Description>
-										<pdfaType:description>An archival identifier may consist of
-											three subelements: a local identifier, a code for the
-											repository, and a code for the
-											country.</pdfaType:description>
-										<pdfaType:namespaceURI>http://www.pdfa.org/eapdf/ns/dacs/</pdfaType:namespaceURI>
-										<pdfaType:prefix>dacs</pdfaType:prefix>
-										<pdfaType:type>ArchivalIdentifier</pdfaType:type>
+										<pdfaType:description>Core metadata about email messages; most are derived from the
+											email header fields from RFC5322 (originally RFC822), but some such as size and
+											attachment count are derived.</pdfaType:description>
+										<pdfaType:namespaceURI>http://www.pdfa.org/eapdf/ns/meta/</pdfaType:namespaceURI>
+										<pdfaType:prefix>pdfmailmeta</pdfaType:prefix>
+										<pdfaType:type>Email</pdfaType:type>
 										<pdfaType:field>
 											<rdf:Seq>
 												<rdf:li>
 													<rdf:Description>
-														<pdfaField:description> This typically
-															alphanumeric identifier frequently serves as a
-															succinct local means of referring to the
-															materials. </pdfaField:description>
-														<pdfaField:name>localIdentifier</pdfaField:name>
+														<pdfaField:description>The "Message-ID:" field contains a single unique message identifier.</pdfaField:description>
+														<pdfaField:name>messageid</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
-													</rdf:Description>
+													</rdf:Description>	
 												</rdf:li>
 												<rdf:li>
 													<rdf:Description>
-														<pdfaField:description> When delivering a
-															descriptive record outside of the repository
-															holding the materials, this element should contain
-															a nationally sanctioned code for the repository. </pdfaField:description>
-														<pdfaField:name>repositoryCode</pdfaField:name>
+														<pdfaField:description>Since "Message-ID:" is optional, any message which is missing one
+															must have a GUID instead.  This is generated by the creation software.
+															Messages may have both.</pdfaField:description>
+														<pdfaField:name>guid</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
-													</rdf:Description>
+													</rdf:Description>	
 												</rdf:li>
 												<rdf:li>
 													<rdf:Description>
-														<pdfaField:description> When delivering a
-															descriptive record outside of the repository
-															holding the materials, this element should contain
-															an internationally standardized code for the
-															country in which the repository is located. </pdfaField:description>
-														<pdfaField:name>countryCode</pdfaField:name>
-														<pdfaField:valueType>Text</pdfaField:valueType>
-													</rdf:Description>
+														<pdfaField:description>This is an unordered list containing the  "Subject:" and possibly "Keyword:" fields
+															of the message.  The "Subject:" field is the most common and contains a short string identifying 
+															the topic of the message. The "Keywords:" field contains important words and phrases that might be useful
+															for the recipient.</pdfaField:description>
+														<pdfaField:name>subject</pdfaField:name>
+														<pdfaField:valueType>bag Text</pdfaField:valueType>
+														<!-- 
+														The EA-PDF spec v0.2 called for dc:subject, but I was unable to get dc:subject
+														to validate properly with VeraPdf, so using the pdfmailmeta namespace instead
+														-->
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Comments:" field contains any additional comments on the text of the
+															body of the message.  This is seldom used by modern email clients.</pdfaField:description>
+														<pdfaField:name>comments</pdfaField:name>
+														<pdfaField:valueType>bag Text</pdfaField:valueType>
+														<!-- This is a new field; it was not defined in the EA-PDF spec v0.2 -->
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Date:" field is the origination date and time at which the creator
+															of the message indicated that the message was complete and ready to
+															enter the mail delivery system. </pdfaField:description>
+														<pdfaField:name>sent</pdfaField:name>
+														<pdfaField:valueType>Date</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>												
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Sender:" field specifies the
+															mailbox of the agent responsible for the actual
+															transmission of the message.  This is usually
+															only included if it is different from one of the
+															'From' agent(s).</pdfaField:description>
+														<pdfaField:name>sender</pdfaField:name>
+														<pdfaField:valueType>Agent</pdfaField:valueType>
+														<!-- This is a new field; it was not defined in the EA-PDF spec v0.2 -->
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "From:" field specifies the
+															author(s) of the message, that is, the mailbox(es) of
+															the person(s) or system(s) responsible for the writing
+															of the message.  This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>from</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "To:" field contains the
+															address(es) of the primary recipient(s) of the
+															message.  This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>to</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Cc:" field ("Cc" means "Carbon Copy") contains the
+															address(es) of others who are to receive the message, though the
+															content of the message may not be directed at them.  This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>cc</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Bcc:" field ("Bcc" means "Blind Carbon Copy") contains
+															address(es) of recipients of the message whose addresses are not to be
+															revealed to other recipients of the message.  This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>bcc</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "In-Reply-To:" field may be used to identify the message (or
+															messages) to which this message is a reply. It will contain the Message IDs of the messages 
+															being replied to.   This is an ordered list of Message ID text.</pdfaField:description>
+														<pdfaField:name>inReplyTo</pdfaField:name>
+														<pdfaField:valueType>seq Text</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "References:" field may be used to identify a "thread" of
+															conversations.  It will contain the Message IDs of the messages in the thread.   
+															This is an ordered list of Message ID text.</pdfaField:description>
+														<pdfaField:name>references</pdfaField:name>
+														<pdfaField:valueType>seq Text</pdfaField:valueType>
+														<!-- This is a new field; it was not defined in the EA-PDF spec v0.2 -->
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is a count of the messages attachments; it will not include the bodies of the message.</pdfaField:description>
+														<pdfaField:name>attachmentCount</pdfaField:name>
+														<pdfaField:valueType>Integer</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the size of the original message.  It will depend on how the
+															message is serialized.  For example, an EML file contains one message, so this will be the
+															size of the EML file.  However, an MBOX contains multiple messages, so this will be the
+															count of bytes between the beginning MBOX header and the start of the next message header
+															in the MBOX.  For other message file formats it may also vary slightly.</pdfaField:description>
+														<pdfaField:name>sizeBytes</pdfaField:name>
+														<pdfaField:valueType>Integer</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the MIME type of the root or outer-most content body of the message.</pdfaField:description>
+														<pdfaField:name>contentType</pdfaField:name>
+														<pdfaField:valueType>MIMEType</pdfaField:valueType>
+													</rdf:Description>	
 												</rdf:li>
 											</rdf:Seq>
 										</pdfaType:field>
 									</rdf:Description>
 								</rdf:li>
-							</rdf:Seq>
-						</pdfaSchema:valueType>
-					</rdf:Description>
-				</rdf:li>
-				<rdf:li>				
-					<rdf:Description>
-						<pdfaSchema:schema>Email header fields from RFC5322 (originally RFC822)
-							which are deemed signifcant by the PDF/mail
-							specification</pdfaSchema:schema>
-						<pdfaSchema:namespaceURI>http://www.pdfa.org/eapdf/ns/rfc5322/</pdfaSchema:namespaceURI>
-						<pdfaSchema:prefix>rfc5322</pdfaSchema:prefix>
-						<pdfaSchema:property>
-							<rdf:Seq>
 								<rdf:li>
 									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description>The "Sender:" field specifies the
-											mailbox of the agent responsible for the actual
-											transmission of the message.</pdfaProperty:description>
-										<pdfaProperty:name>sender</pdfaProperty:name>
-										<pdfaProperty:valueType>Agent</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description>The "From:" field specifies the
-											author(s) of the message, that is, the mailbox(es) of
-											the person(s) or system(s) responsible for the writing
-											of the message.</pdfaProperty:description>
-										<pdfaProperty:name>from</pdfaProperty:name>
-										<pdfaProperty:valueType>seq Agent</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description>The "To:" field contains the
-											address(es) of the primary recipient(s) of the
-											message.</pdfaProperty:description>
-										<pdfaProperty:name>to</pdfaProperty:name>
-										<pdfaProperty:valueType>seq Agent</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description/>
-										<pdfaProperty:name>cc</pdfaProperty:name>
-										<pdfaProperty:valueType>seq Agent</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description/>
-										<pdfaProperty:name>bcc</pdfaProperty:name>
-										<pdfaProperty:valueType>seq Agent</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description/>
-										<pdfaProperty:name>inReplyTo</pdfaProperty:name>
-										<pdfaProperty:valueType>seq Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-							</rdf:Seq>
-						</pdfaSchema:property>
-						<pdfaSchema:valueType>
-							<rdf:Seq>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaType:description>The foaf:Group class represents a
-											collection of individual agents (and may itself play the
-											role of a foaf:Agent, ie. something that can perform
-											actions).</pdfaType:description>
-										<pdfaType:namespaceURI>http://xmlns.com/foaf/0.1/</pdfaType:namespaceURI>
-										<pdfaType:prefix>foaf</pdfaType:prefix>
-										<pdfaType:type>Group</pdfaType:type>
+										<pdfaType:description>Metadata for embedded source email assets.</pdfaType:description>
+										<pdfaType:namespaceURI>http://www.pdfa.org/eapdf/ns/meta/</pdfaType:namespaceURI>
+										<pdfaType:prefix>pdfmailmeta</pdfaType:prefix>
+										<pdfaType:type>Asset</pdfaType:type>	
+										<pdfaType:field>
+											<rdf:Seq>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The filename of the asset, possibly including path components.</pdfaField:description>
+														<pdfaField:name>filename</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The size of the asset in bytes.</pdfaField:description>
+														<pdfaField:name>sizeBytes</pdfaField:name>
+														<pdfaField:valueType>Integer</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The MIME type of the asset, such as message/rfc822 for EML files,
+															or application/mbox for MBOX files.</pdfaField:description>
+														<pdfaField:name>format</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+											</rdf:Seq>
+										</pdfaType:field>										
 									</rdf:Description>
 								</rdf:li>
 								<rdf:li>
@@ -356,14 +241,14 @@
 										<pdfaType:namespaceURI>http://xmlns.com/foaf/0.1/</pdfaType:namespaceURI>
 										<pdfaType:prefix>foaf</pdfaType:prefix>
 										<pdfaType:type>Agent</pdfaType:type>
-										<pdfaType:field>
+										<pdfaType:field>  
 											<rdf:Seq>
 												<rdf:li>
 													<rdf:Description>
 														<pdfaField:description>A name for some
-															thing</pdfaField:description>
+															thing.</pdfaField:description>
 														<pdfaField:name>name</pdfaField:name>
-														<pdfaField:valueType>Text</pdfaField:valueType>
+														<pdfaField:valueType>ProperName</pdfaField:valueType>
 													</rdf:Description>
 												</rdf:li>
 												<rdf:li>
@@ -371,9 +256,21 @@
 														<pdfaField:description>A personal mailbox, ie. an
 															Internet mailbox associated with exactly one
 															owner, the first owner of this
-															mailbox.</pdfaField:description>
+															mailbox.  This is usually and 'mailto:' URI.</pdfaField:description>
 														<pdfaField:name>mbox</pdfaField:name>
 														<pdfaField:valueType>URI</pdfaField:valueType>
+													</rdf:Description>
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>If the Agent is a Group, this will be an ordered list of the group members.</pdfaField:description>
+														<pdfaField:name>member</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+														<!-- Technically according to FOAF, an Agent with members should be of type Group instead of Agent; 
+															Group is a subclass of Agent.  Unfortunately, XMP Extension Schemas don't seem able to 
+															represent this sort of RDF complexity, but adding the member field to Agents seems to
+															work OK, and any sufficently advanced RDF parser should be able to infer that an Agent
+															with members is a Group, if this is even neccesary. -->
 													</rdf:Description>
 												</rdf:li>
 											</rdf:Seq>
@@ -382,109 +279,6 @@
 								</rdf:li>
 							</rdf:Seq>
 						</pdfaSchema:valueType>
-					</rdf:Description>
-				</rdf:li>
-				<rdf:li>
-					<rdf:Description>
-						<pdfaSchema:schema>FOAF (an acronym of friend of a friend) is a
-							machine-readable ontology describing persons, their activities and their
-							relations to other people and objects.</pdfaSchema:schema>
-						<pdfaSchema:namespaceURI>http://xmlns.com/foaf/0.1/</pdfaSchema:namespaceURI>
-						<pdfaSchema:prefix>foaf</pdfaSchema:prefix>
-						<pdfaSchema:property>
-							<rdf:Seq>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description>A name for some
-											thing</pdfaProperty:description>
-										<pdfaProperty:name>name</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description>A personal mailbox, ie. an
-											Internet mailbox associated with exactly one owner, the
-											first owner of this mailbox.</pdfaProperty:description>
-										<pdfaProperty:name>mbox</pdfaProperty:name>
-										<pdfaProperty:valueType>URI</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description>Indicates a member of a
-											Group</pdfaProperty:description>
-										<pdfaProperty:name>member</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-							</rdf:Seq>
-						</pdfaSchema:property>
-					</rdf:Description>
-				</rdf:li>
-				<rdf:li>
-					<rdf:Description>
-						<pdfaSchema:schema>Identifies additional terms coined outside of the
-							original fifteen elements of Dublin Core.</pdfaSchema:schema>
-						<pdfaSchema:namespaceURI>http://purl.org/dc/terms/</pdfaSchema:namespaceURI>
-						<pdfaSchema:prefix>dcterms</pdfaSchema:prefix>
-						<pdfaSchema:property>
-							<rdf:Seq>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description>A related resource that is
-											referenced, cited, or otherwise pointed to by the
-											described resource.</pdfaProperty:description>
-										<pdfaProperty:name>references</pdfaProperty:name>
-										<pdfaProperty:valueType>seq Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>external</pdfaProperty:category>
-										<pdfaProperty:description>Date of creation of the
-											resource.</pdfaProperty:description>
-										<pdfaProperty:name>created</pdfaProperty:name>
-										<pdfaProperty:valueType>Date</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-							</rdf:Seq>
-						</pdfaSchema:property>
-					</rdf:Description>
-				</rdf:li>
-				<rdf:li>
-					<rdf:Description>
-						<pdfaSchema:schema>Archival PDF (PDF/A) Profile Identification
-							schema</pdfaSchema:schema>
-						<pdfaSchema:namespaceURI>http://www.aiim.org/pdfa/ns/id/</pdfaSchema:namespaceURI>
-						<pdfaSchema:prefix>pdfaid</pdfaSchema:prefix>
-						<pdfaSchema:property>
-							<rdf:Seq>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>internal</pdfaProperty:category>
-										<pdfaProperty:description>The PDF/A conformance level, a, b,
-											u, to which the document
-											complies.</pdfaProperty:description>
-										<pdfaProperty:name>conformance</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-								<rdf:li>
-									<rdf:Description>
-										<pdfaProperty:category>internal</pdfaProperty:category>
-										<pdfaProperty:description>The part of the PDF/A profile to
-											which the document complies.</pdfaProperty:description>
-										<pdfaProperty:name>part</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
-									</rdf:Description>
-								</rdf:li>
-							</rdf:Seq>
-						</pdfaSchema:property>
 					</rdf:Description>
 				</rdf:li>
 				<rdf:li>
@@ -498,11 +292,11 @@
 								<rdf:li>
 									<rdf:Description>
 										<pdfaProperty:category>internal</pdfaProperty:category>
-										<pdfaProperty:description>The PDF/mail conformance level, s,
-											m, or c, to which the document
+										<pdfaProperty:description>The PDF/mail conformance level, s, si,
+											m, mi, or c, ci to which the document
 											complies.</pdfaProperty:description>
 										<pdfaProperty:name>conformance</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										<pdfaProperty:valueType>open Choice of Text</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 								<rdf:li>
@@ -512,7 +306,7 @@
 											to which the document
 											complies.</pdfaProperty:description>
 										<pdfaProperty:name>part</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										<pdfaProperty:valueType>open Choice of Integer</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 								<rdf:li>
@@ -522,7 +316,7 @@
 											profile to which the document
 											complies.</pdfaProperty:description>
 										<pdfaProperty:name>rev</pdfaProperty:name>
-										<pdfaProperty:valueType>Text</pdfaProperty:valueType>
+										<pdfaProperty:valueType>open Choice of Integer</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
 							</rdf:Seq>

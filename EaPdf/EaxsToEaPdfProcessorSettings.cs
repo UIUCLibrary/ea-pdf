@@ -1,7 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.FileProviders;
-using NDepend.Path;
-using PdfTemplating.SystemCustomExtensions;
 using UIUCLibrary.EaPdf.Helpers;
 using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
 

@@ -15,7 +15,7 @@ namespace UIUCLibrary.TestEaPdf
 {
     internal class Helpers
     {
-        const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf_1.24\\verapdf.bat";
+        const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf_1.24.3\\verapdf.bat";
 
 
         public static string CalculateHash(string algName, string filePath)
@@ -242,6 +242,30 @@ namespace UIUCLibrary.TestEaPdf
 
             return proc.ExitCode;
 
+        }
+
+        /// <summary>
+        /// PdfTools is a commercial product which I have used for some testing; so this is just a placeholder
+        /// You can install PdfTools via NuGet: Install-Package PdfTools
+        /// I've found it doesn't work as well as VeraPdf, so I'm not using it for the main tests
+        /// </summary>
+        /// <param name="pdfFilePath"></param>
+        public static void ValidatePdfAUsingPdfTools(string pdfFilePath)
+        {
+            //List<string> errors = new();
+
+            //using var inStr = File.OpenRead(pdfFilePath);
+            //using var inDoc = PdfTools.Pdf.Document.Open(inStr);
+
+            //var conformance = new PdfTools.Pdf.Conformance(3, PdfTools.Pdf.Conformance.PdfALevel.A);
+
+            //var validator = new PdfTools.PdfA.Validation.Validator();
+            //validator.Error += (s, e) => errors.Add($"- {e.Category}: {e.Message} ({e.Context}{(e.PageNo > 0 ? " " + e.PageNo : "")}");
+
+            //var options = new PdfTools.PdfA.Validation.ValidationOptions() { Conformance = conformance };
+            //var result = validator.Validate(inDoc, options);
+
+            //errors = errors.Prepend("Document conforms to " + result.Conformance.ToString() + ": " + result.IsConforming).ToList();
         }
 
         public static void ValidatePdfAUsingVeraPdf(string pdfFilePath)

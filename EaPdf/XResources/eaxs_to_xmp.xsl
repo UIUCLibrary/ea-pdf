@@ -47,6 +47,7 @@
 						
 						<dc:identifier><xsl:value-of select="eaxs:MessageId"/></dc:identifier>
 						
+						<!--
 						<xsl:if test="eaxs:Subject">
 							<dc:subject>
 								<rdf:Bag>
@@ -138,6 +139,7 @@
 								</rdf:Seq>
 							</dcterms:references>							
 						</xsl:if>
+						-->
 						
 					</rdf:Description>
 				</rdf:RDF>

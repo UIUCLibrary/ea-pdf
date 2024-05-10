@@ -65,11 +65,13 @@
 					>
 					<dc:title>
 						<rdf:Alt>
+							<rdf:li xml:lang="x-default"><xsl:value-of select="$title"/> (<xsl:value-of select="$profile"/>)</rdf:li>
 							<rdf:li xml:lang="en"><xsl:value-of select="$title"/> (<xsl:value-of select="$profile"/>)</rdf:li>
 						</rdf:Alt>
 					</dc:title>
 					<dc:description>
 						<rdf:Alt>
+							<rdf:li xml:lang="x-default"><xsl:value-of select="$description"/></rdf:li>
 							<rdf:li xml:lang="en"><xsl:value-of select="$description"/></rdf:li>
 						</rdf:Alt>
 					</dc:description>
@@ -102,6 +104,125 @@
 					<xmp:MetadataDate><xsl:value-of select="$datetime-string"/></xmp:MetadataDate>
 					<xmp:CreateDate><xsl:value-of select="$datetime-string"/></xmp:CreateDate>
 					<xmp:ModifyDate><xsl:value-of select="$datetime-string"/></xmp:ModifyDate>
+					
+					<pdfmailmeta:assets>
+						<rdf:Seq>
+							<xsl:for-each select="//eaxs:FolderProperties[eaxs:RelPath] | //eaxs:MessageProperties[eaxs:RelPath]">
+								<rdf:li>
+									<pdfmailmeta:Asset>
+										<xsl:attribute name="rdf:about">urn:<xsl:value-of select="fn:lower-case(eaxs:Hash/eaxs:Function)"/>:<xsl:value-of select="fn:lower-case(eaxs:Hash/eaxs:Value)"/></xsl:attribute>
+										<pdfmailmeta:filename><xsl:value-of select="eaxs:RelPath"/></pdfmailmeta:filename>
+										<pdfmailmeta:sizeBytes><xsl:value-of select="eaxs:Size"/></pdfmailmeta:sizeBytes>
+										<pdfmailmeta:format><xsl:value-of select="eaxs:ContentType"/></pdfmailmeta:format>
+									</pdfmailmeta:Asset>
+								</rdf:li>
+							</xsl:for-each>
+						</rdf:Seq>
+					</pdfmailmeta:assets>
+
+					<pdfmailmeta:email>
+						<rdf:Seq>
+							<xsl:for-each select="//eaxs:Folder/eaxs:Message">
+								<rdf:li>
+									<pdfmailmeta:Email>
+										<xsl:attribute name="rdf:about">mid:<xsl:value-of select="fn:encode-for-uri(eaxs:MessageId)"/></xsl:attribute>
+										<pdfmailmeta:guid><xsl:value-of select="eaxs:Guid"/></pdfmailmeta:guid>							
+										<pdfmailmeta:messageid><xsl:value-of select="eaxs:MessageId"/></pdfmailmeta:messageid>							
+										<xsl:if test="eaxs:Subject | eaxs:Keywords">
+											<pdfmailmeta:subject>
+												<rdf:Bag>
+													<xsl:apply-templates select="eaxs:Subject"/>
+													<xsl:apply-templates select="eaxs:Keywords"/>
+												</rdf:Bag>
+											</pdfmailmeta:subject>							
+										</xsl:if>
+										<xsl:if test="eaxs:Comments">
+											<pdfmailmeta:comments>
+												<rdf:Bag>
+													<xsl:apply-templates select="eaxs:Comments"/>
+												</rdf:Bag>
+											</pdfmailmeta:comments>
+										</xsl:if>
+										<xsl:if test="eaxs:OrigDate">
+											<pdfmailmeta:sent><xsl:value-of select="eaxs:OrigDate"/></pdfmailmeta:sent>
+										</xsl:if>
+										<!--
+										<xsl:if test="eaxs:Sender">
+											<pdfmailmeta:sender>
+												<xsl:apply-templates select="eaxs:Sender"/>
+											</pdfmailmeta:sender>
+										</xsl:if>
+										-->
+										<xsl:if test="eaxs:From">
+											<pdfmailmeta:from>
+												<rdf:Seq>
+													<xsl:for-each select="eaxs:From/*">
+														<rdf:li>
+															<xsl:apply-templates select="."/>
+														</rdf:li>
+													</xsl:for-each>
+												</rdf:Seq>
+											</pdfmailmeta:from>
+										</xsl:if>
+										<xsl:if test="eaxs:To">
+											<pdfmailmeta:to>
+												<rdf:Seq>
+													<xsl:for-each select="eaxs:To/*">
+														<rdf:li>
+															<xsl:apply-templates select="."/>
+														</rdf:li>
+													</xsl:for-each>
+												</rdf:Seq>
+											</pdfmailmeta:to>
+										</xsl:if>
+										<xsl:if test="eaxs:Cc">
+											<pdfmailmeta:cc>
+												<rdf:Seq>
+													<xsl:for-each select="eaxs:Cc/*">
+														<rdf:li>
+															<xsl:apply-templates select="."/>
+														</rdf:li>
+													</xsl:for-each>
+												</rdf:Seq>
+											</pdfmailmeta:cc>
+										</xsl:if>
+										<xsl:if test="eaxs:Bcc">
+											<pdfmailmeta:bcc>
+												<rdf:Seq>
+													<xsl:for-each select="eaxs:Bcc/*">
+														<rdf:li>
+															<xsl:apply-templates select="."/>
+														</rdf:li>
+													</xsl:for-each>
+												</rdf:Seq>
+											</pdfmailmeta:bcc>
+										</xsl:if>
+										<xsl:if test="eaxs:InReplyTo">
+											<pdfmailmeta:inReplyTo>
+												<rdf:Seq>
+													<xsl:apply-templates select="eaxs:InReplyTo"/>
+												</rdf:Seq>
+											</pdfmailmeta:inReplyTo>
+										</xsl:if>
+										<xsl:if test="eaxs:References">
+											<pdfmailmeta:references>
+												<rdf:Seq>
+													<xsl:apply-templates select="eaxs:References"/>
+												</rdf:Seq>
+											</pdfmailmeta:references>							
+										</xsl:if>
+										<xsl:if test=".//eaxs:ContentType">
+											<pdfmailmeta:contentType><xsl:value-of select="(.//eaxs:ContentType)[1]"/></pdfmailmeta:contentType>							
+										</xsl:if>
+										<xsl:if test="eaxs:MessageProperties/eaxs:Size">
+											<pdfmailmeta:sizeBytes><xsl:value-of select="eaxs:MessageProperties/eaxs:Size"/></pdfmailmeta:sizeBytes>							
+										</xsl:if>
+										<pdfmailmeta:attachmentCount><xsl:value-of select="count(.//eaxs:*[@IsAttachment='true'])"/></pdfmailmeta:attachmentCount>							
+									</pdfmailmeta:Email>
+								</rdf:li>
+							</xsl:for-each>
+						</rdf:Seq>
+					</pdfmailmeta:email>
 				</rdf:Description>
 				
 				<xsl:copy-of select="document('EaPdfXmpSchema.xmp')/rdf:RDF/rdf:Description"  />
@@ -111,5 +232,56 @@
 		<xsl:processing-instruction name="xpacket">end="r"</xsl:processing-instruction>	
 	</xsl:template>
 
+	<xsl:template match="eaxs:Mailbox | eaxs:Sender" xmlns:foaf="http://xmlns.com/foaf/0.1/">
+		<foaf:Agent>
+			<xsl:if test="@name">
+				<foaf:name><xsl:value-of select="@name"/></foaf:name>												
+			</xsl:if>
+			<xsl:if test="@address">
+				<foaf:mbox>mailto:<xsl:value-of select="@address"/></foaf:mbox>												
+			</xsl:if>
+			<xsl:if test="not(@address) and not(@name)">
+				<foaf:name><xsl:value-of select="."/></foaf:name>
+			</xsl:if>
+		</foaf:Agent>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Group" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+		<foaf:Agent>
+			<foaf:name><xsl:value-of select="eaxs:Name"/></foaf:name>
+			<xsl:if test="eaxs:Group | eaxs:Mailbox">
+				<foaf:member>
+					<rdf:Seq>
+						<xsl:for-each select="eaxs:Group | eaxs:Mailbox">
+							<rdf:li>
+								<xsl:apply-templates select="."/>
+							</rdf:li>
+						</xsl:for-each>						
+					</rdf:Seq>
+				</foaf:member>
+			</xsl:if>
+		</foaf:Agent>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Subject" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+		<rdf:li><xsl:value-of select="."/></rdf:li>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:InReplyTo" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+		<rdf:li><xsl:value-of select="."/></rdf:li>
+	</xsl:template>
 
+	<xsl:template match="eaxs:References" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+		<rdf:li><xsl:value-of select="."/></rdf:li>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Keywords" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+		<rdf:li><xsl:value-of select="."/></rdf:li>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Comments" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+		<rdf:li><xsl:value-of select="."/></rdf:li>
+	</xsl:template>
+	
+	
 </xsl:stylesheet>

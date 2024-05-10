@@ -168,7 +168,12 @@ namespace UIUCLibrary.TestEaPdf
 
                     Assert.IsTrue(IsPdfValid(file.Value));
 
-                    if (VALIDATE_PDFS) Helpers.ValidatePdfAUsingVeraPdf(file.Value);
+                    if (VALIDATE_PDFS) 
+                    {
+                        Helpers.ValidatePdfAUsingPdfTools(file.Value);
+
+                        Helpers.ValidatePdfAUsingVeraPdf(file.Value);
+                    }
 
                     if (OPEN_PDFS)
                         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file.Value) { UseShellExecute = true });

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 using MimeKit.Tnef;
+using MimeKit.Utils;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -1624,8 +1625,22 @@ namespace UIUCLibrary.EaPdf
 
         private void WriteStandardMessageHeaders(XmlWriter xwriter, MimeMessage message)
         {
+            xwriter.WriteElementString("Guid", XM_NS, Guid.NewGuid().ToString());
 
-            xwriter.WriteElementString("MessageId", XM_NS, message.MessageId);
+            var msgId = message.MessageId;
+            if (!string.IsNullOrWhiteSpace(msgId))
+            {
+                xwriter.WriteElementString("MessageId", XM_NS, msgId);
+            }
+            else
+            {
+                //create a new message id if one is not present
+                msgId = MimeUtils.GenerateMessageId();
+                xwriter.WriteStartElement("MessageId", XM_NS);
+                xwriter.WriteAttributeString("Supplied", "true");
+                xwriter.WriteValue(msgId);
+                xwriter.WriteEndElement(); //MessageId
+            }
 
             if (message.MimeVersion != null)
             {

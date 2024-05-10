@@ -1,9 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Net.Http.Headers;
-using System.Reflection.Emit;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
 
 
 namespace UIUCLibrary.EaPdf.Helpers
