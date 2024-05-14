@@ -631,7 +631,7 @@ namespace UIUCLibrary.EaPdf
             };
 
 
-            var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
+            var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".root.xmp");
 
             List<(LogLevel level, string message)> messages = new();
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltRootXmpFilePath, xmpFilePath, parms, null, ref messages);
