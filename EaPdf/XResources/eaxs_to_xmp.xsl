@@ -35,6 +35,7 @@
 			<xsl:attribute name="NamedDestinationEnd">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="LocalId"><xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<xsl:attribute name="MessageId"><xsl:value-of select="eaxs:MessageId"/></xsl:attribute>
+			<xsl:attribute name="Guid"><xsl:value-of select="eaxs:Guid"/></xsl:attribute>
 			<xsl:processing-instruction name="xpacket">begin="" id="W5M0MpCehiHzreSzNTczkc9d" </xsl:processing-instruction>
 			<x:xmpmeta xmlns:x="adobe:ns:meta/">
 				<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">

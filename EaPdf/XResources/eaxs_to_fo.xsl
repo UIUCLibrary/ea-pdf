@@ -679,7 +679,6 @@
 		<fo:block page-break-after="always"><xsl:call-template name="tag-Art"/>
 			<xsl:attribute name="id">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<fox:destination><xsl:attribute name="internal-destination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>
-			<fo:block xml:lang="en" xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H2"/><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
 			<xsl:call-template name="MessageHeaderTocAndContent"/>
 			<!-- Create named destination to the end of the message -->
 			<fo:inline><xsl:attribute name="id">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute><fox:destination><xsl:attribute name="internal-destination">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>&nbsp;</fo:inline>
@@ -688,6 +687,7 @@
 	
 	<xsl:template name="MessageHeaderTocAndContent">
 		<xsl:param name="RenderToc">true</xsl:param>
+		<fo:block xml:lang="en" xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H2"/><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
 		<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:MessageId"/>
 			<xsl:apply-templates select="eaxs:OrigDate"/> <!-- MimeKit seems to use this as the default value if there is no date -->
@@ -706,8 +706,24 @@
 			<fo:block xml:lang="en" xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black"><xsl:call-template name="tag-H3"/>Message Contents</fo:block>
 			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>			
 		</xsl:if>
-		<xsl:call-template name="hr"/>
 		<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent"/>
+	</xsl:template>
+	
+	<xsl:template name="AbbreviatedHeader">
+		<fo:block xml:lang="en" xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black">
+			<xsl:call-template name="tag-H3"/>
+			<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
+			<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
+			<xsl:call-template name="FolderHeader"/> &gt; 
+			Message <xsl:value-of select="ancestor::eaxs:Message[1]/eaxs:LocalId"/> &gt;
+			<xsl:value-of select="../eaxs:ContentType"/>
+		</fo:block>
+		<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
+			<xsl:apply-templates select="ancestor::eaxs:Message[1]/eaxs:MessageId"/>
+			<xsl:apply-templates select="ancestor::eaxs:Message[1]/eaxs:OrigDate"/> 
+			<xsl:apply-templates select="ancestor::eaxs:Message[1]/eaxs:From"/>
+			<xsl:apply-templates select="ancestor::eaxs:Message[1]/eaxs:Subject"/>
+		</fo:list-block>	
 	</xsl:template>
 	
 	<xsl:template name="FolderHeader">
@@ -893,9 +909,10 @@
 	</xsl:template>
 
 	<xsl:template match="eaxs:Group">
-		<fo:inline font-weight="bold"><xsl:value-of select="eaxs:Name"/> [</fo:inline>
+		<fo:inline font-weight="bold" font-style="italic"><xsl:value-of select="eaxs:Name"/></fo:inline><fo:inline font-weight="bold">&nbsp;[&nbsp;</fo:inline>
 		<xsl:apply-templates select="eaxs:Mailbox | eaxs:Group"/>
-		<fo:inline font-weight="bold"><xsl:value-of select="eaxs:Name"/>] </fo:inline>
+		<fo:inline font-weight="bold">&nbsp;]</fo:inline>
+		<xsl:if test="position() != last()">, </xsl:if>
 	</xsl:template>
 
 	<xsl:template name="mailbox">
@@ -1030,32 +1047,18 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:BodyContent">
+		<!-- only render content which is text and which is not an attachment -->
 		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/')">
-			<!-- only render content which is text and which is not an attachment -->
-			<xsl:choose>
-				<xsl:when test="count(ancestor::eaxs:Message//eaxs:SingleBody[not(fn:lower-case(normalize-space(@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')]) > 1 ">
-					<!-- Only put the header if there are multiple bodies -->
-					<fo:block xml:lang="en" xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black" keep-with-next.within-page="always">
-						<xsl:call-template name="tag-H3"/>
-						<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
-						<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
-						<xsl:text>Content Type: </xsl:text><xsl:value-of select="../eaxs:ContentType"/>
-					</fo:block>				
-				</xsl:when>
-				<xsl:otherwise>
-					<!-- don't put a header, but add an extra line above the content -->
-					<fo:block margin-top="1em">
-						<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
-						<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>	
-						<xsl:text> </xsl:text>
-					</fo:block>
-				</xsl:otherwise>
-			</xsl:choose>
-			<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
+			<fo:block page-break-before="always" >
+				<xsl:call-template name="AbbreviatedHeader"/>				
+				<xsl:call-template name="hr"/>
+				<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
+			</fo:block>
 		</xsl:if>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:ExtBodyContent">
+		<!-- TODO -->
 	</xsl:template>
 	
 	<xsl:template match="eaxs:ChildMessage">

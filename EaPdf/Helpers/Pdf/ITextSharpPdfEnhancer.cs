@@ -614,10 +614,16 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 newStrm.Put(new PdfName("Type"), new PdfName("Metadata"));
                 newStrm.Put(new PdfName("Subtype"), new PdfName("XML"));
                 PdfIndirectObject metaIndObj = _stamper.Writer.AddToBody(newStrm);
+                newDPartDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference);  //this can go here or in the DPM dictionary
+
                 PdfDictionary metaDict = new();
-                metaDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference);
+                metaDict.Put(new PdfName("EmailMessageID"), new PdfString("aaa"));
+                metaDict.Put(new PdfName("EmailGUID"), new PdfString("bbb"));
+                metaDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference); //this can go here or in the Metadata dictionary
+                //TODO: Add the AF entry to the metadata dictionary
+                //metaDict.Put(new PdfName("AF"), null);
                 newDPartDict.Put(new PdfName("DPM"), metaDict);
-                //Maybe use this instead: newDPartDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference); 
+
                 if (dpartNode.Parent == null)
                 {
                     //this is the root DPart node, so replace the catalog metadata with this
