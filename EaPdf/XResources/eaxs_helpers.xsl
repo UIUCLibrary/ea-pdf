@@ -25,6 +25,39 @@
 		Some utility templates 
 	============================================================================= -->
     
+    <xsl:template name="InternalDestinationToMessageHeader">
+        <xsl:param name="FolderOrMessage" select="."/>
+        <xsl:choose>
+            <xsl:when test="local-name($FolderOrMessage)='Folder'">
+                <!-- link to the first message in the folder -->
+                <xsl:attribute name="internal-destination">
+                    <xsl:call-template name="ContentSetId">
+                        <xsl:with-param name="type" select="'EmailHeaderRendering'"/>
+                        <xsl:with-param name="number" select="($FolderOrMessage//eaxs:Message/eaxs:LocalId)[1]"/>							
+                    </xsl:call-template>
+                </xsl:attribute>                
+            </xsl:when>
+            <xsl:when test="local-name($FolderOrMessage)='Message'">
+                <!-- link to this message -->
+                <xsl:attribute name="internal-destination">
+                    <xsl:call-template name="ContentSetId">
+                        <xsl:with-param name="type" select="'EmailHeaderRendering'"/>
+                        <xsl:with-param name="number" select="($FolderOrMessage/eaxs:LocalId)[1]"/>							
+                    </xsl:call-template>
+                </xsl:attribute>                                
+            </xsl:when>
+            <xsl:otherwise>
+                <!-- link to the farthest away ancestor message, not to any child messages -->
+                <xsl:attribute name="internal-destination">
+                    <xsl:call-template name="ContentSetId">
+                        <xsl:with-param name="type" select="'EmailHeaderRendering'"/>
+                        <xsl:with-param name="number" select="$FolderOrMessage/ancestor::*[eaxs:MessageId][last()]/eaxs:LocalId"/>
+                    </xsl:call-template>
+                </xsl:attribute>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+    
     <xsl:template name="BeginContentSet">
         <xsl:param name="type" required="yes"/>
         <xsl:param name="subtype"/>

@@ -377,7 +377,8 @@ namespace UIUCLibrary.TestEaPdf
                     SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt,
                     WrapExternalContentInXml = wrapExtContentInXml,  //must be true for XEP to properly attach external PDFs
                     SaveTextAsXhtml = true, //required to render html inside the PDF
-                    MaximumXmlFileSize = maxFileSize
+                    MaximumXmlFileSize = maxFileSize,
+                    IncludeSubFolders = true
                 };
                 if (!string.IsNullOrWhiteSpace(skipAfterMsgId))
                     settings.SkipAfterMessageId = skipAfterMsgId;
@@ -406,7 +407,8 @@ namespace UIUCLibrary.TestEaPdf
                     SaveAttachmentsAndBinaryContentExternally = saveAttachmentsExt,
                     WrapExternalContentInXml = wrapExtContentInXml,  //Must be true for XEP to properly attach external PDFs
                     SaveTextAsXhtml = true, //required to render html inside the PDF
-                    MaximumXmlFileSize = maxFileSize
+                    MaximumXmlFileSize = maxFileSize,
+                    IncludeSubFolders = true
                 };
 
                 var eProc = new EmailToEaxsProcessor(logger, settings);

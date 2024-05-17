@@ -114,11 +114,6 @@
 				<fo:page-sequence master-reference="message-page">
 					<xsl:call-template name="static-content"/>
 					<fo:flow flow-name="xsl-region-body">
-						<fo:block><!-- empty block just to use as link destination -->
-							<xsl:call-template name="tag-artifact"/>
-							<xsl:attribute name="id"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
-							<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute></fox:destination>
-						</fo:block>
 						<xsl:apply-templates select="." mode="RenderContent"/>
 					</fo:flow>
 				</fo:page-sequence>
@@ -329,7 +324,7 @@
 										<xsl:for-each select="//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/ancestor::*[eaxs:MessageId][1]/eaxs:MessageId">
 											<fo:block>
 												<fo:basic-link xsl:use-attribute-sets="a-link">
-													<xsl:attribute name="internal-destination"><xsl:text>MESSAGE_</xsl:text><xsl:value-of select="ancestor::*[eaxs:MessageId][last()]/eaxs:LocalId"/></xsl:attribute>
+													<xsl:call-template name="InternalDestinationToMessageHeader"/>
 													<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="."/></xsl:call-template>												
 												</fo:basic-link>
 											</fo:block>
@@ -396,20 +391,20 @@
 			</fo:bookmark>
 		</xsl:if>
 		<fo:bookmark>
-			<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+			<xsl:call-template name="InternalDestinationToMessageHeader"/>
 			<fo:bookmark-title><xsl:value-of select="eaxs:Name"/></fo:bookmark-title>
 			<xsl:if test="count(eaxs:Message) > 0">
 				<fo:bookmark starting-state="hide">
-					<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+					<xsl:call-template name="InternalDestinationToMessageHeader"/>
 					<fo:bookmark-title><xsl:value-of select="count(eaxs:Message)"/> Messages</fo:bookmark-title>
 					<xsl:apply-templates select="eaxs:Message" mode="RenderBookmarks"/>
 				</fo:bookmark>
 			</xsl:if>
-			<xsl:if test="eaxs:Folder[eaxs:Message or eaxs:Folder]">
+			<xsl:if test="eaxs:Folder[eaxs:Message or eaxs:Folder[.//eaxs:Message]]">
 				<fo:bookmark starting-state="hide">
-					<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(eaxs:Folder[eaxs:Message or eaxs:Folder][1])"/></xsl:attribute>
-					<fo:bookmark-title><xsl:value-of select="count(eaxs:Folder[eaxs:Message or eaxs:Folder])"/> Sub-folders</fo:bookmark-title>
-					<xsl:apply-templates select="eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderBookmarks"><xsl:with-param name="topfolder">false</xsl:with-param></xsl:apply-templates>
+					<xsl:call-template name="InternalDestinationToMessageHeader"><xsl:with-param name="FolderOrMessage" select="(eaxs:Folder[eaxs:Message or eaxs:Folder[.//eaxs:Message]])[1]"></xsl:with-param></xsl:call-template>
+					<fo:bookmark-title><xsl:value-of select="count(eaxs:Folder[eaxs:Message or eaxs:Folder[.//eaxs:Message]])"/> Sub-folders</fo:bookmark-title>
+					<xsl:apply-templates select="eaxs:Folder[eaxs:Message or eaxs:Folder[.//eaxs:Message]]" mode="RenderBookmarks"><xsl:with-param name="topfolder">false</xsl:with-param></xsl:apply-templates>
 				</fo:bookmark>
 			</xsl:if>
 		</fo:bookmark>
@@ -426,7 +421,8 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Message" mode="RenderBookmarks">
-		<fo:bookmark><xsl:attribute name="internal-destination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
+		<fo:bookmark>
+			<xsl:call-template name="InternalDestinationToMessageHeader"/>
 			<fo:bookmark-title>
 				<xsl:value-of select="normalize-space(eaxs:Subject)"/>
 				<xsl:text>&#13;&#10;from </xsl:text><xsl:value-of select="normalize-space(eaxs:From)"/>
@@ -602,15 +598,6 @@
 					</fo:list-item>
 				</xsl:if>
 				
-				<fo:list-item>
-					<fo:list-item-label  xsl:use-attribute-sets="h2-font h2-space"><fo:block>Folders (<xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message or eaxs:Folder])"/>): </fo:block></fo:list-item-label>
-					<fo:list-item-body>
-						<fo:block margin-top="2em">
-							<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderToc"/>
-						</fo:block>
-					</fo:list-item-body>
-				</fo:list-item>
-				
 				<!-- QUESTION: Do not count child messages? -->
 				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
 					<fo:list-item-label><fo:block>Message Count: </fo:block></fo:list-item-label>
@@ -626,6 +613,16 @@
 						</fo:block>
 					</fo:list-item-body>
 				</fo:list-item>
+
+				<fo:list-item>
+					<fo:list-item-label  xsl:use-attribute-sets="h2-font h2-space"><fo:block>Folders (<xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message or eaxs:Folder])"/>): </fo:block></fo:list-item-label>
+					<fo:list-item-body>
+						<fo:block margin-top="2em">
+							<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderToc"/>
+						</fo:block>
+					</fo:list-item-body>
+				</fo:list-item>
+				
 				
 			</fo:list-block>
 			
@@ -699,7 +696,7 @@
 						</xsl:if>
 						<xsl:if test="count(eaxs:Message) > 0">
 							<fo:basic-link>
-								<xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
+								<xsl:call-template name="InternalDestinationToMessageHeader"/>
 								<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To First Message</fo:inline>
 							</fo:basic-link>
 						</xsl:if>
@@ -714,8 +711,6 @@
 		<xsl:apply-templates select="eaxs:Message" />
 		<xsl:for-each select="eaxs:Folder[eaxs:Message or eaxs:Folder]">
 			<fo:block><xsl:call-template name="tag-Sect"/>
-				<xsl:attribute name="id"><xsl:value-of select="generate-id(.)"/></xsl:attribute>
-				<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="generate-id(.)"/></xsl:attribute></fox:destination>
 				<xsl:apply-templates select="." mode="RenderContent"/>	
 			</fo:block>
 		</xsl:for-each>
@@ -766,8 +761,6 @@
 	<xsl:template name="AbbreviatedHeader">
 		<fo:block xml:lang="en" xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black">
 			<xsl:call-template name="tag-H3"/>
-			<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
-			<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
 			<xsl:call-template name="FolderHeader"/> &gt; 
 			Message <xsl:value-of select="ancestor::eaxs:Message[1]/eaxs:LocalId"/> &gt;
 			<xsl:value-of select="../eaxs:ContentType"/>
@@ -1022,6 +1015,7 @@
 	
 
 	<xsl:template match="eaxs:ContentType">
+		<xsl:variable name="ContentType" select="."/>
 		<fo:list-item>
 			<fo:list-item-label end-indent="label-end()">
 				<fo:block></fo:block>
@@ -1032,7 +1026,17 @@
 					<xsl:call-template name="AttachmentLink"/>
 					<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and (fn:lower-case(normalize-space(.)) = 'text/plain' or fn:lower-case(normalize-space(.)) = 'text/html')">
 						<fo:basic-link>
-							<xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(../eaxs:BodyContent)"/></xsl:attribute>									
+							<xsl:attribute name="internal-destination">
+								<xsl:call-template name="ContentSetId">
+									<xsl:with-param name="type" select="'BodyRendering'"/>
+									<xsl:with-param name="subtype"><xsl:value-of select="my:PdfNameEscape(fn:lower-case(normalize-space(.)))"/></xsl:with-param>
+									<xsl:with-param name="number">
+										<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
+										<xsl:text>.</xsl:text>
+										<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
+									</xsl:with-param>
+								</xsl:call-template>
+							</xsl:attribute>									
 							<fo:inline>&nbsp;</fo:inline><fo:inline xsl:use-attribute-sets="a-link" font-size="small">Go To Content</fo:inline>
 						</fo:basic-link>												
 					</xsl:if>
@@ -1212,8 +1216,6 @@
 			</xsl:when>	
 			<xsl:otherwise>
 				<fo:block>
-					<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
-					<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
 					<fo:inline font-style="italic">BLANK</fo:inline>					
 				</fo:block>
 			</xsl:otherwise>
@@ -1294,8 +1296,6 @@
 			</xsl:when>	
 			<xsl:otherwise>
 				<fo:block>
-					<xsl:attribute name="id"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute>
-					<fox:destination><xsl:attribute name="internal-destination"><xsl:value-of select="fn:generate-id(.)"/></xsl:attribute></fox:destination>
 					<fo:inline font-style="italic">BLANK</fo:inline>
 				</fo:block>
 			</xsl:otherwise>
