@@ -108,7 +108,7 @@
       <structure-alias name="StaticContent" value="Sect"/>
       <structure-alias name="FlowSection" value="Sect"/>
       <structure-alias name="BlockContainer" value="Div"/>
-      <structure-alias name="Block" value="P"/>
+      <structure-alias name="Block" value="Div"/>
       <structure-alias name="Inline" value="Span"/>
       <structure-alias name="Wrapper" value="Span"/>
       <structure-alias name="Leader" value="Span"/>

@@ -32,12 +32,14 @@
 	
 	<xsl:param name="icc-profile" select="'file:/C:/Program Files/RenderX/XEP/sRGB2014.icc'"/>
 	
-	<xsl:param name="creator" select="'UIUCLibrary.EaPdf'"/>
 
 	<!-- Which FO Processor -->
 	<xsl:param name="fo-processor-version">FOP Version 2.8</xsl:param> <!-- Values used: fop or xep -->
 	<xsl:variable name="fo-processor" select="fn:lower-case(fn:tokenize($fo-processor-version)[1])"/>
+
+	<xsl:param name="creator" select="'UIUCLibrary.EaPdf'"/>
 	<xsl:variable name="producer"><xsl:value-of select="$fo-processor-version"/></xsl:variable>
+	<xsl:param name="enhancer">iTextSharp</xsl:param>
 	
 	<xsl:param name="generate-xmp">false</xsl:param><!-- generate the XMP metadata, this is currently generated during post processing so leave as 'false' -->
 	
@@ -104,7 +106,7 @@
 			<fo:page-sequence master-reference="message-page" xml:lang="en">
 				<xsl:call-template name="static-content"/>
 				<fo:flow flow-name="xsl-region-body">
-					<xsl:call-template name="CoverPage"/>
+					<xsl:call-template name="FrontMatter"/>
 				</fo:flow>
 			</fo:page-sequence>
 			
@@ -166,172 +168,181 @@
 	
 	<xsl:template name="AttachmentsList">
 		<xsl:variable name="font-size" select="'95%'"/>
+		<xsl:variable name="HasAttachments" select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]"/>
 		
-		<fo:block id="AttachmentList" xsl:use-attribute-sets="h1"><xsl:call-template name="tag-H1"/><fox:destination internal-destination="AttachmentList"/>All Attachments</fo:block>
-		
-		<fo:block background-color="beige" border="1px solid brown" padding="0.125em">
-			You may need to open the PDF reader's attachments list to download or open these f&zwnj;iles. 
-			The same attachment might have originated from multiple mail messages, possibly with different f&zwnj;ilenames, but only one copy will be attached to this PDF; 
-			however, each message will have a seperate annotation pointing to the same attachment.
-		</fo:block>
-		
-		<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>Source Email Files</fo:block>
-		
-		<xsl:choose>
-			<xsl:when test="//eaxs:Folder[eaxs:Message or eaxs:Folder]/eaxs:FolderProperties[eaxs:RelPath] or //eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
+		<fo:block>
+			<xsl:call-template name="tag-Div"/>
+			<xsl:call-template name="BeginContentSet">
+				<xsl:with-param name="type">AttachmentList</xsl:with-param>
+			</xsl:call-template>
+			
+			<fo:block id="AttachmentList" xsl:use-attribute-sets="h1"><xsl:call-template name="tag-H1"/>All Attachments</fo:block>
+						
+			<fo:block background-color="beige" border="1px solid brown" padding="0.125em" >
+				<xsl:text>You may need to open the PDF reader's attachments list to download or open these f&zwnj;iles. 
+				The same attachment might have originated from multiple mail messages, possibly with different f&zwnj;ilenames, but only one copy will be attached to this PDF; 
+				however, each message will have a seperate annotation pointing to the same attachment.</xsl:text>
+			</fo:block>
+
+			<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>Source Email Files</fo:block>
+			
+			<xsl:choose>
+				<xsl:when test="//eaxs:Folder[eaxs:Message or eaxs:Folder]/eaxs:FolderProperties[eaxs:RelPath] or //eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
+					<fo:list-block font-size="{$font-size}">
+						<!-- Source MBOX files are referenced in FolderProperties -->
+						<xsl:for-each select="//eaxs:Folder[eaxs:Message or eaxs:Folder]/eaxs:FolderProperties[eaxs:RelPath]">
+							<xsl:sort select="fn:string-join(ancestor-or-self::eaxs:Folder/eaxs:Name)"/> 
+							<xsl:variable name="UniqueDestination">
+								<xsl:text>X_</xsl:text><xsl:value-of select="eaxs:Hash/eaxs:Value"/>
+							</xsl:variable>
+							<fo:list-item margin-top="5pt" >
+								<fo:list-item-label>
+									<fo:block font-weight="bold"><fo:inline>Source File <xsl:value-of select="position()"/>:</fo:inline></fo:block>
+								</fo:list-item-label>
+								<fo:list-item-body keep-together.within-column="always">
+									<xsl:call-template name="file-list-2x2">
+										<xsl:with-param name="lbl-1">F&zwnj;ile name: </xsl:with-param>
+										<xsl:with-param name="body-1">
+											<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template>
+											<xsl:if test="eaxs:Size">
+												<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
+											</xsl:if>
+										</xsl:with-param>
+										<xsl:with-param name="lbl-2">Folder name: </xsl:with-param>
+										<xsl:with-param name="body-2">
+											<xsl:for-each select="ancestor-or-self::eaxs:Folder/eaxs:Name">
+												<xsl:choose>
+													<xsl:when test="position() != last()">
+														<xsl:value-of select="."/><xsl:text>&rarr;&zwnj;</xsl:text>
+													</xsl:when>
+													<xsl:otherwise>
+														<fo:basic-link>
+															<xsl:attribute name="internal-destination">M<xsl:value-of select="$UniqueDestination"/></xsl:attribute>
+															<fo:inline xsl:use-attribute-sets="a-link">
+																<xsl:value-of select="."/>
+															</fo:inline>	
+														</fo:basic-link>											
+													</xsl:otherwise>
+												</xsl:choose>
+											</xsl:for-each>
+										</xsl:with-param>
+									</xsl:call-template>
+								</fo:list-item-body>
+							</fo:list-item>
+						</xsl:for-each>
+						
+						<!-- Source EML files are referenced in MessageProperties -->
+						<xsl:for-each select="//eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
+							<xsl:sort select="eaxs:RelPath"/>
+							<xsl:variable name="UniqueDestination">
+								<xsl:text>MX_</xsl:text><xsl:value-of select="eaxs:Hash/eaxs:Value"/>
+							</xsl:variable>
+							<fo:list-item margin-top="5pt" >
+								<fo:list-item-label>
+									<fo:block font-weight="bold"><fo:inline>Source File <xsl:value-of select="position()"/>:</fo:inline></fo:block>
+								</fo:list-item-label>
+								<fo:list-item-body keep-together.within-column="always">
+									<xsl:call-template name="file-list-2x2">
+										<xsl:with-param name="lbl-1">F&zwnj;ile name: </xsl:with-param>
+										<xsl:with-param name="body-1">
+											<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template>
+											<xsl:if test="eaxs:Size">
+												<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
+											</xsl:if>
+										</xsl:with-param>
+										<xsl:with-param name="lbl-2">Message id: </xsl:with-param>
+										<xsl:with-param name="body-2">
+											<fo:basic-link>
+												<xsl:attribute name="internal-destination"><xsl:value-of select="$UniqueDestination"/></xsl:attribute>
+												<fo:inline xsl:use-attribute-sets="a-link" >
+													<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="../eaxs:MessageId"/></xsl:call-template>
+												</fo:inline>	
+											</fo:basic-link>
+										</xsl:with-param>
+									</xsl:call-template>
+								</fo:list-item-body>
+							</fo:list-item>
+						</xsl:for-each>
+					</fo:list-block>
+				</xsl:when>
+				<xsl:when test="/eaxs:Account/processing-instruction('ContinuedIn')">
+					<fo:block>
+						<xsl:text>Email messages are split into multiple PDF files; the last PDF file in the sequence contains the source files.
+						The next file in the sequence is '</xsl:text><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedIn}')" show-destination="new"><xsl:value-of select="$ContinuedIn"/></fo:basic-link><xsl:text>'.</xsl:text>
+					</fo:block>
+				</xsl:when>
+				<xsl:otherwise>
+					<fo:block>
+						<xsl:text>The sources file(s) for this PDF email archive are not available as attachments.</xsl:text>
+					</fo:block>
+					<xsl:message terminate="no">WARNING: The sources file(s) for this email archive are not available as PDF attachments.</xsl:message>
+				</xsl:otherwise>
+			</xsl:choose>
+			
+			<!-- All Attachments -->
+			<xsl:if test="$HasAttachments">
+				<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>File Attachments</fo:block>
+				
 				<fo:list-block font-size="{$font-size}">
-					<!-- Source MBOX files are referenced in FolderProperties -->
-					<xsl:for-each select="//eaxs:Folder[eaxs:Message or eaxs:Folder]/eaxs:FolderProperties[eaxs:RelPath]">
-						<xsl:sort select="fn:string-join(ancestor-or-self::eaxs:Folder/eaxs:Name)"/> 
-						<xsl:variable name="UniqueDestination">
-							<xsl:text>X_</xsl:text><xsl:value-of select="eaxs:Hash/eaxs:Value"/>
-						</xsl:variable>
-						<fo:list-item margin-top="5pt" >
+					<xsl:for-each-group select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]" group-by="eaxs:Hash/eaxs:Value">
+						<xsl:sort select="../eaxs:DispositionFileName"/>
+						<xsl:sort select="../eaxs:ContentName"/>
+						<xsl:variable name="hash" select="eaxs:Hash/eaxs:Value"/>
+						<xsl:variable name="multiple-names" select="count(fn:distinct-values(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/(eaxs:DispositionFileName | eaxs:ContentName))) > 1"/>
+						<xsl:variable name="multiple-msgs" select="count(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/ancestor::*[eaxs:MessageId][1]/eaxs:MessageId) > 1"/>
+						<fo:list-item margin-top="5pt">
 							<fo:list-item-label>
-								<fo:block font-weight="bold"><fo:inline>Source File <xsl:value-of select="position()"/>:</fo:inline></fo:block>
+								<fo:block font-weight="bold"><fo:inline>Attachment <xsl:value-of select="position()"/>:</fo:inline></fo:block>						
 							</fo:list-item-label>
 							<fo:list-item-body keep-together.within-column="always">
 								<xsl:call-template name="file-list-2x2">
-									<xsl:with-param name="lbl-1">F&zwnj;ile name: </xsl:with-param>
+									<xsl:with-param name="lbl-1">
+										<xsl:text>F&zwnj;ile name</xsl:text>
+										<xsl:if test="$multiple-names">s</xsl:if>
+										<xsl:text>:</xsl:text>
+									</xsl:with-param>
 									<xsl:with-param name="body-1">
-										<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template>
+										<xsl:choose>
+											<xsl:when test="../eaxs:DispositionFileName | ../eaxs:ContentName">
+												<xsl:if test="$multiple-names">
+													<xsl:text>"</xsl:text>
+												</xsl:if>
+												<xsl:value-of select="fn:string-join(fn:distinct-values(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/(eaxs:DispositionFileName | eaxs:ContentName)),'&quot;, &quot;')"/>
+												<xsl:if test="$multiple-names">
+													<xsl:text>"</xsl:text>
+												</xsl:if>
+											</xsl:when>
+											<xsl:otherwise>
+												<fo:inline xsl:use-attribute-sets="i">* No f&zwnj;ilename given *</fo:inline>
+											</xsl:otherwise>
+										</xsl:choose>
 										<xsl:if test="eaxs:Size">
 											<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
 										</xsl:if>
 									</xsl:with-param>
-									<xsl:with-param name="lbl-2">Folder name: </xsl:with-param>
+									<xsl:with-param name="lbl-2">
+										<xsl:text>Message id</xsl:text>
+										<xsl:if test="$multiple-msgs">s</xsl:if>
+										<xsl:text>:</xsl:text>
+									</xsl:with-param>
 									<xsl:with-param name="body-2">
-										<xsl:for-each select="ancestor-or-self::eaxs:Folder/eaxs:Name">
-											<xsl:choose>
-												<xsl:when test="position() != last()">
-													<xsl:value-of select="."/><xsl:text>&rarr;&zwnj;</xsl:text>
-												</xsl:when>
-												<xsl:otherwise>
-													<fo:basic-link>
-														<xsl:attribute name="internal-destination">M<xsl:value-of select="$UniqueDestination"/></xsl:attribute>
-														<fo:inline xsl:use-attribute-sets="a-link">
-															<xsl:value-of select="."/>
-														</fo:inline>	
-													</fo:basic-link>											
-												</xsl:otherwise>
-											</xsl:choose>
+										<xsl:for-each select="//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/ancestor::*[eaxs:MessageId][1]/eaxs:MessageId">
+											<fo:block>
+												<fo:basic-link xsl:use-attribute-sets="a-link">
+													<xsl:attribute name="internal-destination"><xsl:text>MESSAGE_</xsl:text><xsl:value-of select="ancestor::*[eaxs:MessageId][last()]/eaxs:LocalId"/></xsl:attribute>
+													<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="."/></xsl:call-template>												
+												</fo:basic-link>
+											</fo:block>
 										</xsl:for-each>
 									</xsl:with-param>
-								</xsl:call-template>
+								</xsl:call-template>								
 							</fo:list-item-body>
 						</fo:list-item>
-					</xsl:for-each>
-					
-					<!-- Source EML files are referenced in MessageProperties -->
-					<xsl:for-each select="//eaxs:Folder/eaxs:Message/eaxs:MessageProperties[eaxs:RelPath]">
-						<xsl:sort select="eaxs:RelPath"/>
-						<xsl:variable name="UniqueDestination">
-							<xsl:text>MX_</xsl:text><xsl:value-of select="eaxs:Hash/eaxs:Value"/>
-						</xsl:variable>
-						<fo:list-item margin-top="5pt" >
-							<fo:list-item-label>
-								<fo:block font-weight="bold"><fo:inline>Source File <xsl:value-of select="position()"/>:</fo:inline></fo:block>
-							</fo:list-item-label>
-							<fo:list-item-body keep-together.within-column="always">
-								<xsl:call-template name="file-list-2x2">
-									<xsl:with-param name="lbl-1">F&zwnj;ile name: </xsl:with-param>
-									<xsl:with-param name="body-1">
-										<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="eaxs:RelPath"/></xsl:call-template>
-										<xsl:if test="eaxs:Size">
-											<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
-										</xsl:if>
-									</xsl:with-param>
-									<xsl:with-param name="lbl-2">Message id: </xsl:with-param>
-									<xsl:with-param name="body-2">
-										<fo:basic-link>
-											<xsl:attribute name="internal-destination"><xsl:value-of select="$UniqueDestination"/></xsl:attribute>
-											<fo:inline xsl:use-attribute-sets="a-link" >
-												<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="../eaxs:MessageId"/></xsl:call-template>
-											</fo:inline>	
-										</fo:basic-link>
-									</xsl:with-param>
-								</xsl:call-template>
-							</fo:list-item-body>
-						</fo:list-item>
-					</xsl:for-each>
+					</xsl:for-each-group>
 				</fo:list-block>
-			</xsl:when>
-			<xsl:when test="/eaxs:Account/processing-instruction('ContinuedIn')">
-				<fo:block>
-					Email messages are split into multiple PDF files; the last PDF file in the sequence contains the source files.
-					The next file in the sequence is '<fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedIn}')" show-destination="new"><xsl:value-of select="$ContinuedIn"/></fo:basic-link>'.
-				</fo:block>
-			</xsl:when>
-			<xsl:otherwise>
-				<fo:block>
-					The sources file(s) for this PDF email archive are not available as attachments.
-				</fo:block>
-				<xsl:message terminate="no">WARNING: The sources file(s) for this email archive are not available as PDF attachments.</xsl:message>
-			</xsl:otherwise>
-		</xsl:choose>
-		
-		<!-- All Attachments -->
-		<xsl:if test="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
-			<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>File Attachments</fo:block>
+			</xsl:if>
 			
-			<fo:list-block font-size="{$font-size}">
-				<xsl:for-each-group select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]" group-by="eaxs:Hash/eaxs:Value">
-					<xsl:sort select="../eaxs:DispositionFileName"/>
-					<xsl:sort select="../eaxs:ContentName"/>
-					<xsl:variable name="hash" select="eaxs:Hash/eaxs:Value"/>
-					<xsl:variable name="multiple-names" select="count(fn:distinct-values(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/(eaxs:DispositionFileName | eaxs:ContentName))) > 1"/>
-					<xsl:variable name="multiple-msgs" select="count(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/ancestor::*[eaxs:MessageId][1]/eaxs:MessageId) > 1"/>					
-					<fo:list-item margin-top="5pt">
-						<fo:list-item-label>
-							<fo:block font-weight="bold"><fo:inline>Attachment <xsl:value-of select="position()"/>:</fo:inline></fo:block>						
-						</fo:list-item-label>
-						<fo:list-item-body keep-together.within-column="always">
-							<xsl:call-template name="file-list-2x2">
-								<xsl:with-param name="lbl-1">
-									<xsl:text>F&zwnj;ile name</xsl:text>
-									<xsl:if test="$multiple-names">s</xsl:if>
-									<xsl:text>:</xsl:text>
-								</xsl:with-param>
-								<xsl:with-param name="body-1">
-									<xsl:choose>
-										<xsl:when test="../eaxs:DispositionFileName | ../eaxs:ContentName">
-											<xsl:if test="$multiple-names">
-												<xsl:text>"</xsl:text>
-											</xsl:if>
-											<xsl:value-of select="fn:string-join(fn:distinct-values(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/(eaxs:DispositionFileName | eaxs:ContentName)),'&quot;, &quot;')"/>
-											<xsl:if test="$multiple-names">
-												<xsl:text>"</xsl:text>
-											</xsl:if>
-										</xsl:when>
-										<xsl:otherwise>
-											<fo:inline xsl:use-attribute-sets="i">* No f&zwnj;ilename given *</fo:inline>
-										</xsl:otherwise>
-									</xsl:choose>
-									<xsl:if test="eaxs:Size">
-										<fo:inline font-size="small"> (<xsl:value-of select="fn:format-number(eaxs:Size,'#,###')"/> bytes)</fo:inline>
-									</xsl:if>
-								</xsl:with-param>
-								<xsl:with-param name="lbl-2">
-									<xsl:text>Message id</xsl:text>
-									<xsl:if test="$multiple-msgs">s</xsl:if>
-									<xsl:text>:</xsl:text>
-								</xsl:with-param>
-								<xsl:with-param name="body-2">
-									<xsl:for-each select="//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/ancestor::*[eaxs:MessageId][1]/eaxs:MessageId">
-										<fo:block>
-											<fo:basic-link xsl:use-attribute-sets="a-link">
-												<xsl:attribute name="internal-destination"><xsl:text>MESSAGE_</xsl:text><xsl:value-of select="ancestor::*[eaxs:MessageId][last()]/eaxs:LocalId"/></xsl:attribute>
-												<xsl:call-template name="InsertZwspAfterNonWords"><xsl:with-param name="string" select="."/></xsl:call-template>												
-											</fo:basic-link>
-										</fo:block>
-									</xsl:for-each>
-								</xsl:with-param>
-							</xsl:call-template>								
-						</fo:list-item-body>
-					</fo:list-item>
-				</xsl:for-each-group>
-			</fo:list-block>
-		</xsl:if>
+		</fo:block>
 	</xsl:template>
 	
 	<!-- template for a 2-item list used for the attachments lists -->
@@ -376,7 +387,11 @@
 		<xsl:param name="topfolder">true</xsl:param>
 		<xsl:if test="$topfolder='true'">
 			<fo:bookmark>
-				<xsl:attribute name="internal-destination">CoverPage</xsl:attribute>
+				<xsl:attribute name="internal-destination">
+					<xsl:call-template name="ContentSetId">
+						<xsl:with-param name="type">FrontMatter</xsl:with-param>
+					</xsl:call-template>
+				</xsl:attribute>
 				<fo:bookmark-title>Cover Page</fo:bookmark-title>
 			</fo:bookmark>
 		</xsl:if>
@@ -400,7 +415,11 @@
 		</fo:bookmark>
 		<xsl:if test="$topfolder='true' and $list-of-attachments='true'">
 			<fo:bookmark>
-				<xsl:attribute name="internal-destination">AttachmentList</xsl:attribute>
+				<xsl:attribute name="internal-destination">
+					<xsl:call-template name="ContentSetId">
+						<xsl:with-param name="type">AttachmentList</xsl:with-param>
+					</xsl:call-template>
+				</xsl:attribute>
 				<fo:bookmark-title>List of All Attachments</fo:bookmark-title>
 			</fo:bookmark>
 		</xsl:if>
@@ -505,85 +524,112 @@
 		</xsl:for-each-group>		
 	</xsl:template>
 	
-	<xsl:template name="CoverPage">
-		<fo:block xsl:use-attribute-sets="h1" id="CoverPage"><xsl:call-template name="tag-H1"/><fox:destination internal-destination="CoverPage"/>PDF Email Archive (PDF/mail-1m)</fo:block>
-		
-		<fo:list-block>
-			<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-				<fo:list-item-label><fo:block>Created On: </fo:block></fo:list-item-label>
-				<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/></fo:block></fo:list-item-body>
-			</fo:list-item>
+	<xsl:template name="FrontMatter">
+		<fo:block>
+			<xsl:call-template name="tag-Div"/>
+			<xsl:call-template name="BeginContentSet">
+				<xsl:with-param name="type">FrontMatter</xsl:with-param>
+			</xsl:call-template>
 			
-			<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-				<fo:list-item-label><fo:block>Created By: </fo:block></fo:list-item-label>
-				<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="$producer"/></fo:block></fo:list-item-body>
-			</fo:list-item>
+			<fo:block xsl:use-attribute-sets="h1" ><xsl:call-template name="tag-H1"/>PDF Email Archive (PDF/mail-1m)</fo:block>
 			
-			<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
-				<fo:list-item>
-					<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Accounts (<xsl:value-of select="count(/eaxs:Account/eaxs:EmailAddress)"/>): </fo:block></fo:list-item-label>
-					<fo:list-item-body>
-						<fo:list-block margin-top="2em" margin-left="1em">
-							<xsl:for-each select="/eaxs:Account/eaxs:EmailAddress">
-								<fo:list-item>
-									<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
-									<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><xsl:apply-templates/></fo:block></fo:list-item-body>
-								</fo:list-item>
-							</xsl:for-each>
+			<fo:list-block>
+				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+					<fo:list-item-label><fo:block>Created On: </fo:block></fo:list-item-label>
+					<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/></fo:block></fo:list-item-body>
+				</fo:list-item>
+				
+				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+					<fo:list-item-label><fo:block>Created By: </fo:block></fo:list-item-label>
+					<fo:list-item-body start-indent="6em">
+						<fo:list-block>
+							<fo:list-item>
+								<fo:list-item-label><fo:block/></fo:list-item-label>
+								<fo:list-item-body><fo:block><xsl:value-of select="$creator"/></fo:block></fo:list-item-body>
+							</fo:list-item>
+							<fo:list-item>
+								<fo:list-item-label><fo:block/></fo:list-item-label>
+								<fo:list-item-body><fo:block><xsl:value-of select="$producer"/></fo:block></fo:list-item-body>
+							</fo:list-item>
+							<fo:list-item>
+								<fo:list-item-label><fo:block/></fo:list-item-label>
+								<fo:list-item-body><fo:block><xsl:value-of select="$enhancer"/></fo:block></fo:list-item-body>
+							</fo:list-item>
 						</fo:list-block>
 					</fo:list-item-body>
 				</fo:list-item>
-			</xsl:if>
-			
-			<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-				<fo:list-item-label><fo:block>Global Id: </fo:block></fo:list-item-label>
-				<fo:list-item-body start-indent="5em"><fo:block><xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block></fo:list-item-body>
-			</fo:list-item>
-			
-			<xsl:if test="$ContinuedIn or $ContinuedFrom">
+				
+				<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
+					<fo:list-item>
+						<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Accounts (<xsl:value-of select="count(/eaxs:Account/eaxs:EmailAddress)"/>): </fo:block></fo:list-item-label>
+						<fo:list-item-body>
+							<fo:list-block margin-top="2em" margin-left="1em">
+								<xsl:for-each select="/eaxs:Account/eaxs:EmailAddress">
+									<fo:list-item>
+										<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
+										<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><xsl:apply-templates/></fo:block></fo:list-item-body>
+									</fo:list-item>
+								</xsl:for-each>
+							</fo:list-block>
+						</fo:list-item-body>
+					</fo:list-item>
+				</xsl:if>
+				
+				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+					<fo:list-item-label><fo:block>Global Id: </fo:block></fo:list-item-label>
+					<fo:list-item-body start-indent="5em"><fo:block><xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block></fo:list-item-body>
+				</fo:list-item>
+				
+				<xsl:if test="$ContinuedIn or $ContinuedFrom">
+					<fo:list-item>
+						<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Multipart Archive: </fo:block></fo:list-item-label>
+						<fo:list-item-body>
+							<fo:list-block margin-top="2em" margin-left="1em">
+								<xsl:if test="$ContinuedFrom">
+									<fo:list-item>
+										<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
+										<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedFrom}')" show-destination="new">Previous: <xsl:value-of select="$ContinuedFrom"/></fo:basic-link></fo:block></fo:list-item-body>
+									</fo:list-item>
+								</xsl:if>
+								<xsl:if test="$ContinuedIn">
+									<fo:list-item>
+										<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
+										<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedIn}')" show-destination="new">Next: <xsl:value-of select="$ContinuedIn"/></fo:basic-link></fo:block></fo:list-item-body>
+									</fo:list-item>
+								</xsl:if>
+							</fo:list-block>
+						</fo:list-item-body>
+					</fo:list-item>
+				</xsl:if>
+				
 				<fo:list-item>
-					<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Multipart Archive: </fo:block></fo:list-item-label>
+					<fo:list-item-label  xsl:use-attribute-sets="h2-font h2-space"><fo:block>Folders (<xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message or eaxs:Folder])"/>): </fo:block></fo:list-item-label>
 					<fo:list-item-body>
-						<fo:list-block margin-top="2em" margin-left="1em">
-							<xsl:if test="$ContinuedFrom">
-								<fo:list-item>
-									<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
-									<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedFrom}')" show-destination="new">Previous: <xsl:value-of select="$ContinuedFrom"/></fo:basic-link></fo:block></fo:list-item-body>
-								</fo:list-item>
-							</xsl:if>
-							<xsl:if test="$ContinuedIn">
-								<fo:list-item>
-									<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
-									<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedIn}')" show-destination="new">Next: <xsl:value-of select="$ContinuedIn"/></fo:basic-link></fo:block></fo:list-item-body>
-								</fo:list-item>
-							</xsl:if>
-						</fo:list-block>
+						<fo:block margin-top="2em">
+							<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderToc"/>
+						</fo:block>
 					</fo:list-item-body>
 				</fo:list-item>
-			</xsl:if>
+				
+				<!-- QUESTION: Do not count child messages? -->
+				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+					<fo:list-item-label><fo:block>Message Count: </fo:block></fo:list-item-label>
+					<fo:list-item-body start-indent="8em"><fo:block><xsl:value-of select="count(//eaxs:Message)"/></fo:block></fo:list-item-body>
+				</fo:list-item>
+				
+				<!-- QUESTION: Only count distinct attachments, based on the hash? -->
+				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+					<fo:list-item-label><fo:block>Attachment Count: </fo:block></fo:list-item-label>
+					<fo:list-item-body start-indent="9.5em">
+						<fo:block>
+							<xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/>
+						</fo:block>
+					</fo:list-item-body>
+				</fo:list-item>
+				
+			</fo:list-block>
 			
-			<!-- QUESTION: Do not count child messages? -->
-			<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-				<fo:list-item-label><fo:block>Message Count: </fo:block></fo:list-item-label>
-				<fo:list-item-body start-indent="8em"><fo:block><xsl:value-of select="count(//eaxs:Message)"/></fo:block></fo:list-item-body>
-			</fo:list-item>
-			
-			<!-- QUESTION: Only count distinct attachments, based on the hash? -->
-			<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-				<fo:list-item-label><fo:block>Attachment Count: </fo:block></fo:list-item-label>
-				<fo:list-item-body start-indent="9.5em"><fo:block><xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/></fo:block></fo:list-item-body>
-			</fo:list-item>
-			
-			<fo:list-item>
-				<fo:list-item-label  xsl:use-attribute-sets="h2-font h2-space"><fo:block>Folders (<xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message or eaxs:Folder])"/>): </fo:block></fo:list-item-label>
-				<fo:list-item-body>
-					<fo:block margin-top="2em">
-						<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderToc"/>
-					</fo:block>
-				</fo:list-item-body>
-			</fo:list-item>
-			
-		</fo:list-block>
+		</fo:block>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Folder" mode="RenderToc">
@@ -676,36 +722,44 @@
 	</xsl:template>
 
 	<xsl:template match="eaxs:Message">
-		<fo:block page-break-after="always"><xsl:call-template name="tag-Art"/>
+		<fo:block><xsl:call-template name="tag-Art"/>
 			<xsl:attribute name="id">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
 			<fox:destination><xsl:attribute name="internal-destination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>
 			<xsl:call-template name="MessageHeaderTocAndContent"/>
 			<!-- Create named destination to the end of the message -->
-			<fo:inline><xsl:attribute name="id">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute><fox:destination><xsl:attribute name="internal-destination">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>&nbsp;</fo:inline>
+			<fo:wrapper><xsl:attribute name="id">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute><xsl:call-template name="tag-artifact"/><fox:destination><xsl:attribute name="internal-destination">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>&nbsp;</fo:wrapper>
 		</fo:block>
 	</xsl:template>
 	
 	<xsl:template name="MessageHeaderTocAndContent">
 		<xsl:param name="RenderToc">true</xsl:param>
-		<fo:block xml:lang="en" xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H2"/><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
-		<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
-			<xsl:apply-templates select="eaxs:MessageId"/>
-			<xsl:apply-templates select="eaxs:OrigDate"/> <!-- MimeKit seems to use this as the default value if there is no date -->
-			<xsl:apply-templates select="eaxs:From"/>
-			<xsl:apply-templates select="eaxs:Sender"/>
-			<xsl:apply-templates select="eaxs:To"/>
-			<xsl:apply-templates select="eaxs:Cc"/>
-			<xsl:apply-templates select="eaxs:Bcc"/>
-			<xsl:apply-templates select="eaxs:Subject"/>
-			<xsl:apply-templates select="eaxs:Comments"/>
-			<xsl:apply-templates select="eaxs:Keywords"/>
-			<xsl:apply-templates select="eaxs:InReplyTo"/>
-			<xsl:apply-templates select="eaxs:References[not(../eaxs:InReplyTo = .)]"/><!-- only references which are not already reply to's -->
-		</fo:list-block>	
-		<xsl:if test="$RenderToc='true'">
-			<fo:block xml:lang="en" xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black"><xsl:call-template name="tag-H3"/>Message Contents</fo:block>
-			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>			
-		</xsl:if>
+		<fo:block>
+			<xsl:if test="$RenderToc='true'">
+				<xsl:call-template name="BeginContentSet">
+					<xsl:with-param name="type" select="'EmailHeaderRendering'"/>
+					<xsl:with-param name="number" select="eaxs:LocalId"/>
+				</xsl:call-template>
+			</xsl:if>
+			<fo:block xml:lang="en" xsl:use-attribute-sets="h2" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H2"/><xsl:call-template name="FolderHeader"/> &gt; Message <xsl:value-of select="eaxs:LocalId"/></fo:block>
+			<fo:list-block provisional-distance-between-starts="6em" provisional-label-separation="0.25em">
+				<xsl:apply-templates select="eaxs:MessageId"/>
+				<xsl:apply-templates select="eaxs:OrigDate"/> <!-- MimeKit seems to use this as the default value if there is no date -->
+				<xsl:apply-templates select="eaxs:From"/>
+				<xsl:apply-templates select="eaxs:Sender"/>
+				<xsl:apply-templates select="eaxs:To"/>
+				<xsl:apply-templates select="eaxs:Cc"/>
+				<xsl:apply-templates select="eaxs:Bcc"/>
+				<xsl:apply-templates select="eaxs:Subject"/>
+				<xsl:apply-templates select="eaxs:Comments"/>
+				<xsl:apply-templates select="eaxs:Keywords"/>
+				<xsl:apply-templates select="eaxs:InReplyTo"/>
+				<xsl:apply-templates select="eaxs:References[not(../eaxs:InReplyTo = .)]"/><!-- only references which are not already reply to's -->
+			</fo:list-block>	
+			<xsl:if test="$RenderToc='true'">
+				<fo:block xml:lang="en" xsl:use-attribute-sets="h3" border-bottom="1.5pt solid black"><xsl:call-template name="tag-H3"/>Message Contents</fo:block>
+				<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderToc"/>			
+			</xsl:if>
+		</fo:block>
 		<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderContent"/>
 	</xsl:template>
 	
@@ -1030,7 +1084,7 @@
 	<xsl:template match="eaxs:MultiBody" mode="RenderContent">
 		<xsl:choose>
 			<xsl:when test="fn:lower-case(eaxs:ContentType) = 'multipart/alternative'">
-				<xsl:for-each select="eaxs:SingleBody | eaxs:MultiBody">
+				<xsl:for-each select="eaxs:SingleBody | eaxs:MultiBody"><!-- TODO: MissingBody -->
 					<xsl:sort select="position()" data-type="number" order="descending"/> <!-- alternatives have priority in descending order, so the last is displayed first -->
 					<xsl:apply-templates select="." mode="RenderContent"/>
 				</xsl:for-each>
@@ -1047,9 +1101,23 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:BodyContent">
+		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
 		<!-- only render content which is text and which is not an attachment -->
-		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/')">
-			<fo:block page-break-before="always" >
+		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with($ContentType,'text/')">
+			<fo:block>
+				<xsl:if test="not(ancestor::eaxs:ChildMessage)">
+					<!-- the content of child messages do not have their own content set -->
+					<xsl:call-template name="BeginContentSet">
+						<xsl:with-param name="type">BodyRendering</xsl:with-param>
+						<xsl:with-param name="subtype"><xsl:value-of select="my:PdfNameEscape(fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType)))"/></xsl:with-param>
+						<!-- TODO:  There can be multiple bodies with the same MIME type which could result in duplicate ids -->
+						<xsl:with-param name="number">
+							<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
+							<xsl:text>.</xsl:text>
+							<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
+						</xsl:with-param> 
+					</xsl:call-template>
+				</xsl:if>
 				<xsl:call-template name="AbbreviatedHeader"/>				
 				<xsl:call-template name="hr"/>
 				<xsl:apply-templates select="eaxs:Content | eaxs:ContentAsXhtml"/>
@@ -1078,9 +1146,23 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:DeliveryStatus">
+		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
 		<fo:block xsl:use-attribute-sets="delivery-status">
 			<xsl:if test="../eaxs:ContentLanguage">
 				<xsl:attribute name="xml:lang"><xsl:value-of select="../eaxs:ContentLanguage"/></xsl:attribute>
+			</xsl:if>
+			<xsl:if test="not(ancestor::eaxs:ChildMessage)">
+				<!-- the content of child messages do not have their own content set -->
+				<xsl:call-template name="BeginContentSet">
+					<xsl:with-param name="type">BodyRendering</xsl:with-param>
+					<xsl:with-param name="subtype"><xsl:value-of select="my:PdfNameEscape(fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType)))"/></xsl:with-param>
+					<!-- TODO:  There can be multiple bodies with the same MIME type which could result in duplicate ids -->
+					<xsl:with-param name="number">
+						<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
+						<xsl:text>.</xsl:text>
+						<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
+					</xsl:with-param> 
+				</xsl:call-template>
 			</xsl:if>
 			<fo:block xsl:use-attribute-sets="h3"><xsl:call-template name="tag-H3"/>Delivery Status</fo:block>
 			<fo:block xsl:use-attribute-sets="h4"><xsl:call-template name="tag-H4"/>Per Message Fields</fo:block>

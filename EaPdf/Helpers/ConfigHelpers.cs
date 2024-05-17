@@ -17,16 +17,20 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// </summary>
         public static string GetNamespaceVersionString(object obj)
         {
-                var typ = obj.GetType();
-                var product = typ.Assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product ?? typ.Namespace ?? typ.Name;
-                var ver = typ.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
-                int i = ver.IndexOf('+');
-                if (i >= 0)
-                {
-                    ver = ver[..i];
-                }
+                return GetNamespaceVersionString( obj.GetType());
+        }
 
-                return $"{product} {ver}";
+        public static string GetNamespaceVersionString(Type typ)
+        {
+            var product = typ.Assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product ?? typ.Namespace ?? typ.Name;
+            var ver = typ.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
+            int i = ver.IndexOf('+');
+            if (i >= 0)
+            {
+                ver = ver[..i];
+            }
+
+            return $"{product} {ver}";
         }
 
 

@@ -186,7 +186,9 @@ namespace UIUCLibrary.EaPdf
                 { "SansSerifFont", sansFonts },
                 { "MonospaceFont", monoFonts },
                 { "ContinuedFrom", Path.GetFileName(prevPdfFilePath) },
-                { "ContinuedIn", Path.GetFileName(nextPdfFilePath)}
+                { "ContinuedIn", Path.GetFileName(nextPdfFilePath)},
+                { "creator", XmpCreatorTool },
+                { "enhancer", ConfigHelpers.GetNamespaceVersionString(typeof(iTextSharp.text.pdf.PdfReader)) }
             };
 
             //first transform the EAXS to FO using XSLT

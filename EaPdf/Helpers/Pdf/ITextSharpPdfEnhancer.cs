@@ -65,6 +65,14 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
+        public string ProcessorVersion 
+        {
+            get 
+            {
+                return ConfigHelpers.GetNamespaceVersionString(_reader); 
+            }
+        }
+
         public void FixGotoRLinks()
         {
             var externalLinkAnnotations = GetExternalLinkAnnotations();
@@ -603,7 +611,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     if(info != null)
                     {
                         var producerStr = info["Producer"];
-                        var iTextStr = ConfigHelpers.GetNamespaceVersionString(_reader);
+                        var iTextStr = ProcessorVersion;
                         dpartNode.UpdateElementNodeText("/*/*/*/pdf:Producer", $"{producerStr}; modified using {iTextStr}");
                     }
 

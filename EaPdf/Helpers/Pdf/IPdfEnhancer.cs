@@ -30,5 +30,11 @@
         /// VeraPDF does not like the link GotoR action pointing to a filespec dictionary, just put the external filename there
         /// </summary>
         public void FixGotoRLinks();
+
+        /// <summary>
+        /// Get the version of the PDF processor used to enhance the PDF
+        /// </summary>
+        string ProcessorVersion { get; }
+
     }
 }
