@@ -94,15 +94,7 @@
             <xsl:if test="not(my:StyleContainsProperty(' width:100 ; overflow: hidden; height: 200 ','overflow'))"> 
                 <xsl:message terminate="yes"> ERROR: my:StyleContainsProperty(' width:100 ; overflow: hidden; height: 200 ','overflow') is not true</xsl:message>
             </xsl:if>
-            
-            <xsl:if test="not(my:PdfNameEscape('text/plain') = 'text#2Fplain')"> 
-                <xsl:message terminate="yes"> ERROR: (my:PdfNameEscape('text/plain') = 'text#2Fplain') is not true</xsl:message>
-            </xsl:if>
-            
-            <xsl:if test="not(my:PdfNameEscape('text##plain') = 'text#23#23plain')"> 
-                <xsl:message terminate="yes"> ERROR: (my:PdfNameEscape('text##plain') = 'text#23#23plain') is not true</xsl:message>
-            </xsl:if>
-            
+                       
             <xsl:message>TESTING MY FUNCTIONS FINISHED -- NO ERRORS</xsl:message>
         </xsl:if>
     </xsl:template>

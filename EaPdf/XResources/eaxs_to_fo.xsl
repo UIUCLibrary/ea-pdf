@@ -718,11 +718,7 @@
 
 	<xsl:template match="eaxs:Message">
 		<fo:block><xsl:call-template name="tag-Art"/>
-			<xsl:attribute name="id">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute>
-			<fox:destination><xsl:attribute name="internal-destination">MESSAGE_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>
 			<xsl:call-template name="MessageHeaderTocAndContent"/>
-			<!-- Create named destination to the end of the message -->
-			<fo:wrapper><xsl:attribute name="id">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute><xsl:call-template name="tag-artifact"/><fox:destination><xsl:attribute name="internal-destination">MESSAGE_END_<xsl:value-of select="eaxs:LocalId"/></xsl:attribute></fox:destination>&nbsp;</fo:wrapper>
 		</fo:block>
 	</xsl:template>
 	
@@ -973,7 +969,7 @@
 	</xsl:template>
 
 	<xsl:template match="eaxs:SingleBody" mode="RenderToc">
-		<fo:list-block  margin="0.25em" padding="0.25em"  border-left="1px solid black" provisional-distance-between-starts="1em" provisional-label-separation="0.25em">
+		<fo:list-block keep-together.within-column="always" margin="0.25em" padding="0.25em"  border-left="1px solid black" provisional-distance-between-starts="1em" provisional-label-separation="0.25em">
 			<xsl:apply-templates select="eaxs:ContentType"/>
 			<xsl:apply-templates select="eaxs:Disposition"/>
 			<xsl:apply-templates select="eaxs:ContentLanguage"/>
@@ -1029,7 +1025,7 @@
 							<xsl:attribute name="internal-destination">
 								<xsl:call-template name="ContentSetId">
 									<xsl:with-param name="type" select="'BodyRendering'"/>
-									<xsl:with-param name="subtype"><xsl:value-of select="my:PdfNameEscape(fn:lower-case(normalize-space(.)))"/></xsl:with-param>
+									<xsl:with-param name="subtype"><xsl:value-of select="."/></xsl:with-param>
 									<xsl:with-param name="number">
 										<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
 										<xsl:text>.</xsl:text>
@@ -1113,7 +1109,7 @@
 					<!-- the content of child messages do not have their own content set -->
 					<xsl:call-template name="BeginContentSet">
 						<xsl:with-param name="type">BodyRendering</xsl:with-param>
-						<xsl:with-param name="subtype"><xsl:value-of select="my:PdfNameEscape(fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType)))"/></xsl:with-param>
+						<xsl:with-param name="subtype"><xsl:value-of select="fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))"/></xsl:with-param>
 						<!-- TODO:  There can be multiple bodies with the same MIME type which could result in duplicate ids -->
 						<xsl:with-param name="number">
 							<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
@@ -1159,7 +1155,7 @@
 				<!-- the content of child messages do not have their own content set -->
 				<xsl:call-template name="BeginContentSet">
 					<xsl:with-param name="type">BodyRendering</xsl:with-param>
-					<xsl:with-param name="subtype"><xsl:value-of select="my:PdfNameEscape(fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType)))"/></xsl:with-param>
+					<xsl:with-param name="subtype"><xsl:value-of select="fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))"/></xsl:with-param>
 					<!-- TODO:  There can be multiple bodies with the same MIME type which could result in duplicate ids -->
 					<xsl:with-param name="number">
 						<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>

@@ -65,11 +65,11 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
-        public string ProcessorVersion 
+        public string ProcessorVersion
         {
-            get 
+            get
             {
-                return ConfigHelpers.GetNamespaceVersionString(_reader); 
+                return ConfigHelpers.GetNamespaceVersionString(_reader);
             }
         }
 
@@ -541,14 +541,14 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
 
         /// <summary>
-        /// Add Xmp metadata to a DPart range of pages for each message
+        /// Add DPart Hierarchy with DPM metadata to the PDF file
         /// </summary>
         /// <param name="dparts">The root DPart node containing all the metadata for the folders and messages in the file</param>
         /// <exception cref="Exception"></exception>
-        public void AddXmpToDParts(DPartInternalNode dparts)
+        public void AddDPartHierarchy(DPartNode dparts)
         {
             if (_logger.IsEnabled(LogLevel.Trace))
-                _logger.LogTrace("ITextSharpPdfEnhancer: AddXmpToDParts ({xmp})", dparts.GetFirstDpmXmpElement());
+                _logger.LogTrace("ITextSharpPdfEnhancer: AddDPartHierarchy ({xmp})", dparts.GetFirstDpmXmpElement());
 
             //get reference to new DPartRoot object
             var dpartRootIndRef = _stamper.Writer.PdfIndirectReference;
@@ -593,103 +593,120 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             newDPartDict.Put(new PdfName("Type"), new PdfName("DPart"));
             newDPartDict.Put(new PdfName("Parent"), parentIndRef);
 
-            if (dpartNode.DpmXmpXml != null && dpartNode.XmlNamespaces != null)
+            var info = _reader.Info; //PDF document info dictionary
+            if (info == null)
             {
-                var info = _reader.Info;
+                _logger.LogWarning("ITextSharpPdfEnhancer: AddDPartNode: Info dictionary not found");
+            }
 
-                if (dpartNode.Parent == null)
+            if (dpartNode.Parent == null && dpartNode.MetadataXml != null)
+            {
+                //This is the root DPart node, representing the top-level document metadata
+                //Update some values in the XMP metadata from the Document Information dictionary
+
+                //this is the root DPart node, so we want to update the ModifyDate in the XMP metadata, so it matches the Document Information dictionary  
+                //which is updated when the file is saved
+                dpartNode.UpdateElementNodeText("/*/*/*/xmp:ModifyDate", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+
+                //Producer is automatically populated by FOP or XEP and appended to by iTextSharp
+                //pdf:Producer is mapped to the Producer field in the Document Information dictionary
+                if (info != null)
                 {
-                    //This is the root DPart node, representing the top-level document metadata
-                    //Update some values in the XMP metadata from the Document Information dictionary
-
-                    //this is the root DPart node, so we want to update the ModifyDate in the XMP metadata, so it matches the Document Information dictionary  
-                    //which is updated when the file is saved
-                    dpartNode.UpdateElementNodeText("/*/*/*/xmp:ModifyDate", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
-
-                    //Producer is automatically populated by FOP or XEP and appended to by iTextSharp
-                    //pdf:Producer is mapped to the Producer field in the Document Information dictionary
-                    if(info != null)
-                    {
-                        var producerStr = info["Producer"];
-                        var iTextStr = ProcessorVersion;
-                        dpartNode.UpdateElementNodeText("/*/*/*/pdf:Producer", $"{producerStr}; modified using {iTextStr}");
-                    }
-
+                    var producerStr = info["Producer"];
+                    var iTextStr = ProcessorVersion;
+                    dpartNode.UpdateElementNodeText("/*/*/*/pdf:Producer", $"{producerStr}; modified using {iTextStr}");
                 }
 
-                byte[] metaBytes = Encoding.UTF8.GetBytes(dpartNode.DpmXmpString);
+            }
+            else if (dpartNode.Parent == null && dpartNode.MetadataXml == null)
+            {
+                throw new Exception("The root DPart node does not contain any XMP metadata.");
+            }
+
+            PdfIndirectObject? metaIndObj = null;
+            if (dpartNode.MetadataXml != null)
+            {
+                byte[] metaBytes = Encoding.UTF8.GetBytes(dpartNode.MetadataString);
                 var newStrm = new PdfStream(metaBytes);
                 newStrm.Put(new PdfName("Type"), new PdfName("Metadata"));
                 newStrm.Put(new PdfName("Subtype"), new PdfName("XML"));
-                PdfIndirectObject metaIndObj = _stamper.Writer.AddToBody(newStrm);
+                metaIndObj = _stamper.Writer.AddToBody(newStrm);
                 newDPartDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference);  //this can go here or in the DPM dictionary
+            }
 
-                PdfDictionary metaDict = new();
-                metaDict.Put(new PdfName("EmailMessageID"), new PdfString("aaa"));
-                metaDict.Put(new PdfName("EmailGUID"), new PdfString("bbb"));
-                metaDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference); //this can go here or in the Metadata dictionary
+            if (dpartNode.Dpm.Count > 0)
+            {
+                PdfDictionary dpmDict = new();
+                foreach (var dpmKVP in dpartNode.Dpm)
+                {
+                    dpmDict = AddToDpmDict(dpmDict, dpmKVP);
+                }
+
+                //QUESTION: V0.2 spec shows the Metadata inside the DPM dictionary, but should it go in the DPart dictionary?
+                //metaDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference); 
                 //TODO: Add the AF entry to the metadata dictionary
                 //metaDict.Put(new PdfName("AF"), null);
-                newDPartDict.Put(new PdfName("DPM"), metaDict);
 
-                if (dpartNode.Parent == null)
+                newDPartDict.Put(new PdfName("DPM"), dpmDict);
+            }
+
+            if (dpartNode.Parent == null && metaIndObj != null)
+            {
+                //this is the root DPart node, so replace the catalog metadata with this
+                _reader.Catalog.Remove(PdfName.Metadata);
+                _reader.Catalog.Put(PdfName.Metadata, metaIndObj.IndirectReference);
+
+                if (info != null && dpartNode.MetadataXml != null)
                 {
-                    //this is the root DPart node, so replace the catalog metadata with this
-                    _reader.Catalog.Remove(PdfName.Metadata);
-                    _reader.Catalog.Put(PdfName.Metadata, metaIndObj.IndirectReference);
+                    //Copy some of the XMP metadata to Document Information dictionary
 
-                    if (info != null)
+                    //dc:title is mapped to the Title field in the Document Information dictionary
+                    var titleNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/dc:title//rdf:li", dpartNode.MetadataNamespaces);
+                    if (titleNode != null)
                     {
-                        //Copy some of the XMP metadata to Document Information dictionary
-
-                        //dc:title is mapped to the Title field in the Document Information dictionary
-                        var titleNode = dpartNode.DpmXmpXml.SelectSingleNode("/*/*/*/dc:title//rdf:li", dpartNode.XmlNamespaces);
-                        if (titleNode != null)
-                        {
-                            info["Title"] = titleNode.InnerText;
-                        }
-
-                        //dc:description is mapped to the Subject field in the Document Information dictionary
-                        var descrNode = dpartNode.DpmXmpXml.SelectSingleNode("/*/*/*/dc:description//rdf:li", dpartNode.XmlNamespaces);
-                        if (descrNode != null)
-                        {
-                            info["Subject"] = descrNode.InnerText;
-                        }
-
-                        //xmp:CreateDate is mapped to the CreationDate field in the Document Information dictionary
-                        var creDateNode = dpartNode.DpmXmpXml.SelectSingleNode("/*/*/*/xmp:CreateDate", dpartNode.XmlNamespaces);
-                        if (creDateNode != null)
-                        {
-                            info["CreationDate"] = new PdfDate(DateTime.Parse(creDateNode.InnerText)).ToString();
-                        }
-
-                        //iTextSharp automatically updates the ModDate field when the file is saved, so no need to set it here
-
-                        //CreatorTool is mapped to the Creator field in the Document Information dictionary
-                        var creatorNode = dpartNode.DpmXmpXml.SelectSingleNode("/*/*/*/xmp:CreatorTool", dpartNode.XmlNamespaces);
-                        if (creatorNode != null)
-                        {
-                            info["Creator"] = creatorNode.InnerText;
-                        }
-
-                        //get rid of unused metadata fields, setting to null seems to work, but the .Remove method does not
-                        info["Keywords"] = null;
-                        info["Trapped"] = null;
-                        info["Author"] = null;
-
-                        _stamper.MoreInfo = info;
+                        info["Title"] = titleNode.InnerText;
                     }
-                    else
+
+                    //dc:description is mapped to the Subject field in the Document Information dictionary
+                    var descrNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/dc:description//rdf:li", dpartNode.MetadataNamespaces);
+                    if (descrNode != null)
                     {
-                        _logger.LogWarning("ITextSharpPdfEnhancer: AddDPartNode: Document Information dictionary not found");
+                        info["Subject"] = descrNode.InnerText;
                     }
+
+                    //xmp:CreateDate is mapped to the CreationDate field in the Document Information dictionary
+                    var creDateNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/xmp:CreateDate", dpartNode.MetadataNamespaces);
+                    if (creDateNode != null)
+                    {
+                        info["CreationDate"] = new PdfDate(DateTime.Parse(creDateNode.InnerText)).ToString();
+                    }
+
+                    //iTextSharp automatically updates the ModDate field when the file is saved, so no need to set it here
+
+                    //CreatorTool is mapped to the Creator field in the Document Information dictionary
+                    var creatorNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/xmp:CreatorTool", dpartNode.MetadataNamespaces);
+                    if (creatorNode != null)
+                    {
+                        info["Creator"] = creatorNode.InnerText;
+                    }
+
+                    //get rid of unused metadata fields, setting to null seems to work, but the .Remove method does not
+                    info["Keywords"] = null;
+                    info["Trapped"] = null;
+                    info["Author"] = null;
+
+                    _stamper.MoreInfo = info;
+                }
+                else if (dpartNode.Parent == null && metaIndObj == null)
+                {
+                    throw new Exception("The root DPart node does not contain any XMP metadata.");
                 }
             }
 
-            if (dpartNode is DPartInternalNode dpartInternal)
+            if (dpartNode.DParts.Count > 0)
             {
                 PdfArray dpartsArr = new();
-                foreach (var child in dpartInternal.DParts)
+                foreach (var child in dpartNode.DParts)
                 {
                     var childIndRef = AddDPartNode(child, newIndRef);
                     dpartsArr.Add(childIndRef);
@@ -700,10 +717,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 outerArr.Add(dpartsArr);
                 newDPartDict.Put(new PdfName("DParts"), outerArr);
             }
-            else if (dpartNode is DPartLeafNode dpartLeafNode)
+            else //leaf node
             {
-                var pageStart = GetPageDataForNamedDestination(dpartLeafNode.StartNamedDestination);
-                var pageEnd = GetPageDataForNamedDestination(dpartLeafNode.EndNamedDestination);
+                var pageStart = GetPageDataForNamedDestination(dpartNode.Id ?? "");
+                var pageEnd = GetPreviousPageDataForNamedDestination(dpartNode.NextLeafNode?.Id ?? "");
 
                 if (pageStart != null && pageEnd != null)
                 {
@@ -725,12 +742,13 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 }
                 else
                 {
-                    throw new Exception($"Start or end page for message (Named Destinations: {dpartLeafNode.StartNamedDestination}, {dpartLeafNode.EndNamedDestination}) were not found.");
+                    if(pageStart == null && pageEnd == null)
+                        throw new Exception($"Start and end page for message (Named Destinations: {dpartNode.Id}, {dpartNode.NextLeafNode?.Id}) were not found.");
+                    else if (pageStart == null)
+                        throw new Exception($"Start page for message (Named Destination: {dpartNode.Id}) was not found.");
+                    else
+                        throw new Exception($"End page for message (Named Destination: {dpartNode.NextLeafNode?.Id}) was not found.");
                 }
-            }
-            else
-            {
-                throw new Exception($"Unexpected PdfDpartNode subclass '{dpartNode.GetType().Name}'");
             }
 
             PdfIndirectObject leafIndObj = _stamper.Writer.AddToBody(newDPartDict, newIndRef) ?? throw new Exception("New DPartRoot object was not created");
@@ -742,7 +760,29 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         }
 
         /// <summary>
-        /// Return the page dictionary, page number, and page indirect reference containing the named destination
+        /// Add the appropriate kind of PDF object to the DPM dictionary
+        /// </summary>
+        /// <param name="pdfDict"></param>
+        /// <param name="kvp"></param>
+        private PdfDictionary AddToDpmDict(PdfDictionary pdfDict, KeyValuePair<string, string> kvp)
+        {
+            switch (kvp.Key)
+            {
+                case "ContentSetType":
+                case "Subtype":
+                    pdfDict.Put(new PdfName(kvp.Key), new PdfName(kvp.Value));
+                    break;
+
+                default:
+                    pdfDict.Put(new PdfName(kvp.Key), new PdfString(kvp.Value));
+                    break;
+            }
+
+            return pdfDict;
+        }
+
+        /// <summary>
+        /// Return the page dictionary, page number, and page indirect reference containing the named destination.
         /// </summary>
         /// <param name="name">the name of the destination</param>
         /// <returns></returns>
@@ -750,6 +790,11 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         private PageData? GetPageDataForNamedDestination(string name)
         {
             _logger.LogTrace("ITextSharpPdfEnhancer: GetPageDataForNamedDestination ({name})", name);
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
 
             var d1 = _reader.GetNamedDestination(true);
             if (d1.ContainsKey(name))
@@ -760,6 +805,26 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
             else
                 return null;
+        }
+
+        /// <summary>
+        /// Return the page dictionary, page number, and page indirect reference for the page which immediately precedes 
+        /// the page containing the named destination.  If the name is null or empty return the last page.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        private PageData? GetPreviousPageDataForNamedDestination(string name)
+        {
+            _logger.LogTrace("ITextSharpPdfEnhancer: GetPreviousPageDataForNamedDestination ({name})", name);
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return _pages.Values.Last();
+            }
+
+            var page = GetPageDataForNamedDestination(name);
+
+            return page == null ? null : _pages[page.PageNumber - 1];
         }
 
 

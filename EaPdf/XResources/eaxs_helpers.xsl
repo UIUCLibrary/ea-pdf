@@ -17,77 +17,10 @@
     xmlns:rx="http://www.renderx.com/XSL/Extensions"
     >
     
+    <xsl:include href="eaxs_contentset_helpers.xsl"/>
+    
     <xsl:variable name="AbsoluteNumeric">^\s*(\d+(?:\.\d*)*|\.\d+)(cm|mm|in|pt|pc|px)?\s*$</xsl:variable>
     
-    <xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no" cdata-section-elements="rx:custom-meta"/>
-    
-    <!-- ========================================================================
-		Some utility templates 
-	============================================================================= -->
-    
-    <xsl:template name="InternalDestinationToMessageHeader">
-        <xsl:param name="FolderOrMessage" select="."/>
-        <xsl:choose>
-            <xsl:when test="local-name($FolderOrMessage)='Folder'">
-                <!-- link to the first message in the folder -->
-                <xsl:attribute name="internal-destination">
-                    <xsl:call-template name="ContentSetId">
-                        <xsl:with-param name="type" select="'EmailHeaderRendering'"/>
-                        <xsl:with-param name="number" select="($FolderOrMessage//eaxs:Message/eaxs:LocalId)[1]"/>							
-                    </xsl:call-template>
-                </xsl:attribute>                
-            </xsl:when>
-            <xsl:when test="local-name($FolderOrMessage)='Message'">
-                <!-- link to this message -->
-                <xsl:attribute name="internal-destination">
-                    <xsl:call-template name="ContentSetId">
-                        <xsl:with-param name="type" select="'EmailHeaderRendering'"/>
-                        <xsl:with-param name="number" select="($FolderOrMessage/eaxs:LocalId)[1]"/>							
-                    </xsl:call-template>
-                </xsl:attribute>                                
-            </xsl:when>
-            <xsl:otherwise>
-                <!-- link to the farthest away ancestor message, not to any child messages -->
-                <xsl:attribute name="internal-destination">
-                    <xsl:call-template name="ContentSetId">
-                        <xsl:with-param name="type" select="'EmailHeaderRendering'"/>
-                        <xsl:with-param name="number" select="$FolderOrMessage/ancestor::*[eaxs:MessageId][last()]/eaxs:LocalId"/>
-                    </xsl:call-template>
-                </xsl:attribute>
-            </xsl:otherwise>
-        </xsl:choose>
-    </xsl:template>
-    
-    <xsl:template name="BeginContentSet">
-        <xsl:param name="type" required="yes"/>
-        <xsl:param name="subtype"/>
-        <xsl:param name="number"/>
-        <xsl:variable name="id">
-            <xsl:call-template name="ContentSetId">
-                <xsl:with-param name="type" select="$type"/>
-                <xsl:with-param name="subtype" select="$subtype"/>
-                <xsl:with-param name="number" select="$number"/>
-            </xsl:call-template>
-        </xsl:variable>
-        <xsl:attribute name="page-break-before">always</xsl:attribute>
-        <xsl:attribute name="id"><xsl:value-of select="$id"/></xsl:attribute>
-        <fox:destination internal-destination="{$id}"/>
-    </xsl:template>
-    
-    <xsl:template name="ContentSetId">
-        <xsl:param name="type" required="yes"/>
-        <xsl:param name="subtype"/>
-        <xsl:param name="number"/>
-        <xsl:value-of>
-            <xsl:value-of select="concat('ContentSet_',$type)"/>
-            <xsl:if test="$subtype">
-                <xsl:value-of select="concat('_', $subtype)"/>
-            </xsl:if>
-            <xsl:if test="$number">
-                <xsl:value-of select="concat('_', $number)"/>
-            </xsl:if>
-        </xsl:value-of>        
-    </xsl:template>
     
     <xsl:template name="GetImgAltAttr">
         <xsl:param name="inline"/>
@@ -405,13 +338,6 @@
 
     <!-- Functions for filepath manipulation, inspired by https://stackoverflow.com/questions/3116942/doing-file-path-manipulations-in-xslt-->
     <!-- Tried to accomodate both Windows and Linux and URL path separators, probably not as robust as it could be -->
-    
-    <!-- Escape a string according to PDF Spec 32000 7.3.5 -->
-    <xsl:function name="my:PdfNameEscape" as="xs:string">
-        <xsl:param name="instring" as="xs:string"/>
-        <!-- URI encode the string and then replace the % with a #; %HH become #HH -->
-        <xsl:value-of select="fn:replace(fn:encode-for-uri($instring),'%','#')"/>
-    </xsl:function>
     
     <!-- Return a width and height that do not exceed the width of the PDF page, accounting for margins -->
     <!-- TODO: Need check that the units are absolute numerics -->

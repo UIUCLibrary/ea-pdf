@@ -344,6 +344,9 @@
     <None Update="XResources\EaPdfXmpSchema.xmp">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="XResources\eaxs_contentset_helpers.xsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="XResources\eaxs_entities.ent">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

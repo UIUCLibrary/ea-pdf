@@ -8,16 +8,112 @@ using RoyT.TrueType;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using UIUCLibrary.EaPdf.Helpers;
+using UIUCLibrary.EaPdf.Helpers.Pdf;
 using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
+using iTextSharp.text.pdf;
 
 namespace UIUCLibrary.TestEaPdf
 {
     [TestClass]
     public class TestHelpers
     {
+        [TestMethod]
+        public void TestDPartNode()
+        {
+            string input = @"
+<DPart>
+   <DPart>
+      <DPart DPM_ContentSetType=""FrontMatter"" Id=""ContentSet_FrontMatter""/>
+   </DPart>
+   <DPart DPM_FolderName=""short-test"">
+      <DPart DPM_EmailMessageID=""000001c503dc$b10d3b50$6601a8c0@FormerClaudia""
+              DPM_EmailGUID=""c3538565-606c-4e2a-97ea-e95adfed8f58"">
+         <DPart DPM_ContentSetType=""EmailHeaderRendering""
+                 Id=""ContentSet_EmailHeaderRendering_1""/>
+         <DPart DPM_ContentSetType=""BodyRendering""
+                 DPM_Subtype=""text/html""
+                 Id=""ContentSet_BodyRendering_text/html_1.0""/>
+         <DPart DPM_ContentSetType=""BodyRendering""
+                 DPM_Subtype=""text/plain""
+                 Id=""ContentSet_BodyRendering_text/plain_1.1""/>
+         <DPart DPM_ContentSetType=""BodyRendering""
+                 DPM_Subtype=""text/plain""
+                 Id=""ContentSet_BodyRendering_text/plain_1.0""/>
+      </DPart>
+      <DPart DPM_EmailMessageID=""003001c51eb0$8b2bd470$bc01fea9@dvaughn""
+              DPM_EmailGUID=""bb4fa448-83f1-4ab5-a5e7-0db567510794"">
+         <DPart DPM_ContentSetType=""EmailHeaderRendering""
+                 Id=""ContentSet_EmailHeaderRendering_2""/>
+         <DPart DPM_ContentSetType=""BodyRendering""
+                 DPM_Subtype=""text/html""
+                 Id=""ContentSet_BodyRendering_text/html_2.0""/>
+         <DPart DPM_ContentSetType=""BodyRendering""
+                 DPM_Subtype=""text/plain""
+                 Id=""ContentSet_BodyRendering_text/plain_2.0""/>
+      </DPart>
+   </DPart>
+   <DPart>
+      <DPart DPM_ContentSetType=""AttachmentList"" Id=""ContentSet_AttachmentList""/>
+   </DPart>
+</DPart>";
+
+            var root = new DPartNode() { Id = "root" };
+
+            var start = DPartNode.CreateFromXmlString(root, input);
+
+            Assert.AreSame(root, start);
+
+            Assert.AreEqual(9,root.AllLeafNodes.Count);
+
+            Assert.AreSame(root, root.FirstLeafNode.RootNode);
+
+            Assert.AreSame(root.FirstLeafNode, root.AllLeafNodes[0]);
+
+            var nameContentSetType = "ContentSetType";
+            var nameFrontMatter = "FrontMatter";
+
+            var first = root.FirstLeafNode;
+
+            Assert.AreEqual("ContentSet_FrontMatter", first.Id);
+            Assert.IsTrue(first.Dpm.ContainsKey(nameContentSetType));
+            Assert.AreEqual(nameFrontMatter, first.Dpm[nameContentSetType]);
+
+            var afterFirst = first.NextLeafNode;
+            Assert.IsNotNull(afterFirst);
+
+            var emailHeaderRendering = root.AllLeafNodes[1];
+            Assert.AreEqual("ContentSet_EmailHeaderRendering_1", emailHeaderRendering.Id);
+
+            var emailBodyRendering = root.AllLeafNodes[2];
+            Assert.AreEqual("ContentSet_BodyRendering_text/html_1.0", emailBodyRendering.Id);
+
+
+            var parent = emailHeaderRendering.Parent;
+            Assert.IsNotNull(parent);
+            Assert.IsTrue(parent.Dpm.ContainsKey("EmailMessageID"));
+            Assert.IsTrue(parent.Dpm.ContainsKey("EmailGUID"));
+            Assert.AreEqual("000001c503dc$b10d3b50$6601a8c0@FormerClaudia", parent.Dpm["EmailMessageID"]);
+            Assert.AreEqual("c3538565-606c-4e2a-97ea-e95adfed8f58", parent.Dpm["EmailGUID"]);
+
+            var nextLeaf = emailHeaderRendering.NextLeafNode;
+            Assert.IsNotNull(nextLeaf);
+
+            PrintDPartNode(start, 0);
+
+        }
+
+        private static void PrintDPartNode(DPartNode node, int level)
+        {
+            Debug.WriteLine($"{new string(' ', level * 2)}{node}");
+            foreach (var child in node.DParts)
+            {
+                PrintDPartNode(child, level + 1);
+            }
+        }
 
         [DataRow("json", DisplayName = "appsettings.json")]
         [DataRow("xml", DisplayName = "app.config")]

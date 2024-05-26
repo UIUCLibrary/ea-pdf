@@ -1,50 +1,249 @@
-﻿using Org.BouncyCastle.Asn1.Pkcs;
-using SkiaSharp;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
-    //Classes for creating the DPart tree from the EAXS XML files
-
-    public abstract class DPartNode
+    /// <summary>
+    /// Represents a DPart tree derived from the EAXS XML files
+    /// </summary>
+    public class DPartNode
     {
-        private object locker = new object();
+        const int MAX_DEPTH = 100;
 
-        private string _dpmXmpString = "";
-        public string DpmXmpString 
+        /// <summary>
+        /// In DPart leaf nodes, this should match an internal-destination id of a content set in the EA-PDF
+        /// </summary>
+        public string? Id { get; set; }
+
+
+        /// <summary>
+        /// Dictionary corresponding to the DPart DPM metadata PDF Dictionary
+        /// </summary>
+        public Dictionary<string, string> Dpm { get; set; } = new();
+
+        /// <summary>
+        /// Metadata of the DPart
+        /// </summary>
+        public XmlDocument? MetadataXml { get; set; }
+
+        /// <summary>
+        /// Null if this is the root node
+        /// </summary>
+        public DPartNode? Parent { get; set; } = null;
+
+        /// <summary>
+        /// Get the depth of the node in the DPart tree, useful for debugging
+        /// </summary>
+        public int Depth
         {
-            get 
+            get
             {
-                return _dpmXmpString; 
-            }
-            set 
-            {
-                lock (locker) 
+                int ret = 0;
+                DPartNode? node = this;
+                while (node.Parent != null)
                 {
-                    _dpmXmpString = value;
-                    _xmlDoc = null;
-                    _xmlns = null;
+                    ret++;
+                    if(ret> MAX_DEPTH)
+                    {
+                        throw new Exception($"Maximum recursion depth ({MAX_DEPTH}) exceeded in DPartNode.Depth");
+                    }
+                    node = node.Parent;
+                }
+                return ret;
+            }
+        }
+
+        /// <summary>
+        /// List will be empty if this is a leaf node
+        /// </summary>
+        public List<DPartNode> DParts { get; set; } = new();
+
+        public override string? ToString()
+        {
+            if (!string.IsNullOrEmpty(Id))
+            {
+                return $"{base.ToString()} (Id: {Id})";
+            }
+            else
+            {
+                return base.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Returns the root node of the DPart tree
+        /// </summary>
+        public DPartNode RootNode
+        {
+            get
+            {
+                int depth = 0;
+                DPartNode ret = this;
+                while (ret.Parent != null)
+                {
+                    depth++;
+                    if (depth > MAX_DEPTH)
+                    {
+                        throw new Exception($"Maximum recursion depth ({MAX_DEPTH}) exceeded in DPartNode.RootNode");
+                    }
+                    ret = ret.Parent;
+                }
+                return ret;
+            }
+        }
+
+        /// <summary>
+        /// Returns a breadth-first ordered list of all leaf nodes starting at this node.  If this node is a leaf node, it will return a list with only this node.
+        /// Has a depth parameter to keep track of the depth of the recursion.
+        /// </summary>
+        /// <param name="depth"></param>
+        /// <returns></returns>
+        private List<DPartNode> GetAllLeafNodes(int depth = 0)
+        {
+            if (depth > MAX_DEPTH)
+            {
+                throw new Exception($"Maximum recursion depth ({MAX_DEPTH}) exceeded in DPartNode.GetAllLeafNodes()");
+            }
+
+            List<DPartNode> ret = new();
+            if (DParts.Count == 0)
+            {
+                ret.Add(this);
+            }
+            else
+            {
+                depth++;
+                foreach (var child in DParts)
+                {
+                    ret.AddRange(child.GetAllLeafNodes(depth));
+                }
+            }
+            return ret;
+        }
+
+        /// <summary>
+        /// Returns a breadth-first ordered list of all leaf nodes starting at this node.  If this node is a leaf node, it will return a list with only this node.
+        /// </summary>
+        public List<DPartNode> AllLeafNodes
+        {
+            get
+            {
+                return GetAllLeafNodes();
+            }
+        }
+
+
+        /// <summary>
+        /// Returns the first leaf node in the breadth-first order.  If this node is a leaf node, it will return itself.
+        /// </summary>
+        public DPartNode FirstLeafNode
+        {
+            get
+            {
+                return AllLeafNodes.First();
+            }
+        }
+
+        /// <summary>
+        /// Returns the next leaf node in the breadth-first order, or null if this is the last leaf node.
+        /// If this node is not itself a leaf node, it will return the first leaf node in its subtree.
+        /// </summary>
+        /// <returns></returns>
+        public DPartNode? NextLeafNode
+        {
+            get
+            {
+                if (DParts.Count > 0)
+                {
+                    return FirstLeafNode;
+                }
+                var leaves = RootNode.AllLeafNodes;
+                var idx = leaves.IndexOf(this) + 1;
+                if (idx < leaves.Count)
+                {
+                    return leaves[idx];
+                }
+                else
+                {
+                    return null;
                 }
             }
         }
 
+        /// <summary>
+        /// Get a string representing the XMP metadata; used in log and error messages
+        /// </summary>
+        /// <returns></returns>
+        public string? GetFirstDpmXmpElement()
+        {
+            string ret = MetadataXml?.SelectSingleNode("/*/*/*/*")?.OuterXml ?? "";
+            return ret;
+        }
+
+        /// <summary>
+        /// Get or set the XMP metadata as a string
+        /// </summary>
+        public string MetadataString
+        {
+            get
+            {
+                return MetadataXml?.OuterXml ?? "";
+            }
+            private set
+            {
+                MetadataXml = new XmlDocument();
+                MetadataXml.LoadXml(value);
+            }
+        }
+
+        /// <summary>
+        /// Get an XmlNamespaceManager with the namespaces commonly used in the XMP metadata
+        /// </summary>
+        public XmlNamespaceManager MetadataNamespaces
+        {
+            get
+            {
+                var ret = new XmlNamespaceManager(new NameTable());
+                ret.AddNamespace("x", "adobe:ns:meta/");
+                ret.AddNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                ret.AddNamespace("dc", "http://purl.org/dc/elements/1.1/");
+                ret.AddNamespace("dcterms", "http://purl.org/dc/terms/");
+                ret.AddNamespace("foaf", "http://xmlns.com/foaf/0.1/");
+                ret.AddNamespace("pdf", "http://ns.adobe.com/pdf/1.3/");
+                ret.AddNamespace("pdfaid", "http://www.aiim.org/pdfa/ns/id/");
+                ret.AddNamespace("pdfmail", "http://www.pdfa.org/eapdf/");
+                ret.AddNamespace("pdfmailid", "http://www.pdfa.org/eapdf/ns/id/");
+                ret.AddNamespace("pdfmailmeta", "http://www.pdfa.org/eapdf/ns/meta/");
+                ret.AddNamespace("pdfx", "http://ns.adobe.com/pdfx/1.3/");
+                ret.AddNamespace("xmp", "http://ns.adobe.com/xap/1.0/");
+
+                return ret;
+            }
+        }
+
+        /// <summary>
+        /// Get the value of an element node in the XMP metadata
+        /// </summary>
+        /// <param name="xpath"></param>
+        /// <param name="newVal"></param>
+        /// <exception cref="Exception"></exception>
         public void UpdateElementNodeText(string xpath, string newVal)
         {
-            if(DpmXmpXml == null || XmlNamespaces == null)
+            if (MetadataXml == null || MetadataNamespaces == null)
             {
                 throw new Exception("The XMP is empty or not valid");
             }
 
-            var node = DpmXmpXml.SelectSingleNode(xpath, XmlNamespaces);
+            var node = MetadataXml.SelectSingleNode(xpath, MetadataNamespaces);
             if (node != null && node.NodeType == XmlNodeType.Element && !node.ChildNodes.OfType<XmlElement>().Any())
             {
                 node.InnerText = newVal;
                 var buffer = new StringBuilder();
                 var writer = XmlWriter.Create(buffer, new XmlWriterSettings { OmitXmlDeclaration = true, Indent = true });
-                DpmXmpXml.Save(writer);
+                MetadataXml.Save(writer);
                 writer.Close();
-                DpmXmpString = buffer.ToString();
+                MetadataString = buffer.ToString();
             }
             else
             {
@@ -52,122 +251,99 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
-        XmlDocument? _xmlDoc = null;
-        XmlNamespaceManager? _xmlns = null;
-        public XmlDocument? DpmXmpXml
+        /// <summary>
+        /// Create a new DPart hierarchy from an XML string
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="xmlString"></param>
+        /// <returns>The root DPartNode</returns>
+        public static DPartNode CreateFromXmlString(DPartNode parent, string xmlString)
         {
-            get
+            XmlDocument xdoc = new()
             {
-                if (string.IsNullOrEmpty(DpmXmpString))
-                {
-                    return null;
-                }
-
-                lock (locker)
-                {
-                    if (_xmlDoc == null)
-                    {
-                        _xmlDoc = new XmlDocument();
-                        _xmlDoc.LoadXml(DpmXmpString);
-
-                        _xmlns = new XmlNamespaceManager(_xmlDoc.NameTable);
-                        _xmlns.AddNamespace("x", "adobe:ns:meta/");
-                        _xmlns.AddNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-                        _xmlns.AddNamespace("dc", "http://purl.org/dc/elements/1.1/");
-                        _xmlns.AddNamespace("dcterms", "http://purl.org/dc/terms/");
-                        _xmlns.AddNamespace("foaf", "http://xmlns.com/foaf/0.1/");
-                        _xmlns.AddNamespace("pdf", "http://ns.adobe.com/pdf/1.3/");
-                        _xmlns.AddNamespace("pdfaid", "http://www.aiim.org/pdfa/ns/id/");
-                        _xmlns.AddNamespace("pdfmail", "http://www.pdfa.org/eapdf/");
-                        _xmlns.AddNamespace("pdfmailid", "http://www.pdfa.org/eapdf/ns/id/");
-                        _xmlns.AddNamespace("pdfmailmeta", "http://www.pdfa.org/eapdf/ns/meta/");
-                        _xmlns.AddNamespace("pdfx", "http://ns.adobe.com/pdfx/1.3/");
-                        _xmlns.AddNamespace("xmp", "http://ns.adobe.com/xap/1.0/");
-                    }
-                    return _xmlDoc;
-                }
-            }
-        }
-
-        public XmlNamespaceManager? XmlNamespaces
-        {
-            get
-            {
-                if (DpmXmpXml == null)
-                {
-                    return null;
-                }
-                return _xmlns;
-            }
-        }
-
-        public string? GetFirstDpmXmpElement()
-        {
-            string ret = DpmXmpXml?.SelectSingleNode("/*/*/*/*")?.OuterXml ?? "";
-            return ret;
-        }
-
-        public DPartNode? Parent { get; set; } = null;
-
-        public static DPartInternalNode Create(DPartNode parent, string xmlFilePath)
-        {
-            DPartInternalNode ret = new()
-            {
-                Parent = parent //this is the root node that refers to the first-level folders of the account
+                PreserveWhitespace = true
             };
+            xdoc.LoadXml(xmlString);
 
+            return DPartNode.CreateFromXmlDocument(parent, xdoc);
+        }
+
+        /// <summary>
+        /// Create a new DPart hierarchy from an XML file
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="xmlFilePath"></param>
+        /// <returns>The root DPartNode</returns>
+        public static DPartNode CreateFromXmlFile(DPartNode parent, string xmlFilePath)
+        {
             XmlDocument xdoc = new()
             {
                 PreserveWhitespace = true
             };
             xdoc.Load(xmlFilePath);
 
-            var xmlFolderNodes = xdoc.SelectNodes("/root/folder");
-            if (xmlFolderNodes != null)
-            {
-                foreach (XmlElement xmlFolderElem in xmlFolderNodes)
-                {
-                    ProcessFolder(ret, xmlFolderElem);
-                }
-            }
-
-            return ret;
+            return DPartNode.CreateFromXmlDocument(parent, xdoc);
         }
 
-        private static void ProcessFolder(DPartInternalNode parentNode, XmlElement xmlFolderElem)
+        /// <summary>
+        /// Create a new DPart hierarchy from an XMLDocument object
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="xdoc"></param>
+        /// <returns>The root DPartNode</returns>
+        public static DPartNode CreateFromXmlDocument(DPartNode parent, XmlDocument xdoc)
         {
-            parentNode.Name = xmlFolderElem.GetAttribute("Name");
-            var xmlMsgNodes = xmlFolderElem.SelectNodes("message");
-            if (xmlMsgNodes != null)
+
+            if (xdoc.SelectSingleNode("/DPart") is XmlElement xmlDPartNode)
             {
-                foreach (XmlElement xmlMsgElem in xmlMsgNodes)
-                {
-                    DPartLeafNode msgNode = new(xmlMsgElem.GetAttribute("NamedDestination"), xmlMsgElem.GetAttribute("NamedDestinationEnd"))
-                    {
-                        DpmXmpString = xmlMsgElem.InnerXml,
-                        Parent = parentNode
-                    };
-                    parentNode.DParts.Add(msgNode);
-                }
+                var dpartNode = ProcessDPart(parent, xmlDPartNode);
+                return parent ?? dpartNode;
             }
 
-            var xmlFldrNodes = xmlFolderElem.SelectNodes("folder");
-            if (xmlFldrNodes != null)
-            {
-                foreach (XmlElement xmlFldrElem in xmlFldrNodes)
-                {
-                    DPartInternalNode fldrNode = new()
-                    {
-                        Name = xmlFldrElem.GetAttribute("Name"),
-                        Parent = parentNode
-                    };
-                    parentNode.DParts.Add(fldrNode);
-                    ProcessFolder(fldrNode, xmlFldrElem);
-                }
-            }
-
+            return parent;
         }
+
+        /// <summary>
+        /// Recursively process a DPart XML element and its children, converting them to DPartNode objects
+        /// </summary>
+        /// <param name="parentNode"></param>
+        /// <param name="dPartElem"></param>
+        /// <returns></returns>
+        private static DPartNode ProcessDPart(DPartNode? parentNode, XmlElement dPartElem)
+        {
+            DPartNode newNode = new()
+            {
+                Parent = parentNode
+            };
+            parentNode?.DParts.Add(newNode);
+
+            newNode.Id = dPartElem.Attributes["Id"]?.Value;
+
+            foreach (var DpmAttr in dPartElem.Attributes.Cast<XmlAttribute>().Where(a => a.LocalName.StartsWith("DPM_")))
+            {
+                var name = DpmAttr.LocalName[4..];
+                newNode.Dpm.Add(name, DpmAttr.Value);
+            }
+
+            if (dPartElem.SelectSingleNode("metadata") is XmlElement metadata)
+            {
+                newNode.MetadataXml = new XmlDocument();
+                newNode.MetadataXml.LoadXml(metadata.OuterXml);
+            }
+
+            var dPartChildren = dPartElem.SelectNodes("DPart");
+            if (dPartChildren != null)
+            {
+                foreach (XmlElement dPartChildElem in dPartChildren)
+                {
+                    ProcessDPart(newNode, dPartChildElem);
+                }
+            }
+
+            return newNode;
+        }
+
 
     }
-
 }
+

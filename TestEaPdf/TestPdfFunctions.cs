@@ -18,7 +18,7 @@ namespace UIUCLibrary.TestEaPdf
     [TestClass]
     public class TestPdfFunctions
     {
-        private readonly bool OPEN_PDFS = true;  //set to true to open the PDFs in the default PDF viewer
+        private readonly bool OPEN_PDFS = false;  //set to true to open the PDFs in the default PDF viewer
         private readonly bool VALIDATE_PDFS = true;  //set to true to validate the PDFs using the PDF/A validator
 
         ILogger<EaxsToEaPdfProcessor>? logger;
@@ -439,7 +439,7 @@ namespace UIUCLibrary.TestEaPdf
 
             if (reader.PdfVersion != '7')
             {
-                logger?.LogDebug("Pdf version is not is not 1.7");
+                logger?.LogDebug("Pdf version is not 1.7");
                 ret = false;
             }
 

@@ -259,18 +259,20 @@ namespace UIUCLibrary.EaPdf
         {
             var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
-            var dparts = GetXmpMetadataForMessages(eaxsFilePath);
+            var dpartRoot = GetXmpMetadataForMessages(eaxsFilePath);
             var docXmp = GetRootXmpForAccount(eaxsFilePath, complexScripts);
 
             //add docXmp to the DPart root node
-            dparts.DpmXmpString = docXmp;
+            var metaXml = new XmlDocument();
+            metaXml.LoadXml(docXmp);
+            dpartRoot.MetadataXml = metaXml;
 
             //get list of all embedded files in the PDF
             var embeddedFiles = GetEmbeddedFiles(eaxsFilePath);
 
             using var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, tempOutFilePath);
 
-            enhancer.AddXmpToDParts(dparts); //Associate XMP with the PDF DPart of the message
+            enhancer.AddDPartHierarchy(dpartRoot); //Associate XMP with the PDF DPart of the message
 
             enhancer.NormalizeAttachments(embeddedFiles);
 
@@ -285,9 +287,18 @@ namespace UIUCLibrary.EaPdf
             var pdfFi = new FileInfo(pdfFilePath);
             var tempFi = new FileInfo(tempOutFilePath);
 
-            if (tempFi.Exists && tempFi.Length >= pdfFi.Length)
+            var sizeDiffPercent = (tempFi.Length - pdfFi.Length) / (double)pdfFi.Length * 100;
+
+            _logger.LogInformation("Postprocessing: Original PDF file size: {originalSize} bytes, New PDF file size: {newSize} bytes, Size difference: {sizeDiffPercent:0.00}%", pdfFi.Length, tempFi.Length, sizeDiffPercent);
+            
+            //Sanity check
+            if (tempFi.Exists) 
             {
                 File.Move(tempOutFilePath, pdfFilePath, true);
+            }
+            else
+            {
+                throw new Exception($"Postprocessing: File '{tempOutFilePath}' does not exist.");
             }
         }
 
@@ -584,9 +595,9 @@ namespace UIUCLibrary.EaPdf
         /// Return the root DPart node for all the folders and messages in the EAXS file.
         /// </summary>
         /// <returns></returns>
-        private DPartInternalNode GetXmpMetadataForMessages(string eaxsFilePath)
+        private DPartNode GetXmpMetadataForMessages(string eaxsFilePath)
         {
-            DPartInternalNode ret = new();
+            DPartNode ret = new();
 
             var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
 
@@ -599,7 +610,7 @@ namespace UIUCLibrary.EaPdf
 
             if (status == 0)
             {
-                ret.DParts.Add(DPartNode.Create(ret, xmpFilePath));
+                ret = DPartNode.CreateFromXmlFile(ret, xmpFilePath);
             }
             else
             {
