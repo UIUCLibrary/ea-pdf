@@ -1,7 +1,6 @@
 ﻿using CommandLine;
 using EaPdfCmd;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NDepend.Path;
 using System;
 using System.Diagnostics;
 using System.IO;

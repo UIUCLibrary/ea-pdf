@@ -1,5 +1,4 @@
 ﻿using MimeKit;
-using NDepend.Path;
 using System.Text.RegularExpressions;
 using Wiry.Base32;
 
@@ -7,6 +6,272 @@ namespace UIUCLibrary.EaPdf.Helpers
 {
     public static class FilePathHelpers
     {
+
+        /// <summary>
+        /// Determine if one DirectoryInfo is the child of another DirectoryInfo 
+        /// Intended to replace the NDepend.Path IsChildOf method which doesn't work on Linux
+        /// </summary>
+        /// <param name="child"></param>
+        /// <param name="parent"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static bool IsChildOf(this DirectoryInfo child, DirectoryInfo parent)
+        {
+            if (child == null)
+                throw new ArgumentNullException(nameof(child));
+            if (parent == null)
+                throw new ArgumentNullException(nameof(parent));
+
+            int parentLen = parent.FullName.Length;
+            int childLen = child.FullName.Length;
+
+            if(parentLen >= childLen)
+            {
+                return false;
+            }
+
+            if (child.EqualTo(parent))
+            {
+                return false;
+            }
+
+            char c = child.FullName[parentLen];
+            if (c == Path.DirectorySeparatorChar || c == Path.AltDirectorySeparatorChar)
+            {
+                var comp = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+                return child.FullName.IndexOf(parent.FullName, comp) == 0;
+            }
+            else
+            {
+                return false;
+            }
+
+        }
+
+        /// <summary>
+        /// Determine if two DirectoryInfo objects are equal, using the normalized FullName properties,
+        /// ignoring case on Windows, and ignoring any trailing directory separators
+        /// </summary>
+        /// <param name="dir1"></param>
+        /// <param name="dir2"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static bool EqualTo(this DirectoryInfo dir1, DirectoryInfo dir2)
+        {
+            if (dir1 == null)
+                throw new ArgumentNullException(nameof(dir1));
+            if (dir2 == null)
+                throw new ArgumentNullException(nameof(dir2));
+
+            var comp = StringComparison.Ordinal;
+            char[] sep = { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
+
+            if (OperatingSystem.IsWindows())
+            {
+                comp = StringComparison.OrdinalIgnoreCase;
+            }
+
+            return dir1.FullName.TrimEnd(sep).Equals(dir2.FullName.TrimEnd(sep), comp);
+        }
+
+        /// <summary>
+        /// Get the DirectoryInfo for a path string
+        /// Intended to replace the NDepend.Path ToAbsoluteDirectoryPath method which doesn't work on Linux
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static DirectoryInfo ToAbsoluteDirectoryPathX(this string path)
+        {
+            if (TryGetAbsoluteDirectoryPathX(path, out DirectoryInfo? absPath, out string reason))
+            {
+                if (absPath != null)
+                    return absPath;
+                else
+                    throw new Exception($"Unable to get DirectoryInfo for path '{path}'");
+            }
+            else
+            {
+                throw new ArgumentException($"'{path}' is not a valid absolute directory path, {reason}");
+            }
+        }
+
+        /// <summary>
+        /// Get the FileInfo for a path string
+        /// Intended to replace the NDepend.Path ToAbsoluteFilePath method which doesn't work on Linux
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public static FileInfo ToAbsoluteFilePathX(this string path)
+        {
+            if (TryGetAbsoluteFilePathX(path, out FileInfo? absPath, out string reason))
+            {
+                if (absPath != null)
+                    return absPath;
+                else
+                    throw new Exception($"Unable to get FileInfo for path '{path}'");
+            }
+            else
+            {
+                throw new ArgumentException($"'{path}' is not a valid absolute file path, {reason}");
+            }
+        }
+
+        /// <summary>
+        /// Try to get the absolute file path, return the result and the reason if it fails.
+        /// Replaces the NDepend.Path TryGetAbsoluteFilePath method which doesn't work on Linux
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="outPath"></param>
+        /// <param name="failureReason"></param>
+        /// <returns></returns>
+        public static bool TryGetAbsoluteFilePathX(this string path, out FileInfo? absoluteFilePath, out string failureReason)
+        {
+            absoluteFilePath = null;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                failureReason = "Path is empty.";
+                return false;
+            }
+            if (!path.IsValidAbsoluteFilePathX(out failureReason))
+            {
+                absoluteFilePath = null;
+                return false;
+            }
+            absoluteFilePath = new FileInfo(path);
+            return true;
+        }
+
+        /// <summary>
+        /// Try to get the absolute file path, return the result and the reason if it fails.
+        /// Replaces the NDepend.Path TryGetAbsoluteFilePath method which doesn't work on Linux
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="outPath"></param>
+        /// <param name="failureReason"></param>
+        /// <returns></returns>
+        public static bool TryGetAbsoluteDirectoryPathX(this string path, out DirectoryInfo? absoluteDirectoryPath, out string failureReason)
+        {
+            absoluteDirectoryPath = null;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                failureReason = "Path is empty.";
+                return false;
+            }
+            if (!path.IsValidAbsoluteDirectoryPathX(out failureReason))
+            {
+                absoluteDirectoryPath = null;
+                return false;
+            }
+            absoluteDirectoryPath = new DirectoryInfo(path);
+            return true;
+        }
+
+
+
+        /// <summary>
+        /// Determine if a path is a valid absolute file path.
+        /// Replaces the NDepend.Path IsValidAbsoluteFilePath method which doesn't work on Linux
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="reason"></param>
+        /// <returns></returns>
+        public static bool IsValidAbsoluteFilePathX(this string path, out string reason)
+        {
+            bool ret;
+
+            try
+            {
+                ret = Path.IsPathFullyQualified(path);
+                if (ret)
+                {
+                    var fileName = Path.GetFileName(path);
+                    var dirName = Path.GetDirectoryName(path);
+                    if (string.IsNullOrWhiteSpace(fileName) || fileName == "." || fileName == "..")
+                    {
+                        ret = false;
+                        reason = "Doesn't appear to be a file path.";
+                    }
+                    else
+                    {
+                        if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                        {
+                            ret = false;
+                            reason = "File name contains invalid characters.";
+                        }
+                        else if (dirName != null && dirName.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                        {
+                            ret = false;
+                            reason = "Directory name contains invalid characters.";
+                        }
+                        else
+                        {
+                            ret = true;
+                            reason = "";
+                        }
+                    }
+                }
+                else
+                {
+                    ret = false;
+                    reason = "Path is not fully qualified.";
+                }
+            }
+            catch (Exception ex)
+            {
+                ret = false;
+                reason = ex.Message;
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Determine if a path is a valid absolute directory path.
+        /// Replaces the NDepend.Path IsValidAbsoluteDirectoryPath method which doesn't work on Linux
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="reason"></param>
+        /// <returns></returns>
+        public static bool IsValidAbsoluteDirectoryPathX(this string path, out string reason)
+        {
+            bool ret;
+
+            try
+            {
+                ret = Path.IsPathFullyQualified(path);
+                if (ret)
+                {
+                    if (path.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                    {
+                        ret = false;
+                        reason = "Directory name contains invalid characters.";
+                    }
+                    else
+                    {
+                        ret = true;
+                        reason = "";
+                    }
+                }
+                else
+                {
+                    ret = false;
+                    reason = "Path is not fully qualified.";
+                }
+            }
+            catch (Exception ex)
+            {
+                ret = false;
+                reason = ex.Message;
+            }
+
+            return ret;
+        }
+
+
         /// <summary>
         /// Shorten the path to just the outer directory name and the file name; useful for logging and error messages
         /// </summary>
@@ -14,7 +279,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <returns></returns>
         public static string ShortenedPath(string path)
         {
-            var dir = Path.GetFileName(Path.GetDirectoryName(path)) ?? ".";
+            var dir = Path.GetFileName(Path.GetDirectoryName(path)) ?? "";
             var file = Path.GetFileName(path);
             var ret = Path.Combine(Path.GetFileName(dir), file);
             if (ret.Length < path.Length)
@@ -32,7 +297,7 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="fullInFilePath"></param>
         /// <param name="createdFiles">dictionary of previously created files, may be null</param>
         /// <returns></returns>
-        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath, Dictionary<string,string>? createdFiles)
+        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath, Dictionary<string, string>? createdFiles)
         {
             //simplest way to ensure unique output filenames is by appending .xml (not replacing) as the new file extension
             var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(fullInFilePath) + ".xml");
@@ -65,7 +330,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 throw new ArgumentNullException(nameof(filePath));
 
             string dirName = Path.GetDirectoryName(filePath) ?? "";
-            if(string.IsNullOrWhiteSpace(dirName))
+            if (string.IsNullOrWhiteSpace(dirName))
                 throw new ArgumentException($"The directory name of '{filePath}' is empty; filePath must be the absolute path of a file.");
 
             string fileName = Path.GetFileName(filePath);
@@ -105,7 +370,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
 
 
-        public const string XML_WRAPPED_EXT  = ".xmlw";
+        public const string XML_WRAPPED_EXT = ".xmlw";
 
         /// <summary>
         /// Get the file path with the given number appended to the file name
@@ -121,7 +386,7 @@ namespace UIUCLibrary.EaPdf.Helpers
 
             string ret = filePath;
 
-            if(incrNumber == 0) //use the original file path w/o the number
+            if (incrNumber == 0) //use the original file path w/o the number
             {
                 return ret;
             }
@@ -201,9 +466,9 @@ namespace UIUCLibrary.EaPdf.Helpers
         public static (string eaxsFilePath, string pdfFilePath) GetDerivedFilePaths(string baseEaxsFilePath, string basePdfFilePath, string continuationFileName)
         {
 
-            if(string.IsNullOrWhiteSpace(baseEaxsFilePath))
+            if (string.IsNullOrWhiteSpace(baseEaxsFilePath))
                 throw new ArgumentNullException(nameof(baseEaxsFilePath));
-            if(string.IsNullOrWhiteSpace(basePdfFilePath))
+            if (string.IsNullOrWhiteSpace(basePdfFilePath))
                 throw new ArgumentNullException(nameof(basePdfFilePath));
 
             if (string.IsNullOrWhiteSpace(continuationFileName))
@@ -246,9 +511,11 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="absInPath"></param>
         /// <param name="absOutPath"></param>
         /// <returns></returns>
-        public static bool IsValidOutputPathForMboxFolder(IAbsoluteDirectoryPath absInPath, IAbsoluteDirectoryPath absOutPath)
+        public static bool IsValidOutputPathForMboxFolder(DirectoryInfo absInPath, DirectoryInfo absOutPath)
         {
-            return !(absOutPath.Equals(absInPath) || absOutPath.IsChildOf(absInPath));
+            var ret = !(absOutPath.EqualTo(absInPath) || absOutPath.IsChildOf(absInPath));
+
+            return ret;
         }
 
         /// <summary>
@@ -266,12 +533,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (string.IsNullOrWhiteSpace(absOutPath))
                 throw new ArgumentNullException(nameof(absOutPath));
 
-            if (!absInPath.IsValidAbsoluteDirectoryPath(out string reason))
+            if (!absInPath.IsValidAbsoluteDirectoryPathX(out string reason))
                 throw new ArgumentException($"'{absInPath}' is not a valid absolute directory path, {reason}");
-            if (!absOutPath.IsValidAbsoluteDirectoryPath(out reason))
+            if (!absOutPath.IsValidAbsoluteDirectoryPathX(out reason))
                 throw new ArgumentException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
 
-            return IsValidOutputPathForMboxFolder(absInPath.ToAbsoluteDirectoryPath(), absOutPath.ToAbsoluteDirectoryPath());
+            return IsValidOutputPathForMboxFolder(absInPath.ToAbsoluteDirectoryPathX(), absOutPath.ToAbsoluteDirectoryPathX());
         }
 
 
@@ -283,21 +550,21 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="absInPath"></param>
         /// <param name="absOutPath"></param>
         /// <returns></returns>
-        public static bool IsValidOutputPathForMboxFile(IAbsoluteDirectoryPath absInPath, IAbsoluteDirectoryPath absOutPath)
+        public static bool IsValidOutputPathForMboxFile(DirectoryInfo absInPath, DirectoryInfo absOutPath)
         {
-            bool ret;
-
-            if (absInPath==null)
+            if(absInPath == null)
                 throw new ArgumentNullException(nameof(absInPath));
-            if (absOutPath==null)
+            if(absOutPath == null)
                 throw new ArgumentNullException(nameof(absOutPath));
 
+            bool ret;
+
             //treat the paths as a directory paths, minus any extension
-            IAbsoluteDirectoryPath inDirPathNoExt = absInPath.ParentDirectoryPath.GetChildDirectoryWithName(Path.GetFileNameWithoutExtension(absInPath.ToString()));
-            IAbsoluteDirectoryPath outDirPathNoExt;
-            if (absOutPath.HasParentDirectory)
+            DirectoryInfo inDirPathNoExt = new(Path.Combine(Path.GetDirectoryName(absInPath.FullName) ??  Path.GetPathRoot(absInPath.FullName) ?? "", Path.GetFileNameWithoutExtension(absInPath.Name)));
+            DirectoryInfo outDirPathNoExt;
+            if (absOutPath.Parent != null)
             {
-                outDirPathNoExt = absOutPath.ParentDirectoryPath.GetChildDirectoryWithName(Path.GetFileNameWithoutExtension(absOutPath.ToString()));
+                outDirPathNoExt = new(Path.Combine(Path.GetDirectoryName(absOutPath.FullName) ?? Path.GetPathRoot(absOutPath.FullName) ?? "", Path.GetFileNameWithoutExtension(absOutPath.Name)));
             }
             else
             {
@@ -306,11 +573,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
 
 
-            if (inDirPathNoExt.Equals(outDirPathNoExt))
+            if (inDirPathNoExt.EqualTo(outDirPathNoExt))
             {
                 ret = false;
             }
-            else {
+            else
+            {
                 int fullInDepth = FolderDepth(inDirPathNoExt);
                 int fullOutDepth = FolderDepth(outDirPathNoExt);
 
@@ -322,20 +590,50 @@ namespace UIUCLibrary.EaPdf.Helpers
                 else
                 {
                     //if there is no common root, the out folder must be valid
-                    var paths = new List<IAbsoluteDirectoryPath>() { inDirPathNoExt, outDirPathNoExt };
-                    if (!paths.TryGetCommonRootDirectory(out _))
+                    if (string.IsNullOrEmpty(GetLongestCommonPrefix(inDirPathNoExt.FullName, outDirPathNoExt.FullName)))
                     {
                         ret = true;
                     }
                     else
                     {
-                        ret = IsValidOutputPathForMboxFile(absInPath, outDirPathNoExt.ParentDirectoryPath);
+                        if(outDirPathNoExt.Parent == null)
+                            throw new ArgumentNullException(nameof(outDirPathNoExt.Parent));
+
+                        ret = IsValidOutputPathForMboxFile(absInPath, outDirPathNoExt.Parent);
                     }
                 }
             }
 
             return ret;
         }
+
+        /// <summary>
+        /// Get the longest common prefix of a set of strings, assuming the strings are platform-specific directory paths
+        /// https://stackoverflow.com/questions/24866683/find-common-parent-path-in-list-of-files-and-directories
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static string GetLongestCommonPrefix(params string[] s)
+        {
+            //TODO: Use FileSystemInfo instead of string for the paths
+            int k = s[0].Length;
+            for (int i = 1; i < s.Length; i++)
+            {
+                k = Math.Min(k, s[i].Length);
+                for (int j = 0; j < k; j++)
+                {
+                    char c1 = OperatingSystem.IsWindows() ? char.ToLowerInvariant(s[i][j]) : s[i][j];
+                    char c2 = OperatingSystem.IsWindows() ? char.ToLowerInvariant(s[0][j]) : s[0][j];
+                    if (c1 != c2)
+                    {
+                        k = j;
+                        break;
+                    }
+                }
+            }
+            return s[0].Substring(0, k);
+        }
+
 
         /// <summary>
         /// Determine whether the output path is allowed given the input path
@@ -352,25 +650,25 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (string.IsNullOrWhiteSpace(absOutPath))
                 throw new ArgumentNullException(nameof(absOutPath));
 
-            if (!absInPath.IsValidAbsoluteFilePath(out string reason))
+            if (!absInPath.IsValidAbsoluteFilePathX(out string reason))
                 throw new ArgumentException($"'{absInPath}' is not a valid file path, {reason}");
-            if (!absInPath.IsValidAbsoluteDirectoryPath(out reason))
+            if (!absInPath.IsValidAbsoluteDirectoryPathX(out reason))
                 throw new ArgumentException($"'{absInPath}' is not a valid absolute directory path, {reason}");
-            if (!absOutPath.IsValidAbsoluteDirectoryPath(out reason))
+            if (!absOutPath.IsValidAbsoluteDirectoryPathX(out reason))
                 throw new ArgumentException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
 
-            return IsValidOutputPathForMboxFile(absInPath.ToAbsoluteDirectoryPath(), absOutPath.ToAbsoluteDirectoryPath());
+            return IsValidOutputPathForMboxFile(absInPath.ToAbsoluteDirectoryPathX(), absOutPath.ToAbsoluteDirectoryPathX());
         }
 
-        public static int FolderDepth(IAbsoluteDirectoryPath absPath)
+        public static int FolderDepth(DirectoryInfo absPath)
         {
             int ret = 0;
 
             var parentPath = absPath;
-            while (parentPath.HasParentDirectory)
+            while (parentPath.Parent != null)
             {
                 ret++;
-                parentPath = parentPath.ParentDirectoryPath;
+                parentPath = parentPath.Parent;
             }
 
             return ret;

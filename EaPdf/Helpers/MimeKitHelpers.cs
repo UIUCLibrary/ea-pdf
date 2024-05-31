@@ -2,7 +2,6 @@
 using MimeKit;
 using MimeKit.Encodings;
 using MimeKit.Text;
-using NDepend.Path;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -894,15 +893,15 @@ namespace UIUCLibrary.EaPdf.Helpers
                 throw new ArgumentNullException(nameof(inputPath));
 
             InputType ret;
-            if (inputPath.TryGetAbsoluteDirectoryPath(out var absDirPath, out string failureReasonDir) && absDirPath.Exists)
+            if (inputPath.TryGetAbsoluteDirectoryPathX(out var absDirPath, out string failureReasonDir) && absDirPath != null && absDirPath.Exists)
             {
                 ret = InputType.UnknownFolder;
 
                 //look at files in the directory to determine the type
-                var files = absDirPath.ChildrenFilesPath;
+                var files = absDirPath.GetFiles();
                 foreach (var file in files)
                 {
-                    var type = DetermineInputType(file.ToStringOrIfNullToEmptyString(), includeSubfolders, out _); //ignore the warning message if inputPath is a folder
+                    var type = DetermineInputType(file.FullName, includeSubfolders, out _); //ignore the warning message if inputPath is a folder
                     if (type != InputType.UnknownFile)
                     {
                         if (ret == InputType.UnknownFolder)
@@ -916,6 +915,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                         }
                     }
                 }
+
                 if (ret == InputType.MboxFile || ret == InputType.EmlFile)
                 {
                     ret = (ret == InputType.MboxFile ? InputType.MboxFolder : InputType.EmlFolder);
@@ -923,10 +923,11 @@ namespace UIUCLibrary.EaPdf.Helpers
 
                 if (includeSubfolders)
                 {
-                    var dirs = absDirPath.ChildrenDirectoriesPath;
+
+                    var dirs = absDirPath.GetDirectories();
                     foreach (var dir in dirs)
                     {
-                        var type = DetermineInputType(dir.ToStringOrIfNullToEmptyString(), includeSubfolders, out _); //ignore the warning message if inputPath is a folder
+                        var type = DetermineInputType(dir.FullName, includeSubfolders, out _); //ignore the warning message if inputPath is a folder
                         if (type != InputType.UnknownFolder)
                         {
                             if (ret == InputType.UnknownFolder)
@@ -942,7 +943,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     }
                 }
             }
-            else if (inputPath.TryGetAbsoluteFilePath(out var absFilePath, out string failureReasonFile) && absFilePath.Exists)
+            else if (inputPath.TryGetAbsoluteFilePathX(out var absFilePath, out string failureReasonFile) && absFilePath != null && absFilePath.Exists)
             {
                 //look at the file to determine the type
                 if (IsMboxFile(inputPath, out string leadIn))
