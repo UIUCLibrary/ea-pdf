@@ -7,15 +7,16 @@ namespace UIUCLibrary.EaPdf.Helpers
     public static class FilePathHelpers
     {
 
+        #region FileSystemInfo Extensions
+
         /// <summary>
-        /// Determine if one DirectoryInfo is the child of another DirectoryInfo 
-        /// Intended to replace the NDepend.Path IsChildOf method which doesn't work on Linux
+        /// Determine if one FileSystemInfo is the child of another DirectoryInfo 
         /// </summary>
         /// <param name="child"></param>
         /// <param name="parent"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static bool IsChildOf(this DirectoryInfo child, DirectoryInfo parent)
+        public static bool IsChildOf(this FileSystemInfo child, DirectoryInfo parent)
         {
             if (child == null)
                 throw new ArgumentNullException(nameof(child));
@@ -49,14 +50,14 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
 
         /// <summary>
-        /// Determine if two DirectoryInfo objects are equal, using the normalized FullName properties,
+        /// Determine if two FileSystemInfo objects are equal, using the normalized FullName properties,
         /// ignoring case on Windows, and ignoring any trailing directory separators
         /// </summary>
         /// <param name="dir1"></param>
         /// <param name="dir2"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public static bool EqualTo(this DirectoryInfo dir1, DirectoryInfo dir2)
+        public static bool EqualTo(this FileSystemInfo dir1, FileSystemInfo dir2)
         {
             if (dir1 == null)
                 throw new ArgumentNullException(nameof(dir1));
@@ -74,17 +75,20 @@ namespace UIUCLibrary.EaPdf.Helpers
             return dir1.FullName.TrimEnd(sep).Equals(dir2.FullName.TrimEnd(sep), comp);
         }
 
+        #endregion
+
+        #region string Extensions for file paths
+
         /// <summary>
         /// Get the DirectoryInfo for a path string
-        /// Intended to replace the NDepend.Path ToAbsoluteDirectoryPath method which doesn't work on Linux
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         /// <exception cref="ArgumentException"></exception>
-        public static DirectoryInfo ToAbsoluteDirectoryPathX(this string path)
+        public static DirectoryInfo ToDirectoryInfo(this string path)
         {
-            if (TryGetAbsoluteDirectoryPathX(path, out DirectoryInfo? absPath, out string reason))
+            if (TryGetDirectoryInfo(path, out DirectoryInfo? absPath, out string reason))
             {
                 if (absPath != null)
                     return absPath;
@@ -99,15 +103,14 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         /// <summary>
         /// Get the FileInfo for a path string
-        /// Intended to replace the NDepend.Path ToAbsoluteFilePath method which doesn't work on Linux
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         /// <exception cref="ArgumentException"></exception>
-        public static FileInfo ToAbsoluteFilePathX(this string path)
+        public static FileInfo ToFileInfo(this string path)
         {
-            if (TryGetAbsoluteFilePathX(path, out FileInfo? absPath, out string reason))
+            if (TryGetFileInfo(path, out FileInfo? absPath, out string reason))
             {
                 if (absPath != null)
                     return absPath;
@@ -122,13 +125,12 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         /// <summary>
         /// Try to get the absolute file path, return the result and the reason if it fails.
-        /// Replaces the NDepend.Path TryGetAbsoluteFilePath method which doesn't work on Linux
         /// </summary>
         /// <param name="path"></param>
         /// <param name="outPath"></param>
         /// <param name="failureReason"></param>
         /// <returns></returns>
-        public static bool TryGetAbsoluteFilePathX(this string path, out FileInfo? absoluteFilePath, out string failureReason)
+        public static bool TryGetFileInfo(this string path, out FileInfo? absoluteFilePath, out string failureReason)
         {
             absoluteFilePath = null;
             if (string.IsNullOrWhiteSpace(path))
@@ -136,7 +138,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 failureReason = "Path is empty.";
                 return false;
             }
-            if (!path.IsValidAbsoluteFilePathX(out failureReason))
+            if (!path.IsValidAbsoluteFilePath(out failureReason))
             {
                 absoluteFilePath = null;
                 return false;
@@ -147,13 +149,12 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         /// <summary>
         /// Try to get the absolute file path, return the result and the reason if it fails.
-        /// Replaces the NDepend.Path TryGetAbsoluteFilePath method which doesn't work on Linux
         /// </summary>
         /// <param name="path"></param>
         /// <param name="outPath"></param>
         /// <param name="failureReason"></param>
         /// <returns></returns>
-        public static bool TryGetAbsoluteDirectoryPathX(this string path, out DirectoryInfo? absoluteDirectoryPath, out string failureReason)
+        public static bool TryGetDirectoryInfo(this string path, out DirectoryInfo? absoluteDirectoryPath, out string failureReason)
         {
             absoluteDirectoryPath = null;
             if (string.IsNullOrWhiteSpace(path))
@@ -161,7 +162,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 failureReason = "Path is empty.";
                 return false;
             }
-            if (!path.IsValidAbsoluteDirectoryPathX(out failureReason))
+            if (!path.IsValidAbsoluteDirectoryPath(out failureReason))
             {
                 absoluteDirectoryPath = null;
                 return false;
@@ -174,12 +175,11 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         /// <summary>
         /// Determine if a path is a valid absolute file path.
-        /// Replaces the NDepend.Path IsValidAbsoluteFilePath method which doesn't work on Linux
         /// </summary>
         /// <param name="path"></param>
         /// <param name="reason"></param>
         /// <returns></returns>
-        public static bool IsValidAbsoluteFilePathX(this string path, out string reason)
+        public static bool IsValidAbsoluteFilePath(this string path, out string reason)
         {
             bool ret;
 
@@ -231,12 +231,11 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         /// <summary>
         /// Determine if a path is a valid absolute directory path.
-        /// Replaces the NDepend.Path IsValidAbsoluteDirectoryPath method which doesn't work on Linux
         /// </summary>
         /// <param name="path"></param>
         /// <param name="reason"></param>
         /// <returns></returns>
-        public static bool IsValidAbsoluteDirectoryPathX(this string path, out string reason)
+        public static bool IsValidAbsoluteDirectoryPath(this string path, out string reason)
         {
             bool ret;
 
@@ -271,6 +270,64 @@ namespace UIUCLibrary.EaPdf.Helpers
             return ret;
         }
 
+        #endregion
+
+        #region Misc. File Path Helpers
+
+
+        public static int FolderDepth(DirectoryInfo absPath)
+        {
+            int ret = 0;
+
+            var parentPath = absPath;
+            while (parentPath.Parent != null)
+            {
+                ret++;
+                parentPath = parentPath.Parent;
+            }
+
+            return ret;
+        }
+
+
+        /// <summary>
+        /// Get a random file name that does not exist in the given directory
+        /// </summary>
+        /// <param name="folderPath"></param>
+        /// <returns></returns>
+        public static string GetRandomFilePath(string folderPath)
+        {
+            //get random file name that doesn't already exist
+            string randomFilePath;
+            do
+            {
+                randomFilePath = Path.Combine(folderPath, Path.GetRandomFileName());
+            } while (File.Exists(randomFilePath));
+
+            return randomFilePath;
+        }
+
+        /// <summary>
+        /// Read to the end of a stream to ensure the hash is correct
+        /// Not really file path related, but useful for file processing
+        /// </summary>
+        /// <param name="stream"></param>
+        public static void ReadToEnd(Stream stream)
+        {
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            const int bufSz = 4096 * 2;  // 8K
+
+            int i;
+            byte[] buffer = new byte[bufSz];
+            do
+            {
+                i = stream.Read(buffer, 0, bufSz);
+            } while (i > 0);
+        }
 
         /// <summary>
         /// Shorten the path to just the outer directory name and the file name; useful for logging and error messages
@@ -288,31 +345,6 @@ namespace UIUCLibrary.EaPdf.Helpers
             }
             return ret;
         }
-
-
-        /// <summary>
-        /// Given the output folder path, input file path, and a set of created files, get the output file path for the XML file
-        /// </summary>
-        /// <param name="fullOutFolderPath"></param>
-        /// <param name="fullInFilePath"></param>
-        /// <param name="createdFiles">dictionary of previously created files, may be null</param>
-        /// <returns></returns>
-        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath, Dictionary<string, string>? createdFiles)
-        {
-            //simplest way to ensure unique output filenames is by appending .xml (not replacing) as the new file extension
-            var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(fullInFilePath) + ".xml");
-
-            createdFiles?.Add(xmlFilePath, fullInFilePath);
-
-            return xmlFilePath;
-        }
-
-        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath)
-        {
-            return GetXmlOutputFilePath(fullOutFolderPath, fullInFilePath, null);
-        }
-
-
 
         /// <summary>
         /// Look for a subfolder name which matches the given file name, ignoring extensions
@@ -368,7 +400,58 @@ namespace UIUCLibrary.EaPdf.Helpers
             return subfolderName;
         }
 
+        /// <summary>
+        /// Get the longest common prefix of a set of strings, assuming the strings are platform-specific directory paths
+        /// https://stackoverflow.com/questions/24866683/find-common-parent-path-in-list-of-files-and-directories
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        private static string GetLongestCommonPrefix(params string[] s)
+        {
+            //TODO: Use FileSystemInfo instead of string for the paths
+            int k = s[0].Length;
+            for (int i = 1; i < s.Length; i++)
+            {
+                k = Math.Min(k, s[i].Length);
+                for (int j = 0; j < k; j++)
+                {
+                    char c1 = OperatingSystem.IsWindows() ? char.ToLowerInvariant(s[i][j]) : s[i][j];
+                    char c2 = OperatingSystem.IsWindows() ? char.ToLowerInvariant(s[0][j]) : s[0][j];
+                    if (c1 != c2)
+                    {
+                        k = j;
+                        break;
+                    }
+                }
+            }
+            return s[0].Substring(0, k);
+        }
 
+        #endregion
+
+        #region File Path Manipulation specifically for EA-PDF files
+
+        /// <summary>
+        /// Given the output folder path, input file path, and a set of created files, get the output file path for the XML file
+        /// </summary>
+        /// <param name="fullOutFolderPath"></param>
+        /// <param name="fullInFilePath"></param>
+        /// <param name="createdFiles">dictionary of previously created files, may be null</param>
+        /// <returns></returns>
+        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath, Dictionary<string, string>? createdFiles)
+        {
+            //simplest way to ensure unique output filenames is by appending .xml (not replacing) as the new file extension
+            var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(fullInFilePath) + ".xml");
+
+            createdFiles?.Add(xmlFilePath, fullInFilePath);
+
+            return xmlFilePath;
+        }
+
+        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath)
+        {
+            return GetXmlOutputFilePath(fullOutFolderPath, fullInFilePath, null);
+        }
 
         public const string XML_WRAPPED_EXT = ".xmlw";
 
@@ -533,12 +616,12 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (string.IsNullOrWhiteSpace(absOutPath))
                 throw new ArgumentNullException(nameof(absOutPath));
 
-            if (!absInPath.IsValidAbsoluteDirectoryPathX(out string reason))
+            if (!absInPath.IsValidAbsoluteDirectoryPath(out string reason))
                 throw new ArgumentException($"'{absInPath}' is not a valid absolute directory path, {reason}");
-            if (!absOutPath.IsValidAbsoluteDirectoryPathX(out reason))
+            if (!absOutPath.IsValidAbsoluteDirectoryPath(out reason))
                 throw new ArgumentException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
 
-            return IsValidOutputPathForMboxFolder(absInPath.ToAbsoluteDirectoryPathX(), absOutPath.ToAbsoluteDirectoryPathX());
+            return IsValidOutputPathForMboxFolder(absInPath.ToDirectoryInfo(), absOutPath.ToDirectoryInfo());
         }
 
 
@@ -607,32 +690,6 @@ namespace UIUCLibrary.EaPdf.Helpers
             return ret;
         }
 
-        /// <summary>
-        /// Get the longest common prefix of a set of strings, assuming the strings are platform-specific directory paths
-        /// https://stackoverflow.com/questions/24866683/find-common-parent-path-in-list-of-files-and-directories
-        /// </summary>
-        /// <param name="s"></param>
-        /// <returns></returns>
-        public static string GetLongestCommonPrefix(params string[] s)
-        {
-            //TODO: Use FileSystemInfo instead of string for the paths
-            int k = s[0].Length;
-            for (int i = 1; i < s.Length; i++)
-            {
-                k = Math.Min(k, s[i].Length);
-                for (int j = 0; j < k; j++)
-                {
-                    char c1 = OperatingSystem.IsWindows() ? char.ToLowerInvariant(s[i][j]) : s[i][j];
-                    char c2 = OperatingSystem.IsWindows() ? char.ToLowerInvariant(s[0][j]) : s[0][j];
-                    if (c1 != c2)
-                    {
-                        k = j;
-                        break;
-                    }
-                }
-            }
-            return s[0].Substring(0, k);
-        }
 
 
         /// <summary>
@@ -650,46 +707,16 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (string.IsNullOrWhiteSpace(absOutPath))
                 throw new ArgumentNullException(nameof(absOutPath));
 
-            if (!absInPath.IsValidAbsoluteFilePathX(out string reason))
+            if (!absInPath.IsValidAbsoluteFilePath(out string reason))
                 throw new ArgumentException($"'{absInPath}' is not a valid file path, {reason}");
-            if (!absInPath.IsValidAbsoluteDirectoryPathX(out reason))
+            if (!absInPath.IsValidAbsoluteDirectoryPath(out reason))
                 throw new ArgumentException($"'{absInPath}' is not a valid absolute directory path, {reason}");
-            if (!absOutPath.IsValidAbsoluteDirectoryPathX(out reason))
+            if (!absOutPath.IsValidAbsoluteDirectoryPath(out reason))
                 throw new ArgumentException($"'{absOutPath}' is not a valid absolute directory path, {reason}");
 
-            return IsValidOutputPathForMboxFile(absInPath.ToAbsoluteDirectoryPathX(), absOutPath.ToAbsoluteDirectoryPathX());
+            return IsValidOutputPathForMboxFile(absInPath.ToDirectoryInfo(), absOutPath.ToDirectoryInfo());
         }
 
-        public static int FolderDepth(DirectoryInfo absPath)
-        {
-            int ret = 0;
-
-            var parentPath = absPath;
-            while (parentPath.Parent != null)
-            {
-                ret++;
-                parentPath = parentPath.Parent;
-            }
-
-            return ret;
-        }
-
-        /// <summary>
-        /// Get a random file name that does not exist in the given directory
-        /// </summary>
-        /// <param name="folderPath"></param>
-        /// <returns></returns>
-        public static string GetRandomFilePath(string folderPath)
-        {
-            //get random file name that doesn't already exist
-            string randomFilePath;
-            do
-            {
-                randomFilePath = Path.Combine(folderPath, Path.GetRandomFileName());
-            } while (File.Exists(randomFilePath));
-
-            return randomFilePath;
-        }
 
         /// <summary>
         /// Get a file path based on a hash with the appropriate filename extension
@@ -732,27 +759,8 @@ namespace UIUCLibrary.EaPdf.Helpers
             return hashFilePath;
         }
 
-        /// <summary>
-        /// Read to the end of a stream to ensure the hash is correct
-        /// </summary>
-        /// <param name="stream"></param>
-        public static void ReadToEnd(Stream stream)
-        {
-            if (stream == null)
-            {
-                throw new ArgumentNullException(nameof(stream));
-            }
 
-            const int bufSz = 4096 * 2;  // 8K
-
-            int i;
-            byte[] buffer = new byte[bufSz];
-            do
-            {
-                i = stream.Read(buffer, 0, bufSz);
-            } while (i > 0);
-        }
-
+        #endregion
 
     }
 }

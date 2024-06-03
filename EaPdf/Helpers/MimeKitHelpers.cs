@@ -893,7 +893,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                 throw new ArgumentNullException(nameof(inputPath));
 
             InputType ret;
-            if (inputPath.TryGetAbsoluteDirectoryPathX(out var absDirPath, out string failureReasonDir) && absDirPath != null && absDirPath.Exists)
+            if (inputPath.TryGetDirectoryInfo(out var absDirPath, out string failureReasonDir) && absDirPath != null && absDirPath.Exists)
             {
                 ret = InputType.UnknownFolder;
 
@@ -943,7 +943,7 @@ namespace UIUCLibrary.EaPdf.Helpers
                     }
                 }
             }
-            else if (inputPath.TryGetAbsoluteFilePathX(out var absFilePath, out string failureReasonFile) && absFilePath != null && absFilePath.Exists)
+            else if (inputPath.TryGetFileInfo(out var absFilePath, out string failureReasonFile) && absFilePath != null && absFilePath.Exists)
             {
                 //look at the file to determine the type
                 if (IsMboxFile(inputPath, out string leadIn))

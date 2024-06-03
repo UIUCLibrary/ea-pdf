@@ -7,9 +7,38 @@ using UIUCLibrary.EaPdf.Helpers;
 namespace UIUCLibrary.TestEaPdf
 {
 
+
     [TestClass]
     public class TestFilePathHelpers
     {
+        [DataRow(@"C:\one\two\three\..\four\five\.\six\", @"C:\one\two\four\five\six\", true, DisplayName = @"WINDOWS_NORM C:\one\two\three\..\four\five\.\six\")]
+        [DataRow(@"C:\one\two\three\four\five\six\..", @"C:\one\two\three\four\five", true, DisplayName = @"WINDOWS_NORM C:\one\two\three\four\five\six\..")]
+        [DataRow(@"C:\one\two\three\four\five\six\..\", @"C:\one\two\three\four\five\", true, DisplayName = @"WINDOWS_NORM C:\one\two\three\four\five\six\..\")]
+        [DataRow(@"C:\one\\\two\three\four//five\six\..\\", @"C:\one\two\three\four\five\", true, DisplayName = @"WINDOWS_NORM C:\one\\\two\three\four//five\six\..\\")]
+
+        [DataRow(@"/one/two/three/../four/five/./six/", @"/one/two/four/five/six/", false, DisplayName = @"LINUX_NORM /one/two/three/../four/five/./six/")]
+        [DataRow(@"/one/two/three/four/five/six/..", @"/one/two/three/four/five", false, DisplayName = @"LINUX_NORM /one/two/three/four/five/six/..")]
+        [DataRow(@"/one/two/three/four/five/six/../", @"/one/two/three/four/five/", false, DisplayName = @"LINUX_NORM /one/two/three/four/five/six/../")]
+        [DataRow(@"/one///two/three/four//five/six/..//", @"/one/two/three/four/five/", false, DisplayName = @"LINUX_NORM /one///two/three/four//five/six/..//")]
+
+        [DataTestMethod]
+        public void TestPathNormalization(string path, string normPath, bool isWindows)
+        {
+            if (OperatingSystem.IsWindows() == isWindows)
+            {
+
+                var dirInfo = new DirectoryInfo(path);
+
+                Assert.AreEqual(normPath, dirInfo.FullName);
+            }
+            else
+            {
+                Assert.Inconclusive($"'{path}' Test is not for this OS.");
+            }
+        }
+
+
+
         [DataRow(@"C:\test\test", 2, true, DisplayName = @"WINDOWS_DEPTH C:\test\test")]
         [DataRow(@"C:\test", 1, true, DisplayName = @"WINDOWS_DEPTH C:\test")]
         [DataRow(@"C:\test\test\", 2, true, DisplayName = @"WINDOWS_DEPTH C:\test\test\")]
@@ -96,7 +125,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (OperatingSystem.IsWindows() == isWindows)
             {
-                var validDir = path.TryGetAbsoluteDirectoryPathX(out DirectoryInfo? absoluteFilePath, out string reason);
+                var validDir = path.TryGetDirectoryInfo(out DirectoryInfo? absoluteFilePath, out string reason);
 
                 Assert.AreEqual(expectedValidDir, validDir, $"'{path}' {reason}");
 
@@ -104,13 +133,13 @@ namespace UIUCLibrary.TestEaPdf
                 {
                     Assert.IsTrue(string.IsNullOrEmpty(reason), $"'{path}' {reason}");
                     Assert.IsNotNull(absoluteFilePath, $"'{path}' {reason}");
-                    Assert.IsTrue(path.IsValidAbsoluteDirectoryPathX(out string reasonFile), $"'{path}' {reasonFile}");
+                    Assert.IsTrue(path.IsValidAbsoluteDirectoryPath(out string reasonFile), $"'{path}' {reasonFile}");
                 }
                 else
                 {
                     Assert.IsFalse(string.IsNullOrEmpty(reason), $"'{path}' {reason}");
                     Assert.IsNull(absoluteFilePath, $"'{path}' {reason}");
-                    Assert.IsFalse(path.IsValidAbsoluteDirectoryPathX(out string reasonFile), $"'{path}' {reasonFile}");
+                    Assert.IsFalse(path.IsValidAbsoluteDirectoryPath(out string reasonFile), $"'{path}' {reasonFile}");
                 }
 
             }
@@ -161,7 +190,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (OperatingSystem.IsWindows() == isWindows)
             {
-                var validFile = path.TryGetAbsoluteFilePathX(out FileInfo? absoluteFilePath, out string reason);
+                var validFile = path.TryGetFileInfo(out FileInfo? absoluteFilePath, out string reason);
 
                 Assert.AreEqual(expectedValidFile, validFile, $"'{path}' {reason}");
 
@@ -169,13 +198,13 @@ namespace UIUCLibrary.TestEaPdf
                 {
                     Assert.IsTrue(string.IsNullOrEmpty(reason), $"'{path}' {reason}");
                     Assert.IsNotNull(absoluteFilePath, $"'{path}' {reason}");
-                    Assert.IsTrue(path.IsValidAbsoluteFilePathX(out string reasonFile), $"'{path}' {reasonFile}");
+                    Assert.IsTrue(path.IsValidAbsoluteFilePath(out string reasonFile), $"'{path}' {reasonFile}");
                 }
                 else
                 {
                     Assert.IsFalse(string.IsNullOrEmpty(reason), $"'{path}' {reason}");
                     Assert.IsNull(absoluteFilePath, $"'{path}' {reason}");
-                    Assert.IsFalse(path.IsValidAbsoluteFilePathX(out string reasonFile), $"'{path}' {reasonFile}");
+                    Assert.IsFalse(path.IsValidAbsoluteFilePath(out string reasonFile), $"'{path}' {reasonFile}");
                 }
 
             }
@@ -227,8 +256,8 @@ namespace UIUCLibrary.TestEaPdf
 
             if (OperatingSystem.IsWindows() == isWindows)
             {
-                var validFile = path.IsValidAbsoluteFilePathX(out string reasonFile);
-                var validDir = path.IsValidAbsoluteDirectoryPathX(out string reasonDir);
+                var validFile = path.IsValidAbsoluteFilePath(out string reasonFile);
+                var validDir = path.IsValidAbsoluteDirectoryPath(out string reasonDir);
 
                 Assert.AreEqual(expectedValidFile, validFile, $"'{path}' {reasonFile}");
                 Assert.AreEqual(expectedValidDir, validDir, $"'{path}' {reasonDir}");
@@ -264,7 +293,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (OperatingSystem.IsWindows())
             {
-                var rootFile = @"C:\test.txt".ToAbsoluteDirectoryPathX();
+                var rootFile = @"C:\test.txt".ToDirectoryInfo();
 
                 var rootParent = rootFile.Parent;
 
@@ -275,7 +304,7 @@ namespace UIUCLibrary.TestEaPdf
             }
             else
             {
-                var rootFile = @"/test.txt".ToAbsoluteDirectoryPathX();
+                var rootFile = @"/test.txt".ToDirectoryInfo();
 
                 var rootParent = rootFile.Parent;
 
@@ -303,8 +332,8 @@ namespace UIUCLibrary.TestEaPdf
         {
             if (OperatingSystem.IsWindows() == isWindows)
             {
-                var ancestor = ancestorPath.ToAbsoluteDirectoryPathX();
-                var descendant = descendantPath.ToAbsoluteDirectoryPathX();
+                var ancestor = ancestorPath.ToDirectoryInfo();
+                var descendant = descendantPath.ToDirectoryInfo();
                 Assert.AreEqual(expectedIsDesc, descendant.IsChildOf(ancestor));
 
             }
