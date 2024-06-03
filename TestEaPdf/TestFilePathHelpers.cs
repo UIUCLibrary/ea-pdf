@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using AngleSharp.Dom;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
 using UIUCLibrary.EaPdf.Helpers;
@@ -7,23 +8,51 @@ namespace UIUCLibrary.TestEaPdf
 {
 
     [TestClass]
-    public class TestNDependPath
+    public class TestFilePathHelpers
     {
-        [TestMethod]
-        public void TestFolderDepth()
+        [DataRow(@"C:\test\test", 2, true, DisplayName = @"WINDOWS_DEPTH C:\test\test")]
+        [DataRow(@"C:\test", 1, true, DisplayName = @"WINDOWS_DEPTH C:\test")]
+        [DataRow(@"C:\test\test\", 2, true, DisplayName = @"WINDOWS_DEPTH C:\test\test\")]
+        [DataRow(@"C:\test\", 1, true, DisplayName = @"WINDOWS_DEPTH C:\test\")]
+        [DataRow(@"C:/test/test", 2, true, DisplayName = @"WINDOWS_DEPTH C:/test/test")]
+        [DataRow(@"C:/test", 1, true, DisplayName = @"WINDOWS_DEPTH C:/test")]
+        [DataRow(@"C:/test/test/", 2, true, DisplayName = @"WINDOWS_DEPTH C:/test/test/")]
+        [DataRow(@"C:/test/", 1, true, DisplayName = @"WINDOWS_DEPTH C:/test/")]
+        [DataRow(@"C:\", 0, true, DisplayName = @"WINDOWS_DEPTH C:\")]
+        [DataRow(@"C:/", 0, true, DisplayName = @"WINDOWS_DEPTH C:/")]
+        [DataRow(@"/", 0, true, DisplayName = @"WINDOWS_DEPTH /")]
+        [DataRow(@"\", 0, true, DisplayName = @"WINDOWS_DEPTH \")]
+        [DataRow(@"C:", -1, true, DisplayName = @"WINDOWS_DEPTH C:")]
+        [DataRow(@"test", -1, true, DisplayName = @"WINDOWS_DEPTH test")]
+
+        [DataRow(@"/test/test", 2, false, DisplayName = @"LINUX_DEPTH /test/test")]
+        [DataRow(@"/test", 1, false, DisplayName = @"LINUX_DEPTH /test")]
+        [DataRow(@"/test/test/", 2, false, DisplayName = @"LINUX_DEPTH /test/test/")]
+        [DataRow(@"/test/", 1, false, DisplayName = @"LINUX_DEPTH /test/")]
+        [DataRow(@"/", 0, false, DisplayName = @"LINUX_DEPTH /")]
+        [DataRow(@"\", -1, false, DisplayName = @"LINUX_DEPTH \")] //in linux this is a relative path to a file named '\'
+        [DataRow(@"test", -1, false, DisplayName = @"LINUX_DEPTH test")]
+
+        [DataTestMethod]
+        public void TestFolderDepth(string path, int expectedDepth, bool isWindows)
         {
-            Assert.AreEqual(2, FilePathHelpers.FolderDepth(new DirectoryInfo(@"C:\test\test")));
-
-            Assert.AreEqual(1, FilePathHelpers.FolderDepth(new DirectoryInfo(@"C:\test")));
-
-            Assert.AreEqual(0, FilePathHelpers.FolderDepth(new DirectoryInfo(@"C:\")));
-
-            Assert.IsTrue(FilePathHelpers.FolderDepth(new DirectoryInfo(@"C:")) > 1); //this evaluates to the current directory on the c: drive
-
-            Assert.IsTrue(FilePathHelpers.FolderDepth(new DirectoryInfo(@"test")) > 1); //this evaluates to file relative to the current directory 
-
-            Assert.AreEqual(0, FilePathHelpers.FolderDepth(new DirectoryInfo(Path.DirectorySeparatorChar.ToString())));
-            Assert.AreEqual(0, FilePathHelpers.FolderDepth(new DirectoryInfo(Path.AltDirectorySeparatorChar.ToString())));
+            if (OperatingSystem.IsWindows() == isWindows)
+            {
+                if (expectedDepth >= 0)
+                {
+                    Assert.AreEqual(expectedDepth, FilePathHelpers.FolderDepth(new DirectoryInfo(path)));
+                }
+                else
+                {
+                    //if expectedDepth is negative, then the depth is greater than the absolute value of expectedDepth
+                    //used to test relative paths
+                    Assert.IsTrue(FilePathHelpers.FolderDepth(new DirectoryInfo(path)) > Math.Abs(expectedDepth));
+                }
+            }
+            else
+            {
+                Assert.Inconclusive($"'{path}' Test is not for this OS.");
+            }
         }
 
 
@@ -136,7 +165,7 @@ namespace UIUCLibrary.TestEaPdf
 
                 Assert.AreEqual(expectedValidFile, validFile, $"'{path}' {reason}");
 
-                if(validFile)
+                if (validFile)
                 {
                     Assert.IsTrue(string.IsNullOrEmpty(reason), $"'{path}' {reason}");
                     Assert.IsNotNull(absoluteFilePath, $"'{path}' {reason}");
@@ -233,66 +262,129 @@ namespace UIUCLibrary.TestEaPdf
         [TestMethod]
         public void TestRootDiscover()
         {
-            var rootFile = @"C:\test.txt".ToAbsoluteDirectoryPathX();
+            if (OperatingSystem.IsWindows())
+            {
+                var rootFile = @"C:\test.txt".ToAbsoluteDirectoryPathX();
 
-            var rootParent = rootFile.Parent;
+                var rootParent = rootFile.Parent;
 
-            Assert.IsNotNull(rootParent);
+                Assert.IsNotNull(rootParent);
 
-            Assert.IsTrue(Path.GetPathRoot(rootParent.FullName) == "C:\\");
+                Assert.IsTrue(Path.GetPathRoot(rootParent.FullName) == "C:\\");
 
-        }
+            }
+            else
+            {
+                var rootFile = @"/test.txt".ToAbsoluteDirectoryPathX();
 
-        [TestMethod]
-        public void TestIsChildOf()
-        {
-            var ancestor = @"C:\one\two\three".ToAbsoluteDirectoryPathX();
+                var rootParent = rootFile.Parent;
 
-            var descendant = @"C:\one\two\three\four\five\six".ToAbsoluteDirectoryPathX();
-            Assert.IsTrue(descendant.IsChildOf(ancestor));
+                Assert.IsNotNull(rootParent);
 
-
-            descendant = @"C:\one\two\".ToAbsoluteDirectoryPathX();
-            Assert.IsFalse(descendant.IsChildOf(ancestor));
-
-            descendant = @"C:\one\two\three\".ToAbsoluteDirectoryPathX();
-            Assert.IsFalse(descendant.IsChildOf(ancestor));
-
-            descendant = @"C:\one\TWO\three/four/".ToAbsoluteDirectoryPathX();
-            Assert.IsTrue(descendant.IsChildOf(ancestor));
+                Assert.IsTrue(Path.GetPathRoot(rootParent.FullName) == "/");
+            }
 
         }
 
-        [DataRow(@"C:\one\two\three\file", @"C:\one\two\three\file", false, DisplayName = "path-exact-match")]
-        [DataRow(@"C:\one\two\three\file", @"D:\one\two\three\file", true, DisplayName = "path-exact-match-different-drive")]
-        [DataRow(@"C:\one\two\three\file.two.mbox", @"C:\one\two\three\file.out", true, DisplayName = "path-match-in-has-2-ext")]
-        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.mbox.out", true, DisplayName = "path-match-out-has-2-ext")]
-        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.mbox.out", true, DisplayName = "path-match-out-has-2-ext")]
-        [DataRow(@"C:\one\two\three\file.two.mbox", @"C:\one\two\three\file.two.out", false, DisplayName = "path-match-has-2-ext-except-ext")]
-        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\folder.out", true, DisplayName = "path-same-parent-diff-subfolder")]
-        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.out\out", false, DisplayName = "path-match-except-ext-subfolder")]
-        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file\one\two\three", false, DisplayName = "path-match-except-ext-deep-subfolder")]
-        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\out\file.out\two\three", true, DisplayName = "path-match-in-subfolder-deep")]
-        [DataRow(@"C:\one\two\three\file", @"C:\one\two\file", true, DisplayName = "path-child-less-depth")]
-        [DataRow(@"C:\one\file", @"C:\out", true, DisplayName = "path-close-to-root")]
-        [DataRow(@"C:\one\file", @"C:\one\file.out", false, DisplayName = "path-close-to-root-not-valid")]
-        [DataRow(@"C:\file", @"C:\one", true, DisplayName = "path-in-root-valid")]
-        [DataRow(@"C:\file", @"C:\file.out", false, DisplayName = "path-in-root-not-valid")]
-        [DataRow(@"C:\file", @"C:\", true, DisplayName = "path-out-is-root")]
+        [DataRow(@"C:\one\two\three", @"C:\one\two\three\four\five\six", true, true, DisplayName = @"WINDOWS_CHILD C:\one\two\three\four\five\six")]
+        [DataRow(@"C:\one\two\three", @"C:/one/two/three/four/five/six", true, true, DisplayName = @"WINDOWS_CHILD C:/one/two/three/four/five/six")]
+        [DataRow(@"C:\one\two\three", @"C:\one\two\", false, true, DisplayName = @"WINDOWS_CHILD C:\one\two\")]
+        [DataRow(@"C:/one/two/three", @"C:/one/two/", false, true, DisplayName = @"WINDOWS_CHILD C:/one/two/")]
+        [DataRow(@"C:\one\two\three", @"C:\one\two\three\", false, true, DisplayName = @"WINDOWS_CHILD C:\one\two\three\")]
+        [DataRow(@"C:\one\two\three", @"C:\one\TWO\three/four/", true, true, DisplayName = @"WINDOWS_CHILD C:\one\TWO\three/four/")]
+
+        [DataRow(@"/one/two/three", @"/one/two/three/four/five/six", true, false, DisplayName = @"LINUX_CHILD C:\one\two\three\four\five\six")]
+        [DataRow(@"/one/two/three", @"/one/two/", false, false, DisplayName = @"LINUX_CHILD C:\one\two\")]
+        [DataRow(@"/one/two/three", @"/one/two/three/", false, false, DisplayName = @"LINUX_CHILD C:\one\two\three\")]
+        [DataRow(@"/one/two/three", @"/one/TWO/three/four/", false, false, DisplayName = @"LINUX_CHILD C:\one\TWO\three/four/")]
+
         [DataTestMethod]
-        public void TestIsValidOutputPath(string inFile, string outFolder, bool expected)
+        public void TestIsChildOf(string ancestorPath, string descendantPath, bool expectedIsDesc, bool isWindows)
         {
+            if (OperatingSystem.IsWindows() == isWindows)
+            {
+                var ancestor = ancestorPath.ToAbsoluteDirectoryPathX();
+                var descendant = descendantPath.ToAbsoluteDirectoryPathX();
+                Assert.AreEqual(expectedIsDesc, descendant.IsChildOf(ancestor));
 
-            var valid = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(inFile, outFolder);
-            Assert.AreEqual(expected, valid);
+            }
+            else
+            {
+                Assert.Inconclusive($"'{ancestorPath}' '{descendantPath}' Test is not for this OS.");
+            }
+        }
+
+        //TODO: Make Linux versions of all these tests
+
+        [DataRow(@"C:\one\two\three\file", @"C:\one\two\three\file", false, true, DisplayName = "WINDOWS_VALID path-exact-match")]
+        [DataRow(@"C:\one\two\three\file", @"D:\one\two\three\file", true, true, DisplayName = "WINDOWS_VALID path-exact-match-different-drive")]
+        [DataRow(@"C:\one\two\three\file.two.mbox", @"C:\one\two\three\file.out", true, true, DisplayName = "WINDOWS_VALID path-match-in-has-2-ext")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.mbox.out", true, true, DisplayName = "WINDOWS_VALID path-match-out-has-2-ext")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.mbox.out", true, true, DisplayName = "WINDOWS_VALID path-match-out-has-2-ext")]
+        [DataRow(@"C:\one\two\three\file.two.mbox", @"C:\one\two\three\file.two.out", false, true, DisplayName = "WINDOWS_VALID path-match-has-2-ext-except-ext")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\folder.out", true, true, DisplayName = "WINDOWS_VALID path-same-parent-diff-subfolder")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file.out\out", false, true, DisplayName = "WINDOWS_VALID path-match-except-ext-subfolder")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\file\one\two\three", false, true, DisplayName = "WINDOWS_VALID path-match-except-ext-deep-subfolder")]
+        [DataRow(@"C:\one\two\three\file.mbox", @"C:\one\two\three\out\file.out\two\three", true, true, DisplayName = "WINDOWS_VALID path-match-in-subfolder-deep")]
+        [DataRow(@"C:\one\two\three\file", @"C:\one\two\file", true, true, DisplayName = "WINDOWS_VALID path-child-less-depth")]
+        [DataRow(@"C:\one\file", @"C:\out", true, true, DisplayName = "WINDOWS_VALID path-close-to-root")]
+        [DataRow(@"C:\one\file", @"C:\one\file.out", false, true, DisplayName = "WINDOWS_VALID path-close-to-root-not-valid")]
+        [DataRow(@"C:\file", @"C:\one", true, true, DisplayName = "WINDOWS_VALID path-in-root-valid")]
+        [DataRow(@"C:\file", @"C:\file.out", false, true, DisplayName = "WINDOWS_VALID path-in-root-not-valid")]
+        [DataRow(@"C:\file", @"C:\", true, true, DisplayName = "WINDOWS_VALID path-out-is-root")]
+
+        [DataRow(@"/one/two/three/file", @"/one/two/three/file", false, false, DisplayName = "LINUX_VALID path-exact-match")]
+        [DataRow(@"/mnt/c/one/two/three/file", @"/mnt/d/one/two/three/file", true, false, DisplayName = "LINUX_VALID path-exact-match-different-drive")]
+        [DataRow(@"/one/two/three/file.two.mbox", @"/one/two/three/file.out", true, false, DisplayName = "LINUX_VALID path-match-in-has-2-ext")]
+        [DataRow(@"/one/two/three/file.mbox", @"/one/two/three/file.mbox.out", true, false, DisplayName = "LINUX_VALID path-match-out-has-2-ext")]
+        [DataRow(@"/one/two/three/file.mbox", @"/one/two/three/file.mbox.out", true, false, DisplayName = "LINUX_VALID path-match-out-has-2-ext")]
+        [DataRow(@"/one/two/three/file.two.mbox", @"/one/two/three/file.two.out", false, false, DisplayName = "LINUX_VALID path-match-has-2-ext-except-ext")]
+        [DataRow(@"/one/two/three/file.mbox", @"/one/two/three/folder.out", true, false, DisplayName = "LINUX_VALID path-same-parent-diff-subfolder")]
+        [DataRow(@"/one/two/three/file.mbox", @"/one/two/three/file.out/out", false, false, DisplayName = "LINUX_VALID path-match-except-ext-subfolder")]
+        [DataRow(@"/one/two/three/file.mbox", @"/one/two/three/file/one/two/three", false, false, DisplayName = "LINUX_VALID path-match-except-ext-deep-subfolder")]
+        [DataRow(@"/one/two/three/file.mbox", @"/one/two/three/out/file.out/two/three", true, false, DisplayName = "LINUX_VALID path-match-in-subfolder-deep")]
+        [DataRow(@"/one/two/three/file", @"/one/two/file", true, false, DisplayName = "LINUX_VALID path-child-less-depth")]
+        [DataRow(@"/one/file", @"/out", true, false, DisplayName = "LINUX_VALID path-close-to-root")]
+        [DataRow(@"/one/file", @"/one/file.out", false, false, DisplayName = "LINUX_VALID path-close-to-root-not-valid")]
+        [DataRow(@"/file", @"/one", true, false, DisplayName = "LINUX_VALID path-in-root-valid")]
+        [DataRow(@"/file", @"/file.out", false, false, DisplayName = "LINUX_VALID path-in-root-not-valid")]
+        [DataRow(@"/file", @"/", true, false, DisplayName = "LINUX_VALID path-out-is-root")]
+
+        [DataTestMethod]
+        public void TestIsValidOutputPath(string inFile, string outFolder, bool expected, bool isWindows)
+        {
+            if (OperatingSystem.IsWindows() == isWindows)
+            {
+                var valid = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(inFile, outFolder);
+                Assert.AreEqual(expected, valid);
+            }
+            else
+            {
+                Assert.Inconclusive($"'{inFile}' '{outFolder}' Test is not for this OS.");
+            }
+
 
         }
 
-        [TestMethod]
+
+        [DataRow(@"C:\", @"C:\one\file", true, DisplayName = "WINDOWS_INVALID path-in-is-root1")]
+        [DataRow(@"C:/", @"C:/one/file", true, DisplayName = "WINDOWS_INVALID path-in-is-root2")]
+        [DataRow(@"/", @"/one/file", true, DisplayName = "WINDOWS_INVALID path-in-is-root3")]
+
+        [DataRow(@"/", @"/one/file", false, DisplayName = "LINUX_INVALID path-in-is-root")]
+
+        [DataTestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void TestInvalidFileName()
+        public void TestInvalidFileName(string inFile, string outFolder, bool isWindows)
         {
-            _ = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(@"C:\", @"C:\one\file");
+            if (OperatingSystem.IsWindows() == isWindows) 
+            {
+                _ = EaPdf.Helpers.FilePathHelpers.IsValidOutputPathForMboxFile(inFile, outFolder);
+            }
+            else
+            {
+                Assert.Inconclusive($"'{inFile}' '{outFolder}' Test is not for this OS.");
+            }
 
         }
     }
