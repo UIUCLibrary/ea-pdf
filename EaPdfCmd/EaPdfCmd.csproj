@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -14,6 +14,20 @@
 	<Copyright>Copyright $([System.DateTime]::Now.ToString('yyyy')) University of Illinois Board of Trustees. All Rights Reserved.</Copyright>
 	<PackageId>UIUCLibrary.$(AssemblyName)</PackageId>
   </PropertyGroup>
+
+  <Import Project="../VersionInfo.xml" />
+
+  <ItemGroup>
+    <None Include="..\CHANGES.md" Link="CHANGES.md">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\LICENSE.md" Link="LICENSE.md">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\README.md" Link="ABOUT_PROJECT.md">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup> 
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />

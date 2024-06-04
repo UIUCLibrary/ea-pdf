@@ -5,7 +5,6 @@ Copyright (c) 2024 University of Illinois Board of Trustees. All rights reserved
 Developed by: 
 
      University of Illinois Library at Urbana-Champaign 
-     University of Illinois
      http://www.library.illinois.edu/
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 

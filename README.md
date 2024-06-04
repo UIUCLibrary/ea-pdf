@@ -1,6 +1,9 @@
 # Email2Pdf
 
-Code for Creating Email Archives Conforming to the EA-PDF (PDF/mail) Specification
+## Code for Creating Email Archives Conforming to the EA-PDF (PDF/mail) Specification
+
+The source code can be found in GitHub, https://github.com/UIUCLibrary/ea-pdf/, and is licensed under the University of Illinois/NCSA Open Source License
+found in the LICENSE.md.
 
 This solution contains projects used to transform email files (currently EML or MBOX) into archival PDF files 
 that conform to the EA-PDF specification as output. The [EA-PDF specification](https://pdfa.org/resource/ea-pdf/) (not yet published) describes standard
@@ -22,13 +25,3 @@ Refer to the README.md file in the EaPdfCmd project for more information on how 
 Also note that the most of the sample emails used in the tests are not currently included in the code repository.  For
 the time being you will need to substitute your own emails for testing purposes.  
 
-## Changelog
-
-### 0.2.5-alpha (2024-04-19)
-- Initial release
-- The tool is based on early, non-public drafts of the EA-PDF specification, specifically 0.2 and 0.3.
-- The tool is capable of creating an EA-PDF from a single email message in the EML format or a collection  
-  of email messages in the MBOX format.
-- This is [alpha-level](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha) software, so expect bugs and missing features.
-  - If you want to report bugs or make feature requests, please us the [GitHub Issue Tracker](https://github.com/UIUCLibrary/ea-pdf/issues).
-  

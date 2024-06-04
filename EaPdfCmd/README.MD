@@ -292,10 +292,11 @@ included in the distribution that can be used as a starting point.
 
 #### EmailToEaxsProcessorSettings
 
-The conversion of email messages to PDFs consists of two steps: 1) converting emails to XML, and 2) converting 
-XML to PDFs; this settings section controls the emails are converted to XML files.  These settings should not 
-need to be changed unless your final product is just the XML files and not the PDFs.  Certain of these settings 
-are required for the conversion to PDFs, so they should not be changed unless you are sure of what you are doing.
+The conversion of email messages to PDFs consists of two steps: 1) converting emails to XML and extracting any 
+attachments, and 2) converting the XML and attachments to PDFs; this settings section controls the emails are 
+converted to XML files. These settings should not need to be changed unless your final product is just the XML 
+files and not the PDFs. Certain of these settings are required for the conversion to PDFs, so they should not be 
+changed unless you are sure of what you are doing.
 
 ##### HashAlgorithmName
 
@@ -341,14 +342,16 @@ is false; FO processors require all attachments be base64 encoded, so this defau
 
 ##### PreserveTextAttachmentTransferEncoding
 
-This only applies to textual attachments wrapped in XML, internally or externally.  If true, textual content (7bit and 8bit) are always 
-serialized as UTF-8 text inside the XML; if false, all textual content is serialized as base64 when saved inside the XML. The default is 
-false; XSL FO processors require all attachments be base64 encoded, so this default should not be changed.
+This only applies to textual attachments (MIME Type 'test/*') wrapped in XML, internally or externally.  If true, textual content 
+(7bit and 8bit) are always serialized as UTF-8 text inside the XML; if false, all textual content is serialized as base64 when 
+saved inside the XML. The default is false; XSL FO processors require all attachments be base64 encoded, so this default should not 
+be changed.
 
 ##### IncludeSubFolders
 
-For MBOX files, subfolders in the same directory as the MBOX file and which match the name of the MBOX file will also be processed, 
-including all of its files and subfolders recursively. For a folder of EML files, all subfolders will also be processed recursively.
+For MBOX files, subfolders in the same directory as the MBOX file and which match the name of the MBOX file (this is how the Mozilla 
+Thunderbird email client stores emails) will also be processed, including all of its files and subfolders recursively. For a folder 
+of EML files, all subfolders will also be processed recursively.
 
 ##### ExternalContentFolder
 
@@ -374,7 +377,7 @@ to PDF or other display formats.  The default is true.
 
 ##### LogToXmlThreshold
 
-LogLevels equal to or above this threshold will also be written to the output XML file as comments in the XML.  The default is 
+Messages with LogLevels equal to or above this threshold will also be written to the output XML file as comments in the XML.  The default is 
 Information.  This should not be changed unless you have a specific requirement.  The valid values are Trace, Debug, Information,
 Warning, Error, Critical, None.  Note that this is not effected by the log level setting in the Logging section or the `-l, --log-level`
 command line option.
@@ -396,12 +399,14 @@ the email.
 
 Extra non-standard HTML character entities to add to the list of entities that are converted to their Unicode equivalent.  The key is the
 name of the entity, and the value is the Unicode code point.  Standard HTML entities are already handled by the code and XSLT processor, so 
-this is only needed if you encounter non-standard entities.  The default is a single entity: `"QUOT": 134`.
+this is only needed if you encounter non-standard entities.  The default is a single entity: `"QUOT": 134`.  Note that HTML entities are
+case-sensitive, so for example, `quot` and `QUOT` are different entities.
 
 ##### ForceParse
 
 Force the message parser to run even if the file does not appear to be a valid message file format. This might be useful for debugging.  The 
-default is false.
+default is false.  Before parsing starts the system will snoop on the first few bytes of the file to determine if it is a valid message file
+type.  If it is not, the file will be skipped.  If this setting is true, the file will be parsed regardless of the file type.
 
 #### EaxsToEaPdfProcessorSettings
 
@@ -417,20 +422,21 @@ Note that the root XSLT file includes other XSLT files, namely:
 
 - eaxs_xhtml2fo.xsl which converts XHTML to XSL-FO
 - eaxs_helpers.xsl which contains common functions and templates
+    - eaxs_contentset_helpers.xsl which contains templates generate identifiers and links for content sets
 - eaxs_helpers_test.xsl which templates to test the helpers
 
 These files should be in the same directory as the root XSLT file. 
 
-In general this file should not be changed.  However, someone proficient in XSLT could modify this file to change the appearance of the
+In general these files should not be changed.  However, someone proficient in XSLT could modify this file to change the appearance of the
 PDF output.  But caution should be used as the XSLT is complex and the output has specific features used during post-processing to ensure
 the PDFs conform to the EA-PDF specification.
 
 ##### XsltXmpFilePath
 
-This is the path to the XSLT file that converts the XML files to XMP metadata for individual folders and messages.   If the path is relative, 
-it is relative to the directory containing this configuration file.  
+This is the path to the XSLT file that converts the XML files to DPart DPM metadata for individual folders, messages, and content sets.   
+If the path is relative, it is relative to the directory containing this configuration file.  
 
-The XML created by this XSLT contain the core email metadata fields required by the EA-PDF specification. During post-processing, these 
+The XML created by this XSLT represents the DPart hierarchy required by the EA-PDF specification. During post-processing, these 
 metadata are inserted into the PDF file.
 
 ##### XsltRootXmpFilePath
@@ -439,12 +445,13 @@ This is the path to the XSLT file that converts the XML files to document-level 
 directory containing this configuration file.  
 
 These metadata contain the top-level metadata by the EA-PDF specification, such as PDF/A and PDF/mail conformanace levels, PDF version, 
-creator, dates, etc.  This XSLT also copies the custom XMP schema, EaPdfXmpSchema.xmp, into the output; this file must be included in the 
-same directory as this XSLT. During post-processing, these metadata are inserted into the PDF file.
+creator, dates, etc.  It also includes lists of source files, messages, and attachments included in the PDF. This XSLT also copies the 
+custom XMP schema, EaPdfXmpSchema.xmp, into the output; this file must be included in the same directory as this XSLT. During post-processing, 
+these metadata are inserted into the PDF file.
 
 ##### LanguageFontMapping
 
-This section contains the mapping of Unicode language scripts and typefaces (Serif, SansSerif, or Monospace) to font families.  This is used 
+This section contains the mapping of Unicode language scripts and primary typefaces (Serif, SansSerif, or Monospace) to font families.  This is used 
 to select the appropriate font family for a given script and desired typeface.  The font family names must exist in the FO processor's font 
 configuration.  The outer element name is an ISO 15924 4-letter codes for the script. A special entry with key `Default` should be in the 
 dictionary with all three typefaces specified. This will be used as the default if a script entry is not found in the list.  Usually, this 
@@ -453,7 +460,7 @@ for `Latn` (Latin) will be used as the default.  If neither `Default` nor `Latn`
 be used as the default which may produce unintended results.  Regardless of original order, the mappings are sorted alphabetically when 
 loaded from the config file.
 
-The supported typefaces are `Serif`, `SansSerif`, or `Monospace`. Some scripts may not support all typefaces.  If a given typeface is
+The supported primary typefaces are `Serif`, `SansSerif`, or `Monospace`. Some scripts may not support all typefaces.  If a given typeface is
 desired but not present in the mapping, the first typeface in the list will be used instead. The typeface value is a comma-separated list 
 of font family names to be used for the script and typeface; these names must exist in the FO processor's font configuration.
 
@@ -475,7 +482,7 @@ Below is an example of the default font mapping:
       }
 ```
 For the `Default` entry, the `Serif`, `SansSerif`, and `Monospace` typefaces are mapped to the `serif`, `sans-serif`, and `monospace` font 
-families, respectively.
+families, respectively.  The `serif`, `sans-serif`, and `monospace` fonts must be defined in the FO processor's font configuration.
 
 Similarly, `Arab` scripts that need a `Serif` typeface are mapped to the `Traditional Arabic, serif` font families.  If an 
 appropriate character can be found in the `Traditional Arabic` font, it will be used; if not, the `serif` font will be used.  Similary
@@ -486,5 +493,5 @@ Note that in the above example, the `serif`, `san-serif`, `monospace`, `Traditio
 included in the distribution have examples of how to declare these font families.  You should refer to the documentation for the FO
 processor you are using for more information on how to configure fonts.
 
-Also included with the distributed files is a `Fonts` directory that contains various open source fonts that can be used with application.
+Also included with the distributed files is a `Fonts` directory that contains various open source fonts that can be used with the application.
 

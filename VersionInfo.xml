@@ -1,0 +1,14 @@
+<Project>
+
+	<!-- Properties common to the class library and command line app -->
+	<!-- import into the .csproj file with <Import Project="VersionInfo.xml" /> -->
+	
+	<PropertyGroup>
+		<VersionPrefix>0.2.6</VersionPrefix>
+		<VersionSuffix>alpha.2</VersionSuffix>
+		<IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion><!-- Include Git Commit ID -->
+		<Company>University of Illinois Board of Trustees</Company>
+		<Copyright>Copyright $([System.DateTime]::Now.ToString('yyyy')) University of Illinois Board of Trustees. All Rights Reserved.</Copyright>
+	</PropertyGroup>
+
+</Project>
