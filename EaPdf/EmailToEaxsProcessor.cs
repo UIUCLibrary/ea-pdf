@@ -36,7 +36,9 @@ namespace UIUCLibrary.EaPdf
 
         private readonly ILogger _logger;
 
-        public const string HASH_DEFAULT = "SHA256";
+        //make sure these two values are the same
+        public const string HASH_DEFAULT = "MD5";
+        public static HashAlgorithm DefaultHashAlgorithm => MD5.Create();
 
         const string EX_MBOX_FROM_MARKER = "Failed to find mbox From marker";
         const string EX_MBOX_PARSE_HEADERS = "Failed to parse message headers";
@@ -2286,7 +2288,7 @@ namespace UIUCLibrary.EaPdf
 
 
             //set up hashing
-            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
+            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
             byte[] hash;
             long fileSize;
 
@@ -2508,7 +2510,7 @@ namespace UIUCLibrary.EaPdf
             var content = part.Content;
 
             using var contentStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write);
-            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
+            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);
 
             (int width, int height) imageDims = (0, 0);
@@ -2553,7 +2555,7 @@ namespace UIUCLibrary.EaPdf
             //      This would provide more context if the external file is ever separated from the main XML email message file
 
             using var contentStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write);
-            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create();  //Fallback to known hash algorithm
+            using var cryptoHashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm;  //Fallback to known hash algorithm
             using var cryptoStream = new CryptoStream(contentStream, cryptoHashAlg, CryptoStreamMode.Write);
 
             var extXmlWriter = XmlWriter.Create(cryptoStream, new XmlWriterSettings
@@ -2763,7 +2765,7 @@ namespace UIUCLibrary.EaPdf
 
             mimeMsgProps.MessageSize = newBuffer.Length;
 
-            var hashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? SHA256.Create(); //Fallback to known hash algorithm
+            var hashAlg = HashAlgorithm.Create(Settings.HashAlgorithmName) ?? DefaultHashAlgorithm; //Fallback to known hash algorithm
             mimeMsgProps.MessageHash = hashAlg.ComputeHash(newBuffer);
 
             //just for debugging

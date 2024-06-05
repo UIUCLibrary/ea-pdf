@@ -40,7 +40,7 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// The name of the HashAlgorithm to use, must be one of the values in the System.Security.Cryptography.HashAlgorithmNames class.
-        /// Default is SHA256
+        /// Default is MD5
         /// </summary>
         public string HashAlgorithmName { get; set; } = EmailToEaxsProcessor.HASH_DEFAULT;
 

@@ -166,7 +166,7 @@ The sample JSON configuration file included in the installation zip file is show
   },
 
   "EmailToEaxsProcessorSettings": {
-    "HashAlgorithmName": "SHA256",
+    "HashAlgorithmName": "MD5",
     "SaveAttachmentsAndBinaryContentExternally": true,
     "WrapExternalContentInXml": true,  //this must be true if the FO processor is XEP (really only if there are PDF attachments)
     "PreserveBinaryAttachmentTransferEncodingIfPossible": false,
@@ -301,8 +301,9 @@ changed unless you are sure of what you are doing.
 ##### HashAlgorithmName
 
 The XML schema requires that the source files, messages, attachments, etc. have a hashed checksum value.
-This is the algorithm used to generate that checksum.  The default is SHA256. Supported values are SHA1, MD5,
-SHA256, SHA384, SHA512.  There is no need to change this unless you have a specific requirement.
+This is the algorithm used to generate that checksum.  The default is MD5. Supported values are SHA1, MD5,
+SHA256, SHA384, SHA512.  For the EA-PDF specification, the required value is MD5; therefore, do not change this value 
+unless you have specific requirements.
 
 ##### SaveAttachmentsAndBinaryContentExternally
 

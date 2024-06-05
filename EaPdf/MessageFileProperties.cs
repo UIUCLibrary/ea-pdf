@@ -11,14 +11,11 @@ namespace UIUCLibrary.EaPdf
     internal class MessageFileProperties : ICloneable
     {
 
-        /// <summary>
-        /// Default to the SHA256 hash algorithm
-        /// </summary>
         public MessageFileProperties()
         {
-            //init the hash algorithm
-            HashAlgorithm = SHA256.Create();
-            HashAlgorithmName = "SHA256";
+            //init the hash algorithm to the default values
+            HashAlgorithm = EmailToEaxsProcessor.DefaultHashAlgorithm;
+            HashAlgorithmName = EmailToEaxsProcessor.HASH_DEFAULT;
         }
 
         /// <summary>
@@ -33,6 +30,8 @@ namespace UIUCLibrary.EaPdf
             this.AccountEmails = source.AccountEmails;
             this.GlobalId = source.GlobalId;
             this.MessageFormat = source.MessageFormat;
+            this.HashAlgorithmName = source.HashAlgorithmName;
+            this.HashAlgorithm = HashAlgorithm.Create(HashAlgorithmName) ?? EmailToEaxsProcessor.DefaultHashAlgorithm;
         }
 
         /// <summary>
@@ -242,7 +241,7 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
-        /// The hash algorithm used for the message file, defaults to SHA256
+        /// The hash algorithm used for the message file, defaults to MD5
         /// Each message file needs its own since it records state
         /// </summary>
         public HashAlgorithm HashAlgorithm { get; private set; }

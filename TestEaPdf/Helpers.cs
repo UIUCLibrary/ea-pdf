@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
+using UIUCLibrary.EaPdf;
 using UIUCLibrary.EaPdf.Helpers;
 
 namespace UIUCLibrary.TestEaPdf
@@ -22,7 +23,7 @@ namespace UIUCLibrary.TestEaPdf
         {
             byte[] hash = Array.Empty<byte>();
 
-            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+            using var alg = HashAlgorithm.Create(algName) ?? EmailToEaxsProcessor.DefaultHashAlgorithm; //Fallback to know hash algorithm
 
             try
             {
@@ -41,7 +42,7 @@ namespace UIUCLibrary.TestEaPdf
 
         public static string CalculateHash(string algName, byte[] byts)
         {
-            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+            using var alg = HashAlgorithm.Create(algName) ?? EmailToEaxsProcessor.DefaultHashAlgorithm; //Fallback to know hash algorithm
 
             byte[] hash;
             try
@@ -59,7 +60,7 @@ namespace UIUCLibrary.TestEaPdf
 
         public static string CalculateHash(string algName, byte[] byts, int offset, int count)
         {
-            using var alg = HashAlgorithm.Create(algName) ?? SHA256.Create(); //Fallback to know hash algorithm
+            using var alg = HashAlgorithm.Create(algName) ?? EmailToEaxsProcessor.DefaultHashAlgorithm; //Fallback to know hash algorithm
 
             byte[] hash;
             try
