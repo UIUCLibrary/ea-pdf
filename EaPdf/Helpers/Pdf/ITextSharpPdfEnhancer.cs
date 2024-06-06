@@ -203,7 +203,21 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
                     if (embeddedFile.ModDate != null) paramsDict.Put(new PdfName("ModDate"), new PdfDate(embeddedFile.ModDate ?? DateTime.Now));
                     if (embeddedFile.CreationDate != null) paramsDict.Put(new PdfName("CreationDate"), new PdfDate(embeddedFile.ModDate ?? DateTime.Now));
-
+                    if (embeddedFile.HashAlgorithm.Equals("MD5", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!string.IsNullOrWhiteSpace(embeddedFile.Hash))
+                        {
+                            paramsDict.Put(new PdfName("CheckSum"), new PdfString(embeddedFile.HashBytes).SetHexWriting(true));
+                        }
+                        else
+                        {
+                            _logger.LogWarning("ITextSharpPdfEnhancer: NormalizeAttachments: Missing hash for attachment '{uniqueName}'", embeddedFile.UniqueName);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("ITextSharpPdfEnhancer: NormalizeAttachments: Unsupported hash algorithm '{hashAlgorithm}' for attachment '{uniqueName}'", embeddedFile.HashAlgorithm, embeddedFile.UniqueName);
+                    }
                 }
             }
 

@@ -110,7 +110,8 @@
 							<xsl:for-each select="//eaxs:FolderProperties[eaxs:RelPath] | //eaxs:MessageProperties[eaxs:RelPath]">
 								<rdf:li>
 									<pdfmailmeta:Asset>
-										<xsl:attribute name="rdf:about">urn:<xsl:value-of select="fn:lower-case(eaxs:Hash/eaxs:Function)"/>:<xsl:value-of select="fn:lower-case(eaxs:Hash/eaxs:Value)"/></xsl:attribute>
+										<!-- The 'urn:hash:' is based on draft https://datatracker.ietf.org/doc/html/draft-thiemann-hash-urn-01 -->
+										<xsl:attribute name="rdf:about">urn:hash:<xsl:value-of select="fn:lower-case(eaxs:Hash/eaxs:Function)"/>:<xsl:value-of select="fn:lower-case(eaxs:Hash/eaxs:Value)"/></xsl:attribute>
 										<pdfmailmeta:filename><xsl:value-of select="eaxs:RelPath"/></pdfmailmeta:filename>
 										<pdfmailmeta:sizeBytes><xsl:value-of select="eaxs:Size"/></pdfmailmeta:sizeBytes>
 										<pdfmailmeta:format><xsl:value-of select="eaxs:ContentType"/></pdfmailmeta:format>
@@ -125,6 +126,7 @@
 							<xsl:for-each select="//eaxs:Folder/eaxs:Message">
 								<rdf:li>
 									<pdfmailmeta:Email>
+										<!-- The 'mid:' URL is based on https://www.ietf.org/rfc/rfc2392.txt -->
 										<xsl:attribute name="rdf:about">mid:<xsl:value-of select="fn:encode-for-uri(eaxs:MessageId)"/></xsl:attribute>
 										<pdfmailmeta:guid><xsl:value-of select="eaxs:Guid"/></pdfmailmeta:guid>							
 										<pdfmailmeta:messageid><xsl:value-of select="eaxs:MessageId"/></pdfmailmeta:messageid>							

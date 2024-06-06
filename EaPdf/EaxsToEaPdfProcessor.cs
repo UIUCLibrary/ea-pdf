@@ -378,12 +378,13 @@ namespace UIUCLibrary.EaPdf
             return ret;
         }
 
-        private static (string filename, string hash, long size) GetAttachmentFilenameHashSize(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
+        private static (string filename, string hash, string hashAlg, long size) GetAttachmentFilenameHashSize(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
         {
             string fileName = extAttachmentNode.SelectSingleNode("(ancestor::*/xm:DispositionFileName | ancestor::*/xm:ContentName)[last()]", xmlns)?.InnerText ?? "";
 
 
             string hash = extAttachmentNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText ?? "";
+            string hashAlg = extAttachmentNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText ?? "";
             if (string.IsNullOrWhiteSpace(fileName))
             {
                 fileName = Path.ChangeExtension(hash, GetFileExtension(extAttachmentNode.ParentNode, xmlns));
@@ -393,13 +394,13 @@ namespace UIUCLibrary.EaPdf
                 fileName = Path.ChangeExtension(fileName, GetFileExtension(extAttachmentNode.ParentNode, xmlns));
             }
             long size = long.Parse(extAttachmentNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1");
-            return (fileName, hash, size);
+            return (fileName, hash, hashAlg, size);
         }
 
         private static void AddAttachmentFile(List<EmbeddedFile> ret, XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
         {
             (DateTime earliest, DateTime latest) = GetEarliestLatestMessageDates(extAttachmentNode.SelectNodes($"ancestor::xm:Folder//xm:OrigDate", xmlns));
-            (string fileName, string hash, long size) = GetAttachmentFilenameHashSize(extAttachmentNode, xmlns);
+            (string fileName, string hash, string hashAlg, long size) = GetAttachmentFilenameHashSize(extAttachmentNode, xmlns);
 
 
             if (!DateTime.TryParse(extAttachmentNode.SelectSingleNode($"ancestor::*/xm:DispositionParam[translate(normalize-space(xm:Name),'{XmlHelpers.UPPER}','{XmlHelpers.LOWER}') = 'creation-date']/xm:Value", xmlns)?.InnerText, out DateTime creDate))
@@ -428,6 +429,7 @@ namespace UIUCLibrary.EaPdf
                 Subtype = mime,
                 Size = size,
                 Hash = hash,
+                HashAlgorithm = hashAlg,
                 CreationDate = creDate,
                 ModDate = modDate,
                 UniqueName = Path.ChangeExtension(hash, GetFileExtension(extAttachmentNode.ParentNode, xmlns)),
@@ -558,6 +560,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             var hash = propNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText ?? "";
+            var hashAlg = propNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText ?? "";
 
             ret.Add(new EmbeddedFile()
             {
@@ -566,6 +569,7 @@ namespace UIUCLibrary.EaPdf
                 Subtype = mime,
                 Size = long.Parse(propNode.SelectSingleNode("xm:Size", xmlns)?.InnerText ?? "-1"),
                 Hash = hash,
+                HashAlgorithm = hashAlg,
                 CreationDate = fileCreDate,
                 ModDate = fileModDate,
                 UniqueName = Path.ChangeExtension(hash, MimeTypeMap.GetExtension(mime)),

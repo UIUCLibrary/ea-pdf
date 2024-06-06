@@ -28,6 +28,19 @@ namespace UIUCLibrary.EaPdf.Helpers
         public string OriginalFileName { get; init; } = string.Empty;
 
         public string Hash { get; init; } = string.Empty;
+        public string HashAlgorithm { get; init; } = string.Empty;
+        public byte[] HashBytes
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Hash))
+                {
+                    return Array.Empty<byte>();
+                }
+                var bytes = Convert.FromHexString(Hash);
+                return bytes;
+            }
+        }
 
         public long Size { get; init; } = 0;
 
