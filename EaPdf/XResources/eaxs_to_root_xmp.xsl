@@ -102,6 +102,7 @@
 
 					<pdf:Producer><xsl:value-of select="$producer"/></pdf:Producer>
 					<pdf:PDFVersion>1.7</pdf:PDFVersion>
+					<pdf:Keywords>EA-PDF</pdf:Keywords>
 
 					<pdfaid:part>3</pdfaid:part>
 					<pdfaid:conformance><xsl:value-of select="$pdf_a_conf_level_norm"/></pdfaid:conformance>

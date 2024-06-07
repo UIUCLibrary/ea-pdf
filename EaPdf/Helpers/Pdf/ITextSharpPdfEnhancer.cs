@@ -2,8 +2,6 @@
 using iTextSharp.text.pdf;
 using Microsoft.Extensions.Logging;
 using System.Text;
-using System.Xml;
-using System.Xml.Linq;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
@@ -613,6 +611,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 _logger.LogWarning("ITextSharpPdfEnhancer: AddDPartNode: Info dictionary not found");
             }
 
+            List<string>? keywords = null;
+
             if (dpartNode.Parent == null && dpartNode.MetadataXml != null)
             {
                 //This is the root DPart node, representing the top-level document metadata
@@ -622,14 +622,25 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 //which is updated when the file is saved
                 dpartNode.UpdateElementNodeText("/*/*/*/xmp:ModifyDate", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
 
-                //Producer is automatically populated by FOP or XEP and appended to by iTextSharp
-                //pdf:Producer is mapped to the Producer field in the Document Information dictionary
                 if (info != null)
                 {
+                    //Producer is automatically populated by FOP or XEP and appended to by iTextSharp
+                    //pdf:Producer is mapped to the Producer field in the Document Information dictionary
                     var producerStr = info["Producer"];
                     var iTextStr = ProcessorVersion;
                     dpartNode.UpdateElementNodeText("/*/*/*/pdf:Producer", $"{producerStr}; modified using {iTextStr}");
+
+                    //Combine the document info Keywords and the XMP Keywords
+                    var infoKeywords = info["Keywords"];
+                    var xmpKeywords = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/pdf:Keywords", dpartNode.MetadataNamespaces)?.InnerText;
+                    keywords = SplitAndMergeStringLists(infoKeywords, xmpKeywords);
+                    if (!keywords.Contains("EA-PDF"))
+                    {
+                        keywords.Add("EA-PDF");
+                    }
+                    dpartNode.UpdateElementNodeText("/*/*/*/pdf:Keywords", string.Join(";",keywords));
                 }
+
 
             }
             else if (dpartNode.Parent == null && dpartNode.MetadataXml == null)
@@ -674,6 +685,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 {
                     //Copy some of the XMP metadata to Document Information dictionary
 
+                    //keywords are combined from the Document Information dictionary and the XMP metadata
+                    if (keywords != null)
+                        info["Keywords"] = string.Join(";", keywords);
+
                     //dc:title is mapped to the Title field in the Document Information dictionary
                     var titleNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/dc:title//rdf:li", dpartNode.MetadataNamespaces);
                     if (titleNode != null)
@@ -705,7 +720,6 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     }
 
                     //get rid of unused metadata fields, setting to null seems to work, but the .Remove method does not
-                    info["Keywords"] = null;
                     info["Trapped"] = null;
                     info["Author"] = null;
 
@@ -771,6 +785,30 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 throw new Exception("New indirect reference unexpectedly assigned");
 
             return leafIndObj.IndirectReference;
+        }
+
+        /// <summary>
+        /// Merge two strings
+        /// </summary>
+        /// <param name="string1"></param>
+        /// <param name="string2"></param>
+        /// <returns></returns>
+        private List<string> SplitAndMergeStringLists(string? string1, string? string2)
+        {
+            _logger.LogTrace("ITextSharpPdfEnhancer: SplitNormalizeAndMergeStringLists ({string1}, {string2})", string1, string2);
+
+            var list1 = string1?.Split(new char[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(s => s.Trim()).ToList();
+            var list2 = string2?.Split(new char[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(s => s.Trim()).ToList();
+
+            if (list1 == null)
+                list1 = new List<string>();
+
+            if(list2 == null)
+                list2 = new List<string>();
+
+            var ret = list1.Union(list2).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            return ret;
         }
 
         /// <summary>
