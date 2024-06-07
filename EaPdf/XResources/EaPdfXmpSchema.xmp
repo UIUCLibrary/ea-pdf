@@ -305,7 +305,7 @@
 										<pdfaProperty:description>The part of the PDF/mail profile
 											to which the document
 											complies.</pdfaProperty:description>
-										<pdfaProperty:name>part</pdfaProperty:name>
+										<pdfaProperty:name>version</pdfaProperty:name>
 										<pdfaProperty:valueType>open Choice of Integer</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>

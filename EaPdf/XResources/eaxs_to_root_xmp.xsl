@@ -15,7 +15,14 @@
 	<xsl:param name="fo-processor-version">FOP Version 2.8</xsl:param> <!-- Values used: fop or xep -->
 	
 	<xsl:param name="pdf_a_conf_level">A</xsl:param><!-- A, B, or U -->
+	<xsl:variable name="pdf_a_conf_level_values" select="('A','B','U')"/>	
 	<xsl:variable name="pdf_a_conf_level_norm" select="fn:upper-case(normalize-space($pdf_a_conf_level))"/>
+	
+	<xsl:param name="pdfmailid_version">1</xsl:param>
+	<xsl:param name="pdfmailid_rev">2024</xsl:param>
+	<xsl:param name="pdfmailid_conformance">m</xsl:param>
+	<xsl:variable name="pdfmailid_conformance_values" select="('s', 'si', 'm', 'mi', 'c', 'ci')"/>
+	<xsl:variable name="pdfmailid_conformance_norm" select="fn:lower-case(normalize-space($pdfmailid_conformance))"/>
 	
 	<xsl:param name="description">
 		<xsl:text>PDF Email Archive </xsl:text>
@@ -38,9 +45,12 @@
 	<xsl:param name="producer"><xsl:value-of select="$fo-processor-version"/></xsl:param>
 	
 	<xsl:template match="/">
-		<xsl:if test="$pdf_a_conf_level_norm != 'A' and $pdf_a_conf_level_norm != 'B' and $pdf_a_conf_level_norm != 'U'">
-			<xsl:message terminate="yes">The 'pdf_a_conf_level' param must be 'A', 'B', or 'U'; it was '<xsl:value-of select="$pdf_a_conf_level_norm"/>'.</xsl:message>
-		</xsl:if>
+		<xsl:if test="not($pdf_a_conf_level_norm = $pdf_a_conf_level_values)">
+			<xsl:message terminate="yes">The 'pdf_a_conf_level' param must be one of ('A','B','U'); it was '<xsl:value-of select="$pdf_a_conf_level_norm"/>'.</xsl:message>
+		</xsl:if>		
+		<xsl:if test="not($pdfmailid_conformance_norm = $pdfmailid_conformance_values)">
+			<xsl:message terminate="yes">The 'pdfmailid_conformance' param must be one of ('s', 'si', 'm', 'mi', 'c', 'ci'); it was '<xsl:value-of select="$pdfmailid_conformance_norm"/>'.</xsl:message>
+		</xsl:if>		
 		<xsl:processing-instruction name="xpacket">begin="" id="W5M0MpCehiHzreSzNTczkc9d" </xsl:processing-instruction><xsl:text xml:space="preserve">
 </xsl:text>
 		<x:xmpmeta xmlns:x="adobe:ns:meta/">
@@ -96,9 +106,9 @@
 					<pdfaid:part>3</pdfaid:part>
 					<pdfaid:conformance><xsl:value-of select="$pdf_a_conf_level_norm"/></pdfaid:conformance>
 
-					<pdfmailid:part>1</pdfmailid:part>
-					<pdfmailid:rev>2022</pdfmailid:rev>
-					<pdfmailid:conformance>m</pdfmailid:conformance>
+					<pdfmailid:version><xsl:value-of select="$pdfmailid_version"/></pdfmailid:version>
+					<pdfmailid:rev><xsl:value-of select="$pdfmailid_rev"/></pdfmailid:rev>
+					<pdfmailid:conformance><xsl:value-of select="$pdfmailid_conformance"/></pdfmailid:conformance>
 
 					<xmp:CreatorTool><xsl:value-of select="$creator"/></xmp:CreatorTool>
 					<xmp:MetadataDate><xsl:value-of select="$datetime-string"/></xmp:MetadataDate>

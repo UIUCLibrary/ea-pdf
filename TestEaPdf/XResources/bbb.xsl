@@ -78,8 +78,8 @@
 					<pdfaid:part>3</pdfaid:part>
 					<pdfaid:conformance><xsl:value-of select="$pdf_a_conf_level_norm"/></pdfaid:conformance>
 
-					<pdfmailid:part>1</pdfmailid:part>
-					<pdfmailid:rev>2022</pdfmailid:rev>
+					<pdfmailid:version>1</pdfmailid:version>
+					<pdfmailid:rev>2024</pdfmailid:rev>
 					<pdfmailid:conformance>m</pdfmailid:conformance>
 
 					<xmp:CreatorTool>UIUCLibrary.EaPdf</xmp:CreatorTool>
