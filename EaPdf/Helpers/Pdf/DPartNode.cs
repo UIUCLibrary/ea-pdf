@@ -193,6 +193,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             private set
             {
                 MetadataXml = new XmlDocument();
+                MetadataXml.PreserveWhitespace = true;
                 MetadataXml.LoadXml(value);
             }
         }
@@ -223,7 +224,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         }
 
         /// <summary>
-        /// Get the value of an element node in the XMP metadata
+        /// Update the value of an element node in the XMP metadata
         /// </summary>
         /// <param name="xpath"></param>
         /// <param name="newVal"></param>
@@ -259,10 +260,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <returns>The root DPartNode</returns>
         public static DPartNode CreateFromXmlString(DPartNode parent, string xmlString)
         {
-            XmlDocument xdoc = new()
-            {
-                PreserveWhitespace = true
-            };
+            XmlDocument xdoc = new();
+            xdoc.PreserveWhitespace = true;
+
             xdoc.LoadXml(xmlString);
 
             return DPartNode.CreateFromXmlDocument(parent, xdoc);
@@ -276,10 +276,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <returns>The root DPartNode</returns>
         public static DPartNode CreateFromXmlFile(DPartNode parent, string xmlFilePath)
         {
-            XmlDocument xdoc = new()
-            {
-                PreserveWhitespace = true
-            };
+            XmlDocument xdoc = new();
+            xdoc.PreserveWhitespace = true;
             xdoc.Load(xmlFilePath);
 
             return DPartNode.CreateFromXmlDocument(parent, xdoc);
@@ -328,6 +326,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             if (dPartElem.SelectSingleNode("metadata") is XmlElement metadata)
             {
                 newNode.MetadataXml = new XmlDocument();
+                newNode.MetadataXml.PreserveWhitespace = true;
                 newNode.MetadataXml.LoadXml(metadata.OuterXml);
             }
 

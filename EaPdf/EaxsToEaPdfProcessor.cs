@@ -264,6 +264,7 @@ namespace UIUCLibrary.EaPdf
 
             //add docXmp to the DPart root node
             var metaXml = new XmlDocument();
+            metaXml.PreserveWhitespace = true;
             metaXml.LoadXml(docXmp);
             dpartRoot.MetadataXml = metaXml;
 
