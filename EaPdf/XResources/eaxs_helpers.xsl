@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.1" encoding="utf-8"?>
 <!DOCTYPE stylesheet SYSTEM "eaxs_entities.ent">
 
 <xsl:stylesheet version="2.0" 

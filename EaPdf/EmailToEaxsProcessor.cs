@@ -45,6 +45,8 @@ namespace UIUCLibrary.EaPdf
 
         const int EPILOGUE_THRESHOLD = 200; //maximum number of characters before the epilogue is considered suspicious and a warning is logged
 
+        const int TOO_FUTURE = 180; //number of days in the future that a date is considered too far in the future to be valid
+
         const double MAX_FILE_SIZE_THRESHOLD = 0.95;
 
         public EmailToEaxsProcessorSettings Settings { get; }
@@ -1660,9 +1662,9 @@ namespace UIUCLibrary.EaPdf
             {
                 WriteToLogWarningMessage(xwriter, $"The first email was sent in 1971.  '{message.Date:u}' must be an invalid date.");
             }
-            else if (message.Date.Year > DateTime.Now.Year)
+            else if (message.Date.Subtract((DateTimeOffset)DateTime.Now).TotalDays > TOO_FUTURE) //more than 180 days in the future
             {
-                WriteToLogWarningMessage(xwriter, $"This is an unlikely email from the future.  '{message.Date:u}' must be an invalid date.");
+                WriteToLogWarningMessage(xwriter, $"This is an unlikely email from the future.  Date of conversion was '{DateTime.Now:u}', so '{message.Date:u}' must be an invalid date.");
             }
 
             WriteInternetAddressList(xwriter, message.From, "From");
@@ -1676,6 +1678,8 @@ namespace UIUCLibrary.EaPdf
             {
                 WriteMailboxAddress(xwriter, message.Sender, "Sender");
             }
+
+            WriteInternetAddressList(xwriter, message.ReplyTo, "ReplyTo");
 
             WriteInternetAddressList(xwriter, message.To, "To");
 

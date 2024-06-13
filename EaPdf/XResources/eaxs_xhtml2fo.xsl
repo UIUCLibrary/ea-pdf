@@ -1741,7 +1741,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
               </xsl:when>
               <xsl:otherwise>
                 <xsl:value-of select="'.'"/>
-                <!-- todo: it should depend on xml:lang ... -->
+                <!-- TODO: it should depend on xml:lang ... -->
               </xsl:otherwise>
             </xsl:choose>
           </xsl:when>
@@ -2050,7 +2050,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
           <xsl:text>“</xsl:text>
           <xsl:apply-templates/>
           <xsl:text>”</xsl:text>
-          <!-- todo: other languages ...-->
+          <!-- TODO: other languages ...-->
         </xsl:otherwise>
       </xsl:choose>
     </fo:inline>

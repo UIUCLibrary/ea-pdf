@@ -1,10 +1,13 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+﻿<?xml version="1.1" encoding="utf-8"?>
+<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:msxsl="urn:schemas-microsoft-com:xslt" exclude-result-prefixes="msxsl"
     xmlns:fn="http://www.w3.org/2005/xpath-functions"
     xmlns:my="http://library.illinois.edu/myFunctions"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:eaxs="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
     >
 
+    <xsl:include href="eaxs_mime_helpers.xsl"/>
 
     <xsl:param name="test-helpers">false</xsl:param>
     
@@ -94,10 +97,55 @@
             <xsl:if test="not(my:StyleContainsProperty(' width:100 ; overflow: hidden; height: 200 ','overflow'))"> 
                 <xsl:message terminate="yes"> ERROR: my:StyleContainsProperty(' width:100 ; overflow: hidden; height: 200 ','overflow') is not true</xsl:message>
             </xsl:if>
-                       
+            
+            <xsl:call-template name="TestQuoteIfNeeded"><xsl:with-param name="input">abcd</xsl:with-param><xsl:with-param name="expected-result">abcd</xsl:with-param></xsl:call-template>
+            <xsl:call-template name="TestQuoteIfNeeded"><xsl:with-param name="input">ab"cd</xsl:with-param><xsl:with-param name="expected-result">"ab\"cd"</xsl:with-param></xsl:call-template>
+            <xsl:call-template name="TestQuoteIfNeeded"><xsl:with-param name="input">ab\"cd</xsl:with-param><xsl:with-param name="expected-result">"ab\\\"cd"</xsl:with-param></xsl:call-template>
+            <xsl:call-template name="TestQuoteIfNeeded"><xsl:with-param name="input">(abcd)</xsl:with-param><xsl:with-param name="expected-result">"(abcd)"</xsl:with-param></xsl:call-template>
+            <xsl:call-template name="TestQuoteIfNeeded"><xsl:with-param name="input">ab&#9;cd</xsl:with-param><xsl:with-param name="expected-result">"ab&#9;cd"</xsl:with-param></xsl:call-template>
+            <xsl:call-template name="TestQuoteIfNeeded"><xsl:with-param name="input">ab&#1;cd</xsl:with-param><xsl:with-param name="expected-result">"ab&#1;cd"</xsl:with-param></xsl:call-template>
+            
+            <xsl:variable name="MessageContentType">
+                <eaxs:Message>
+                    <eaxs:SingleBody>
+                        <eaxs:ContentType>text/plain</eaxs:ContentType>
+                        <eaxs:Charset>utf-8</eaxs:Charset>
+                        <eaxs:ContentName>some sample.txt</eaxs:ContentName>
+                        <eaxs:ContentTypeParam>
+                            <eaxs:Name>x-extra</eaxs:Name>
+                            <eaxs:Value>&lt;stuff&gt;</eaxs:Value>
+                        </eaxs:ContentTypeParam>
+                        <eaxs:ContentTypeParam>
+                            <eaxs:Name>x-more</eaxs:Name>
+                            <eaxs:Value>ju\nk</eaxs:Value>
+                        </eaxs:ContentTypeParam>
+                        <eaxs:ContentTypeComments>this is (ju\st) a test</eaxs:ContentTypeComments>
+                    </eaxs:SingleBody>
+                </eaxs:Message>
+            </xsl:variable>
+            
+            <xsl:variable name="RecombinedContentType">
+                <xsl:call-template name="FullContentTypeHeader"><xsl:with-param name="Body" select="$MessageContentType//eaxs:SingleBody"/></xsl:call-template>
+            </xsl:variable>
+            <xsl:variable name="ExpectedContentType">text/plain; charset=utf-8; name="some sample.txt"; x-extra="&lt;stuff&gt;"; x-more="ju\\nk" (this is \(ju\\st\) a test)</xsl:variable>
+            <xsl:if test="$RecombinedContentType != $ExpectedContentType">
+                <xsl:message terminate="yes">ERROR: FullContentTypeHeader did not return expected result.  Expected: <xsl:value-of select="$ExpectedContentType"/> Output: <xsl:value-of select="$RecombinedContentType"/></xsl:message>
+            </xsl:if>
+            
             <xsl:message>TESTING MY FUNCTIONS FINISHED -- NO ERRORS</xsl:message>
         </xsl:if>
     </xsl:template>
     
+    <xsl:template name="TestQuoteIfNeeded">
+        <xsl:param name="input" as="xs:string"/>
+        <xsl:param name="expected-result" select="$input" as="xs:string"/>
+        <xsl:param name="should-pass" as="xs:boolean" select="true()"/>
+        <xsl:variable name="test-result">
+            <xsl:value-of select="my:QuoteIfNeeded($input)"/>
+        </xsl:variable>
+        <xsl:if test="($test-result = $expected-result) != $should-pass">
+            <xsl:message terminate="yes"> ERROR: QuoteIfNeeded did not return expected result. Input: '<xsl:value-of select="$input"/>' Output: '<xsl:value-of select="$test-result"/>' Expected: '<xsl:value-of select="$expected-result"/>'</xsl:message>
+        </xsl:if>
+    </xsl:template>
     
 </xsl:stylesheet>

@@ -16,7 +16,7 @@
 	<Product>UIUCLibrary.$(AssemblyName)</Product>
   </PropertyGroup>
 
-  <Import Project="../VersionInfo.xml"/> 
+  <Import Project="../VersionInfo.xml" /> 
 
   <ItemGroup>
     <PackageReference Include="AngleSharp.Css" Version="0.17.0" />
@@ -355,6 +355,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="XResources\eaxs_helpers_test.xsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="XResources\eaxs_mime_helpers.xsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="XResources\eaxs_schema_v2.xsd">

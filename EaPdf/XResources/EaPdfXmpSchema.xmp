@@ -40,6 +40,14 @@
 										<pdfaProperty:valueType>seq Email</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
+								<rdf:li>
+									<rdf:Description>
+										<pdfaProperty:category>external</pdfaProperty:category>
+										<pdfaProperty:description>An ordered list of email attachments.</pdfaProperty:description>
+										<pdfaProperty:name>attachments</pdfaProperty:name>
+										<pdfaProperty:valueType>seq Attachment</pdfaProperty:valueType>
+									</rdf:Description>
+								</rdf:li>
 							</rdf:Seq>
 						</pdfaSchema:property>
 						<pdfaSchema:valueType>
@@ -56,8 +64,144 @@
 											<rdf:Seq>
 												<rdf:li>
 													<rdf:Description>
+														<pdfaField:description>The RDF identifier (rdf:about) of the asset which contained the email message</pdfaField:description>
+														<pdfaField:name>Asset</pdfaField:name>
+														<pdfaField:valueType>URI</pdfaField:valueType>
+														<!-- This field is not defined in the EA-PDF spec v0.5 -->
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the filename of the 'asset' file which contains the message.
+															It must match one of the Asset/Filename properties.</pdfaField:description>
+														<pdfaField:name>AssetFilename</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+														<!-- This field is not defined in the EA-PDF spec v0.5 -->
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "To:" field contains the
+															address(es) of the primary recipient(s) of the
+															message.  This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>To</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the original unprocessed 'To" 
+															field from the email.</pdfaField:description>
+														<pdfaField:name>Raw-To</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "From:" field specifies the
+															author(s) of the message, that is, the mailbox(es) of
+															the person(s) or system(s) responsible for the writing
+															of the message.  This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>From</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the original unprocessed 'From" 
+															field from the email.</pdfaField:description>
+														<pdfaField:name>Raw-From</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Sender:" field specifies the
+															mailbox of the agent responsible for the actual
+															transmission of the message.  This is usually
+															only included if it is different from one of the
+															'From' agent(s).</pdfaField:description>
+														<pdfaField:name>Sender</pdfaField:name>
+														<pdfaField:valueType>Agent</pdfaField:valueType>
+														<!-- This field is not defined in the EA-PDF spec v0.5 -->
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the original unprocessed 'Sender" 
+															field from the email.</pdfaField:description>
+														<pdfaField:name>Raw-Sender</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+														<!-- This is a new field; it was not defined in the EA-PDF spec v0.5 -->
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Reply-To:" field indicates the address(es) to which the author of the message suggests
+															that replies be sent.  If there is no 'Reply-To' field, the 'From' fields is used for this purpose.
+															This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>Reply-To</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+														<!-- This is a new field; it was not defined in the EA-PDF spec v0.5 -->
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the original unprocessed 'Reply-To" 
+															field from the email.</pdfaField:description>
+														<pdfaField:name>Raw-Reply-To</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This originates from the "Date:" field and is the origination date and time at which the creator
+															of the message indicated that the message was complete and ready to
+															enter the mail delivery system. </pdfaField:description>
+														<pdfaField:name>Sent</pdfaField:name>
+														<pdfaField:valueType>Date</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>												
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the original unprocessed 'Date" 
+															field from the email.</pdfaField:description>
+														<pdfaField:name>Raw-Sent</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>												
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This contains the email "Subject:" field
+															of the message.  The "Subject:" field contains a short string identifying 
+															the topic of the message. </pdfaField:description>
+														<pdfaField:name>Subject</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is an unordered list containing the email "Keywords:" fields
+															of the message.  The "Keywords:" field is uncommon but contains important words and phrases that might be useful
+															for the recipient.</pdfaField:description>
+														<pdfaField:name>Keywords</pdfaField:name>
+														<!-- This is a new field; it was not defined in the EA-PDF spec v0.5 -->
+														<pdfaField:valueType>bag Text</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Comments:" field contains any additional comments on the text of the
+															body of the message.  This is seldom used by modern email clients.</pdfaField:description>
+														<pdfaField:name>Comments</pdfaField:name>
+														<pdfaField:valueType>bag Text</pdfaField:valueType>
+														<!-- This is a new field; it was not defined in the EA-PDF spec v0.5 -->
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
 														<pdfaField:description>The "Message-ID:" field contains a single unique message identifier.</pdfaField:description>
-														<pdfaField:name>messageid</pdfaField:name>
+														<pdfaField:name>Message-ID</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
 													</rdf:Description>	
 												</rdf:li>
@@ -66,115 +210,8 @@
 														<pdfaField:description>Since "Message-ID:" is optional, any message which is missing one
 															must have a GUID instead.  This is generated by the creation software.
 															Messages may have both.</pdfaField:description>
-														<pdfaField:name>guid</pdfaField:name>
+														<pdfaField:name>GUID</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
-													</rdf:Description>	
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>This is an unordered list containing the  "Subject:" and possibly "Keyword:" fields
-															of the message.  The "Subject:" field is the most common and contains a short string identifying 
-															the topic of the message. The "Keywords:" field contains important words and phrases that might be useful
-															for the recipient.</pdfaField:description>
-														<pdfaField:name>subject</pdfaField:name>
-														<pdfaField:valueType>bag Text</pdfaField:valueType>
-														<!-- 
-														The EA-PDF spec v0.2 called for dc:subject, but I was unable to get dc:subject
-														to validate properly with VeraPdf, so using the pdfmailmeta namespace instead
-														-->
-													</rdf:Description>	
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "Comments:" field contains any additional comments on the text of the
-															body of the message.  This is seldom used by modern email clients.</pdfaField:description>
-														<pdfaField:name>comments</pdfaField:name>
-														<pdfaField:valueType>bag Text</pdfaField:valueType>
-														<!-- This is a new field; it was not defined in the EA-PDF spec v0.2 -->
-													</rdf:Description>	
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "Date:" field is the origination date and time at which the creator
-															of the message indicated that the message was complete and ready to
-															enter the mail delivery system. </pdfaField:description>
-														<pdfaField:name>sent</pdfaField:name>
-														<pdfaField:valueType>Date</pdfaField:valueType>
-													</rdf:Description>													
-												</rdf:li>												
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "Sender:" field specifies the
-															mailbox of the agent responsible for the actual
-															transmission of the message.  This is usually
-															only included if it is different from one of the
-															'From' agent(s).</pdfaField:description>
-														<pdfaField:name>sender</pdfaField:name>
-														<pdfaField:valueType>Agent</pdfaField:valueType>
-														<!-- This is a new field; it was not defined in the EA-PDF spec v0.2 -->
-													</rdf:Description>	
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "From:" field specifies the
-															author(s) of the message, that is, the mailbox(es) of
-															the person(s) or system(s) responsible for the writing
-															of the message.  This is an ordered list of Agents.</pdfaField:description>
-														<pdfaField:name>from</pdfaField:name>
-														<pdfaField:valueType>seq Agent</pdfaField:valueType>
-													</rdf:Description>	
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "To:" field contains the
-															address(es) of the primary recipient(s) of the
-															message.  This is an ordered list of Agents.</pdfaField:description>
-														<pdfaField:name>to</pdfaField:name>
-														<pdfaField:valueType>seq Agent</pdfaField:valueType>
-													</rdf:Description>													
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "Cc:" field ("Cc" means "Carbon Copy") contains the
-															address(es) of others who are to receive the message, though the
-															content of the message may not be directed at them.  This is an ordered list of Agents.</pdfaField:description>
-														<pdfaField:name>cc</pdfaField:name>
-														<pdfaField:valueType>seq Agent</pdfaField:valueType>
-													</rdf:Description>													
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "Bcc:" field ("Bcc" means "Blind Carbon Copy") contains
-															address(es) of recipients of the message whose addresses are not to be
-															revealed to other recipients of the message.  This is an ordered list of Agents.</pdfaField:description>
-														<pdfaField:name>bcc</pdfaField:name>
-														<pdfaField:valueType>seq Agent</pdfaField:valueType>
-													</rdf:Description>													
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "In-Reply-To:" field may be used to identify the message (or
-															messages) to which this message is a reply. It will contain the Message IDs of the messages 
-															being replied to.   This is an ordered list of Message ID text.</pdfaField:description>
-														<pdfaField:name>inReplyTo</pdfaField:name>
-														<pdfaField:valueType>seq Text</pdfaField:valueType>
-													</rdf:Description>	
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>The "References:" field may be used to identify a "thread" of
-															conversations.  It will contain the Message IDs of the messages in the thread.   
-															This is an ordered list of Message ID text.</pdfaField:description>
-														<pdfaField:name>references</pdfaField:name>
-														<pdfaField:valueType>seq Text</pdfaField:valueType>
-														<!-- This is a new field; it was not defined in the EA-PDF spec v0.2 -->
-													</rdf:Description>	
-												</rdf:li>
-												<rdf:li>
-													<rdf:Description>
-														<pdfaField:description>This is a count of the messages attachments; it will not include the bodies of the message.</pdfaField:description>
-														<pdfaField:name>attachmentCount</pdfaField:name>
-														<pdfaField:valueType>Integer</pdfaField:valueType>
 													</rdf:Description>	
 												</rdf:li>
 												<rdf:li>
@@ -184,15 +221,69 @@
 															size of the EML file.  However, an MBOX contains multiple messages, so this will be the
 															count of bytes between the beginning MBOX header and the start of the next message header
 															in the MBOX.  For other message file formats it may also vary slightly.</pdfaField:description>
-														<pdfaField:name>sizeBytes</pdfaField:name>
+														<pdfaField:name>SizeInBytes</pdfaField:name>
 														<pdfaField:valueType>Integer</pdfaField:valueType>
 													</rdf:Description>	
 												</rdf:li>
 												<rdf:li>
 													<rdf:Description>
-														<pdfaField:description>This is the MIME type of the root or outer-most content body of the message.</pdfaField:description>
-														<pdfaField:name>contentType</pdfaField:name>
-														<pdfaField:valueType>MIMEType</pdfaField:valueType>
+														<pdfaField:description>This is a count of the messages attachments; it will not include the bodies of the message.</pdfaField:description>
+														<pdfaField:name>NumberAttachments</pdfaField:name>
+														<pdfaField:valueType>Integer</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Cc:" field ("Cc" means "Carbon Copy") contains the
+															address(es) of others who are to receive the message, though the
+															content of the message may not be directed at them.  This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>Cc</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the original unprocessed 'Cc" 
+															field from the email.</pdfaField:description>
+														<pdfaField:name>Raw-Cc</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "Bcc:" field ("Bcc" means "Blind Carbon Copy") contains
+															address(es) of recipients of the message whose addresses are not to be
+															revealed to other recipients of the message.  This is an ordered list of Agents.</pdfaField:description>
+														<pdfaField:name>Bcc</pdfaField:name>
+														<pdfaField:valueType>seq Agent</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the original unprocessed 'Bcc" 
+															field from the email.</pdfaField:description>
+														<pdfaField:name>Raw-Bcc</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "In-Reply-To:" field may be used to identify the message (or
+															messages) to which this message is a reply. It will contain the Message IDs of the messages 
+															being replied to.   This is an ordered list of Message ID text.</pdfaField:description>
+														<pdfaField:name>In-Reply-To</pdfaField:name>
+														<pdfaField:valueType>seq Text</pdfaField:valueType>
+														<!-- The v0.5 spec, just uses Text for this value type, but it can be a space-separated list which might be useful to break up -->
+													</rdf:Description>
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The "References:" field may be used to identify a "thread" of
+															conversations.  It will contain the Message IDs of the messages in the thread.   
+															This is an ordered list of Message ID text.</pdfaField:description>
+														<pdfaField:name>References</pdfaField:name>
+														<pdfaField:valueType>seq Text</pdfaField:valueType>
+														<!-- This is a new field; it was not defined in the EA-PDF spec v0.5 -->
 													</rdf:Description>	
 												</rdf:li>
 											</rdf:Seq>
@@ -210,14 +301,14 @@
 												<rdf:li>
 													<rdf:Description>
 														<pdfaField:description>The filename of the asset, possibly including path components.</pdfaField:description>
-														<pdfaField:name>filename</pdfaField:name>
+														<pdfaField:name>Filename</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
 													</rdf:Description>													
 												</rdf:li>
 												<rdf:li>
 													<rdf:Description>
 														<pdfaField:description>The size of the asset in bytes.</pdfaField:description>
-														<pdfaField:name>sizeBytes</pdfaField:name>
+														<pdfaField:name>SizeInBytes</pdfaField:name>
 														<pdfaField:valueType>Integer</pdfaField:valueType>
 													</rdf:Description>													
 												</rdf:li>
@@ -225,7 +316,92 @@
 													<rdf:Description>
 														<pdfaField:description>The MIME type of the asset, such as message/rfc822 for EML files,
 															or application/mbox for MBOX files.</pdfaField:description>
-														<pdfaField:name>format</pdfaField:name>
+														<pdfaField:name>Format</pdfaField:name>
+														<!-- The v0.5 spec calls for dc:format here, but PDF validators won't validate dc elements intermingled -->
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The number of individual email messages in this source email asset 
+															that have been successfully rendered into this EA-PDF file.</pdfaField:description>
+														<pdfaField:name>NumberMessages</pdfaField:name>
+														<pdfaField:valueType>Integer</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>A 32-character hex string, representing the MD5
+															checksum (as hexadecimal) of this email
+															asset file.</pdfaField:description>
+														<pdfaField:name>CheckSum</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+														<!-- This is not part of the 0.5 spec -->
+													</rdf:Description>													
+												</rdf:li>
+											</rdf:Seq>
+										</pdfaType:field>										
+									</rdf:Description>
+								</rdf:li>
+								<rdf:li>
+									<rdf:Description>
+										<pdfaType:description>Metadata for embedded source email assets.</pdfaType:description>
+										<pdfaType:namespaceURI>http://www.pdfa.org/eapdf/ns/meta/</pdfaType:namespaceURI>
+										<pdfaType:prefix>pdfmailmeta</pdfaType:prefix>
+										<pdfaType:type>Attachment</pdfaType:type>	
+										<pdfaType:field>
+											<rdf:Seq>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The case-sensitive filename of the attachment as listed in the original email message.</pdfaField:description>
+														<pdfaField:name>Filename</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The size of the attachment in bytes.</pdfaField:description>
+														<pdfaField:name>SizeInBytes</pdfaField:name>
+														<pdfaField:valueType>Integer</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The RDF identifier (rdf:about) of the asset which contained the attachment.</pdfaField:description>
+														<pdfaField:name>Email</pdfaField:name>
+														<pdfaField:valueType>URI</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>												
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>The Message-ID of the message containing the attachment.</pdfaField:description>
+														<pdfaField:name>Message-ID</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>Since Message-ID is optional, this is the generated GUID of the message
+															containing the attachment.</pdfaField:description>
+														<pdfaField:name>GUID</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>	
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>This is the IANA Media
+															Type of this email attachment as specified in the
+															original email asset.</pdfaField:description>
+														<pdfaField:name>Content-Type</pdfaField:name>
+														<pdfaField:valueType>Text</pdfaField:valueType>
+													</rdf:Description>													
+												</rdf:li>
+												<rdf:li>
+													<rdf:Description>
+														<pdfaField:description>A 32-character hex string, representing the MD5
+															checksum (as hexadecimal) of this email
+															attachment when processed as binary data.</pdfaField:description>
+														<pdfaField:name>CheckSum</pdfaField:name>
 														<pdfaField:valueType>Text</pdfaField:valueType>
 													</rdf:Description>													
 												</rdf:li>

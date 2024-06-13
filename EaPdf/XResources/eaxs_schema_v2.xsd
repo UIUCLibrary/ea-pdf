@@ -68,6 +68,9 @@
 			
 			2023-12-12
 			* Added image/width and image/height *BodyContent; image sizes can useful when rendering to PDF pages
+			
+			2024-06-11
+			* Added ReplyTo and InReplyTo to the core message header fields
 
 		</documentation>
 	</annotation>
@@ -679,10 +682,11 @@
 			<element name="OrigDate" type="dateTime" minOccurs="0"/>
 			<element name="From" type="xm:address" minOccurs="0" />
 			<element name="Sender" type="xm:name-address" minOccurs="0"/>
+			<element name="ReplyTo" type="xm:address" minOccurs="0"/><!-- Added TGH 2024-06-12 -->
 			<element name="To" type="xm:address" minOccurs="0" />
 			<element name="Cc" type="xm:address" minOccurs="0" />
 			<element name="Bcc" type="xm:address" minOccurs="0" />
-			<element name="InReplyTo" type="string" minOccurs="0" maxOccurs="unbounded"/>
+			<element name="InReplyTo" type="string" minOccurs="0" maxOccurs="unbounded"/><!-- Added TGH 2024-06-12 -->
 			<element name="References" type="string" minOccurs="0" maxOccurs="unbounded"/>
 			<element name="Subject" type="string" minOccurs="0"/>
 			<element name="Comments" type="string" minOccurs="0" maxOccurs="unbounded"/>
