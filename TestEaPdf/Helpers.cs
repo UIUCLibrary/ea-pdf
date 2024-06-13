@@ -16,7 +16,7 @@ namespace UIUCLibrary.TestEaPdf
 {
     internal class Helpers
     {
-        const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf_1.24.3\\verapdf.bat";
+        const string VERAPDF_PATH = "C:\\Users\\thabi\\verapdf-1.26.2\\verapdf.bat";
 
 
         public static string CalculateHash(string algName, string filePath)
