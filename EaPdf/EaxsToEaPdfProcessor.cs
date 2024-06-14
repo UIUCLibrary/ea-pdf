@@ -1,14 +1,24 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Xml;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
-using System.Reflection;
 
 namespace UIUCLibrary.EaPdf
 {
     public class EaxsToEaPdfProcessor
     {
+        public const string PDFMAILID_CONFORMANCE_SINGLE = "s";
+        public const string PDFMAILID_CONFORMANCE_MULTIPLE = "m";
+        public const string PDFMAILID_CONFORMANCE_CONTAINER = "c";
+        public const string PDFMAILID_CONFORMANCE_ISOLATED = "i";
+        public const string PDFMAILID_CONFORMANCE_SINGLE_ISOLATED = PDFMAILID_CONFORMANCE_SINGLE + PDFMAILID_CONFORMANCE_ISOLATED;
+        public const string PDFMAILID_CONFORMANCE_MULTIPLE_ISOLATED = PDFMAILID_CONFORMANCE_MULTIPLE + PDFMAILID_CONFORMANCE_ISOLATED;
+        public const string PDFMAILID_CONFORMANCE_CONTAINER_ISOLATED = PDFMAILID_CONFORMANCE_CONTAINER + PDFMAILID_CONFORMANCE_ISOLATED;
+
+        public const string PDFAID_CONFORMANCE_ACCESSIBLE = "A";
+        public const string PDFAID_CONFORMANCE_BASIC = "B";
+        public const string PDFAID_CONFORMANCE_UNICODE = "U";
 
         private readonly ILogger _logger;
         private readonly IXsltTransformer _xslt;
@@ -159,6 +169,12 @@ namespace UIUCLibrary.EaPdf
             string continuedFrom = eaxsHelpers.ContinuedFromFile;
             string continuedIn = eaxsHelpers.ContinuedInFile;
 
+            int messageCount = eaxsHelpers.MessageCount;
+            if (messageCount == 0)
+            {
+                _logger.LogWarning("No messages found in EAXS file '{eaxsFilePath}'.", eaxsFilePath);
+            }
+
             (string nextEaxsFilePath, string nextPdfFilePath) = FilePathHelpers.GetDerivedFilePaths(eaxsFilePath, pdfFilePath, continuedIn);
             (string prevEaxsFilePath, string prevPdfFilePath) = FilePathHelpers.GetDerivedFilePaths(eaxsFilePath, pdfFilePath, continuedFrom);
 
@@ -246,7 +262,7 @@ namespace UIUCLibrary.EaPdf
 #endif
 
             //Do some post processing to add metadata, cleanup attachments, etc.
-            PostProcessPdf(eaxsFilePath, pdfFilePath, complexScripts, prevPdfFilePath, nextPdfFilePath);
+            PostProcessPdf(eaxsFilePath, pdfFilePath, complexScripts, messageCount, prevPdfFilePath, nextPdfFilePath);
 
             if (!string.IsNullOrWhiteSpace(continuedIn))
             {
@@ -255,12 +271,12 @@ namespace UIUCLibrary.EaPdf
         }
 
 
-        private void PostProcessPdf(string eaxsFilePath, string pdfFilePath, bool complexScripts, string prevPdfFilePath, string nextPdfFilePath)
+        private void PostProcessPdf(string eaxsFilePath, string pdfFilePath, bool complexScripts, int messageCount, string prevPdfFilePath, string nextPdfFilePath)
         {
             var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
             var dpartRoot = GetXmpMetadataForMessages(eaxsFilePath);
-            var docXmp = GetRootXmpForAccount(eaxsFilePath, complexScripts);
+            var docXmp = GetRootXmpForAccount(eaxsFilePath, complexScripts, messageCount);
 
             //add docXmp to the DPart root node
             var metaXml = new XmlDocument();
@@ -630,22 +646,29 @@ namespace UIUCLibrary.EaPdf
             return ret;
         }
 
-        private string GetRootXmpForAccount(string eaxsFilePath, bool complexScripts)
+        private string GetRootXmpForAccount(string eaxsFilePath, bool complexScripts, int messageCount)
         {
             string ret;
 
             var foProc = _xslfo.ProcessorVersion;
-            var pdfaConfLvl = "A"; //PDF/A-3 conformance level: A, B, or U
+            var pdfaConfLvl = PDFAID_CONFORMANCE_ACCESSIBLE; //PDF/A-3A
             if (foProc.StartsWith("FOP", StringComparison.OrdinalIgnoreCase) && complexScripts)
             {
-                pdfaConfLvl = "U"; //FOP does not support full accessability for complex scripts, so use PDF/A-3U
+                pdfaConfLvl = PDFAID_CONFORMANCE_UNICODE; //FOP does not support full accessability for complex scripts, so use PDF/A-3U
+            }
+
+            string pdfmailidConformance = PDFMAILID_CONFORMANCE_MULTIPLE; //m
+            if ((messageCount <= 1))
+            {
+                pdfmailidConformance = PDFMAILID_CONFORMANCE_SINGLE; //s
             }
 
             Dictionary<string, object> parms = new()
             {
                 { "creator", XmpCreatorTool },
                 { "fo-processor-version", foProc },
-                { "pdf_a_conf_level", pdfaConfLvl }
+                { "pdf_a_conf_level", pdfaConfLvl },
+                { "pdfmailid_conformance", pdfmailidConformance }
             };
 
 

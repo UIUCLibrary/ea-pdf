@@ -21,6 +21,17 @@ namespace UIUCLibrary.EaPdf.Helpers
         }
 
         /// <summary>
+        /// Return the number of messages in the EAXS file, child messages do not count
+        /// </summary>
+        public int MessageCount
+        {
+            get
+            {
+                return EaxsDocument.SelectNodes("//xm:Message", Xmlns)?.Count ?? 0;
+            }
+        }
+
+        /// <summary>
         /// Get the value of the processing instruction "ContinuedIn" in the EAXS file, if not present return empty string
         /// </summary>
         public string ContinuedInFile

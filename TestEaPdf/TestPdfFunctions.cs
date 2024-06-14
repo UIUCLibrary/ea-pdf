@@ -4,10 +4,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
+using System.Text;
 using System.Xml;
 using UIUCLibrary.EaPdf;
 using UIUCLibrary.EaPdf.Helpers;
@@ -120,7 +119,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToPdfProcessor(string inPath, string foProcessor, bool ext, bool wrap)
         {
             if (!foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase) && !foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
-                throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case",nameof(foProcessor));
+                throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case", nameof(foProcessor));
 
             if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase) && ext && !wrap)
                 throw new ArgumentException("XEP requires external files to be wrapped in XML");
@@ -162,13 +161,13 @@ namespace UIUCLibrary.TestEaPdf
                 Assert.AreEqual(files.ElementAt(0).Key, xmlFile);
                 Assert.AreEqual(files.ElementAt(0).Value, pdfFile);
 
-                foreach(var file in files)
+                foreach (var file in files)
                 {
                     Assert.IsTrue(File.Exists(file.Value));
 
                     Assert.IsTrue(IsPdfValid(file.Value));
 
-                    if (VALIDATE_PDFS) 
+                    if (VALIDATE_PDFS)
                     {
                         Helpers.ValidatePdfAUsingPdfTools(file.Value);
 
@@ -232,7 +231,7 @@ namespace UIUCLibrary.TestEaPdf
                 XmlNamespaceManager xmlns = new(xdoc.NameTable);
                 xmlns.AddNamespace("eaxs", "https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2");
                 var nodesToRemove = xdoc.SelectNodes("//eaxs:ImageProperties", xmlns);
-                if(nodesToRemove != null)
+                if (nodesToRemove != null)
                 {
                     foreach (XmlNode node in nodesToRemove)
                     {
@@ -364,7 +363,7 @@ namespace UIUCLibrary.TestEaPdf
                 var inFile = Path.Combine(testFilesBaseDirectory, filePath);
                 var outFolder = Path.GetDirectoryName(inFile);
 
-                if(outFolder == null)
+                if (outFolder == null)
                     Assert.Fail("Could not get directory name from " + inFile);
 
                 var xmlFile = FilePathHelpers.GetXmlOutputFilePath(outFolder, inFile);
@@ -441,6 +440,117 @@ namespace UIUCLibrary.TestEaPdf
             {
                 logger?.LogDebug("Pdf version is not 1.7");
                 ret = false;
+            }
+
+            //some checks for the XMP metadata
+            var xmp = reader.Metadata;
+            if (xmp == null)
+            {
+                logger?.LogDebug("Metadata is missing");
+                ret = false;
+            }
+            else
+            {
+                var xmpString = Encoding.UTF8.GetString(xmp);
+                var xmpDoc = new XmlDocument();
+                xmpDoc.LoadXml(xmpString);
+
+                var xmlns = new XmlNamespaceManager(xmpDoc.NameTable);
+                xmlns.AddNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+                xmlns.AddNamespace("dc", "http://purl.org/dc/elements/1.1/");
+                xmlns.AddNamespace("dcterms", "http://purl.org/dc/terms/");
+                xmlns.AddNamespace("foaf", "http://xmlns.com/foaf/0.1/");
+                xmlns.AddNamespace("pdf", "http://ns.adobe.com/pdf/1.3/");
+                xmlns.AddNamespace("pdfaid", "http://www.aiim.org/pdfa/ns/id/");
+                xmlns.AddNamespace("pdfmail", "http://www.pdfa.org/eapdf/");
+                xmlns.AddNamespace("pdfmailid", "http://www.pdfa.org/eapdf/ns/id/");
+                xmlns.AddNamespace("pdfmailmeta", "http://www.pdfa.org/eapdf/ns/meta/");
+                xmlns.AddNamespace("pdfx", "http://ns.adobe.com/pdfx/1.3/");
+                xmlns.AddNamespace("xmp", "http://ns.adobe.com/xap/1.0/");
+
+                var keywords = xmpDoc.SelectSingleNode("//pdf:Keywords", xmlns)?.InnerText ?? "";
+                if (!keywords.Contains("EA-PDF"))
+                {
+                    logger?.LogDebug("pdf:Keywords does not contain 'EA-PDF'");
+                    ret = false;
+                }
+
+                var pdfVersion = xmpDoc.SelectSingleNode("//pdf:PDFVersion", xmlns)?.InnerText ?? "";
+                if (pdfVersion != "1.7")
+                {
+                    logger?.LogDebug("pdf:PDFVersion does nopt equal '1.7'");
+                    ret = false;
+                }
+
+                var pdfaidConformance = xmpDoc.SelectSingleNode("//pdfaid:conformance", xmlns)?.InnerText ?? "";
+                var pdfaidPart = xmpDoc.SelectSingleNode("//pdfaid:part", xmlns)?.InnerText ?? "";
+
+                if (string.IsNullOrWhiteSpace(pdfaidConformance) || string.IsNullOrWhiteSpace(pdfaidPart))
+                {
+                    logger?.LogDebug("PDF/A identifying metadata is missing");
+                    ret = false;
+                }
+                else
+                {
+                    if (!pdfaidConformance.Equals(EaxsToEaPdfProcessor.PDFAID_CONFORMANCE_ACCESSIBLE) && !pdfaidConformance.Equals(EaxsToEaPdfProcessor.PDFAID_CONFORMANCE_UNICODE))
+                    {
+                        logger?.LogDebug($"PDF/A conformance is {pdfaidConformance}.  It must be either {EaxsToEaPdfProcessor.PDFAID_CONFORMANCE_ACCESSIBLE} or {EaxsToEaPdfProcessor.PDFAID_CONFORMANCE_UNICODE}");
+                        ret = false;
+                    }
+
+                    if (!pdfaidPart.Equals("3"))
+                    {
+                        logger?.LogDebug($"PDF/A part is {pdfaidPart}.  It must be 3");
+                        ret = false;
+                    }
+
+                }
+
+                var pdfmailidVersion = xmpDoc.SelectSingleNode("//pdfmailid:version", xmlns)?.InnerText ?? "";
+                var pdfmailidRev = xmpDoc.SelectSingleNode("//pdfmailid:rev", xmlns)?.InnerText ?? "";
+                var pdfmailidConformance = xmpDoc.SelectSingleNode("//pdfmailid:conformance", xmlns)?.InnerText ?? "";
+                if (string.IsNullOrWhiteSpace(pdfmailidVersion) || string.IsNullOrWhiteSpace(pdfmailidRev) || string.IsNullOrWhiteSpace(pdfmailidConformance))
+                {
+                    logger?.LogDebug("EA-PDF identifying metadata is missing");
+                    ret = false;
+                }
+                else
+                {
+                    if (!pdfmailidVersion.Equals("1"))
+                    {
+                        logger?.LogDebug($"EA-PDF version is {pdfmailidVersion}.  It must be 1.");
+                        ret = false;
+                    }
+
+                    if (!pdfmailidRev.Equals("2024"))
+                    {
+                        logger?.LogDebug($"PDF/A revision is {pdfmailidRev}.  It must be 2024.");
+                        ret = false;
+                    }
+
+                    //get the number of email messages in the metadata
+                    var messageCount = xmpDoc.SelectNodes("//pdfmailmeta:Email", xmlns)?.Count ?? 0;
+                    if (messageCount == 0)
+                    {
+                        logger?.LogDebug("No email messages found in the metadata");
+                        ret = false;
+                    }
+
+                    if(pdfmailidConformance.Length == 2 && pdfmailidConformance[1..2] != EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_ISOLATED)
+                    {
+                    }
+                    if (messageCount <= 1 && !pdfmailidConformance.StartsWith(EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE))
+                    {
+                        logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be {EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE} if there is a single messages in the PDF.");
+                        ret = false;
+                    }
+                    if (messageCount > 1 && !pdfmailidConformance.StartsWith(EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_MULTIPLE))
+                    {
+                        logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be {EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_MULTIPLE} if there are multiple messages in the PDF.");
+                        ret = false;
+                    }
+                }
+
             }
 
             //TODO: Add more tests
