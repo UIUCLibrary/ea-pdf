@@ -20,6 +20,7 @@
 	<xsl:include href="eaxs_xhtml2fo.xsl"/>
 	
 	<xsl:include href="eaxs_helpers.xsl"/>
+	<xsl:include href="eaxs_mime_helpers.xsl"/>
 	<xsl:include href="eaxs_helpers_test.xsl"/>
 	
 	<xsl:output method="xml" version="1.0" encoding="utf-8" indent="no" omit-xml-declaration="no" cdata-section-elements="rx:custom-meta"/>
@@ -392,16 +393,16 @@
 		</xsl:if>
 		<fo:bookmark>
 			<xsl:call-template name="InternalDestinationToMessageHeader"/>
-			<fo:bookmark-title><xsl:value-of select="eaxs:Name"/></fo:bookmark-title>
+			<fo:bookmark-title>Folder: <xsl:value-of select="eaxs:Name"/></fo:bookmark-title>
 			<xsl:if test="count(eaxs:Message) > 0">
-				<fo:bookmark starting-state="hide">
+				<fo:bookmark >
 					<xsl:call-template name="InternalDestinationToMessageHeader"/>
 					<fo:bookmark-title><xsl:value-of select="count(eaxs:Message)"/> Messages</fo:bookmark-title>
 					<xsl:apply-templates select="eaxs:Message" mode="RenderBookmarks"/>
 				</fo:bookmark>
 			</xsl:if>
 			<xsl:if test="eaxs:Folder[eaxs:Message or eaxs:Folder[.//eaxs:Message]]">
-				<fo:bookmark starting-state="hide">
+				<fo:bookmark >
 					<xsl:call-template name="InternalDestinationToMessageHeader"><xsl:with-param name="FolderOrMessage" select="(eaxs:Folder[eaxs:Message or eaxs:Folder[.//eaxs:Message]])[1]"></xsl:with-param></xsl:call-template>
 					<fo:bookmark-title><xsl:value-of select="count(eaxs:Folder[eaxs:Message or eaxs:Folder[.//eaxs:Message]])"/> Sub-folders</fo:bookmark-title>
 					<xsl:apply-templates select="eaxs:Folder[eaxs:Message or eaxs:Folder[.//eaxs:Message]]" mode="RenderBookmarks"><xsl:with-param name="topfolder">false</xsl:with-param></xsl:apply-templates>
@@ -421,16 +422,86 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Message" mode="RenderBookmarks">
-		<fo:bookmark>
+		<fo:bookmark starting-state="hide">
 			<xsl:call-template name="InternalDestinationToMessageHeader"/>
 			<fo:bookmark-title>
 				<xsl:value-of select="normalize-space(eaxs:Subject)"/>
 				<xsl:text>&#13;&#10;from </xsl:text><xsl:value-of select="normalize-space(eaxs:From)"/>
 				<xsl:text>&#13;&#10;on </xsl:text><xsl:value-of select="fn:format-dateTime(eaxs:OrigDate, '[FNn], [MNn] [D], [Y]')"/>
 			</fo:bookmark-title>
+			<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderBookmarks"/>
 		</fo:bookmark>			
 	</xsl:template>
 	
+	<xsl:template match="eaxs:MultiBody" mode="RenderBookmarks">
+		<xsl:choose>
+			<xsl:when test="fn:lower-case(eaxs:ContentType) = 'multipart/alternative'">
+				<xsl:for-each select="eaxs:SingleBody | eaxs:MultiBody"><!-- TODO: MissingBody -->
+					<xsl:sort select="position()" data-type="number" order="descending"/> <!-- alternatives have priority in descending order, so the last is displayed first -->
+					<xsl:apply-templates select="." mode="RenderBookmarks"/>
+				</xsl:for-each>
+			</xsl:when>
+			<xsl:otherwise>
+				<xsl:apply-templates select="eaxs:SingleBody | eaxs:MultiBody" mode="RenderBookmarks"/>				
+			</xsl:otherwise>
+		</xsl:choose>		
+	</xsl:template>
+	
+	<xsl:template match="eaxs:SingleBody" mode="RenderBookmarks">
+		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:DeliveryStatus" mode="RenderBookmarks"/>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:BodyContent" mode="RenderBookmarks">
+		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
+		<!-- only render content which is text and which is not an attachment -->
+		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with($ContentType,'text/')">
+			<xsl:if test="not(ancestor::eaxs:ChildMessage)">
+				<!-- the content of child messages do not have their own content set -->
+				<fo:bookmark>
+					<xsl:attribute name="internal-destination">
+						<xsl:call-template name="ContentSetId">
+							<xsl:with-param name="type">BodyRendering</xsl:with-param>
+							<xsl:with-param name="subtype"><xsl:value-of select="fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))"/></xsl:with-param>
+							<!-- There can be multiple bodies with the same MIME type which could result in duplicate ids, so need to add a counter number -->
+							<xsl:with-param name="number">
+								<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
+								<xsl:text>.</xsl:text>
+								<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
+							</xsl:with-param> 
+						</xsl:call-template>
+					</xsl:attribute>
+					<fo:bookmark-title><xsl:value-of select="../eaxs:ContentType"/></fo:bookmark-title>
+				</fo:bookmark>
+			</xsl:if>
+		</xsl:if>
+	</xsl:template>
+
+	<xsl:template match="eaxs:ExtBodyContent" mode="RenderBookmarks">
+		<!-- TODO -->
+	</xsl:template>
+
+	<xsl:template match="eaxs:DeliveryStatus" mode="RenderBookmarks">
+		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
+		<xsl:if test="not(ancestor::eaxs:ChildMessage)">
+			<!-- the content of child messages do not have their own content set -->
+			<fo:bookmark>
+				<xsl:attribute name="internal-destination">
+					<xsl:call-template name="ContentSetId">
+						<xsl:with-param name="type">BodyRendering</xsl:with-param>
+						<xsl:with-param name="subtype"><xsl:value-of select="fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))"/></xsl:with-param>
+						<!-- There can be multiple bodies with the same MIME type which could result in duplicate ids, so need to add a counter number -->
+						<xsl:with-param name="number">
+							<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
+							<xsl:text>.</xsl:text>
+							<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
+						</xsl:with-param> 
+					</xsl:call-template>
+				</xsl:attribute>
+				<fo:bookmark-title><xsl:value-of select="../eaxs:ContentType"/></fo:bookmark-title>
+			</fo:bookmark>
+		</xsl:if>
+	</xsl:template>
+
 	<xsl:template name="declarations">
 		<xsl:if test="$fo-processor='fop'">
 			<fo:declarations>
@@ -1097,10 +1168,10 @@
 	
 	<xsl:template match="eaxs:SingleBody" mode="RenderContent">
 		<!-- only render child messages if they contain plain text or html content -->
-		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:ChildMessage[.//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:ContentType))='text/plain' or fn:lower-case(normalize-space(eaxs:ContentType)) = 'text/html']] | eaxs:DeliveryStatus"/>
+		<xsl:apply-templates select="eaxs:BodyContent | eaxs:ExtBodyContent | eaxs:ChildMessage[.//eaxs:SingleBody[fn:lower-case(normalize-space(eaxs:ContentType))='text/plain' or fn:lower-case(normalize-space(eaxs:ContentType)) = 'text/html']] | eaxs:DeliveryStatus" mode="RenderContent"/>
 	</xsl:template>
 	
-	<xsl:template match="eaxs:BodyContent">
+	<xsl:template match="eaxs:BodyContent" mode="RenderContent">
 		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
 		<!-- only render content which is text and which is not an attachment -->
 		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with($ContentType,'text/')">
@@ -1110,7 +1181,7 @@
 					<xsl:call-template name="BeginContentSet">
 						<xsl:with-param name="type">BodyRendering</xsl:with-param>
 						<xsl:with-param name="subtype"><xsl:value-of select="fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))"/></xsl:with-param>
-						<!-- TODO:  There can be multiple bodies with the same MIME type which could result in duplicate ids -->
+						<!-- There can be multiple bodies with the same MIME type which could result in duplicate ids, so need to add a counter number -->
 						<xsl:with-param name="number">
 							<xsl:value-of select="ancestor::eaxs:Message/eaxs:LocalId"/>
 							<xsl:text>.</xsl:text>
@@ -1125,11 +1196,11 @@
 		</xsl:if>
 	</xsl:template>
 	
-	<xsl:template match="eaxs:ExtBodyContent">
+	<xsl:template match="eaxs:ExtBodyContent" mode="RenderContent">
 		<!-- TODO -->
 	</xsl:template>
 	
-	<xsl:template match="eaxs:ChildMessage">
+	<xsl:template match="eaxs:ChildMessage" mode="RenderContent">
 		<fo:block xsl:use-attribute-sets="child-message">
 			<xsl:if test="count(ancestor::eaxs:ChildMessage) > 0">
 				<xsl:call-template name="hr"/>
@@ -1145,7 +1216,7 @@
 		</fo:block>
 	</xsl:template>
 	
-	<xsl:template match="eaxs:DeliveryStatus">
+	<xsl:template match="eaxs:DeliveryStatus" mode="RenderContent">
 		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
 		<fo:block xsl:use-attribute-sets="delivery-status">
 			<xsl:if test="../eaxs:ContentLanguage">

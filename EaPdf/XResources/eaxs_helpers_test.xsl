@@ -7,8 +7,6 @@
     xmlns:eaxs="https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"
     >
 
-    <xsl:include href="eaxs_mime_helpers.xsl"/>
-
     <xsl:param name="test-helpers">false</xsl:param>
     
     <xsl:template name="test-helpers">
