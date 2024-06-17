@@ -536,8 +536,12 @@ namespace UIUCLibrary.TestEaPdf
                         ret = false;
                     }
 
-                    if(pdfmailidConformance.Length == 2 && pdfmailidConformance[1..2] != EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_ISOLATED)
+                    string[] conformanceLevels = { EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_MULTIPLE, EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_MULTIPLE_ISOLATED, EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE, EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE_ISOLATED };
+                    //NOTE: This tool does not support 'c' or 'ci' conformance levels
+                    if(!conformanceLevels.Contains(pdfmailidConformance))
                     {
+                        logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be one of: '{string.Join("','", conformanceLevels)}'");
+                        ret = false;
                     }
                     if (messageCount <= 1 && !pdfmailidConformance.StartsWith(EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE))
                     {

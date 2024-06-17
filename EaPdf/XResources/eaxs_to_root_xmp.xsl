@@ -20,9 +20,14 @@
 	<xsl:variable name="pdf_a_conf_level_values" select="('A','B','U')"/>	
 	<xsl:variable name="pdf_a_conf_level_norm" select="fn:upper-case(normalize-space($pdf_a_conf_level))"/>
 	
-	<xsl:param name="pdfmailid_version">1</xsl:param>
-	<xsl:param name="pdfmailid_rev">2024</xsl:param>
-	<xsl:param name="pdfmailid_conformance">m</xsl:param>
+	<xsl:variable name="pdfmailid_version">1</xsl:variable>
+	<xsl:variable name="pdfmailid_rev">2024</xsl:variable>
+	<xsl:param name="pdfmailid_conformance">
+		<xsl:choose>
+			<xsl:when test="count(//eaxs:Message) &lt;= 1">s</xsl:when>
+			<xsl:otherwise>m</xsl:otherwise>
+		</xsl:choose>
+	</xsl:param>
 	<xsl:variable name="pdfmailid_conformance_values" select="('s', 'si', 'm', 'mi', 'c', 'ci')"/>
 	<xsl:variable name="pdfmailid_conformance_norm" select="fn:lower-case(normalize-space($pdfmailid_conformance))"/>
 	

@@ -262,7 +262,7 @@ namespace UIUCLibrary.EaPdf
 #endif
 
             //Do some post processing to add metadata, cleanup attachments, etc.
-            PostProcessPdf(eaxsFilePath, pdfFilePath, complexScripts, messageCount, prevPdfFilePath, nextPdfFilePath);
+            PostProcessPdf(eaxsFilePath, pdfFilePath, complexScripts, prevPdfFilePath, nextPdfFilePath);
 
             if (!string.IsNullOrWhiteSpace(continuedIn))
             {
@@ -271,12 +271,12 @@ namespace UIUCLibrary.EaPdf
         }
 
 
-        private void PostProcessPdf(string eaxsFilePath, string pdfFilePath, bool complexScripts, int messageCount, string prevPdfFilePath, string nextPdfFilePath)
+        private void PostProcessPdf(string eaxsFilePath, string pdfFilePath, bool complexScripts, string prevPdfFilePath, string nextPdfFilePath)
         {
             var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
             var dpartRoot = GetXmpMetadataForMessages(eaxsFilePath);
-            var docXmp = GetRootXmpForAccount(eaxsFilePath, complexScripts, messageCount);
+            var docXmp = GetRootXmpForAccount(eaxsFilePath, complexScripts);
 
             //add docXmp to the DPart root node
             var metaXml = new XmlDocument();
@@ -646,7 +646,7 @@ namespace UIUCLibrary.EaPdf
             return ret;
         }
 
-        private string GetRootXmpForAccount(string eaxsFilePath, bool complexScripts, int messageCount)
+        private string GetRootXmpForAccount(string eaxsFilePath, bool complexScripts)
         {
             string ret;
 
@@ -657,18 +657,11 @@ namespace UIUCLibrary.EaPdf
                 pdfaConfLvl = PDFAID_CONFORMANCE_UNICODE; //FOP does not support full accessability for complex scripts, so use PDF/A-3U
             }
 
-            string pdfmailidConformance = PDFMAILID_CONFORMANCE_MULTIPLE; //m
-            if ((messageCount <= 1))
-            {
-                pdfmailidConformance = PDFMAILID_CONFORMANCE_SINGLE; //s
-            }
-
             Dictionary<string, object> parms = new()
             {
                 { "creator", XmpCreatorTool },
                 { "fo-processor-version", foProc },
-                { "pdf_a_conf_level", pdfaConfLvl },
-                { "pdfmailid_conformance", pdfmailidConformance }
+                { "pdf_a_conf_level", pdfaConfLvl }
             };
 
 
