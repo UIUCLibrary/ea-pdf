@@ -1,3 +1,4 @@
+using AngleSharp.Text;
 using Extensions.Logging.ListOfString;
 using iTextSharp.text.pdf;
 using Microsoft.Extensions.Logging;
@@ -482,78 +483,95 @@ namespace UIUCLibrary.TestEaPdf
                     ret = false;
                 }
 
-                var pdfaidConformance = xmpDoc.SelectSingleNode("//pdfaid:conformance", xmlns)?.InnerText ?? "";
-                var pdfaidPart = xmpDoc.SelectSingleNode("//pdfaid:part", xmlns)?.InnerText ?? "";
-
-                if (string.IsNullOrWhiteSpace(pdfaidConformance) || string.IsNullOrWhiteSpace(pdfaidPart))
+                if (Enum.TryParse(xmpDoc.SelectSingleNode("//pdfaid:conformance", xmlns)?.InnerText, out PdfAIdConformance pdfaidConformance))
                 {
-                    logger?.LogDebug("PDF/A identifying metadata is missing");
-                    ret = false;
+                    var pdfaidPart = xmpDoc.SelectSingleNode("//pdfaid:part", xmlns)?.InnerText ?? "";
+                    if (string.IsNullOrWhiteSpace(pdfaidPart))
+                    {
+                        logger?.LogDebug("PDF/A identifying part is missing");
+                        ret = false;
+                    }
+                    else
+                    {
+                        if (pdfaidConformance != PdfAIdConformance.A && pdfaidConformance != PdfAIdConformance.U)
+                        {
+                            logger?.LogDebug($"PDF/A conformance is {pdfaidConformance}.  It must be either {PdfAIdConformance.A} or {PdfAIdConformance.U}");
+                            ret = false;
+                        }
+
+                        if (!pdfaidPart.Equals("3"))
+                        {
+                            logger?.LogDebug($"PDF/A part is {pdfaidPart}.  It must be 3");
+                            ret = false;
+                        }
+
+                    }
                 }
                 else
                 {
-                    if (!pdfaidConformance.Equals(EaxsToEaPdfProcessor.PDFAID_CONFORMANCE_ACCESSIBLE) && !pdfaidConformance.Equals(EaxsToEaPdfProcessor.PDFAID_CONFORMANCE_UNICODE))
-                    {
-                        logger?.LogDebug($"PDF/A conformance is {pdfaidConformance}.  It must be either {EaxsToEaPdfProcessor.PDFAID_CONFORMANCE_ACCESSIBLE} or {EaxsToEaPdfProcessor.PDFAID_CONFORMANCE_UNICODE}");
-                        ret = false;
-                    }
-
-                    if (!pdfaidPart.Equals("3"))
-                    {
-                        logger?.LogDebug($"PDF/A part is {pdfaidPart}.  It must be 3");
-                        ret = false;
-                    }
-
+                    logger?.LogDebug("PDF/A identifying conformance level is missing");
+                    ret = false;
                 }
 
-                var pdfmailidVersion = xmpDoc.SelectSingleNode("//pdfmailid:version", xmlns)?.InnerText ?? "";
-                var pdfmailidRev = xmpDoc.SelectSingleNode("//pdfmailid:rev", xmlns)?.InnerText ?? "";
-                var pdfmailidConformance = xmpDoc.SelectSingleNode("//pdfmailid:conformance", xmlns)?.InnerText ?? "";
-                if (string.IsNullOrWhiteSpace(pdfmailidVersion) || string.IsNullOrWhiteSpace(pdfmailidRev) || string.IsNullOrWhiteSpace(pdfmailidConformance))
+
+
+                if (Enum.TryParse(xmpDoc.SelectSingleNode("//pdfmailid:conformance", xmlns)?.InnerText, out PdfMailIdConformance pdfmailidConformance))
                 {
-                    logger?.LogDebug("EA-PDF identifying metadata is missing");
-                    ret = false;
+                    var pdfmailidVersion = xmpDoc.SelectSingleNode("//pdfmailid:version", xmlns)?.InnerText ?? "";
+                    var pdfmailidRev = xmpDoc.SelectSingleNode("//pdfmailid:rev", xmlns)?.InnerText ?? "";
+                    if (string.IsNullOrWhiteSpace(pdfmailidVersion) || string.IsNullOrWhiteSpace(pdfmailidRev) )
+                    {
+                        logger?.LogDebug("EA-PDF identifying metadata (version or rev) is missing");
+                        ret = false;
+                    }
+                    else
+                    {
+                        if (!pdfmailidVersion.Equals("1"))
+                        {
+                            logger?.LogDebug($"EA-PDF version is {pdfmailidVersion}.  It must be 1.");
+                            ret = false;
+                        }
+
+                        if (!pdfmailidRev.Equals("2024"))
+                        {
+                            logger?.LogDebug($"PDF/A revision is {pdfmailidRev}.  It must be 2024.");
+                            ret = false;
+                        }
+
+                        //get the number of email messages in the metadata
+                        var messageCount = xmpDoc.SelectNodes("//pdfmailmeta:email/rdf:Seq/rdf:li", xmlns)?.Count ?? 0;
+                        if (messageCount == 0)
+                        {
+                            logger?.LogDebug("No email messages found in the metadata");
+                            ret = false;
+                        }
+
+                        PdfMailIdConformance[] conformanceLevels = { PdfMailIdConformance.s, PdfMailIdConformance.si, PdfMailIdConformance.m, PdfMailIdConformance.mi };
+                        //NOTE: This tool does not support 'c' or 'ci' conformance levels
+                        if (!conformanceLevels.Contains(pdfmailidConformance))
+                        {
+                            logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be one of: '{string.Join("','", conformanceLevels)}'");
+                            ret = false;
+                        }
+                        if (messageCount <= 1 && pdfmailidConformance != PdfMailIdConformance.s && pdfmailidConformance != PdfMailIdConformance.si)
+                        {
+                            logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be {PdfMailIdConformance.s} if there is a single messages in the PDF.");
+                            ret = false;
+                        }
+                        if (messageCount > 1 && pdfmailidConformance != PdfMailIdConformance.m && pdfmailidConformance != PdfMailIdConformance.mi)
+                        {
+                            logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be {PdfMailIdConformance.m} if there are multiple messages in the PDF.");
+                            ret = false;
+                        }
+                    }
+
                 }
                 else
                 {
-                    if (!pdfmailidVersion.Equals("1"))
-                    {
-                        logger?.LogDebug($"EA-PDF version is {pdfmailidVersion}.  It must be 1.");
-                        ret = false;
-                    }
-
-                    if (!pdfmailidRev.Equals("2024"))
-                    {
-                        logger?.LogDebug($"PDF/A revision is {pdfmailidRev}.  It must be 2024.");
-                        ret = false;
-                    }
-
-                    //get the number of email messages in the metadata
-                    var messageCount = xmpDoc.SelectNodes("//pdfmailmeta:Email", xmlns)?.Count ?? 0;
-                    if (messageCount == 0)
-                    {
-                        logger?.LogDebug("No email messages found in the metadata");
-                        ret = false;
-                    }
-
-                    string[] conformanceLevels = { EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_MULTIPLE, EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_MULTIPLE_ISOLATED, EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE, EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE_ISOLATED };
-                    //NOTE: This tool does not support 'c' or 'ci' conformance levels
-                    if(!conformanceLevels.Contains(pdfmailidConformance))
-                    {
-                        logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be one of: '{string.Join("','", conformanceLevels)}'");
-                        ret = false;
-                    }
-                    if (messageCount <= 1 && !pdfmailidConformance.StartsWith(EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE))
-                    {
-                        logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be {EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_SINGLE} if there is a single messages in the PDF.");
-                        ret = false;
-                    }
-                    if (messageCount > 1 && !pdfmailidConformance.StartsWith(EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_MULTIPLE))
-                    {
-                        logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be {EaxsToEaPdfProcessor.PDFMAILID_CONFORMANCE_MULTIPLE} if there are multiple messages in the PDF.");
-                        ret = false;
-                    }
+                    logger?.LogDebug("EA-PDF identifying conformance level is missing");
+                    ret = false;
                 }
+
 
             }
 

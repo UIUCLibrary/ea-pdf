@@ -6,19 +6,19 @@ using UIUCLibrary.EaPdf.Helpers.Pdf;
 
 namespace UIUCLibrary.EaPdf
 {
+    public enum PdfMailIdConformance
+    {
+        s, m, c, si, mi, ci
+    }
+
+    public enum PdfAIdConformance
+    {
+        A, B, U
+    }
+
     public class EaxsToEaPdfProcessor
     {
-        public const string PDFMAILID_CONFORMANCE_SINGLE = "s";
-        public const string PDFMAILID_CONFORMANCE_MULTIPLE = "m";
-        public const string PDFMAILID_CONFORMANCE_CONTAINER = "c";
-        public const string PDFMAILID_CONFORMANCE_ISOLATED = "i";
-        public const string PDFMAILID_CONFORMANCE_SINGLE_ISOLATED = PDFMAILID_CONFORMANCE_SINGLE + PDFMAILID_CONFORMANCE_ISOLATED;
-        public const string PDFMAILID_CONFORMANCE_MULTIPLE_ISOLATED = PDFMAILID_CONFORMANCE_MULTIPLE + PDFMAILID_CONFORMANCE_ISOLATED;
-        public const string PDFMAILID_CONFORMANCE_CONTAINER_ISOLATED = PDFMAILID_CONFORMANCE_CONTAINER + PDFMAILID_CONFORMANCE_ISOLATED;
 
-        public const string PDFAID_CONFORMANCE_ACCESSIBLE = "A";
-        public const string PDFAID_CONFORMANCE_BASIC = "B";
-        public const string PDFAID_CONFORMANCE_UNICODE = "U";
 
         private readonly ILogger _logger;
         private readonly IXsltTransformer _xslt;
@@ -651,17 +651,17 @@ namespace UIUCLibrary.EaPdf
             string ret;
 
             var foProc = _xslfo.ProcessorVersion;
-            var pdfaConfLvl = PDFAID_CONFORMANCE_ACCESSIBLE; //PDF/A-3A
+            var pdfaConfLvl = PdfAIdConformance.A; //PDF/A-3A
             if (foProc.StartsWith("FOP", StringComparison.OrdinalIgnoreCase) && complexScripts)
             {
-                pdfaConfLvl = PDFAID_CONFORMANCE_UNICODE; //FOP does not support full accessability for complex scripts, so use PDF/A-3U
+                pdfaConfLvl = PdfAIdConformance.U; //FOP does not support full accessability for complex scripts, so use PDF/A-3U
             }
 
             Dictionary<string, object> parms = new()
             {
                 { "creator", XmpCreatorTool },
                 { "fo-processor-version", foProc },
-                { "pdf_a_conf_level", pdfaConfLvl }
+                { "pdf_a_conf_level", pdfaConfLvl.ToString() }
             };
 
 
