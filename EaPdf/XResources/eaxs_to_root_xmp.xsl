@@ -22,12 +22,12 @@
 	
 	<xsl:variable name="pdfmailid_version">1</xsl:variable>
 	<xsl:variable name="pdfmailid_rev">2024</xsl:variable>
-	<xsl:param name="pdfmailid_conformance">
+	<xsl:variable name="pdfmailid_conformance">
 		<xsl:choose>
 			<xsl:when test="count(//eaxs:Message) &lt;= 1">s</xsl:when>
 			<xsl:otherwise>m</xsl:otherwise>
 		</xsl:choose>
-	</xsl:param>
+	</xsl:variable>
 	<xsl:variable name="pdfmailid_conformance_values" select="('s', 'si', 'm', 'mi', 'c', 'ci')"/>
 	<xsl:variable name="pdfmailid_conformance_norm" select="fn:lower-case(normalize-space($pdfmailid_conformance))"/>
 	
@@ -54,9 +54,6 @@
 	<xsl:template match="/">
 		<xsl:if test="not($pdf_a_conf_level_norm = $pdf_a_conf_level_values)">
 			<xsl:message terminate="yes">ERROR: The 'pdf_a_conf_level' param must be one of ('A','B','U'); it was '<xsl:value-of select="$pdf_a_conf_level_norm"/>'.</xsl:message>
-		</xsl:if>		
-		<xsl:if test="not($pdfmailid_conformance_norm = $pdfmailid_conformance_values)">
-			<xsl:message terminate="yes">ERROR: The 'pdfmailid_conformance' param must be one of ('s', 'si', 'm', 'mi', 'c', 'ci'); it was '<xsl:value-of select="$pdfmailid_conformance_norm"/>'.</xsl:message>
 		</xsl:if>		
 		<xsl:processing-instruction name="xpacket">begin="" id="W5M0MpCehiHzreSzNTczkc9d" </xsl:processing-instruction><xsl:text xml:space="preserve">
 </xsl:text>

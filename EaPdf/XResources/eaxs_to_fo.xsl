@@ -60,6 +60,17 @@
 	<xsl:param name="ContinuedFrom"></xsl:param>
 	<xsl:param name="ContinuedIn"></xsl:param>
 	
+	<xsl:variable name="pdfmailid_conformance">
+		<xsl:choose>
+			<xsl:when test="count(//eaxs:Message) &lt;= 1">s</xsl:when>
+			<xsl:otherwise>m</xsl:otherwise>
+		</xsl:choose>
+	</xsl:variable>
+	<xsl:variable name="pdfmailid_conformance_values" select="('s', 'si', 'm', 'mi', 'c', 'ci')"/>
+	<xsl:variable name="pdfmailid_conformance_norm" select="fn:lower-case(normalize-space($pdfmailid_conformance))"/>
+
+	<xsl:variable name="HasAttachments" select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]"/>
+	
 	<xsl:template name="check-params">
 		<xsl:choose>
 			<xsl:when test="$fo-processor='fop'"/>
@@ -70,6 +81,9 @@
 				</xsl:message>
 			</xsl:otherwise>
 		</xsl:choose>
+		<xsl:if test="not($pdfmailid_conformance_norm = $pdfmailid_conformance_values)">
+			<xsl:message terminate="yes">ERROR: The 'pdfmailid_conformance' param must be one of ('s', 'si', 'm', 'mi', 'c', 'ci'); it was '<xsl:value-of select="$pdfmailid_conformance_norm"/>'.</xsl:message>
+		</xsl:if>		
 	</xsl:template>
 
 	<xsl:template match="/">
@@ -81,9 +95,11 @@
 		<xsl:if test="$fo-processor='xep'">
 			<!-- Add ICC color profile -->
 			<xsl:processing-instruction name="xep-pdf-icc-profile">url(<xsl:value-of select="$icc-profile"/>)</xsl:processing-instruction>
+			<!-- XEP doesn't seem to have support for /ViewerPreferences/NonFullScreenPageMode/UseOutlines or PageMode/UseAttachments, so will need to set these in the post-processing -->
 			<xsl:processing-instruction name="xep-pdf-view-mode">show-bookmarks</xsl:processing-instruction>
+			<xsl:processing-instruction name="xep-pdf-viewer-preferences">display-document-title</xsl:processing-instruction>
+			<!-- need to keep unused destnations for post-processing to work -->
 			<xsl:processing-instruction name="xep-pdf-drop-unused-destinations">false</xsl:processing-instruction>
-			<!-- XEP doesn't seem to have support for /ViewerPreferences/NonFullScreenPageMode/UseOutlines -->
 		</xsl:if>
 		
 		<fo:root>
@@ -164,7 +180,6 @@
 	
 	<xsl:template name="AttachmentsList">
 		<xsl:variable name="font-size" select="'95%'"/>
-		<xsl:variable name="HasAttachments" select="//eaxs:SingleBody/eaxs:ExtBodyContent | //eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]"/>
 		
 		<fo:block>
 			<xsl:call-template name="tag-Div"/>
@@ -506,8 +521,17 @@
 		<xsl:if test="$fo-processor='fop'">
 			<fo:declarations>
 				<pdf:catalog>
-					<pdf:name key="PageMode">UseOutlines</pdf:name>
-					<!-- TODO:  Maybe set /ViewerPreferences/NonFullScreenPageMode/UseOutlines -->
+					<!-- Set PageMode and /ViewerPreferences/NonFullScreenPageMode/UseOutlines -->
+					<pdf:name key="PageMode">
+						<xsl:choose>
+							<xsl:when test="$pdfmailid_conformance_norm='s' and $HasAttachments">UseAttachments</xsl:when>
+							<xsl:otherwise>UseOutlines</xsl:otherwise>
+						</xsl:choose>
+					</pdf:name>
+					<pdf:dictionary type="normal" key="ViewerPreferences">
+						<pdf:name key="NonFullScreenPageMode">UseOutlines</pdf:name>
+						<pdf:boolean key="DisplayDocTitle">true</pdf:boolean>
+					</pdf:dictionary>
 				</pdf:catalog>
 				<xsl:call-template name="declarations-attachments"/>
 				<xsl:if test="fn:lower-case(normalize-space($generate-xmp)) = 'true'">
@@ -598,7 +622,7 @@
 				<xsl:with-param name="type">FrontMatter</xsl:with-param>
 			</xsl:call-template>
 			
-			<fo:block xsl:use-attribute-sets="h1" ><xsl:call-template name="tag-H1"/>PDF Email Archive (PDF/mail-1m)</fo:block>
+			<fo:block xsl:use-attribute-sets="h1" ><xsl:call-template name="tag-H1"/>PDF Email Archive (PDF/mail-1<xsl:value-of select="$pdfmailid_conformance_norm"/>)</fo:block>
 			
 			<fo:list-block>
 				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">

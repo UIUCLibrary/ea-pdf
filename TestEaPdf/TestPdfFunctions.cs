@@ -431,7 +431,16 @@ namespace UIUCLibrary.TestEaPdf
 
             using var reader = new PdfReader(pdfFile);
 
-            if (!reader.Catalog.Contains(new PdfName("DPartRoot")))
+            var catalog = reader.Catalog;
+
+            if (catalog == null) 
+            {
+                logger?.LogDebug("PDF Catalog is missing; no further tests were run");
+                ret = false;
+                return false; // no use even continuing if this is missing
+            }
+
+            if (!catalog.Contains(new PdfName("DPartRoot")))
             {
                 logger?.LogDebug("Catalog is missing DPartRoot");
                 ret = false;
@@ -513,8 +522,6 @@ namespace UIUCLibrary.TestEaPdf
                     ret = false;
                 }
 
-
-
                 if (Enum.TryParse(xmpDoc.SelectSingleNode("//pdfmailid:conformance", xmlns)?.InnerText, out PdfMailIdConformance pdfmailidConformance))
                 {
                     var pdfmailidVersion = xmpDoc.SelectSingleNode("//pdfmailid:version", xmlns)?.InnerText ?? "";
@@ -561,6 +568,53 @@ namespace UIUCLibrary.TestEaPdf
                         if (messageCount > 1 && pdfmailidConformance != PdfMailIdConformance.m && pdfmailidConformance != PdfMailIdConformance.mi)
                         {
                             logger?.LogDebug($"EA-PDF conformance is {pdfmailidConformance}.  It must be {PdfMailIdConformance.m} if there are multiple messages in the PDF.");
+                            ret = false;
+                        }
+                    }
+
+                    //get the count of attachments in the PDF
+                    var pdfAttachmentCount = xmpDoc.SelectNodes("//pdfmailmeta:attachments/rdf:Seq/rdf:li", xmlns)?.Count ?? 0;
+
+                    var pageMode = catalog.GetAsName(PdfName.Pagemode);
+                    if(pageMode == null )
+                    {
+                        logger?.LogDebug("PageMode is not set");
+                        ret = false;
+                    }
+                    else if((pdfmailidConformance == PdfMailIdConformance.s || pdfmailidConformance == PdfMailIdConformance.si) && pdfAttachmentCount > 0 && !pageMode.ToString().Equals("/UseAttachments"))
+                    {
+                        logger?.LogDebug("Conformance level is s and there are attachments, but PageMode is not set to /UseAttachments");
+                        ret = false;
+                    }
+                    else if ((pdfmailidConformance == PdfMailIdConformance.m || pdfmailidConformance == PdfMailIdConformance.mi) && !pageMode.ToString().Equals("/UseOutlines"))
+                    {
+                        logger?.LogDebug("Conformance level is m, but PageMode is not set to /UseOutlines");
+                        ret = false;
+                    }
+                    else if ((pdfmailidConformance == PdfMailIdConformance.s || pdfmailidConformance == PdfMailIdConformance.si) && pdfAttachmentCount == 0 && !pageMode.ToString().Equals("/UseOutlines"))
+                    {
+                        logger?.LogDebug("Conformance level is s and there are no attachments, but PageMode is not set to /UseOutlines");
+                        ret = false;
+                    }
+
+                    var viewerPreferences = catalog.GetAsDict(PdfName.Viewerpreferences);
+                    if(viewerPreferences == null)
+                    {
+                        logger?.LogDebug("ViewerPreferences is not set");
+                        ret = false;
+                    }
+                    else
+                    {
+                        var displayDocTitle = viewerPreferences.GetAsBoolean(PdfName.Displaydoctitle);
+                        if (displayDocTitle == null || !displayDocTitle.BooleanValue)
+                        {
+                            logger?.LogDebug("DisplayDocTitle is not set to true");
+                            ret = false;
+                        }
+                        var nonFullScreenPageMode = viewerPreferences.GetAsName(PdfName.Nonfullscreenpagemode);
+                        if (nonFullScreenPageMode == null || !nonFullScreenPageMode.ToString().Equals("/UseOutlines"))
+                        {
+                            logger?.LogDebug("NonFullScreenPageMode is not set to /UseOutlines");
                             ret = false;
                         }
                     }

@@ -284,6 +284,16 @@ namespace UIUCLibrary.EaPdf
             metaXml.LoadXml(docXmp);
             dpartRoot.MetadataXml = metaXml;
 
+            //get the PDF/mail conformance level
+            if (!Enum.TryParse(metaXml.SelectSingleNode("//pdfmailid:conformance", dpartRoot.MetadataNamespaces)?.InnerText, out PdfMailIdConformance pdfMailConformance))
+            {
+                pdfMailConformance = PdfMailIdConformance.m;
+                _logger.LogWarning("PDF/mail-1 conformance level not found in XMP metadata, using default value '{pdfMailConformance}'.", pdfMailConformance);
+            }
+
+            //get the count of attachments in the PDF
+            var pdfAttachmentCount = metaXml.SelectNodes("//pdfmailmeta:attachments/rdf:Seq/rdf:li", dpartRoot.MetadataNamespaces)?.Count ?? 0;
+
             //get list of all embedded files in the PDF
             var embeddedFiles = GetEmbeddedFiles(eaxsFilePath);
 
@@ -297,6 +307,8 @@ namespace UIUCLibrary.EaPdf
 
             enhancer.FixGotoRLinks();
 
+            enhancer.SetViewerPreferences(pdfMailConformance, pdfAttachmentCount > 0);
+
             //dispose of the enhancer to make sure files are closed
             enhancer.Dispose();
 
@@ -309,7 +321,7 @@ namespace UIUCLibrary.EaPdf
             _logger.LogInformation("Postprocessing: Original PDF file size: {originalSize} bytes, New PDF file size: {newSize} bytes, Size difference: {sizeDiffPercent:0.00}%", pdfFi.Length, tempFi.Length, sizeDiffPercent);
             
             //Sanity check
-            if (tempFi.Exists) 
+            if (tempFi.Exists)
             {
                 File.Move(tempOutFilePath, pdfFilePath, true);
             }

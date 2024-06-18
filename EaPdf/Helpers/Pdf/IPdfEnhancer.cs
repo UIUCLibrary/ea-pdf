@@ -20,6 +20,13 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         public void NormalizeAttachments(List<EmbeddedFile> embeddedFiles);
 
         /// <summary>
+        /// Set the PageMode and ViewerPreferences based on the conformance level and whether the PDF has attachments
+        /// </summary>
+        /// <param name="conformance"></param>
+        /// <param name="hasAttachments"></param>
+        public void SetViewerPreferences(PdfMailIdConformance conformance, bool hasAttachments);
+
+        /// <summary>
         /// Return a dictionary of the PDF Info metadata
         /// </summary>
         public Dictionary<string, string> PdfInfo { get; }

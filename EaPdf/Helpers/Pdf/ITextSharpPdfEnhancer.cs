@@ -87,6 +87,34 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
+        public void SetViewerPreferences(PdfMailIdConformance conformanceLevel, bool hasAttachments)
+        {
+            //this is mostly for XEP, because it can't set the viewer preferences Useattachments or Nonfullscreenpagemode
+
+            _logger.LogTrace("ITextSharpPdfEnhancer: SetViewerPreferences");
+            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
+
+            //set the PageMode 
+            catalog.Put(PdfName.Pagemode, PdfName.Useoutlines);
+            if((conformanceLevel == PdfMailIdConformance.s || conformanceLevel == PdfMailIdConformance.si) && hasAttachments)
+            {
+                //if single and has attachments set to UseAttachments
+                catalog.Put(PdfName.Pagemode, PdfName.Useattachments);
+            }
+
+
+            var viewerPreferences = catalog.GetAsDict(PdfName.Viewerpreferences);
+            if(viewerPreferences == null)
+            {
+                viewerPreferences = new PdfDictionary();
+                catalog.Put(PdfName.Viewerpreferences, viewerPreferences);
+            }
+
+            viewerPreferences.Put(PdfName.Displaydoctitle, new PdfBoolean(true));
+            viewerPreferences.Put(PdfName.Nonfullscreenpagemode, PdfName.Useoutlines);
+
+        }
+
         public void RemoveUnnecessaryElements()
         {
             _logger.LogTrace("ITextSharpPdfEnhancer: RemoveUnnecessaryElements");
@@ -638,7 +666,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     {
                         keywords.Add("EA-PDF");
                     }
-                    dpartNode.UpdateElementNodeText("/*/*/*/pdf:Keywords", string.Join(";",keywords));
+                    dpartNode.UpdateElementNodeText("/*/*/*/pdf:Keywords", string.Join(";", keywords));
                 }
 
 
@@ -770,7 +798,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 }
                 else
                 {
-                    if(pageStart == null && pageEnd == null)
+                    if (pageStart == null && pageEnd == null)
                         throw new Exception($"Start and end page for message (Named Destinations: {dpartNode.Id}, {dpartNode.NextLeafNode?.Id}) were not found.");
                     else if (pageStart == null)
                         throw new Exception($"Start page for message (Named Destination: {dpartNode.Id}) was not found.");
@@ -803,7 +831,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             if (list1 == null)
                 list1 = new List<string>();
 
-            if(list2 == null)
+            if (list2 == null)
                 list2 = new List<string>();
 
             var ret = list1.Union(list2).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
