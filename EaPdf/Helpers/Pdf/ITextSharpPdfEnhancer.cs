@@ -848,8 +848,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         {
             switch (kvp.Key)
             {
-                case "ContentSetType":
-                case "Subtype":
+                case "Mail_ContentSetType":
+                case "Mail_Subtype":
                     pdfDict.Put(new PdfName(kvp.Key), new PdfName(kvp.Value));
                     break;
 
