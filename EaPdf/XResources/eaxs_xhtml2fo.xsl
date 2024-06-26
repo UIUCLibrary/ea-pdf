@@ -1035,8 +1035,14 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
   </xsl:template>
   
   <!-- Shortcuts for tagging elements -->
+  <xsl:template name="tag-Document">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">Document</xsl:with-param></xsl:call-template>
+  </xsl:template>
   <xsl:template name="tag-Sect">
     <xsl:call-template name="tag-element"><xsl:with-param name="tag">Sect</xsl:with-param></xsl:call-template>
+  </xsl:template>
+  <xsl:template name="tag-Part">
+    <xsl:call-template name="tag-element"><xsl:with-param name="tag">Part</xsl:with-param></xsl:call-template>
   </xsl:template>
   <xsl:template name="tag-Art">
     <xsl:call-template name="tag-element"><xsl:with-param name="tag">Art</xsl:with-param></xsl:call-template>

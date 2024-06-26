@@ -41,7 +41,8 @@ Besides the above, the application also requires the following dependencies to b
 
   - The XEP processor is a commercial product and can be downloaded from [RenderX](https://www.renderx.com/download/).  If you 
     want to use the XEP processor you will need to purchase a license from RenderX.  The 
-    program has only been tested with free trial edition of XEP 4.30.
+    program has only been tested with free trial edition of XEP 4.30.  Note that the tagging features of XEP are not as 
+    robust as FOP, so the output will not be fully compliant with the logical structure (tagged PDF) requirements of the EA-PDF specification.
 
   - Only one of the above two FO processors is required, but you must configure the application to use the 
     correct processor.  The configuration settings are described below.

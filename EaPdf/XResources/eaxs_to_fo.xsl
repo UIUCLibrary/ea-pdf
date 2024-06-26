@@ -120,29 +120,14 @@
 			
 			<xsl:call-template name="bookmarks"/>
 			
-			<fo:page-sequence master-reference="message-page" xml:lang="en">
-				<xsl:call-template name="static-content"/>
-				<fo:flow flow-name="xsl-region-body">
-					<xsl:call-template name="FrontMatter"/>
-				</fo:flow>
-			</fo:page-sequence>
+			<xsl:call-template name="FrontMatter"/>
 			
 			<xsl:for-each select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]">
-				<fo:page-sequence master-reference="message-page">
-					<xsl:call-template name="static-content"/>
-					<fo:flow flow-name="xsl-region-body">
-						<xsl:apply-templates select="." mode="RenderContent"/>
-					</fo:flow>
-				</fo:page-sequence>
+				<xsl:apply-templates select="." mode="RenderContent"/>
 			</xsl:for-each>
 			
 			<xsl:if test="$list-of-attachments='true'">
-				<fo:page-sequence master-reference="message-page" xml:lang="en">
-					<xsl:call-template name="static-content"/>
-					<fo:flow flow-name="xsl-region-body">
-						<xsl:call-template name="AttachmentsList"/>
-					</fo:flow>
-				</fo:page-sequence>
+				<xsl:call-template name="AttachmentsList"/>
 			</xsl:if>
 			
 			<!-- TODO: Add a section which is the conversion report with info, warning, and error messages -->
@@ -181,8 +166,9 @@
 	<xsl:template name="AttachmentsList">
 		<xsl:variable name="font-size" select="'95%'"/>
 		
-		<fo:block>
-			<xsl:call-template name="tag-Div"/>
+		<fo:page-sequence master-reference="message-page" xml:lang="en"><xsl:call-template name="tag-Part"/>
+			<xsl:call-template name="static-content"/>
+			<fo:flow  flow-name="xsl-region-body"><xsl:call-template name="tag-Art"/>
 			<xsl:call-template name="BeginContentSet">
 				<xsl:with-param name="type">AttachmentList</xsl:with-param>
 			</xsl:call-template>
@@ -353,7 +339,9 @@
 				</fo:list-block>
 			</xsl:if>
 			
-		</fo:block>
+		</fo:flow>
+		</fo:page-sequence>
+		
 	</xsl:template>
 	
 	<!-- template for a 2-item list used for the attachments lists -->
@@ -616,112 +604,114 @@
 	</xsl:template>
 	
 	<xsl:template name="FrontMatter">
-		<fo:block>
-			<xsl:call-template name="tag-Div"/>
-			<xsl:call-template name="BeginContentSet">
-				<xsl:with-param name="type">FrontMatter</xsl:with-param>
-			</xsl:call-template>
-			
-			<fo:block xsl:use-attribute-sets="h1" ><xsl:call-template name="tag-H1"/>PDF Email Archive (PDF/mail-1<xsl:value-of select="$pdfmailid_conformance_norm"/>)</fo:block>
-			
-			<fo:list-block>
-				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-					<fo:list-item-label><fo:block>Created On: </fo:block></fo:list-item-label>
-					<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/></fo:block></fo:list-item-body>
-				</fo:list-item>
+		<fo:page-sequence master-reference="message-page" xml:lang="en"><xsl:call-template name="tag-Part"/>
+			<xsl:call-template name="static-content"/>
+			<fo:flow flow-name="xsl-region-body"><xsl:call-template name="tag-Art"/>
+				<xsl:call-template name="BeginContentSet">
+					<xsl:with-param name="type">FrontMatter</xsl:with-param>
+				</xsl:call-template>
 				
-				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-					<fo:list-item-label><fo:block>Created By: </fo:block></fo:list-item-label>
-					<fo:list-item-body start-indent="6em">
-						<fo:list-block>
-							<fo:list-item>
-								<fo:list-item-label><fo:block/></fo:list-item-label>
-								<fo:list-item-body><fo:block><xsl:value-of select="$creator"/></fo:block></fo:list-item-body>
-							</fo:list-item>
-							<fo:list-item>
-								<fo:list-item-label><fo:block/></fo:list-item-label>
-								<fo:list-item-body><fo:block><xsl:value-of select="$producer"/></fo:block></fo:list-item-body>
-							</fo:list-item>
-							<fo:list-item>
-								<fo:list-item-label><fo:block/></fo:list-item-label>
-								<fo:list-item-body><fo:block><xsl:value-of select="$enhancer"/></fo:block></fo:list-item-body>
-							</fo:list-item>
-						</fo:list-block>
-					</fo:list-item-body>
-				</fo:list-item>
+				<fo:block xsl:use-attribute-sets="h1" ><xsl:call-template name="tag-H1"/>PDF Email Archive (PDF/mail-1<xsl:value-of select="$pdfmailid_conformance_norm"/>)</fo:block>
 				
-				<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
-					<fo:list-item>
-						<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Accounts (<xsl:value-of select="count(/eaxs:Account/eaxs:EmailAddress)"/>): </fo:block></fo:list-item-label>
-						<fo:list-item-body>
-							<fo:list-block margin-top="2em" margin-left="1em">
-								<xsl:for-each select="/eaxs:Account/eaxs:EmailAddress">
-									<fo:list-item>
-										<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
-										<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><xsl:apply-templates/></fo:block></fo:list-item-body>
-									</fo:list-item>
-								</xsl:for-each>
+				<fo:list-block>
+					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+						<fo:list-item-label><fo:block>Created On: </fo:block></fo:list-item-label>
+						<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/></fo:block></fo:list-item-body>
+					</fo:list-item>
+					
+					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+						<fo:list-item-label><fo:block>Created By: </fo:block></fo:list-item-label>
+						<fo:list-item-body start-indent="6em">
+							<fo:list-block>
+								<fo:list-item>
+									<fo:list-item-label><fo:block/></fo:list-item-label>
+									<fo:list-item-body><fo:block><xsl:value-of select="$creator"/></fo:block></fo:list-item-body>
+								</fo:list-item>
+								<fo:list-item>
+									<fo:list-item-label><fo:block/></fo:list-item-label>
+									<fo:list-item-body><fo:block><xsl:value-of select="$producer"/></fo:block></fo:list-item-body>
+								</fo:list-item>
+								<fo:list-item>
+									<fo:list-item-label><fo:block/></fo:list-item-label>
+									<fo:list-item-body><fo:block><xsl:value-of select="$enhancer"/></fo:block></fo:list-item-body>
+								</fo:list-item>
 							</fo:list-block>
 						</fo:list-item-body>
 					</fo:list-item>
-				</xsl:if>
-				
-				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-					<fo:list-item-label><fo:block>Global Id: </fo:block></fo:list-item-label>
-					<fo:list-item-body start-indent="5em"><fo:block><xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block></fo:list-item-body>
-				</fo:list-item>
-				
-				<xsl:if test="$ContinuedIn or $ContinuedFrom">
-					<fo:list-item>
-						<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Multipart Archive: </fo:block></fo:list-item-label>
-						<fo:list-item-body>
-							<fo:list-block margin-top="2em" margin-left="1em">
-								<xsl:if test="$ContinuedFrom">
-									<fo:list-item>
-										<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
-										<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedFrom}')" show-destination="new">Previous: <xsl:value-of select="$ContinuedFrom"/></fo:basic-link></fo:block></fo:list-item-body>
-									</fo:list-item>
-								</xsl:if>
-								<xsl:if test="$ContinuedIn">
-									<fo:list-item>
-										<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
-										<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedIn}')" show-destination="new">Next: <xsl:value-of select="$ContinuedIn"/></fo:basic-link></fo:block></fo:list-item-body>
-									</fo:list-item>
-								</xsl:if>
-							</fo:list-block>
+					
+					<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
+						<fo:list-item>
+							<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Accounts (<xsl:value-of select="count(/eaxs:Account/eaxs:EmailAddress)"/>): </fo:block></fo:list-item-label>
+							<fo:list-item-body>
+								<fo:list-block margin-top="2em" margin-left="1em">
+									<xsl:for-each select="/eaxs:Account/eaxs:EmailAddress">
+										<fo:list-item>
+											<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
+											<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><xsl:apply-templates/></fo:block></fo:list-item-body>
+										</fo:list-item>
+									</xsl:for-each>
+								</fo:list-block>
+							</fo:list-item-body>
+						</fo:list-item>
+					</xsl:if>
+					
+					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+						<fo:list-item-label><fo:block>Global Id: </fo:block></fo:list-item-label>
+						<fo:list-item-body start-indent="5em"><fo:block><xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block></fo:list-item-body>
+					</fo:list-item>
+					
+					<xsl:if test="$ContinuedIn or $ContinuedFrom">
+						<fo:list-item>
+							<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Multipart Archive: </fo:block></fo:list-item-label>
+							<fo:list-item-body>
+								<fo:list-block margin-top="2em" margin-left="1em">
+									<xsl:if test="$ContinuedFrom">
+										<fo:list-item>
+											<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
+											<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedFrom}')" show-destination="new">Previous: <xsl:value-of select="$ContinuedFrom"/></fo:basic-link></fo:block></fo:list-item-body>
+										</fo:list-item>
+									</xsl:if>
+									<xsl:if test="$ContinuedIn">
+										<fo:list-item>
+											<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
+											<fo:list-item-body xsl:use-attribute-sets="h3-font" start-indent="body-start()"><fo:block><xsl:call-template name="tag-Span"/><fo:basic-link xsl:use-attribute-sets="a-link" external-destination="url('{$ContinuedIn}')" show-destination="new">Next: <xsl:value-of select="$ContinuedIn"/></fo:basic-link></fo:block></fo:list-item-body>
+										</fo:list-item>
+									</xsl:if>
+								</fo:list-block>
+							</fo:list-item-body>
+						</fo:list-item>
+					</xsl:if>
+					
+					<!-- QUESTION: Do not count child messages? -->
+					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+						<fo:list-item-label><fo:block>Message Count: </fo:block></fo:list-item-label>
+						<fo:list-item-body start-indent="8em"><fo:block><xsl:value-of select="count(//eaxs:Message)"/></fo:block></fo:list-item-body>
+					</fo:list-item>
+					
+					<!-- QUESTION: Only count distinct attachments, based on the hash? -->
+					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
+						<fo:list-item-label><fo:block>Attachment Count: </fo:block></fo:list-item-label>
+						<fo:list-item-body start-indent="9.5em">
+							<fo:block>
+								<xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/>
+							</fo:block>
 						</fo:list-item-body>
 					</fo:list-item>
-				</xsl:if>
+	
+					<fo:list-item>
+						<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Folders (<xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message or eaxs:Folder])"/>): </fo:block></fo:list-item-label>
+						<fo:list-item-body>
+							<fo:block margin-top="2em">
+								<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderToc"/>
+							</fo:block>
+						</fo:list-item-body>
+					</fo:list-item>
+					
+				</fo:list-block>
 				
-				<!-- QUESTION: Do not count child messages? -->
-				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-					<fo:list-item-label><fo:block>Message Count: </fo:block></fo:list-item-label>
-					<fo:list-item-body start-indent="8em"><fo:block><xsl:value-of select="count(//eaxs:Message)"/></fo:block></fo:list-item-body>
-				</fo:list-item>
-				
-				<!-- QUESTION: Only count distinct attachments, based on the hash? -->
-				<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-					<fo:list-item-label><fo:block>Attachment Count: </fo:block></fo:list-item-label>
-					<fo:list-item-body start-indent="9.5em">
-						<fo:block>
-							<xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/>
-						</fo:block>
-					</fo:list-item-body>
-				</fo:list-item>
 
-				<fo:list-item>
-					<fo:list-item-label  xsl:use-attribute-sets="h2-font h2-space"><fo:block>Folders (<xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message or eaxs:Folder])"/>): </fo:block></fo:list-item-label>
-					<fo:list-item-body>
-						<fo:block margin-top="2em">
-							<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderToc"/>
-						</fo:block>
-					</fo:list-item-body>
-				</fo:list-item>
-				
-				
-			</fo:list-block>
-			
-		</fo:block>
+			</fo:flow>
+		</fo:page-sequence>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Folder" mode="RenderToc">
@@ -805,21 +795,22 @@
 	<xsl:template match="eaxs:Folder" mode="RenderContent">
 		<xsl:apply-templates select="eaxs:Message" />
 		<xsl:for-each select="eaxs:Folder[eaxs:Message or eaxs:Folder]">
-			<fo:block><xsl:call-template name="tag-Sect"/>
-				<xsl:apply-templates select="." mode="RenderContent"/>	
-			</fo:block>
+			<xsl:apply-templates select="." mode="RenderContent"/>	
 		</xsl:for-each>
 	</xsl:template>
 
 	<xsl:template match="eaxs:Message">
-		<fo:block><xsl:call-template name="tag-Art"/>
-			<xsl:call-template name="MessageHeaderTocAndContent"/>
-		</fo:block>
+		<fo:page-sequence master-reference="message-page"><xsl:call-template name="tag-Document"/>
+			<xsl:call-template name="static-content"/>
+			<fo:flow flow-name="xsl-region-body"><xsl:call-template name="tag-Part"/>
+				<xsl:call-template name="MessageHeaderTocAndContent"/>				
+			</fo:flow>
+		</fo:page-sequence>
 	</xsl:template>
 	
 	<xsl:template name="MessageHeaderTocAndContent">
 		<xsl:param name="RenderToc">true</xsl:param>
-		<fo:block>
+		<fo:block><xsl:call-template name="tag-Art"/>
 			<xsl:if test="$RenderToc='true'">
 				<xsl:call-template name="BeginContentSet">
 					<xsl:with-param name="type" select="'EmailHeaderRendering'"/>
@@ -850,8 +841,7 @@
 	</xsl:template>
 	
 	<xsl:template name="AbbreviatedHeader">
-		<fo:block xml:lang="en" xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black">
-			<xsl:call-template name="tag-H3"/>
+		<fo:block xml:lang="en" xsl:use-attribute-sets="h3" padding="0.25em" border="1.5pt solid black"><xsl:call-template name="tag-H3"/>
 			<xsl:call-template name="FolderHeader"/> &gt; 
 			Message <xsl:value-of select="ancestor::eaxs:Message[1]/eaxs:LocalId"/> &gt;
 			<xsl:value-of select="../eaxs:ContentType"/>
@@ -1199,7 +1189,7 @@
 		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
 		<!-- only render content which is text and which is not an attachment -->
 		<xsl:if test="not(fn:lower-case(normalize-space(../@IsAttachment)) = 'true') and starts-with($ContentType,'text/')">
-			<fo:block>
+			<fo:block><xsl:call-template name="tag-Art"/>
 				<xsl:if test="not(ancestor::eaxs:ChildMessage)">
 					<!-- the content of child messages do not have their own content set -->
 					<xsl:call-template name="BeginContentSet">
@@ -1229,7 +1219,7 @@
 			<xsl:if test="count(ancestor::eaxs:ChildMessage) > 0">
 				<xsl:call-template name="hr"/>
 			</xsl:if>
-			<fo:block xsl:use-attribute-sets="h3">
+			<fo:block xsl:use-attribute-sets="h3"><xsl:call-template name="tag-H3"/>
 				<xsl:call-template name="RepeatString"><xsl:with-param name="Count" select="1 + count(ancestor::eaxs:ChildMessage)"></xsl:with-param></xsl:call-template>
 				<xsl:text> Child Message </xsl:text> 
 				<xsl:value-of select="eaxs:LocalId"/>
@@ -1242,7 +1232,7 @@
 	
 	<xsl:template match="eaxs:DeliveryStatus" mode="RenderContent">
 		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
-		<fo:block xsl:use-attribute-sets="delivery-status">
+		<fo:block xsl:use-attribute-sets="delivery-status"><xsl:call-template name="tag-Art"/>
 			<xsl:if test="../eaxs:ContentLanguage">
 				<xsl:attribute name="xml:lang"><xsl:value-of select="../eaxs:ContentLanguage"/></xsl:attribute>
 			</xsl:if>
