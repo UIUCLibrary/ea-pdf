@@ -237,10 +237,6 @@ namespace EaPdfCmd
             {
                 return ReturnValue.FileNotFound;
             }
-            if (!FileExists(config, "FoProcessors:Fop:JarFilePath", logger))
-            {
-                return ReturnValue.FileNotFound;
-            }
             if (!FileExists(config, "FoProcessors:Fop:ConfigFilePath", logger))
             {
                 return ReturnValue.FileNotFound;
@@ -263,6 +259,19 @@ namespace EaPdfCmd
                 }
             }
 
+            classPath = config["FoProcessors:Fop:ClassPath"];
+            if (!string.IsNullOrWhiteSpace(classPath))
+            {
+                foreach (string path in classPath.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    if (!File.Exists(path))
+                    {
+                        logger.LogError($"File '{path}' not found for 'FoProcessors:Fop:ClassPath':'{classPath}' ");
+                        return ReturnValue.FileNotFound;
+                    }
+                }
+            }
+
             classPath = config["FoProcessors:Xep:ClassPath"];
             if (!string.IsNullOrWhiteSpace(classPath))
             {
@@ -270,7 +279,7 @@ namespace EaPdfCmd
                 {
                     if (!File.Exists(path))
                     {
-                        logger.LogError($"File '{path}' not found for 'XsltProcessors:Saxon:ClassPath':'{classPath}' ");
+                        logger.LogError($"File '{path}' not found for 'FoProcessors:Xep:ClassPath':'{classPath}' ");
                         return ReturnValue.FileNotFound;
                     }
                 }

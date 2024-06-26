@@ -95,14 +95,14 @@ namespace UIUCLibrary.EaPdf
 
             if (foProc.Equals("Fop", StringComparison.OrdinalIgnoreCase))
             {
-                string? jarFilePath = config["FoProcessors:Fop:JarFilePath"];
-                if (string.IsNullOrWhiteSpace(jarFilePath))
+                string? classPath = config["FoProcessors:Fop:ClassPath"];
+                if (string.IsNullOrWhiteSpace(classPath))
                 {
                     _xslfo = new FopToPdfTransformer(configFilePath);
                 }
                 else
                 {
-                    _xslfo = new FopToPdfTransformer(jarFilePath, configFilePath);
+                    _xslfo = new FopToPdfTransformer(classPath, configFilePath);
                 }
             }
             else if (foProc.Equals("Xep", StringComparison.OrdinalIgnoreCase))

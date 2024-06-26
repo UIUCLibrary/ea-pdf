@@ -41,11 +41,16 @@ Besides the above, the application also requires the following dependencies to b
 
   - The XEP processor is a commercial product and can be downloaded from [RenderX](https://www.renderx.com/download/).  If you 
     want to use the XEP processor you will need to purchase a license from RenderX.  The 
-    program has only been tested with free trial edition of XEP 4.30.  Note that the tagging features of XEP are not as 
+    program has only been tested with the free trial edition of XEP 4.30.  Note that the tagging features of XEP are not as 
     robust as FOP, so the output will not be fully compliant with the logical structure (tagged PDF) requirements of the EA-PDF specification.
 
   - Only one of the above two FO processors is required, but you must configure the application to use the 
     correct processor.  The configuration settings are described below.
+
+  - Note that if you are only using one processor or the other, you should remove the configuration settings for the 
+	unused processor from the configuration file.  Otherwise, the application will attempt to validate the processor 
+    installation and fail if it is not installed.  Regardless, you still need to specify the "Default" processor to use
+    in the configuration file.
 
 - Both Saxon and the FOP and XEP processors are Java applications, and therefore require a 
   Java runtime to be installed. During development, the `openjdk 11.0.16.1 2022-08-12 LTS` 
@@ -157,7 +162,7 @@ The sample JSON configuration file included in the installation zip file is show
   "FoProcessors": {
     "Default": "FOP", // "Fop" or "Xep"
     "Fop": {
-      "JarFilePath": "C:\\Program Files\\Apache FOP\\fop-2.8\\fop\\build\\fop.jar",
+      "ClassPath": "C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-core-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-events-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-util-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-anim-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-awt-util-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-bridge-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-codec-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-constants-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-css-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-dom-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-ext-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-extension-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-gvt-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-i18n-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-parser-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-script-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-shared-resources-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-svg-dom-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-svggen-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-transcoder-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-util-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-xml-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\commons-io-2.11.0.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\commons-logging-1.0.4.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\fontbox-2.0.27.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xml-apis-1.4.01.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xml-apis-ext-1.3.04.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xmlgraphics-commons-2.9.jar",
       "ConfigFilePath": "XResources\\fop.xconf"
     },
     "Xep": {
@@ -275,8 +280,8 @@ be overridden by the `-f, --fo-processor` command line option.`
 
 ##### FOP
 
-The `FoProcessors:Fop:JarFilePath` setting must be set to the **absolute** path of the FOP jar file which depends
-on where you installed the Apache FOP libraries.  
+The `FoProcessors:Fop:ClassPath` setting must be set to a semicolon-separated list of the **absolute** paths of all 
+the required FOP jar files which depends on where you installed the RanderX XEP libraries.  
 
 The `FoProcessors:Fop:ConfigFilePath` setting must be set to the path of the FOP configuration file.  If the path 
 is relative, it is relative to the directory containing this configuration file. There is a default fop.xconf file 
@@ -285,7 +290,7 @@ included in the distribution that can be used as a starting point.
 ##### XEP
 
 The `FoProcessors:Xep:ClassPath` setting must be set to a semicolon-separated list of the **absolute** paths of all 
-the required the XEP jar files which depends on where you installed the RanderX XEP libraries. 
+the required XEP jar files which depends on where you installed the RanderX XEP libraries. 
 
 The `FoProcessors:Xep:ConfigFilePath` setting must be set to the path of the XEP configuration file.  If the path 
 is relative, it is relative to the directory containing this configuration file.  There is a default xep.config file

@@ -5,21 +5,19 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
     public class FopToPdfTransformer : JavaRunner, IXslFoTransformer
     {
-        const string JAR_FILE = "C:\\Program Files\\Apache FOP\\fop-2.8\\fop\\build\\fop.jar";
+        const string CLASS_PATH = "C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-core-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-events-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-util-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-anim-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-awt-util-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-bridge-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-codec-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-constants-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-css-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-dom-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-ext-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-extension-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-gvt-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-i18n-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-parser-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-script-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-shared-resources-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-svg-dom-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-svggen-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-transcoder-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-util-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-xml-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\commons-io-2.11.0.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\commons-logging-1.0.4.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\fontbox-2.0.27.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xml-apis-1.4.01.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xml-apis-ext-1.3.04.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xmlgraphics-commons-2.9.jar";
+        const string MAIN_CLASS = "org.apache.fop.cli.Main";
 
-        public FopToPdfTransformer(string jarFilePath, string configFilePath)
+        public FopToPdfTransformer(string classPath, string configFilePath) : base(classPath)
         {
-            JarFilePath = jarFilePath;
             ConfigFilePath = configFilePath;
         }
 
-        public FopToPdfTransformer(string configFilePath) : this(JAR_FILE, configFilePath)
+        public FopToPdfTransformer(string configFilePath) : this(CLASS_PATH, configFilePath)
         {
         }
 
         public string ConfigFilePath { get; set; }
-
-        public string JarFilePath { get; }
 
         public string ProcessorVersion
         {
@@ -27,7 +25,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 var args = "-version";
                 List<(LogLevel level, string message)> messages = new();
-                _ = RunExecutableJar(JarFilePath, args, ref messages);
+                _ = RunMainClass(MAIN_CLASS, args, ref messages);
 
                 string ret = messages[0].message;
                 if (!ret.StartsWith("FOP",StringComparison.OrdinalIgnoreCase))
@@ -62,7 +60,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             //-q option to suppress output except warnings and errors; unfortunately doesn't seem to make a difference
             var args = $" -q {extraCommandLineParams} {config} -fo \"{sourceFoFilePath}\" -pdf \"{outputPdfFilePath}\"";
 
-            int status = RunExecutableJar(JarFilePath, args, ref tempMessages);
+            int status = RunMainClass(MAIN_CLASS, args, ref tempMessages);
 
             messages.AddRange(ConvertLogLines(tempMessages));
 
