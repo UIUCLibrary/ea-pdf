@@ -293,6 +293,18 @@ namespace EaPdfCmd
                 return ReturnValue.ConfigurationError;
             }
 
+            //check that the default FO processor has a configuration section
+            if(foProcStr.Equals("Fop", StringComparison.OrdinalIgnoreCase) && config["FoProcessors:Fop"] == null)
+            {
+                logger.LogError($"The 'FoProcessors:Fop' settings are missing for the 'FoProcessors:Default' setting of '{foProcStr}'.");
+                return ReturnValue.ConfigurationError;
+            }
+            if (foProcStr.Equals("Xep", StringComparison.OrdinalIgnoreCase) && config["FoProcessors:Xep"] == null)
+            {
+                logger.LogError($"The 'FoProcessors:Xep' settings are missing for the 'FoProcessors:Default' setting of '{foProcStr}'.");
+                return ReturnValue.ConfigurationError;
+            }
+
             //check for valid XSLT processor
             var xsltProcStr = config["XsltProcessors:Default"] ?? "";
             if (!string.IsNullOrWhiteSpace(xsltProcStr) && !Enum.TryParse<XsltProcessor>(xsltProcStr, true, out _))
