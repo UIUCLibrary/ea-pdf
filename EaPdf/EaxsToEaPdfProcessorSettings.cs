@@ -8,10 +8,10 @@ namespace UIUCLibrary.EaPdf
     {
         public EaxsToEaPdfProcessorSettings(IConfiguration config)
         {
-            //the LanguageFontMapping will be replaced by any LanguageFontMapping in the configuration file
-            if (config.AsEnumerable().Any(s => s.Key.StartsWith("EaxsToEaPdfProcessorSettings:LanguageFontMapping:")))
+            //the ScriptFontMapping will be replaced by any ScriptFontMapping in the configuration file
+            if (config.AsEnumerable().Any(s => s.Key.StartsWith("EaxsToEaPdfProcessorSettings:ScriptFontMapping:")))
             {
-                LanguageFontMapping.Clear();
+                ScriptFontMapping.Clear();
             }
 
             config.Bind("EaxsToEaPdfProcessorSettings", this);
@@ -28,7 +28,7 @@ namespace UIUCLibrary.EaPdf
         private void ValidateSettings()
         {
             //make sure supported scripts are in the ISO 15924 list
-            foreach (var script in LanguageFontMapping)
+            foreach (var script in ScriptFontMapping)
             {
                 if (!script.Key.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase) && !UnicodeScriptDetector.GetScripts().Any(s => s.ShortName.Equals(script.Key, StringComparison.OrdinalIgnoreCase)))
                 {
@@ -81,7 +81,7 @@ namespace UIUCLibrary.EaPdf
         /// The inner dictionary key is the BaseFontFamily enum, Serif, SansSerif, or Monospace; the first key is the default if no base font family is specified
         /// The value of the inner dictionary is a comma-separated list of font family names; these names must exist in the FO processor's font configuration
         /// </summary>
-        public Dictionary<string, Dictionary<BaseFontFamily, string>> LanguageFontMapping { get; set; } = new Dictionary<string, Dictionary<BaseFontFamily, string>>(StringComparer.OrdinalIgnoreCase)
+        public Dictionary<string, Dictionary<BaseFontFamily, string>> ScriptFontMapping { get; set; } = new Dictionary<string, Dictionary<BaseFontFamily, string>>(StringComparer.OrdinalIgnoreCase)
         {
             {FontHelpers.DEFAULT_SCRIPT, new Dictionary<BaseFontFamily, string>() //default fonts should cover most western languages; these should be mapped to actual fonts in the FO processor's font configuration
                 {
@@ -143,17 +143,17 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// Get the default font family names for the given base font family
-        /// This is either the 'default' or 'latn' entry in the LanguageFontMapping, or the first entry if neither of those is present
+        /// This is either the 'default' or 'latn' entry in the ScriptFontMapping, or the first entry if neither of those is present
         /// </summary>
         /// <param name="baseFamily"></param>
         /// <returns></returns>
         public string GetDefaultFontFamily(BaseFontFamily baseFamily)
         {
-            if (!LanguageFontMapping.TryGetValue(FontHelpers.DEFAULT_SCRIPT, out Dictionary<BaseFontFamily, string>? families))
+            if (!ScriptFontMapping.TryGetValue(FontHelpers.DEFAULT_SCRIPT, out Dictionary<BaseFontFamily, string>? families))
             {
-                if (!LanguageFontMapping.TryGetValue("latn", out families))
+                if (!ScriptFontMapping.TryGetValue("latn", out families))
                 {
-                    families = LanguageFontMapping.First().Value;
+                    families = ScriptFontMapping.First().Value;
                 }
             }
 
@@ -171,7 +171,7 @@ namespace UIUCLibrary.EaPdf
         {
             string? ret = null;
 
-            if (LanguageFontMapping.TryGetValue(script, out Dictionary<BaseFontFamily, string>? families))
+            if (ScriptFontMapping.TryGetValue(script, out Dictionary<BaseFontFamily, string>? families))
             {
                 ret = GetFontFamily(families, baseFamily);
             }
@@ -199,13 +199,13 @@ namespace UIUCLibrary.EaPdf
         }
 
         /// <summary>
-        /// Return a list of all supported scripts in the LanguageFontMapping
+        /// Return a list of all supported scripts in the ScriptFontMapping
         /// </summary>
         public List<string> AllSupportedScripts
         {
             get
             {
-                List<string> ret = LanguageFontMapping.Keys.Where(k => !k.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase)).ToList();
+                List<string> ret = ScriptFontMapping.Keys.Where(k => !k.Equals(FontHelpers.DEFAULT_SCRIPT, StringComparison.OrdinalIgnoreCase)).ToList();
                 return ret;
             }
         }

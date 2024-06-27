@@ -95,19 +95,19 @@ namespace UIUCLibrary.TestEaPdf
             Assert.AreEqual("XResources\\bbb.xsl", settings.XsltXmpFilePath);
             Assert.AreEqual("XResources\\ccc.xsl", settings.XsltRootXmpFilePath);
 
-            Assert.AreEqual(2, settings.LanguageFontMapping.Count);
-            Assert.IsTrue(settings.LanguageFontMapping.ContainsKey(FontHelpers.DEFAULT_SCRIPT));
-            Assert.IsTrue(settings.LanguageFontMapping.ContainsKey("Hebr"));
+            Assert.AreEqual(2, settings.ScriptFontMapping.Count);
+            Assert.IsTrue(settings.ScriptFontMapping.ContainsKey(FontHelpers.DEFAULT_SCRIPT));
+            Assert.IsTrue(settings.ScriptFontMapping.ContainsKey("Hebr"));
 
-            Assert.AreEqual(3, settings.LanguageFontMapping[FontHelpers.DEFAULT_SCRIPT].Count);
-            Assert.AreEqual("serif1",settings.LanguageFontMapping[FontHelpers.DEFAULT_SCRIPT][FontHelpers.BaseFontFamily.Serif]);
-            Assert.AreEqual("sans-serif1", settings.LanguageFontMapping[FontHelpers.DEFAULT_SCRIPT][FontHelpers.BaseFontFamily.SansSerif], "sans-serif1");
-            Assert.AreEqual("monospace1", settings.LanguageFontMapping[FontHelpers.DEFAULT_SCRIPT][FontHelpers.BaseFontFamily.Monospace]);
+            Assert.AreEqual(3, settings.ScriptFontMapping[FontHelpers.DEFAULT_SCRIPT].Count);
+            Assert.AreEqual("serif1",settings.ScriptFontMapping[FontHelpers.DEFAULT_SCRIPT][FontHelpers.BaseFontFamily.Serif]);
+            Assert.AreEqual("sans-serif1", settings.ScriptFontMapping[FontHelpers.DEFAULT_SCRIPT][FontHelpers.BaseFontFamily.SansSerif], "sans-serif1");
+            Assert.AreEqual("monospace1", settings.ScriptFontMapping[FontHelpers.DEFAULT_SCRIPT][FontHelpers.BaseFontFamily.Monospace]);
 
-            Assert.AreEqual(3, settings.LanguageFontMapping["Hebr"].Count);
-            Assert.AreEqual("serif2", settings.LanguageFontMapping["Hebr"][FontHelpers.BaseFontFamily.Serif]);
-            Assert.AreEqual("sans-serif2", settings.LanguageFontMapping["Hebr"][FontHelpers.BaseFontFamily.SansSerif]);
-            Assert.AreEqual("monospace2", settings.LanguageFontMapping["Hebr"][FontHelpers.BaseFontFamily.Monospace]);
+            Assert.AreEqual(3, settings.ScriptFontMapping["Hebr"].Count);
+            Assert.AreEqual("serif2", settings.ScriptFontMapping["Hebr"][FontHelpers.BaseFontFamily.Serif]);
+            Assert.AreEqual("sans-serif2", settings.ScriptFontMapping["Hebr"][FontHelpers.BaseFontFamily.SansSerif]);
+            Assert.AreEqual("monospace2", settings.ScriptFontMapping["Hebr"][FontHelpers.BaseFontFamily.Monospace]);
 
 
             Assert.AreEqual(1, settings.AllSupportedScripts.Count);

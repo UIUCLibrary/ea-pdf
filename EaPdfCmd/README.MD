@@ -207,7 +207,7 @@ The sample JSON configuration file included in the installation zip file is show
         The inner element name is the base font family, <Serif>, <SansSerif>, or <Monospace>; the first element is the default if no base font family is specified
         The value is a comma-separated list of font family names; these names must exist in the FO processor's font configuration
     */
-    "LanguageFontMapping": {
+    "ScriptFontMapping": {
       "Default": { //This will be the default of no other entry matches the script
         "Serif": "serif",
         "SansSerif": "sans-serif",
@@ -456,7 +456,7 @@ creator, dates, etc.  It also includes lists of source files, messages, and atta
 custom XMP schema, EaPdfXmpSchema.xmp, into the output; this file must be included in the same directory as this XSLT. During post-processing, 
 these metadata are inserted into the PDF file.
 
-##### LanguageFontMapping
+##### ScriptFontMapping
 
 This section contains the mapping of Unicode language scripts and primary typefaces (Serif, SansSerif, or Monospace) to font families.  This is used 
 to select the appropriate font family for a given script and desired typeface.  The font family names must exist in the FO processor's font 
@@ -474,7 +474,7 @@ of font family names to be used for the script and typeface; these names must ex
 Below is an example of the default font mapping:
 
 ```json
-    "LanguageFontMapping": {
+    "ScriptFontMapping": {
       "Default": { //This will be the default of no other entry matches the script
         "Serif": "serif",
         "SansSerif": "sans-serif",
