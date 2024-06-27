@@ -294,14 +294,14 @@ namespace EaPdfCmd
             }
 
             //check that the default FO processor has a configuration section
-            if(foProcStr.Equals("Fop", StringComparison.OrdinalIgnoreCase) && config["FoProcessors:Fop"] == null)
+            if (foProcStr.Equals("Fop", StringComparison.OrdinalIgnoreCase) && (string.IsNullOrEmpty(config["FoProcessors:Fop:ClassPath"]) || string.IsNullOrEmpty(config["FoProcessors:Fop:ConfigFilePath"])))
             {
-                logger.LogError($"The 'FoProcessors:Fop' settings are missing for the 'FoProcessors:Default' setting of '{foProcStr}'.");
+                logger.LogError($"The 'FoProcessors:Fop:ClassPath' or 'FoProcessors:Fop:ConfigFilePath' settings are missing for the 'FoProcessors:Default' setting of '{foProcStr}'.");
                 return ReturnValue.ConfigurationError;
             }
-            if (foProcStr.Equals("Xep", StringComparison.OrdinalIgnoreCase) && config["FoProcessors:Xep"] == null)
+            if (foProcStr.Equals("Xep", StringComparison.OrdinalIgnoreCase) && (string.IsNullOrEmpty(config["FoProcessors:Xep:ClassPath"]) || string.IsNullOrEmpty(config["FoProcessors:Xep:ConfigFilePath"])))
             {
-                logger.LogError($"The 'FoProcessors:Xep' settings are missing for the 'FoProcessors:Default' setting of '{foProcStr}'.");
+                logger.LogError($"The 'FoProcessors:Xep:ClassPath' or 'FoProcessors:Xep:ConfigFilePath' settings are missing for the 'FoProcessors:Default' setting of '{foProcStr}'.");
                 return ReturnValue.ConfigurationError;
             }
 
