@@ -214,7 +214,7 @@ namespace EaPdfCmd
         {
             //convert the relative paths to absolute paths, if needed
             _ = ConfigHelpers.MakeConfigPathAbsolute(config, "EaxsToEaPdfProcessorSettings:XsltFoFilePath");
-            _ = ConfigHelpers.MakeConfigPathAbsolute(config, "EaxsToEaPdfProcessorSettings:XsltXmpFilePath");
+            _ = ConfigHelpers.MakeConfigPathAbsolute(config, "EaxsToEaPdfProcessorSettings:XsltDpartFilePath");
             _ = ConfigHelpers.MakeConfigPathAbsolute(config, "EaxsToEaPdfProcessorSettings:XsltRootXmpFilePath");
 
             _ = ConfigHelpers.MakeConfigPathAbsolute(config, "FoProcessors:Fop:ConfigFilePath");
@@ -229,7 +229,7 @@ namespace EaPdfCmd
             {
                 return ReturnValue.FileNotFound;
             }
-            if (!FileExists(config, "EaxsToEaPdfProcessorSettings:XsltXmpFilePath", logger))
+            if (!FileExists(config, "EaxsToEaPdfProcessorSettings:XsltDpartFilePath", logger))
             {
                 return ReturnValue.FileNotFound;
             }

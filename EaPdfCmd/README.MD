@@ -194,7 +194,7 @@ The sample JSON configuration file included in the installation zip file is show
 
   "EaxsToEaPdfProcessorSettings": {
     "XsltFoFilePath": "XResources\\eaxs_to_fo.xsl",
-    "XsltXmpFilePath": "XResources\\eaxs_to_xmp.xsl",
+    "XsltDpartFilePath": "XResources\\eaxs_to_dpart.xsl",
     "XsltRootXmpFilePath": "XResources\\eaxs_to_root_xmp.xsl",
 
     /*
@@ -438,7 +438,7 @@ In general these files should not be changed.  However, someone proficient in XS
 PDF output.  But caution should be used as the XSLT is complex and the output has specific features used during post-processing to ensure
 the PDFs conform to the EA-PDF specification.
 
-##### XsltXmpFilePath
+##### XsltDpartFilePath
 
 This is the path to the XSLT file that converts the XML files to DPart DPM metadata for individual folders, messages, and content sets.   
 If the path is relative, it is relative to the directory containing this configuration file.  

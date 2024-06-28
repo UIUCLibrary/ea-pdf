@@ -115,8 +115,8 @@
 		<xsl:variable name="ContentTypeHuman">
 			<xsl:call-template name="HumanReadableContentType"/>
 		</xsl:variable>
-		<DPart DPM_Mail_ContentSetType="BodyRendering" DPM_Mail_Subtype="{fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))}" DPM_Mail_Desc="This is a rendering of the {$ContentTypeHuman} body for Message Id '{../eaxs:MessageId}'.">
-			<xsl:attribute name="Id"></xsl:attribute>
+		<DPart DPM_Mail_ContentSetType="BodyRendering" DPM_Mail_Subtype="{fn:lower-case(normalize-space(parent::eaxs:SingleBody/eaxs:ContentType))}" DPM_Mail_Desc="This is a rendering of the {$ContentTypeHuman} body for Message Id '{ancestor::eaxs:Message/eaxs:MessageId}'.">
+			<xsl:attribute name="Id">
 				<xsl:call-template name="ContentSetId">
 					<xsl:with-param name="type">BodyRendering</xsl:with-param>
 					<xsl:with-param name="subtype"><xsl:value-of select="parent::eaxs:SingleBody/eaxs:ContentType"/></xsl:with-param>
@@ -127,6 +127,7 @@
 						<xsl:value-of select="count(ancestor::*/preceding-sibling::*[fn:lower-case(normalize-space(eaxs:ContentType)) = $ContentType])"/>
 					</xsl:with-param> 
 				</xsl:call-template>
+			</xsl:attribute>
 		</DPart>
 	</xsl:template>
 

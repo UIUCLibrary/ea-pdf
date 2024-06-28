@@ -48,9 +48,9 @@ namespace UIUCLibrary.EaPdf
             {
                 throw new Exception($"XSLT file '{XsltFoFilePath}' not found");
             }
-            if(!string.IsNullOrWhiteSpace(XsltXmpFilePath) && !File.Exists(XsltXmpFilePath))
+            if(!string.IsNullOrWhiteSpace(XsltDpartFilePath) && !File.Exists(XsltDpartFilePath))
             {
-                throw new Exception($"XSLT file '{XsltXmpFilePath}' not found");
+                throw new Exception($"XSLT file '{XsltDpartFilePath}' not found");
             }
             if(!string.IsNullOrWhiteSpace(XsltRootXmpFilePath) && !File.Exists(XsltRootXmpFilePath))
             {
@@ -65,7 +65,7 @@ namespace UIUCLibrary.EaPdf
 
         public string XsltFoFilePath { get; set; } = "XResources\\eaxs_to_fo.xsl";
 
-        public string XsltXmpFilePath { get; set; } = "XResources\\eaxs_to_xmp.xsl";
+        public string XsltDpartFilePath { get; set; } = "XResources\\eaxs_to_dpart.xsl";
 
         public string XsltRootXmpFilePath { get; set; } = "XResources\\eaxs_to_root_xmp.xsl";
 

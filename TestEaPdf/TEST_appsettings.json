@@ -49,7 +49,7 @@
 
   "EaxsToEaPdfProcessorSettings": {
     "XsltFoFilePath": "XResources\\aaa.xsl",
-    "XsltXmpFilePath": "XResources\\bbb.xsl",
+    "XsltDpartFilePath": "XResources\\bbb.xsl",
     "XsltRootXmpFilePath": "XResources\\ccc.xsl",
 
     /*

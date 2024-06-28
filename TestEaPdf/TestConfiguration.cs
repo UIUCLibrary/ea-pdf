@@ -92,7 +92,7 @@ namespace UIUCLibrary.TestEaPdf
         private void CheckEaxsToEaPdfProcessorSettings(EaxsToEaPdfProcessorSettings settings)
         {
             Assert.AreEqual("XResources\\aaa.xsl", settings.XsltFoFilePath);
-            Assert.AreEqual("XResources\\bbb.xsl", settings.XsltXmpFilePath);
+            Assert.AreEqual("XResources\\bbb.xsl", settings.XsltDpartFilePath);
             Assert.AreEqual("XResources\\ccc.xsl", settings.XsltRootXmpFilePath);
 
             Assert.AreEqual(2, settings.ScriptFontMapping.Count);

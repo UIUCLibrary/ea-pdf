@@ -366,7 +366,7 @@
     <None Update="XResources\eaxs_to_root_xmp.xsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="XResources\eaxs_to_xmp.xsl">
+    <None Update="XResources\eaxs_to_dpart.xsl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <SubType>Designer</SubType>
     </None>
