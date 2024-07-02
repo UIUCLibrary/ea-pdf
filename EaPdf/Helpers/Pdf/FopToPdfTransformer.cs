@@ -5,6 +5,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
     public class FopToPdfTransformer : JavaRunner, IXslFoTransformer
     {
+        //FOP Version 2.9 has a bug and does not have a version number in the output, only the string 'FOP Version SVN'
+        const string INCORRECT_VERSION = "FOP Version SVN"; 
+        const string ACTUAL_VERSION = "FOP Version 2.9"; 
+
         const string CLASS_PATH = "C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-core-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-events-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\build\\fop-util-2.9.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-anim-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-awt-util-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-bridge-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-codec-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-constants-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-css-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-dom-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-ext-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-extension-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-gvt-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-i18n-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-parser-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-script-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-shared-resources-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-svg-dom-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-svggen-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-transcoder-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-util-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\batik-xml-1.17.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\commons-io-2.11.0.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\commons-logging-1.0.4.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\fontbox-2.0.27.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xml-apis-1.4.01.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xml-apis-ext-1.3.04.jar;C:\\Program Files\\Apache FOP\\fop-2.9\\fop\\lib\\xmlgraphics-commons-2.9.jar";
         const string MAIN_CLASS = "org.apache.fop.cli.Main";
 
@@ -32,10 +36,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 {
                     ret = "UNKNOWN VERSION";
                 }
-                else if (ret.EndsWith("SVN", StringComparison.OrdinalIgnoreCase))
+                else if (ret == INCORRECT_VERSION)
                 {
-                    //FOP V2.9 has a bug and does not have a version number in the output, only the string 'SVN'
-                    ret = ret.Replace("SVN", "2.9");
+                    //FOP V2.9 has a bug and does not have a version number in the output, only the string 'FOP Version SVN'
+                    ret = ACTUAL_VERSION;
                 }
 
                 return ret;
