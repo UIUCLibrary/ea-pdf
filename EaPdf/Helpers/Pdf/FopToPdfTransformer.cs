@@ -32,6 +32,11 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 {
                     ret = "UNKNOWN VERSION";
                 }
+                else if (ret.EndsWith("SVN", StringComparison.OrdinalIgnoreCase))
+                {
+                    //FOP V2.9 has a bug and does not have a version number in the output, only the string 'SVN'
+                    ret = ret.Replace("SVN", "2.9");
+                }
 
                 return ret;
             }
