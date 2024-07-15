@@ -7,20 +7,71 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RoyT.TrueType;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Xml;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
 using static UIUCLibrary.EaPdf.Helpers.UnicodeScriptDetector;
-using iTextSharp.text.pdf;
 
 namespace UIUCLibrary.TestEaPdf
 {
     [TestClass]
     public class TestHelpers
     {
+
+        [DataRow("abcd", "abcd")]
+        [DataRow(@"ab""cd", @"""ab\""cd""")]
+        [DataRow(@"ab\""cd", @"""ab\\\""cd""")]
+        [DataRow(@"(abcd)", @"""(abcd)""")]
+        [DataRow("ab\tcd", "\"ab\tcd\"")]
+        [DataRow("ab\u0001cd", "\"ab\u0001cd\"")]
+
+        [DataTestMethod]
+        public void TestQuoteIfNeeded(string input, string expected)
+        {
+            string actual = EaxsHelpers.QuoteIfNeeded(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void TestGetOriginalContentTypeHeader()
+        {
+            string bodyXml = @"
+<SingleBody xmlns=""https://github.com/StateArchivesOfNorthCarolina/tomes-eaxs-2"" IsAttachment=""false"">
+    <ContentType>text/plain</ContentType>
+    <Charset>us-ascii</Charset>
+    <ContentName>IMLS;0213.txt</ContentName>
+    <ContentTypeComments>this (is) a comment</ContentTypeComments>
+    <ContentTypeParam>
+        <Name>x-name1</Name>
+        <Value>(test)</Value>
+    </ContentTypeParam>
+    <ContentTypeParam>
+        <Name>x-name2</Name>
+        <Value>[ te""st ]</Value>
+    </ContentTypeParam>
+    <TransferEncoding>7bit</TransferEncoding>
+    <BodyContent>
+        <ContentAsXhtml><html xmlns=""http://www.w3.org/1999/xhtml""><head><meta name=""generator"" content=""Conversion to XHTML performed by UIUCLibrary.EaPdf.Helpers"" /></head><body><div>Dear Attendees:<br /><br /> <br /><br />We are less than three weeks away from our workshop and we are excited<br />about your attendance and participation.  There have been a few very<br />important changes that I need each one of you to be aware.  First, and<br />most important, we have changed hotels for both the workshop and<br />sleeping rooms.   The Washington Terrace Hotel will be our new home for<br />this workshop.  The Washington Terrace Hotel<br />(<a href=""http://www.washingtonterracehotel.com"">www.washingtonterracehotel.com</a>) is located at 1515 Rhode Island Avenue,<br />NW.  All hotel reservations have been made at this hotel (please see<br />attached document for your confirmation numbers as well as arrival &amp;<br />departure dates).<br /><br /> <br /><br />Attached to this e-mail is a pdf file (IMLS0213.pdf) with our group<br />reservations, please find your name and the associated confirmation<br />number as a reference.  Also please double check the dates we have for<br />your arrival and departure.  If there is an error you need to contact me<br />immediately so I may let the hotel know.<br /><br /> <br /><br />Another important note to make is that we will serve a full breakfast<br />every morning (available starting at 8:15 am).  We will also provide<br />morning &amp; afternoon breaks.  Lunch will be on your own and a list of<br />restaurants within walking distance of the hotel will be provided (1<br />hour has been set aside).<br /><br /> <br /><br />The workshop starts both mornings at 9:00am and will end promptly at<br />4:40pm each afternoon.<br /><br /> <br /><br />I also wanted to let you know that there will be a lot of note taking at<br />the workshop and forms to be filled out over the two days.  If you would<br />prefer to bring a laptop to the class (you'll only need one per grantee<br />group), you are welcome to and all forms will be provided to you<br />electronically at the workshop.  There is a second attachment to this<br />e-mail (PRI5Evalworksheet2004.doc) with some of the forms you will be<br />using if you'd like to download them ahead of time onto your computer.<br /><br /> <br /><br />Should you have any questions between now and the time of your workshop,<br />please do not hesitate to contact me.<br /><br /> <br /><br />One final note, I need each of you to individually reply to this message<br />with a note to me stating that you have received this important e-mail<br />and acknowledgement of the changes outlined above.  Please feel free to<br />add any questions you may have for me to respond to as well.<br /><br /> <br /><br />Jennifer Olin<br /><br />Business Manager<br /><br />Performance Results, Inc.<br /><br />PO Box 5267<br /><br />Laytonsville, MD  20882<br /><br />(301) 963-5953<br /><br /> &lt;<a href=""mailto:Jennifer@performance-results.net"">mailto:Jennifer@performance-results.net</a>&gt;<br /><a href=""mailto:Jennifer@performance-results.net"">Jennifer@performance-results.net</a><br /><br /> <br /><br /></div></body></html></ContentAsXhtml>
+    </BodyContent>
+</SingleBody>";
+
+            var xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(bodyXml);
+
+            var body = xmlDoc.DocumentElement;
+            Assert.IsNotNull(body);
+
+            var ret = EaxsHelpers.GetOriginalContentTypeHeader(body);
+
+            string expected = "text/plain; charset=us-ascii; name=\"IMLS;0213.txt\"; x-name1=\"(test)\"; x-name2=\"[ te\\\"st ]\" (this \\(is\\) a comment)";
+
+            Assert.AreEqual(expected, ret);
+        }
+
         [TestMethod]
         public void TestDPartNode()
         {

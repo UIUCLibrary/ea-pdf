@@ -569,7 +569,12 @@
 						<xsl:with-param name="content" select="eaxs:Content"/>
 					</xsl:call-template>
 				</xsl:attribute>
-			</pdf:embedded-file>								
+			</pdf:embedded-file>
+			<xsl:for-each select="current-group()">
+				<xsl:if test="position() > 1">
+					<xsl:call-template name="dummy-embedded-file"><xsl:with-param name="filename" select="$filename"/></xsl:call-template>
+				</xsl:if>
+			</xsl:for-each>
 		</xsl:for-each-group>
 		<!-- external attachments -->
 		<xsl:for-each-group select="//eaxs:SingleBody/eaxs:ExtBodyContent" group-by="eaxs:Hash/eaxs:Value">
@@ -600,7 +605,23 @@
 					</xsl:when>
 				</xsl:choose>
 			</pdf:embedded-file>								
+			<xsl:for-each select="current-group()">
+				<xsl:if test="position() > 1">
+					<xsl:call-template name="dummy-embedded-file"><xsl:with-param name="filename" select="$filename"/></xsl:call-template>
+				</xsl:if>
+			</xsl:for-each>
 		</xsl:for-each-group>		
+	</xsl:template>
+	
+	<!-- This is a dummy embedded file which represents duplicates; it is needed for post-processing -->	
+	<xsl:template name="dummy-embedded-file">
+		<xsl:param name="filename"/>
+		<pdf:embedded-file>
+			<xsl:attribute name="filename"><xsl:value-of select="$filename"/></xsl:attribute>
+			<!-- The description MUST start with 'DELETE ME' for post-processing to work correctly -->
+			<xsl:attribute name="description">DELETE ME <xsl:value-of select="position()"/></xsl:attribute>
+			<xsl:attribute name="src">url('data:text/plain;base64,')</xsl:attribute>
+		</pdf:embedded-file>
 	</xsl:template>
 	
 	<xsl:template name="FrontMatter">

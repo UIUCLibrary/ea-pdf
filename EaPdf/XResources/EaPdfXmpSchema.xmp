@@ -48,6 +48,25 @@
 										<pdfaProperty:valueType>seq Attachment</pdfaProperty:valueType>
 									</rdf:Description>
 								</rdf:li>
+								<rdf:li>
+									<rdf:Description>
+										<pdfaProperty:category>external</pdfaProperty:category>
+										<pdfaProperty:description>A bag or unordered list of message identifiers in the form, of 'mid:' or 'urn:uuid:' URIs. These identify the messages contained in a source file.  
+											Intended to be used as metadata attached to an EmbeddedFile dictionary.</pdfaProperty:description>
+										<pdfaProperty:name>containsMessages</pdfaProperty:name>
+										<pdfaProperty:valueType>bag URI</pdfaProperty:valueType>
+										<!-- This is not part of the 0.5 spec -->
+									</rdf:Description>
+								</rdf:li>
+								<rdf:li>
+									<rdf:Description>
+										<pdfaProperty:category>external</pdfaProperty:category>
+										<pdfaProperty:description>A bag or unordered list of message identifiers in the form, of 'mid:' or 'urn:uuid:' URIs. These identify 
+											the messages which contain a given attachment.  Intended to be used as metadata attached to an EmbeddedFile dictionary.</pdfaProperty:description>
+										<pdfaProperty:name>containedInMessages</pdfaProperty:name>
+										<pdfaProperty:valueType>bag URI</pdfaProperty:valueType>
+									</rdf:Description>
+								</rdf:li>
 							</rdf:Seq>
 						</pdfaSchema:property>
 						<pdfaSchema:valueType>
@@ -339,13 +358,14 @@
 														<!-- This is not part of the 0.5 spec -->
 													</rdf:Description>													
 												</rdf:li>
+												
 											</rdf:Seq>
 										</pdfaType:field>										
 									</rdf:Description>
 								</rdf:li>
 								<rdf:li>
 									<rdf:Description>
-										<pdfaType:description>Metadata for embedded source email assets.</pdfaType:description>
+										<pdfaType:description>Metadata for embedded email attachments.</pdfaType:description>
 										<pdfaType:namespaceURI>http://www.pdfa.org/eapdf/ns/meta/</pdfaType:namespaceURI>
 										<pdfaType:prefix>pdfmailmeta</pdfaType:prefix>
 										<pdfaType:type>Attachment</pdfaType:type>	

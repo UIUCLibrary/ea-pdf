@@ -21,7 +21,7 @@
         <xsl:if test="$Body/eaxs:ContentTypeComments"> (<xsl:value-of select="replace($Body/eaxs:ContentTypeComments, '\(|\)|\\', '\\$0')"/>)</xsl:if>
     </xsl:template>
     
-    <!-- If a string contains any special characters per email RFCs, it musty be quoted -->
+    <!-- If a string contains any special characters per email RFCs, it must be quoted -->
     <!-- TODO: Not sure this will handle non-ascii characters properly-->
     <xsl:function name="my:QuoteIfNeeded" as="xs:string">
         <xsl:param name="text" as="xs:string"/>

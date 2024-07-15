@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
@@ -18,10 +19,11 @@ namespace UIUCLibrary.EaPdf.Helpers
             EncryptedPayload,
             FormData,
             Schema,
-            Unspecified
+            Unspecified,
+            Mail_Attachment
         }
 
-        public AFRelationship Relationship { get; init; } = AFRelationship.Unspecified;
+        public AFRelationship? Relationship { get; init; } = null;
 
         public string Subtype { get; init; } = MimeTypeMap.DefaultMimeType;
 
@@ -52,5 +54,8 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         public string UniqueName { get; init; } = string.Empty;
 
+        public XmlDocument? Metadata { get; init; } = null;
+
+        public string MessageId { get; init; } = string.Empty;
     }
 }

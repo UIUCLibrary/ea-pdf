@@ -1,11 +1,93 @@
 ﻿using static UIUCLibrary.EaPdf.Helpers.FontHelpers;
 using System.Xml;
 using Microsoft.Extensions.Logging;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace UIUCLibrary.EaPdf.Helpers
 {
     public class EaxsHelpers
     {
+
+        /// <summary>
+        /// In the EAXS XML, the Content-Type header is parsed and stored as a series of child elements.
+        /// This function will recombine them into a single string which will not be 
+        /// exactly the same as the original Content-Type header, but should be equivalent.
+        /// </summary>
+        /// <param name="bodyNode"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="Exception"></exception>
+        public static string GetOriginalContentTypeHeader(XmlNode bodyNode)
+        {
+            if (bodyNode is not XmlElement body) 
+            { 
+                throw new ArgumentException($"The body element must be an XmlElement; it is a '{bodyNode.NodeType}'", nameof(bodyNode));
+            }
+
+            var xmlns = new XmlNamespaceManager(body.OwnerDocument.NameTable);
+            xmlns.AddNamespace(EmailToEaxsProcessor.XM, EmailToEaxsProcessor.XM_NS);
+
+            var ret = new StringBuilder();
+            var contentType = body.SelectSingleNode("xm:ContentType", xmlns);
+            if (contentType != null)
+                ret.Append(contentType.InnerText);
+            else
+                throw new Exception("No ContentType element found in the EAXS file");
+
+            var charset = body.SelectSingleNode("xm:Charset", xmlns);
+            if (charset != null)
+                ret.Append("; charset=").Append(QuoteIfNeeded(charset.InnerText));
+
+            var name = body.SelectSingleNode("xm:ContentName", xmlns);
+            if (name != null)
+                ret.Append("; name=").Append(QuoteIfNeeded(name.InnerText));
+
+            var boundary = body.SelectSingleNode("xm:BoundaryString", xmlns);
+            if(boundary != null)
+                ret.Append("; boundary=").Append(QuoteIfNeeded(boundary.InnerText));
+
+            var parms = body.SelectNodes("xm:ContentTypeParam", xmlns);
+            if(parms != null)
+            {
+                foreach(XmlNode parm in parms)
+                {
+                    var parmName = parm.SelectSingleNode("xm:Name", xmlns) ?? throw new Exception("ContentTypeParam Name is missing");
+                    var parmValue = parm.SelectSingleNode("xm:Value", xmlns) ?? throw new Exception("ContentTypeParam Value is missing");
+                    ret.Append("; ").Append(parmName.InnerText).Append('=').Append(QuoteIfNeeded(parmValue.InnerText));
+                }
+            }
+
+            var comments = body.SelectSingleNode("xm:ContentTypeComments", xmlns);
+            if(comments != null)
+            {
+                ret.Append(" (");
+                ret.Append(Regex.Replace(comments.InnerText, @"\(|\)|\\", @"\$0"));
+                ret.Append(')');
+            }
+
+            return ret.ToString();
+        }
+
+        /// <summary>
+        /// Quote a string according to the rules for message header parameters
+        /// <see cref="https://datatracker.ietf.org/doc/html/rfc5322#section-3.2.4"/>
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static string QuoteIfNeeded(string value)
+        {
+            var rex = new Regex(@"\(|\)|<|>|@|,|;|:|\\|""|/|\[|\]|\?|=| |[\u0001-\u001f]|\u007f");
+
+            if(rex.IsMatch(value))
+            {
+                return "\"" + Regex.Replace(value, @"""|\\", @"\$0") + "\"";
+            }
+            else
+            {
+                return value;
+            }
+        }
 
         public XmlDocument EaxsDocument { get; init; } = new();
         private XmlNamespaceManager Xmlns { get; init; }

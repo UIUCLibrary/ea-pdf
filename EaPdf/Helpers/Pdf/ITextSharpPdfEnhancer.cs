@@ -5,8 +5,16 @@ using System.Text;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
+    /// <summary>
+    /// Implements the IPdfEnhancer interface using the iTextSharp library
+    /// 
+    /// N.B. This has only been tested on PDFs produced by XEP and FOP, and it is unlikely to work on PDFs produced by other tools
+    /// because of variations in the way that different tools produce PDFs.
+    /// </summary>
     public class ITextSharpPdfEnhancer : IPdfEnhancer
     {
+        const string DELETE_ME = "DELETE ME";
+
         private bool disposedValue;
 
         private readonly PdfReader _reader;
@@ -17,27 +25,46 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         readonly object locker = new();
 
         /// <summary>
-        /// Dictionary where either the indirect refererence or the page number can be used to get the page data
+        /// Dictionary where either the indirect reference or the page number can be used to get the page data
         /// </summary>
-        private readonly MultiKeyDictionary<PdfIndirectReference, int, PageData> _pages = new(new ITextSharpIndirectReferenceEqualityComparer());
+        private readonly MultiKeyDictionary<PdfIndirectReference, int, PageData> Pages = new(new ITextSharpIndirectReferenceEqualityComparer());
 
+        /// <summary>
+        /// Track references to Filespec dictionaries by checksum and messageId
+        /// Assumes that the same message will not contain multiple attachments of the exact same file or checksum
+        /// </summary>
+        private Dictionary<(string checksum, string messageId), PdfIndirectReference> FilespecsByCheckSum = new();
+
+        /// <summary>
+        /// Instantiate the ITextSharpPdfEnhancer, note that the input PDF file can be modified by this class,
+        /// but once the class is disposed, the desired output file will be created at the outPdfFilePath location
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <param name="inPdfFilePath"></param>
+        /// <param name="outPdfFilePath"></param>
         public ITextSharpPdfEnhancer(ILogger logger, string inPdfFilePath, string outPdfFilePath)
         {
+
             _logger = logger;
             _reader = new PdfReader(inPdfFilePath);
             _out = new FileStream(outPdfFilePath, FileMode.Create);
             _stamper = new PdfStamper(_reader, _out, PdfWriter.VERSION_1_7);
 
-            _logger.LogTrace("ITextSharpPdfEnhancer: Opened PDF file '{inPdfFilePath}' for enhancement to '{outPdfFilePath}'", inPdfFilePath, outPdfFilePath);
+            _logger.LogTrace("ITextSharpPdfEnhancer: Opened PDF file '{inFilePath}' for enhancement to '{outFilePath}'", inPdfFilePath, outPdfFilePath);
 
             //populate the page dictionary
+            PopulatePageDictionary();
+        }
+
+        public void PopulatePageDictionary()
+        {
+            Pages.Clear();
             for (int i = 1; i <= _reader.NumberOfPages; i++)
             {
                 var indRef = _reader.GetPageOrigRef(i) ?? throw new Exception($"Unable to get PrIndirectReference for page {i}");
                 var pgDict = _reader.GetPageN(i) ?? throw new Exception($"Unable to get PdfDictionary for page {i}");
-                _pages.Add(indRef, i, new PageData(indRef, i, pgDict));
+                Pages.Add(indRef, i, new PageData(indRef, i, pgDict));
             }
-
         }
 
         Dictionary<string, string>? _pdfInfo;
@@ -96,7 +123,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             //set the PageMode 
             catalog.Put(PdfName.Pagemode, PdfName.Useoutlines);
-            if((conformanceLevel == PdfMailIdConformance.s || conformanceLevel == PdfMailIdConformance.si) && hasAttachments)
+            if ((conformanceLevel == PdfMailIdConformance.s || conformanceLevel == PdfMailIdConformance.si) && hasAttachments)
             {
                 //if single and has attachments set to UseAttachments
                 catalog.Put(PdfName.Pagemode, PdfName.Useattachments);
@@ -104,7 +131,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
 
             var viewerPreferences = catalog.GetAsDict(PdfName.Viewerpreferences);
-            if(viewerPreferences == null)
+            if (viewerPreferences == null)
             {
                 viewerPreferences = new PdfDictionary();
                 catalog.Put(PdfName.Viewerpreferences, viewerPreferences);
@@ -124,10 +151,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         private void RemoveProcSet()
         {
             _logger.LogTrace("ITextSharpPdfEnhancer: RemoveProcSet");
-            foreach (var page in _pages)
+            foreach (var page in Pages)
             {
                 PdfDictionary pageDict = page.Value.PageDictionary;
-                var resources = pageDict.GetAsDict(PdfName.Resources) ?? throw new Exception($"Unable to get page {_pages.GetSubKey(page.Key)} resources");
+                var resources = pageDict.GetAsDict(PdfName.Resources) ?? throw new Exception($"Unable to get page {Pages.GetSubKey(page.Key)} resources");
                 if (resources.Keys.Contains(PdfName.Procset))
                 {
                     _logger.LogTrace("ITextSharpPdfEnhancer: RemoveProcSet: Removing ProcSet from page {pageNumber}", page.Value.PageNumber);
@@ -156,15 +183,110 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         }
 
         /// <summary>
+        /// Any dummy placeholder filespecs in the array need to be modified to point to the correct EmbeddedFile
+        /// and the dummy EmbeddedFile needs to be removed
+        /// </summary>
+        /// <param name="annotFileSpecList"></param>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="Exception"></exception>
+        private void CorrectForDummyPlaceholderFilespecs(List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)> annotFileSpecList)
+        {
+
+            if (annotFileSpecList == null || annotFileSpecList.Count == 0)
+            {
+                throw new ArgumentException("List is null or empty", nameof(annotFileSpecList));
+            }
+
+            var realFileSpecs = annotFileSpecList.Where(afs => !(afs.filespec.GetAsString(PdfName.Desc)?.ToString() ?? "").StartsWith(DELETE_ME)).ToList();
+            var dummyFileSpecs = annotFileSpecList.Where(afs => (afs.filespec.GetAsString(PdfName.Desc)?.ToString() ?? "").StartsWith(DELETE_ME)).ToList();
+
+            if (realFileSpecs == null || realFileSpecs.Count == 0)
+            {
+                throw new Exception("Real filespecs not found");
+            }
+
+            //get the real EmbeddedFile stream and makler sure that each real filespec points to the same EmbeddedFile
+            PdfIndirectReference? realFIndRef = null;
+            PdfStream? realFStream = null;
+            foreach (var (annotation, filespec, indRef) in realFileSpecs)
+            {
+                var (fIndRef, fStream) = GetFilespecEmbeddedFile(filespec);
+                if (realFIndRef == null)
+                {
+                    realFIndRef = fIndRef;
+                    realFStream = fStream;
+                }
+                else if (!realFIndRef.EqualsIndRef(fIndRef))
+                {
+                    throw new Exception("Multiple filespecs with the same name, must all point to the same EmbeddedFile");
+                }
+
+            }
+
+
+            if (realFIndRef == null || realFStream == null)
+            {
+                throw new Exception("Real EmbeddedFile not found");
+            }
+
+            var size = realFStream.GetAsNumber(PdfName.LENGTH)?.IntValue ?? 0;
+            if (size == 0)
+            {
+                throw new Exception("Real EmbeddedFile size is 0");
+            }
+
+            //update the dummy filespecs to point to the real EmbeddedFile
+            foreach (var (annotation, filespec, indRef) in dummyFileSpecs)
+            {
+                var (fIndRef, fStream) = GetFilespecEmbeddedFile(filespec);
+
+                var dummySize = fStream.GetAsNumber(PdfName.LENGTH)?.IntValue ?? 0;
+                if (dummySize != 0)
+                {
+                    throw new Exception("Dummy EmbeddedFile size is not 0");
+                }
+
+                var efDict = filespec.GetAsDict(PdfName.EF) ?? throw new Exception("Filespec EF not found");
+                var fIndRefObj = efDict.GetAsIndirectObject(PdfName.F) ?? throw new Exception("Filespec EF F not found");
+
+                if (fIndRefObj != fIndRef)
+                {
+                    throw new Exception("Dummy filespec does not point to the correct EmbeddedFile");
+                }
+
+                efDict.Remove(PdfName.F);
+                efDict.Put(PdfName.F, realFIndRef);
+
+
+                //Note: The dummy EmbeddedFile will be removed by the RemoveUnusedObjects method during the Dispose method
+
+            }
+        }
+
+        private (PdfIndirectReference fIndRef, PdfStream fStream) GetFilespecEmbeddedFile(PdfDictionary filespec)
+        {
+            var ef = filespec.GetAsDict(PdfName.EF) ?? throw new Exception("Filespec EF not found");
+            var fIndRef = ef.GetAsIndirectObject(PdfName.F) ?? throw new Exception("Filespec EF F not found");
+            var fStream = ef.GetAsStream(PdfName.F) ?? throw new Exception("Filespec EF F not found");
+            return (fIndRef, fStream);
+        }
+
+        /// <summary>
         /// Set the AFRelationship, use the actual file names, and set the size, mod date, and creation date for each attachment
         /// </summary>
         /// <param name="embeddedFiles"></param>
         /// <exception cref="Exception"></exception>
         public void NormalizeAttachments(List<EmbeddedFile> embeddedFiles)
         {
-            //FUTURE: Some of the same attachments are added to the same place multiple times, so need to consolidate them to avoid unnecessary duplication
-
             _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments ({fileCount} embedded files)", embeddedFiles.Count);
+
+            //Get the annotFileSpecList once before the loop, because it is used multiple times, and values can change during processing that would invalidate the list
+            Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>> annotFileSpecDict = new();
+            foreach (var embeddedFileGrp in embeddedFiles.GroupBy(e => e.UniqueName))
+            {
+                var annotFileSpecList = GetAnnotFileSpecList(embeddedFileGrp.Key);
+                annotFileSpecDict.Add(embeddedFileGrp.Key, annotFileSpecList);
+            }
 
             foreach (var embeddedFileGrp in embeddedFiles.GroupBy(e => e.UniqueName)) //The embeddedFiles list can contain duplicates, so group by PdfName and use the first one in the group or use the group to create a new PdfName
             {
@@ -175,11 +297,16 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 var fileNames = embeddedFileGrp.Select(e => e.OriginalFileName).ToList();
                 var descs = embeddedFileGrp.Select(e => e.Description).ToList();
 
-                var annotFileSpecList = GetAnnotFileSpecList(embeddedFileGrp.Key);
+                var annotFileSpecList = annotFileSpecDict[embeddedFileGrp.Key];
 
                 if (annotFileSpecList.Count > embeddedFileGrp.Count())
                 {
                     throw new Exception($"Attachment {embeddedFile.UniqueName} ({embeddedFile.OriginalFileName}) has too many matching annotations or filespecs.");
+                }
+
+                if (annotFileSpecList.Count > 1)
+                {
+                    CorrectForDummyPlaceholderFilespecs(annotFileSpecList);
                 }
 
 
@@ -200,9 +327,21 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         annot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
                         annot.Put(PdfName.Creationdate, d);
                         annot.Put(PdfName.M, d);
+
+                        //to ensure PDF/A-3 compliance, the file attachment annotation must be listed in an AF array somewhere in the document
+                        var afArray = new PdfArray();
+                        afArray.Add(indRef);
+                        annot.Put(new PdfName("AF"), afArray);
                     }
 
-                    filespec.Put(new PdfName("AFRelationship"), new PdfName(embeddedFile.Relationship.ToString()));
+                    if (embeddedFile.Relationship != null)
+                    {
+                        filespec.Put(new PdfName("AFRelationship"), new PdfName(embeddedFile.Relationship.ToString()));
+                    }
+                    else
+                    {
+                        filespec.Remove(new PdfName("AFRelationship"));
+                    }
 
                     filespec.Put(new PdfName("F"), new PdfString(fileNames[fileNum], PdfObject.TEXT_UNICODE));
                     filespec.Put(new PdfName("UF"), new PdfString(fileNames[fileNum], PdfObject.TEXT_UNICODE));
@@ -210,8 +349,11 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         filespec.Put(new PdfName("Desc"), new PdfString(descs[fileNum], PdfObject.TEXT_UNICODE));
 
                     var efDict = filespec.GetAsDict(PdfName.EF) ?? throw new Exception($"Filespec EmbeddedFile (EF) for attachment '{embeddedFile.UniqueName}' not found");
-
+                    var efIndRef = efDict.GetAsIndirectObject(PdfName.F) ?? throw new Exception($"Filespec EmbeddedFile (EF) for attachment '{embeddedFile.UniqueName}' not found");
                     var efStream = efDict.GetAsStream(PdfName.F) ?? throw new Exception($"Filespec EmbeddedFile stream for attachment '{embeddedFile.UniqueName}' not found");
+
+                    //add a UF entry to the Filespec EF dictionary that matches the F entry (for maximum compatibility)
+                    efDict.Put(PdfName.Uf, efIndRef);
 
                     efStream.Put(new PdfName("Subtype"), new PdfName(embeddedFile.Subtype));
 
@@ -234,6 +376,13 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         if (!string.IsNullOrWhiteSpace(embeddedFile.Hash))
                         {
                             paramsDict.Put(new PdfName("CheckSum"), new PdfString(embeddedFile.HashBytes).SetHexWriting(true));
+                            foreach (var grp in embeddedFileGrp)
+                            {
+                                if (!FilespecsByCheckSum.TryAdd((grp.Hash, grp.MessageId), indRef))
+                                {
+                                    _logger.LogTrace("ITextSharpPdfEnhancer: NormalizeAttachments: Filespec for attachment '{checksum}' '{messageId}' already exists in FilespecsByCheckSum", embeddedFile.Hash, embeddedFile.MessageId);
+                                }
+                            }
                         }
                         else
                         {
@@ -244,30 +393,155 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     {
                         _logger.LogWarning("ITextSharpPdfEnhancer: NormalizeAttachments: Unsupported hash algorithm '{hashAlgorithm}' for attachment '{uniqueName}'", embeddedFile.HashAlgorithm, embeddedFile.UniqueName);
                     }
+
+                    //Add a Metadata entry to the EmbeddedFile stream dictionary, with the pdfmailmeta:Attachment or pdfmailmeta:Asset metadata 
+                    if (embeddedFile.Metadata != null)
+                    {
+                        var metaIndObj = AddMetadataStream(embeddedFile.Metadata.OuterXml);
+                        efStream.Put(new PdfName("Metadata"), metaIndObj.IndirectReference);
+                    }
                 }
             }
 
-            AddFileAttachmentAnnots(embeddedFiles);
+            AddFileAttachmentAnnots(embeddedFiles, annotFileSpecDict);
 
-            if (PdfInfo.ContainsKey("Producer") && PdfInfo["Producer"].Contains("Apache FOP"))
+            ReaddCatalogNamesEmbeddedFiles();
+        }
+
+        /// <summary>
+        /// Add a metadata stream to the PDF file and return the indirect object reference
+        /// </summary>
+        /// <param name="xmlStr"></param>
+        /// <returns></returns>
+        private PdfIndirectObject AddMetadataStream(string xmlStr)
+        {
+            byte[] metaBytes = Encoding.UTF8.GetBytes(xmlStr);
+            var newStrm = new PdfStream(metaBytes);
+            newStrm.Put(new PdfName("Type"), new PdfName("Metadata"));
+            newStrm.Put(new PdfName("Subtype"), new PdfName("XML"));
+            var metaIndObj = _stamper.Writer.AddToBody(newStrm);
+            return metaIndObj;
+        }
+
+        /// <summary>
+        /// If there is a /Catalog /Names /Embeddedfiles entry remove it and add a new one with the correct entries
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        private void ReaddCatalogNamesEmbeddedFiles()
+        {
+            _logger.LogTrace("ITextSharpPdfEnhancer: ReaddCatalogNamesEmbeddedFiles");
+
+            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
+
+            var names = catalog.GetAsDict(PdfName.Names) ?? throw new Exception("Catalog Names not found");
+
+            var embeddedFilesDict = names.GetAsDict(PdfName.Embeddedfiles);
+            if (embeddedFilesDict != null)
             {
-                //if the PDF was produced by FOP, the AddFileAttachmentAnnots will cause duplicate entries in the file attachments list
-                //so delete the /Catalog /Names /EmbeddedFiles entry
-                RemoveCatalogNamesEmbeddedFiles();
+                //Delete the Embeddedfiles entry so it can be re-added the correct way
+                //This will leave an orphaned name tree in the document, which will be removed by the RemoveUnusedObjects call in the Dispose method
+                names.Remove(PdfName.Embeddedfiles);
+            }
+
+            //Add or Re-add the Embeddedfiles entry
+
+            //Every file currently in the AF array, must also be in the Embeddedfiles name tree; later the AF array will be truncated to only include source files
+            var af = catalog.GetAsArray(new PdfName("AF")) ?? throw new Exception("Catalog AF not found");
+
+            var nameList = new List<KeyValuePair<string, PdfIndirectReference>>();  //this will be turned into a name tree later
+
+            for (int i = 0; i < af.Size; i++)
+            {
+                //need to get the file name extension and the checksum  to convert into a name for the name tree
+                var indRef = af.GetAsIndirectObject(i) ?? throw new Exception("Filespec indirect reference not found");
+                var fileSpec = af.GetAsDict(i) ?? throw new Exception("Filespec not found");
+                var name = GetNameTreeName(fileSpec);
+
+                nameList.Add(new KeyValuePair<string, PdfIndirectReference>(name, indRef));
+            }
+
+            var nameTree = ConvertToNameTree(nameList);
+
+            //add nameTree to the file
+
+            var nameTreeRootRef = _stamper.Writer.AddToBody(nameTree).IndirectReference;
+
+            names.Put(PdfName.Embeddedfiles, nameTreeRootRef);
+
+            //Next remove entries from the AF array that are not source files
+
+            var toRemove = new List<int>();
+            for (int i = 0; i < af.Size; i++)
+            {
+                var fileSpec = af.GetAsDict(i) ?? throw new Exception("Filespec not found");
+                var relat = fileSpec.GetAsName(new PdfName("AFRelationship"));
+                var relatStr = relat?.ToString() ?? "NONE";
+                if (relatStr != "/Source")
+                {
+                    toRemove.Add(i);
+                }
+            }
+            toRemove.Reverse(); //so as I remove entries, the index doesn't change
+            foreach (var i in toRemove)
+            {
+                af.Remove(i);
             }
 
         }
 
-        private void RemoveCatalogNamesEmbeddedFiles()
+        /// <summary>
+        /// Convert a sorted dictionary of file names and indirect references into a name tree and return the root node
+        /// </summary>
+        /// <param name="nameDict"></param>
+        /// <returns></returns>
+        private PdfDictionary ConvertToNameTree(List<KeyValuePair<string, PdfIndirectReference>> nameList)
         {
-            //This will leave an orphaned name tree in the document, which will be removed by the RemoveUnusedObjects call in the Dispose method
-            _logger.LogTrace("ITextSharpPdfEnhancer: RemoveCatalogNamesEmbeddedFiles");
-            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
-            var names = catalog.GetAsDict(PdfName.Names);
-            names?.Remove(PdfName.Embeddedfiles);
+            var sortedNameList = nameList.OrderBy(kv => kv.Key).ToList();
+
+            //Start with the most basic structure, a single Names dictionary at the root; this seems to be what FOP already uses regardless of the number of entries
+            var names = new PdfArray();
+            foreach (var entry in sortedNameList)
+            {
+                var name = new PdfString(entry.Key);
+                var indRef = entry.Value;
+                names.Add(name);
+                names.Add(indRef);
+            }
+
+            var root = new PdfDictionary();
+            root.Put(PdfName.Names, names);
+
+            return root;
         }
 
-        private void AddFileAttachmentAnnots(List<EmbeddedFile> embeddedFiles)
+        /// <summary>
+        /// Given a Filespec dictionary, get a name which can be used for the EmbeddedFiles name tree
+        /// </summary>
+        /// <param name="fileSpec"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        private string GetNameTreeName(PdfDictionary fileSpec)
+        {
+            var f = fileSpec.GetAsString(PdfName.F) ?? throw new Exception("Filespec F not found");
+
+            //Just use the filename as the name tree name; there might be duplicates which can cause problems for some viewers
+            return f.ToString();
+
+            ////Use the file extension and the checksum to create a unique name for the name tree
+            ////This avoids duplicates, but causes some viewers to display the wrong attachment files
+
+            //var ext = Path.GetExtension(f.ToString());
+
+            //var ef = fileSpec.GetAsDict(PdfName.EF) ?? throw new Exception("Filespec EF not found");
+            //var embeddedFile = ef.GetAsStream(PdfName.F) ?? throw new Exception("Filespec EF F not found");
+            //var paramsDict = embeddedFile.GetAsDict(PdfName.Params) ?? throw new Exception("Filespec EF F Params not found");
+            //var checksumPdfStr = paramsDict.GetAsString(new PdfName("CheckSum")) ?? throw new Exception("Filespec EF F Params CheckSum not found");
+            //var checksum = Convert.ToHexString(checksumPdfStr.GetOriginalBytes());
+
+            //return $"{checksum}{ext}";
+        }
+
+        private void AddFileAttachmentAnnots(List<EmbeddedFile> embeddedFiles, Dictionary<string, List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)>> annotFileSpecDict)
         {
             _logger.LogTrace("ITextSharpPdfEnhancer: AddFileAttachmentAnnots ({fileCount} embedded files)", embeddedFiles.Count);
 
@@ -290,8 +564,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 var objs = GetObjsFromNameTreeStartingWith(destsDict, "X_" + embeddedFile.Hash);
                 if (objs.Count == 0) continue;
 
-                var annotFileSpecs = GetAnnotFileSpecList(embeddedFileGrp.Key);
-                foreach (var annotFileSpec in annotFileSpecs) //There can be multiple annotations pointing to the same embedded file 
+                var annotFileSpecList = annotFileSpecDict[embeddedFileGrp.Key];
+                foreach (var annotFileSpec in annotFileSpecList) //There can be multiple annotations pointing to the same embedded file 
                 {
 
                     for (int objNum = 0; objNum < objs.Count; objNum++)
@@ -302,8 +576,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         {
                             //if there are multiple annotations pointing to the same embedded file, create a new filespec for each annotation
                             var embeddedFileIndRef = annotFileSpec.filespec.GetAsDict(PdfName.EF).GetAsIndirectObject(PdfName.F);
-                            var fileSpec = AddFilespec(embeddedFileGrp.ElementAt(objNum), embeddedFileIndRef);
-                            fileSpecIndRef = fileSpec.IndirectReference;
+                            fileSpecIndRef = AddFilespec(embeddedFileGrp.ElementAt(objNum), embeddedFileIndRef);
                         }
 
                         var (obj, indRef) = objs[objNum];
@@ -321,6 +594,12 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                             linkAnnot.Put(PdfName.Creationdate, d);
                             linkAnnot.Put(PdfName.M, d);
                             linkAnnot.Put(PdfName.Fs, fileSpecIndRef);
+
+                            //to ensure PDF/A-3 compliance, the file attachment annotation must be listed in an AF array somewhere in the document
+                            var af = new PdfArray();
+                            af.Add(fileSpecIndRef);
+                            linkAnnot.Put(new PdfName("AF"), af);
+
                             var ap = new PdfDictionary();
                             ap.Put(PdfName.N, annotAppearanceStream.IndirectReference);
                             linkAnnot.Put(PdfName.Ap, ap);
@@ -364,27 +643,42 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             return ret;
         }
 
-        private PdfIndirectObject AddFilespec(EmbeddedFile embeddedFile, PdfIndirectReference indRef)
+        private PdfIndirectReference AddFilespec(EmbeddedFile embeddedFile, PdfIndirectReference indRef)
         {
-            _logger.LogTrace("ITextSharpPdfEnhancer: AddFilespec ({embeddedFile}, {originalFileName}, {indirectReference}", embeddedFile.UniqueName, embeddedFile.OriginalFileName, indRef);
+            _logger.LogTrace("ITextSharpPdfEnhancer: AddFilespec ({fileSpec}, {originalFileName}, {indirectReference}", embeddedFile.UniqueName, embeddedFile.OriginalFileName, indRef);
 
             var fileSpec = new PdfDictionary();
             fileSpec.Put(PdfName.TYPE, PdfName.Filespec);
             fileSpec.Put(PdfName.F, new PdfString(embeddedFile.OriginalFileName, PdfObject.TEXT_UNICODE));
             fileSpec.Put(PdfName.Uf, new PdfString(embeddedFile.OriginalFileName, PdfObject.TEXT_UNICODE));
-            fileSpec.Put(new PdfName("AFRelationship"), new PdfName(embeddedFile.Relationship.ToString()));
+            if (embeddedFile.Relationship != null)
+            {
+                fileSpec.Put(new PdfName("AFRelationship"), new PdfName(embeddedFile.Relationship.ToString()));
+            }
+            else
+            {
+                fileSpec.Remove(new PdfName("AFRelationship"));
+            }
             fileSpec.Put(PdfName.Desc, new PdfString(embeddedFile.Description, PdfObject.TEXT_UNICODE));
 
             var efDict = new PdfDictionary();
             efDict.Put(PdfName.F, indRef);
+            efDict.Put(PdfName.Uf, indRef);
             fileSpec.Put(PdfName.EF, efDict);
 
-            var ret = _stamper.Writer.AddToBody(fileSpec);
+            //PdfIndirectObject ret = _stamper.Writer.AddToBody(fileSpec);  //This doesn't seem to work as needed
+            PdfIndirectReference ret = _reader.AddPdfObject(fileSpec);
 
-            //Need to add the fileSpec to the /Catalog/AF array name tree
+            //Need to add the fileSpec to the /Catalog/AF array 
             var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
             var af = catalog.GetAsArray(new PdfName("AF"));
-            af.Add(ret.IndirectReference);
+            af.AddFirst(ret);
+
+            //Need to add the fileSpec to the FilespecsByCheckSum list
+            if (!FilespecsByCheckSum.TryAdd((embeddedFile.Hash, embeddedFile.MessageId), ret))
+            {
+                _logger.LogTrace("ITextSharpPdfEnhancer: AddFilespec: Filespec for attachment '{checksum}' '{messageId}' already exists in FilespecsByCheckSum", embeddedFile.Hash, embeddedFile.MessageId);
+            }
 
             return ret;
         }
@@ -393,32 +687,62 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         {
             _logger.LogTrace("ITextSharpPdfEnhancer: GetAnnotFileSpecList ({name})", name);
 
+            var prod = _reader.Info["Producer"] ?? "Unknown";
+
             List<(PdfDictionary? annotation, PdfDictionary filespec, PdfIndirectReference indRef)> ret = new();
 
             var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
 
-            //attachments via the catalog Names Embeddedfiles entries
-            var names = catalog.GetAsDict(PdfName.Names);
-            var embeddedFilesDict = names?.GetAsDict(PdfName.Embeddedfiles);
-
-            //attachments via the page annotations entries
-            var annotationAttachments = GetFileAttachmentAnnotations();
-
-            if (embeddedFilesDict != null)
+            if (prod.Contains("FOP"))
             {
-                var t = GetObjFromNameTree(embeddedFilesDict, name);
-                if (t?.obj is PdfDictionary fs)
-                    ret.Add((null, fs, t.Value.indRef));
+                //attachments via the Catalog AF array
+                var af = catalog.GetAsArray(new PdfName("AF")) ?? throw new Exception("Catalog AF array not found");
+
+                var fileSpecs = GetFilespecsFromAfArray(af, name);
+                foreach (var filespec in fileSpecs)
+                {
+                    ret.Add((null, filespec.filespec, filespec.indRef));
+                }
+            }
+            else if (prod.Contains("XEP"))
+            {
+                //attachments via the page annotations entries
+                var annotationAttachments = GetFileAttachmentAnnotations();
+
+
+                if (annotationAttachments.ContainsKey(name))
+                {
+                    ret.AddRange(annotationAttachments[name]);
+                }
+            }
+            else
+            {
+                throw new Exception($"Unsupported PDF producer: {prod}");
             }
 
-            if (annotationAttachments.ContainsKey(name))
-            {
-                ret.AddRange(annotationAttachments[name]);
-            }
-
-            if (ret == null)
+            if (ret == null || ret.Count == 0)
                 throw new Exception($"Filespec for attachment '{name}' not found");
 
+            return ret;
+        }
+
+        private List<(PdfDictionary filespec, PdfIndirectReference indRef)> GetFilespecsFromAfArray(PdfArray af, string fileName)
+        {
+            List<(PdfDictionary, PdfIndirectReference)> ret = new();
+
+            for (int i = 0; i < af.Size; i++)
+            {
+                var indRef = af.GetAsIndirectObject(i) ?? throw new Exception("Filespec indirect reference not found");
+                var fileSpec = af.GetAsDict(i) ?? throw new Exception("Filespec not found");
+                var f = fileSpec.GetAsString(PdfName.F) ?? throw new Exception("Filespec F not found");
+
+                _logger.LogTrace($"GetFilespecsFromAfArray: {indRef} '{f.ToString()}'");
+
+                if (f.ToString() == fileName)
+                {
+                    ret.Add((fileSpec, indRef));
+                }
+            }
             return ret;
         }
 
@@ -434,7 +758,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
                     _extLinkAnnotations = new();
 
-                    foreach (var page in _pages)
+                    foreach (var page in Pages)
                     {
                         PdfDictionary pageDict = page.Value.PageDictionary;
                         PdfArray annots = pageDict.GetAsArray(PdfName.Annots);
@@ -495,7 +819,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
                     _fileAttachmentAnnotations = new();
 
-                    foreach (var page in _pages)
+                    foreach (var page in Pages)
                     {
                         PdfDictionary pageDict = page.Value.PageDictionary;
                         PdfArray annots = pageDict.GetAsArray(PdfName.Annots);
@@ -543,7 +867,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
                     _linkAnnotations = new();
 
-                    foreach (var page in _pages)
+                    foreach (var page in Pages)
                     {
                         PdfDictionary pageDict = page.Value.PageDictionary;
                         PdfArray annots = pageDict.GetAsArray(PdfName.Annots);
@@ -605,7 +929,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             if (newDPartRootIndObj.IndirectReference.Number != dpartRootIndRef.Number || newDPartRootIndObj.IndirectReference.Generation != dpartRootIndRef.Generation)
                 throw new Exception("New indirect reference unexpectedly assigned");
 
-            //add DPartRoot to catalog
+            //Add DPartRoot to catalog
             //Note: _stamper.Writer.ExtraCatalog will not work for this
             _reader.Catalog.Put(new PdfName("DPartRoot"), dpartRootIndRef);
         }
@@ -626,6 +950,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             if (dpartNode == null)
                 throw new ArgumentNullException(nameof(dpartNode));
+
+            var catalog = _reader.Catalog ?? throw new Exception("Catalog not found");
 
             var newIndRef = _stamper.Writer.PdfIndirectReference; //get reference to new DPart object
 
@@ -648,7 +974,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
                 //this is the root DPart node, so we want to update the ModifyDate in the XMP metadata, so it matches the Document Information dictionary  
                 //which is updated when the file is saved
-                dpartNode.UpdateElementNodeText("/*/*/*/xmp:ModifyDate", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                dpartNode.UpdateElementNodeText($"{DPartNode.XmpRootPath}/xmp:ModifyDate", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
 
                 if (info != null)
                 {
@@ -656,17 +982,17 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     //pdf:Producer is mapped to the Producer field in the Document Information dictionary
                     var producerStr = info["Producer"];
                     var iTextStr = ProcessorVersion;
-                    dpartNode.UpdateElementNodeText("/*/*/*/pdf:Producer", $"{producerStr}; modified using {iTextStr}");
+                    dpartNode.UpdateElementNodeText($"{DPartNode.XmpRootPath}/pdf:Producer", $"{producerStr}; modified using {iTextStr}");
 
                     //Combine the document info Keywords and the XMP Keywords
                     var infoKeywords = info["Keywords"];
-                    var xmpKeywords = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/pdf:Keywords", dpartNode.MetadataNamespaces)?.InnerText;
+                    var xmpKeywords = dpartNode.MetadataXml.SelectSingleNode($"{DPartNode.XmpRootPath}/pdf:Keywords", dpartNode.MetadataNamespaces)?.InnerText;
                     keywords = SplitAndMergeStringLists(infoKeywords, xmpKeywords);
                     if (!keywords.Contains("EA-PDF"))
                     {
                         keywords.Add("EA-PDF");
                     }
-                    dpartNode.UpdateElementNodeText("/*/*/*/pdf:Keywords", string.Join(";", keywords));
+                    dpartNode.UpdateElementNodeText($"{DPartNode.XmpRootPath}/pdf:Keywords", string.Join(";", keywords));
                 }
 
 
@@ -679,11 +1005,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             PdfIndirectObject? metaIndObj = null;
             if (dpartNode.MetadataXml != null)
             {
-                byte[] metaBytes = Encoding.UTF8.GetBytes(dpartNode.MetadataString);
-                var newStrm = new PdfStream(metaBytes);
-                newStrm.Put(new PdfName("Type"), new PdfName("Metadata"));
-                newStrm.Put(new PdfName("Subtype"), new PdfName("XML"));
-                metaIndObj = _stamper.Writer.AddToBody(newStrm);
+                //In this implementation, only the root DPart node contains the XMP metadata; this also replaces the document-level XMP metadata
+                metaIndObj = AddMetadataStream(dpartNode.MetadataString);
                 newDPartDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference);  //this can go here or in the DPM dictionary
             }
 
@@ -695,19 +1018,27 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     dpmDict = AddToDpmDict(dpmDict, dpmKVP);
                 }
 
-                //QUESTION: V0.2 spec shows the Metadata inside the DPM dictionary, but should it go in the DPart dictionary?
-                //metaDict.Put(new PdfName("Metadata"), metaIndObj.IndirectReference); 
-                //TODO: Add the AF entry to the metadata dictionary
-                //metaDict.Put(new PdfName("AF"), null);
 
                 newDPartDict.Put(new PdfName("DPM"), dpmDict);
+            }
+
+            if (dpartNode.AttachmentChecksums.Count > 0)
+            {
+                //Add the AF entry to the metadata dictionary
+                //Find the Filespec entries in the AF array that match the DPart AF entries
+
+                var files = GetReferencesToFilespecsWithCheckSums(dpartNode.AttachmentChecksums, dpartNode.MessageId);
+                if (files.Size > 0)
+                {
+                    newDPartDict.Put(new PdfName("AF"), files);
+                }
             }
 
             if (dpartNode.Parent == null && metaIndObj != null)
             {
                 //this is the root DPart node, so replace the catalog metadata with this
-                _reader.Catalog.Remove(PdfName.Metadata);
-                _reader.Catalog.Put(PdfName.Metadata, metaIndObj.IndirectReference);
+                catalog.Remove(PdfName.Metadata);
+                catalog.Put(PdfName.Metadata, metaIndObj.IndirectReference);
 
                 if (info != null && dpartNode.MetadataXml != null)
                 {
@@ -718,21 +1049,21 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                         info["Keywords"] = string.Join(";", keywords);
 
                     //dc:title is mapped to the Title field in the Document Information dictionary
-                    var titleNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/dc:title//rdf:li", dpartNode.MetadataNamespaces);
+                    var titleNode = dpartNode.MetadataXml.SelectSingleNode($"{DPartNode.XmpRootPath}/dc:title//rdf:li", dpartNode.MetadataNamespaces);
                     if (titleNode != null)
                     {
                         info["Title"] = titleNode.InnerText;
                     }
 
                     //dc:description is mapped to the Subject field in the Document Information dictionary
-                    var descrNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/dc:description//rdf:li", dpartNode.MetadataNamespaces);
+                    var descrNode = dpartNode.MetadataXml.SelectSingleNode($"{DPartNode.XmpRootPath}/dc:description//rdf:li", dpartNode.MetadataNamespaces);
                     if (descrNode != null)
                     {
                         info["Subject"] = descrNode.InnerText;
                     }
 
                     //xmp:CreateDate is mapped to the CreationDate field in the Document Information dictionary
-                    var creDateNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/xmp:CreateDate", dpartNode.MetadataNamespaces);
+                    var creDateNode = dpartNode.MetadataXml.SelectSingleNode($"{DPartNode.XmpRootPath}/xmp:CreateDate", dpartNode.MetadataNamespaces);
                     if (creDateNode != null)
                     {
                         info["CreationDate"] = new PdfDate(DateTime.Parse(creDateNode.InnerText)).ToString();
@@ -741,7 +1072,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     //iTextSharp automatically updates the ModDate field when the file is saved, so no need to set it here
 
                     //CreatorTool is mapped to the Creator field in the Document Information dictionary
-                    var creatorNode = dpartNode.MetadataXml.SelectSingleNode("/*/*/*/xmp:CreatorTool", dpartNode.MetadataNamespaces);
+                    var creatorNode = dpartNode.MetadataXml.SelectSingleNode($"{DPartNode.XmpRootPath}/xmp:CreatorTool", dpartNode.MetadataNamespaces);
                     if (creatorNode != null)
                     {
                         info["Creator"] = creatorNode.InnerText;
@@ -789,8 +1120,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                     //add dpart indirect reference to pages dictionary, so there is a two-way linkage
                     for (int i = pageStart.PageNumber; i <= pageEnd.PageNumber; i++)
                     {
-                        if (_pages[i] != null)
-                            _pages[i]?.PageDictionary.Put(new PdfName("DPart"), newIndRef);
+                        if (Pages[i] != null)
+                            Pages[i]?.PageDictionary.Put(new PdfName("DPart"), newIndRef);
                         else
                             throw new Exception($"Page number {i} not found");
                     }
@@ -813,6 +1144,46 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 throw new Exception("New indirect reference unexpectedly assigned");
 
             return leafIndObj.IndirectReference;
+        }
+
+        /// <summary>
+        /// Return an array of PdfIndirectReference objects for the filespecs that have the given checksums
+        /// </summary>
+        /// <param name="checkSums"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        private PdfArray GetReferencesToFilespecsWithCheckSums(List<string> checkSums, string messageId)
+        {
+            var ret = new PdfArray();
+
+            if (_logger.IsEnabled(LogLevel.Trace))
+                _logger.LogTrace("ITextSharpPdfEnhancer: GetReferencesToFilespecsWithCheckSums ({checkSums})", checkSums);
+
+            if (checkSums.Count == 0)
+                return ret;
+
+            foreach (var cs in checkSums)
+            {
+                var kvs = FilespecsByCheckSum.Where(kv => kv.Key.checksum == cs).Select(kv => kv.Value);
+                if (kvs != null && kvs.Count() > 1)
+                {
+                    kvs = FilespecsByCheckSum.Where(kv => kv.Key.checksum == cs && kv.Key.messageId == messageId).Select(kv => kv.Value);
+                }
+
+                if (kvs != null && kvs.Any())
+                {
+                    foreach (var indref in kvs)
+                    {
+                        ret.Add(indref);
+                    }
+                }
+                else
+                {
+                    throw new Exception($"Filespec for checksum '{cs}' message-id '{messageId}' not found");
+                }
+
+            }
+            return ret;
         }
 
         /// <summary>
@@ -881,7 +1252,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 PdfArray pageDest = (PdfArray)d1[name] as PdfArray;
                 PdfIndirectReference pageRef = pageDest.GetAsIndirectObject(0);
-                return _pages[pageRef];
+                return Pages[pageRef];
             }
             else
                 return null;
@@ -899,12 +1270,12 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             if (string.IsNullOrWhiteSpace(name))
             {
-                return _pages.Values.Last();
+                return Pages.Values.Last();
             }
 
             var page = GetPageDataForNamedDestination(name);
 
-            return page == null ? null : _pages[page.PageNumber - 1];
+            return page == null ? null : Pages[page.PageNumber - 1];
         }
 
 
@@ -914,20 +1285,26 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 if (disposing)
                 {
-                    _reader.RemoveUnusedObjects(); //this gets rid of orphaned XMP metadata objects, maybe among others
-
-                    _stamper.Close();
-                    _reader.Close();
-                    _stamper.Dispose();
-                    _reader.Dispose();
-
-                    _out.Close();
-                    _out.Dispose();
-
+                    CloseAndDispose();
                 }
+
 
                 disposedValue = true;
             }
+        }
+
+        private void CloseAndDispose()
+        {
+            _reader.RemoveUnusedObjects(); //this gets rid of orphaned XMP metadata objects, maybe among others
+
+            _stamper.Close();
+            _reader.Close();
+            _stamper.Dispose();
+            _reader.Dispose();
+
+            _out.Close();
+            _out.Dispose();
+
         }
 
         public void Dispose()

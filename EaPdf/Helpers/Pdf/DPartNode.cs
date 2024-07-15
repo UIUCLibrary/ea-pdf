@@ -9,6 +9,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
     /// </summary>
     public class DPartNode
     {
+        public const string XmpRootPath = "/x:xmpmeta/rdf:RDF/rdf:Description[1]"; //useful in XMP XPath queries; the first rdf:Description contains the document metadata
+
         const int MAX_DEPTH = 100;
 
         /// <summary>
@@ -21,6 +23,19 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// Dictionary corresponding to the DPart DPM metadata PDF Dictionary
         /// </summary>
         public Dictionary<string, string> Dpm { get; set; } = new();
+
+        public string MessageId         {
+            get
+            {
+                return Dpm.GetValueOrDefault("Mail_MessageID") ?? string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// List of the checksums of the attachments for the dpart node (if any), usually only at the message level
+        /// Entries correspond to the AttachmentNames list
+        /// </summary>
+        public List<string> AttachmentChecksums { get; set; } = new();
 
         /// <summary>
         /// Metadata of the DPart
@@ -316,6 +331,12 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             parentNode?.DParts.Add(newNode);
 
             newNode.Id = dPartElem.Attributes["Id"]?.Value;
+
+            var attachmentCheckSums = dPartElem.GetAttribute("AttachmentCheckSums");
+            if(!string.IsNullOrWhiteSpace(attachmentCheckSums))
+            {
+                newNode.AttachmentChecksums.AddRange(attachmentCheckSums.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            }
 
             foreach (var DpmAttr in dPartElem.Attributes.Cast<XmlAttribute>().Where(a => a.LocalName.StartsWith("DPM_")))
             {

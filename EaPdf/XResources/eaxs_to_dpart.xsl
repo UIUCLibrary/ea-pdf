@@ -48,7 +48,15 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Message">
-		<DPart DPM_Mail_MessageID="{eaxs:MessageId}" DPM_Mail_GUID="{eaxs:Guid}">			
+		<DPart DPM_Mail_MessageID="{eaxs:MessageId}" DPM_Mail_GUID="{eaxs:Guid}">
+			<xsl:if test=".//eaxs:SingleBody/eaxs:ExtBodyContent | .//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+				<xsl:attribute name="AttachmentCheckSums">
+					<!-- AF is an array of attachments for the message, put the checksum here so we can link them up later -->
+					<xsl:for-each select=".//eaxs:SingleBody/eaxs:ExtBodyContent | .//eaxs:SingleBody/eaxs:BodyContent[fn:lower-case(normalize-space(../@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(../eaxs:ContentType)),'text/'))]">
+						<xsl:value-of select="eaxs:Hash/eaxs:Value"/><xsl:text> </xsl:text>
+					</xsl:for-each>
+				</xsl:attribute>
+			</xsl:if>
 			<DPart DPM_Mail_ContentSetType="EmailHeaderRendering" DPM_Mail_Desc="This is a rendering of the important email headers for Message Id '{eaxs:MessageId}', including a listing of message contents.">
 				<xsl:attribute name="Id">
 					<xsl:call-template name="ContentSetId">

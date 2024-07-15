@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Xml;
+using System.Text;
 using UIUCLibrary.EaPdf.Helpers;
 using UIUCLibrary.EaPdf.Helpers.Pdf;
 
@@ -275,7 +276,7 @@ namespace UIUCLibrary.EaPdf
         {
             var tempOutFilePath = Path.ChangeExtension(pdfFilePath, "out.pdf");
 
-            var dpartRoot = GetXmpMetadataForMessages(eaxsFilePath);
+            var dpartRoot = GetDPartsForMessages(eaxsFilePath);
             var docXmp = GetRootXmpForAccount(eaxsFilePath, complexScripts);
 
             //add docXmp to the DPart root node
@@ -295,22 +296,24 @@ namespace UIUCLibrary.EaPdf
             var pdfAttachmentCount = metaXml.SelectNodes("//pdfmailmeta:attachments/rdf:Seq/rdf:li", dpartRoot.MetadataNamespaces)?.Count ?? 0;
 
             //get list of all embedded files in the PDF
-            var embeddedFiles = GetEmbeddedFiles(eaxsFilePath);
+            var embeddedFiles = GetEmbeddedFiles(eaxsFilePath, dpartRoot);
 
-            using var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, tempOutFilePath);
+            using (var enhancer = _enhancerFactory.Create(_logger, pdfFilePath, tempOutFilePath))
+            {
+                enhancer.NormalizeAttachments(embeddedFiles);
 
-            enhancer.AddDPartHierarchy(dpartRoot); //Associate XMP with the PDF DPart of the message
+                //NOTE: The DPart hierarchy must be added after the NormalizeAttachments method is called, as it requires embedded files to have the checksums for identification purposes
+                enhancer.AddDPartHierarchy(dpartRoot); //Associate XMP with the PDF DPart of the message
 
-            enhancer.NormalizeAttachments(embeddedFiles);
+                enhancer.RemoveUnnecessaryElements();
 
-            enhancer.RemoveUnnecessaryElements();
+                enhancer.FixGotoRLinks();
 
-            enhancer.FixGotoRLinks();
+                enhancer.SetViewerPreferences(pdfMailConformance, pdfAttachmentCount > 0);
 
-            enhancer.SetViewerPreferences(pdfMailConformance, pdfAttachmentCount > 0);
-
-            //dispose of the enhancer to make sure files are closed
-            enhancer.Dispose();
+                //dispose of the enhancer to make sure files are closed
+                enhancer.Dispose();
+            }
 
             //if all is well, move the temp file over the top of the original
             var pdfFi = new FileInfo(pdfFilePath);
@@ -319,7 +322,7 @@ namespace UIUCLibrary.EaPdf
             var sizeDiffPercent = (tempFi.Length - pdfFi.Length) / (double)pdfFi.Length * 100;
 
             _logger.LogInformation("Postprocessing: Original PDF file size: {originalSize} bytes, New PDF file size: {newSize} bytes, Size difference: {sizeDiffPercent:0.00}%", pdfFi.Length, tempFi.Length, sizeDiffPercent);
-            
+
             //Sanity check
             if (tempFi.Exists)
             {
@@ -331,7 +334,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private List<EmbeddedFile> GetEmbeddedFiles(string eaxsFilePath)
+        private List<EmbeddedFile> GetEmbeddedFiles(string eaxsFilePath, DPartNode dpartRoot)
         {
             List<EmbeddedFile> ret = new();
 
@@ -359,7 +362,7 @@ namespace UIUCLibrary.EaPdf
                             names.Add(parentFolderName.InnerText);
                         }
                     }
-                    AddSourceFile(ret, folderPropNode, dates, names, true, xmlns);
+                    AddSourceFile(ret, folderPropNode, dates, names, true, xmlns, dpartRoot);
                 }
             }
 
@@ -378,7 +381,7 @@ namespace UIUCLibrary.EaPdf
                         }
                     }
                     names.Add(msgPropNode.SelectSingleNode("../xm:MessageId", xmlns)?.InnerText ?? "");
-                    AddSourceFile(ret, msgPropNode, dates, names, false, xmlns);
+                    AddSourceFile(ret, msgPropNode, dates, names, false, xmlns, dpartRoot);
                 }
             }
 
@@ -389,7 +392,7 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (XmlNode inlineAttachmentNode in bodyContentNodes)
                 {
-                    AddAttachmentFile(ret, inlineAttachmentNode, xmlns);
+                    AddAttachmentFile(ret, inlineAttachmentNode, xmlns, dpartRoot);
                 }
             }
 
@@ -397,7 +400,7 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (XmlNode extAttachmentNode in extBodyContentNodes)
                 {
-                    AddAttachmentFile(ret, extAttachmentNode, xmlns);
+                    AddAttachmentFile(ret, extAttachmentNode, xmlns, dpartRoot);
                 }
             }
 
@@ -405,6 +408,119 @@ namespace UIUCLibrary.EaPdf
             //get the attachment files
 
             return ret;
+        }
+
+        /// <summary>
+        /// Given the checksum return the XMP metadata for the attachment from the root DPartNode
+        /// </summary>
+        /// <param name="dpartRoot"></param>
+        /// <param name="checksum"></param>
+        /// <returns></returns>
+        private static XmlDocument GetAssetOrAttachmentXmp(DPartNode dpartRoot, string checksum)
+        {
+            if (dpartRoot.MetadataXml == null)
+            {
+                throw new ArgumentNullException(nameof(dpartRoot), "Root DPart does not have any metadata");
+            }
+
+            var embeddedFiles = dpartRoot.MetadataXml.SelectNodes($"//pdfmailmeta:Asset[pdfmailmeta:CheckSum = '{checksum.ToLower()}'] | //pdfmailmeta:Attachment[pdfmailmeta:CheckSum = '{checksum.ToLower()}']", dpartRoot.MetadataNamespaces);
+
+            string about = "";
+            string prop = "";
+
+            if (embeddedFiles == null || embeddedFiles.Count == 0)
+            {
+                throw new Exception($"Embedded files with checksum '{checksum}' not found in the DPart metadata.");
+            }
+
+            StringBuilder lis = new();
+
+            foreach (XmlElement embeddedFile in embeddedFiles)
+            {
+                //if embeddedFileXmp is an asset, get a list of all the messages in the asset
+                if (embeddedFile.LocalName == "Asset")
+                {
+                    prop = "containsMessages";
+
+                    about = embeddedFile.GetAttribute("rdf:about");
+                    if (string.IsNullOrWhiteSpace(about))
+                    {
+                        throw new Exception("Attribute rdf:about not found in the Asset.");
+                    }
+
+                    var messages = dpartRoot.MetadataXml.SelectNodes($"//pdfmailmeta:Email[pdfmailmeta:Asset/@rdf:resource='{about}']", dpartRoot.MetadataNamespaces);
+                    if (messages != null && messages.Count > 0)
+                    {
+                        List<string> msgIds = new();
+                        foreach (XmlElement msg in messages)
+                        {
+                            var msgId = msg.GetAttribute("rdf:about");
+                            if (!string.IsNullOrWhiteSpace(msgId))
+                            {
+                                lis.AppendLine($"                <rdf:li rdf:resource=\"{msgId}\"/>");
+                            }
+                            else
+                            {
+                                throw new Exception("Attribute rdf:about not found for the Email.");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception("No Email found for the Asset.");
+                    }
+                }
+                //if embeddedFileXmp is an attachment, get the list of messages it is attached to
+                else if (embeddedFile.LocalName == "Attachment")
+                {
+                    prop = "containedInMessages";
+
+                    about = embeddedFile.GetAttribute("rdf:about");
+                    if (string.IsNullOrWhiteSpace(about))
+                    {
+                        throw new Exception("Attribute rdf:about not found in the Attachment.");
+                    }
+
+                    var email = embeddedFile.SelectSingleNode("pdfmailmeta:Email", dpartRoot.MetadataNamespaces);
+                    if (email != null && email is XmlElement emailElem)
+                    {
+                        var msgId = emailElem.GetAttribute("rdf:resource");
+                        if (!string.IsNullOrWhiteSpace(msgId))
+                        {
+                            lis.AppendLine($"                <rdf:li rdf:resource=\"{msgId}\"/>");
+                        }
+                        else
+                        {
+                            throw new Exception("Message ID not found in the metadata.");
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception("Email element not found in the Attachment metadata.");
+                    }
+                }
+            }
+
+            string xmp = $@"<?xpacket begin="""" id=""W5M0MpCehiHzreSzNTczkc9d"" ?>
+<x:xmpmeta xmlns:x=""adobe:ns:meta/"">
+   <rdf:RDF xmlns:rdf=""http://www.w3.org/1999/02/22-rdf-syntax-ns#"">
+      <rdf:Description xmlns:pdfmailmeta=""http://www.pdfa.org/eapdf/ns/meta/"" rdf:about=""{about}"">
+            <pdfmailmeta:{prop}>
+              <rdf:Bag>
+{lis}              </rdf:Bag>
+            </pdfmailmeta:{prop}>
+      </rdf:Description>
+   </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end=""r""?>";
+
+
+            var xmlDoc = new XmlDocument
+            {
+                PreserveWhitespace = true
+            };
+            xmlDoc.LoadXml(xmp);
+            return xmlDoc;
         }
 
         private static (string filename, string hash, string hashAlg, long size) GetAttachmentFilenameHashSize(XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
@@ -426,7 +542,7 @@ namespace UIUCLibrary.EaPdf
             return (fileName, hash, hashAlg, size);
         }
 
-        private static void AddAttachmentFile(List<EmbeddedFile> ret, XmlNode extAttachmentNode, XmlNamespaceManager xmlns)
+        private static void AddAttachmentFile(List<EmbeddedFile> ret, XmlNode extAttachmentNode, XmlNamespaceManager xmlns, DPartNode rootDPart)
         {
             (DateTime earliest, DateTime latest) = GetEarliestLatestMessageDates(extAttachmentNode.SelectNodes($"ancestor::xm:Folder//xm:OrigDate", xmlns));
             (string fileName, string hash, string hashAlg, long size) = GetAttachmentFilenameHashSize(extAttachmentNode, xmlns);
@@ -451,10 +567,15 @@ namespace UIUCLibrary.EaPdf
 
             var mime = extAttachmentNode.ParentNode?.SelectSingleNode("xm:ContentType", xmlns)?.InnerText ?? "";
 
+            var xml = GetAssetOrAttachmentXmp(rootDPart, hash);
+
+            string msgId = extAttachmentNode.SelectSingleNode("ancestor::xm:Message/xm:MessageId", xmlns)?.InnerText ?? "";
+
+
             ret.Add(new EmbeddedFile()
             {
                 OriginalFileName = fileName,
-                Relationship = EmbeddedFile.AFRelationship.Supplement,
+                Relationship = EmbeddedFile.AFRelationship.Mail_Attachment,
                 Subtype = mime,
                 Size = size,
                 Hash = hash,
@@ -462,7 +583,9 @@ namespace UIUCLibrary.EaPdf
                 CreationDate = creDate,
                 ModDate = modDate,
                 UniqueName = Path.ChangeExtension(hash, GetFileExtension(extAttachmentNode.ParentNode, xmlns)),
-                Description = GetAttachmentDescription(extAttachmentNode, xmlns)
+                Description = GetAttachmentDescription(extAttachmentNode, xmlns),
+                Metadata = xml,
+                MessageId = msgId
             });
 
         }
@@ -548,7 +671,7 @@ namespace UIUCLibrary.EaPdf
             }
         }
 
-        private void AddSourceFile(List<EmbeddedFile> ret, XmlNode propNode, XmlNodeList? origDates, List<string> sourceNames, bool folder, XmlNamespaceManager xmlns)
+        private void AddSourceFile(List<EmbeddedFile> ret, XmlNode propNode, XmlNodeList? origDates, List<string> sourceNames, bool folder, XmlNamespaceManager xmlns, DPartNode rootDPart)
         {
             var relPath = propNode.SelectSingleNode("xm:RelPath", xmlns)?.InnerText ?? "";
             var fileExt = propNode.SelectSingleNode("xm:FileExt", xmlns)?.InnerText ?? "";
@@ -591,6 +714,8 @@ namespace UIUCLibrary.EaPdf
             var hash = propNode.SelectSingleNode("xm:Hash/xm:Value", xmlns)?.InnerText ?? "";
             var hashAlg = propNode.SelectSingleNode("xm:Hash/xm:Function", xmlns)?.InnerText ?? "";
 
+            var xml = GetAssetOrAttachmentXmp(rootDPart, hash);
+
             ret.Add(new EmbeddedFile()
             {
                 OriginalFileName = relPath,
@@ -602,7 +727,8 @@ namespace UIUCLibrary.EaPdf
                 CreationDate = fileCreDate,
                 ModDate = fileModDate,
                 UniqueName = Path.ChangeExtension(hash, MimeTypeMap.GetExtension(mime)),
-                Description = "Source file for " + (folder ? "folder: " : "message: ") + string.Join(" -> ", sourceNames)
+                Description = "Source file for " + (folder ? "folder: " : "message: ") + string.Join(" -> ", sourceNames),
+                Metadata = xml
             }); ;
 
         }
@@ -628,11 +754,11 @@ namespace UIUCLibrary.EaPdf
         /// Return the root DPart node for all the folders and messages in the EAXS file.
         /// </summary>
         /// <returns></returns>
-        private DPartNode GetXmpMetadataForMessages(string eaxsFilePath)
+        private DPartNode GetDPartsForMessages(string eaxsFilePath)
         {
             DPartNode ret = new();
 
-            var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".xmp");
+            var xmpFilePath = Path.ChangeExtension(eaxsFilePath, ".dpart");
 
             List<(LogLevel level, string message)> messages = new();
             var status = _xslt.Transform(eaxsFilePath, Settings.XsltDpartFilePath, xmpFilePath, null, null, ref messages);

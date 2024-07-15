@@ -101,7 +101,7 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToPdfProcessorLargeFiles(string inPath, string foProcessor, bool ext, bool wrap)
         {
             //FUTURE: skip for the time being, takes too long
-            if(foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+            if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
                 Assert.Inconclusive("Test is commented out");
 
             TestEaxsToPdfProcessor(inPath, foProcessor, ext, wrap);
