@@ -192,14 +192,35 @@ namespace UIUCLibrary.TestEaPdf
 
                 var validMessageCount = ConvertMessagesAndCheckCounts(eProc, format, sampleFile, outFolder, expectedCounts);
 
-                InputFileType ftype = format switch
+                if(eProc.CreatedFiles != null)
+                    foreach (var xmlFile in eProc.CreatedFiles)
+                    {
+                        logger.LogDebug("Created file: {xmlFile} ", xmlFile);
+                    }
+                else
                 {
-                    MimeFormat.Mbox => InputFileType.MboxFile,
-                    MimeFormat.Entity => InputFileType.EmlFile,
-                    _ => InputFileType.UnknownFile
+                    Assert.Fail("CreatedFiles should not be null after a processing run; it might be empty though");
+                }
+
+                InputType ftype = format switch
+                {
+                    MimeFormat.Mbox => InputType.MboxFile,
+                    MimeFormat.Entity => InputType.EmlFile,
+                    _ => InputType.UnknownFile
                 };
 
                 List<string> expectedXmlFiles = CheckOutputFolderAndGetXmlFiles(expectedOutFolder, outFolder, sampleFile, includeSubs, oneFilePerMbox, forceParse, ftype, format);
+
+                var unq = expectedXmlFiles.Distinct();
+
+                Assert.AreEqual(expectedXmlFiles.Count, unq.Count());
+
+                Assert.AreEqual(expectedXmlFiles.Count, eProc.CreatedFiles.Count);
+
+                foreach (var xmlFile in expectedXmlFiles) //check that all the expected files were created or not
+                {
+                    Assert.IsTrue(eProc.CreatedFiles.Contains(xmlFile));
+                }
 
                 if (quick) return;
 
@@ -422,8 +443,8 @@ namespace UIUCLibrary.TestEaPdf
         [DataRow("Gmail\\true_eml_files_w_extra_junk", "out_eml_one_per_junk_noforce", "MD5", false, false, false, false, false, true, 1, 0, 10, false, 0, false, null, false, DisplayName = "gmail-folder-eml-one-per-junk-noforce")] //Folder of EML files, one output file per input file
 
         //A folder of normal EML files and junk including sub folders
-        [DataRow("Gmail\\true_eml_files_w_extra_junk", "out_eml_subs_junk_noforce", "MD5", false, false, false, false, true, false, 3, 0, 20, false, 0, false, null, false, DisplayName = "gmail-folder-subs-eml-junk-noforce")] //Folder of EML files, one output file
-        [DataRow("Gmail\\true_eml_files_w_extra_junk", "out_eml_subs_ext_wrap_junk_noforce", "MD5", true, true, false, false, true, false, 3, 0, 20, false, 0, false, null, false, DisplayName = "gmail-folder-subs-eml-ext-wrap-junk-noforce")] //Folder of EML files, one output file, with external content wrapped in XML
+        [DataRow("Gmail\\true_eml_files_w_extra_junk", "out_eml_subs_junk_noforce", "MD5", false, false, false, false, true, false, 2, 0, 20, false, 0, false, null, false, DisplayName = "gmail-folder-subs-eml-junk-noforce")] //Folder of EML files, one output file
+        [DataRow("Gmail\\true_eml_files_w_extra_junk", "out_eml_subs_ext_wrap_junk_noforce", "MD5", true, true, false, false, true, false, 2, 0, 20, false, 0, false, null, false, DisplayName = "gmail-folder-subs-eml-ext-wrap-junk-noforce")] //Folder of EML files, one output file, with external content wrapped in XML
         [DataRow("Gmail\\true_eml_files_w_extra_junk", "out_eml_subs_one_per_junk_noforce", "MD5", false, false, false, false, true, true, 3, 0, 20, false, 0, false, null, false, DisplayName = "gmail-folder-subs-eml-one-per-junk-noforce")] //Folder of EML files, one output file per input file
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -729,7 +750,7 @@ namespace UIUCLibrary.TestEaPdf
             return validMessageCount;
         }
 
-        private List<string> CheckOutputFolderAndGetXmlFiles(string expectedOutFolder, string outFolder, string sampleFile, bool includeSubs, bool oneFilePerMbox, bool forceParse, InputFileType inFileType, MimeFormat mimeFormat)
+        private List<string> CheckOutputFolderAndGetXmlFiles(string expectedOutFolder, string outFolder, string sampleFile, bool includeSubs, bool oneFilePerMbox, bool forceParse, InputType inFileType, MimeFormat mimeFormat)
         {
             //make sure output folders and files exist
             Assert.AreEqual(expectedOutFolder, outFolder);
@@ -743,12 +764,14 @@ namespace UIUCLibrary.TestEaPdf
             {
                 Assert.IsTrue(expectedXmlFiles.Count > 0, "Expected at least one xml file");
             }
-            else if(expectedXmlFiles.Count == 0)
+            else if (expectedXmlFiles.Count == 0)
             {
-               logger?.LogDebug("No xml files found in output folder '{outFolder}' for file '{sampleFile}'", outFolder, sampleFile); 
+                logger?.LogDebug("No xml files found in output folder '{outFolder}' for file '{sampleFile}'", outFolder, sampleFile);
             }
 
-            return expectedXmlFiles;
+            //Normalize expectedXmlFiles filepaths before returning them; FileInfo will do this
+            return expectedXmlFiles.Select(s => new FileInfo(s).FullName).ToList();
+
         }
 
         private void ValidateXmlFiles(ILogger logger,
@@ -1336,7 +1359,7 @@ namespace UIUCLibrary.TestEaPdf
         /// <param name="sampleFile"></param>
         /// <param name="outFolder"></param>
         /// <returns></returns>
-        private bool ValidateXmlDocuments(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, InputFileType inFileType, MimeFormat mimeFormat)
+        private bool ValidateXmlDocuments(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, InputType inFileType, MimeFormat mimeFormat)
         {
             List<string> expectedXmlFiles = Helpers.GetExpectedFiles(includeSubs, oneFilePerMbox, sampleFile, outFolder, forceParse, inFileType, mimeFormat);
 

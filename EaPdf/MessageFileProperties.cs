@@ -343,15 +343,15 @@ namespace UIUCLibrary.EaPdf
         /// Determine the input file type using the MimeKitHelpers.DetermineInputType function
         /// </summary>
         /// <param name="message">possible warning message associated with determnining the file type</param>
-        InputFileType? _inputFileType;
-        public InputFileType? GetInputFileType(out string message)
+        InputType? _inputFileType;
+        public InputType? GetInputFileType(out string message)
         {
             message = "";
             if (_inputFileType == null)
             {
                 if (FileInfo != null)
                 {
-                    _inputFileType = (InputFileType?)MimeKitHelpers.DetermineInputType(FileInfo.FullName, out message);
+                    _inputFileType = MimeKitHelpers.DetermineInputType(FileInfo.FullName, out message);
                 }
             }
             return _inputFileType;
@@ -369,7 +369,7 @@ namespace UIUCLibrary.EaPdf
             if(FileInfo != null)
             {
                 var inputFileType = GetInputFileType(out message);
-                ret = MimeKitHelpers.DoesMimeFormatMatchInputFileType( MessageFormat, inputFileType ?? InputFileType.UnknownFile);
+                ret = MimeKitHelpers.DoesMimeFormatMatchInputFileType( MessageFormat, inputFileType ?? InputType.UnknownFile);
             }
             return ret;
         }

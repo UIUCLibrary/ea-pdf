@@ -438,19 +438,12 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="fullInFilePath"></param>
         /// <param name="createdFiles">dictionary of previously created files, may be null</param>
         /// <returns></returns>
-        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath, Dictionary<string, string>? createdFiles)
+        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath)
         {
             //simplest way to ensure unique output filenames is by appending .xml (not replacing) as the new file extension
             var xmlFilePath = Path.Combine(fullOutFolderPath, Path.GetFileName(fullInFilePath) + ".xml");
 
-            createdFiles?.Add(xmlFilePath, fullInFilePath);
-
             return xmlFilePath;
-        }
-
-        public static string GetXmlOutputFilePath(string fullOutFolderPath, string fullInFilePath)
-        {
-            return GetXmlOutputFilePath(fullOutFolderPath, fullInFilePath, null);
         }
 
         public const string XML_WRAPPED_EXT = ".xmlw";

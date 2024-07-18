@@ -118,7 +118,7 @@ namespace UIUCLibrary.TestEaPdf
 
             Assert.AreSame(root, start);
 
-            Assert.AreEqual(9,root.AllLeafNodes.Count);
+            Assert.AreEqual(9, root.AllLeafNodes.Count);
 
             Assert.AreSame(root, root.FirstLeafNode.RootNode);
 
@@ -348,19 +348,19 @@ namespace UIUCLibrary.TestEaPdf
 
             var typ1d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMboxFile) ?? ".", out string leadin1d);
             Assert.IsTrue(string.IsNullOrEmpty(leadin1d));
-            Assert.AreEqual(InputType.MboxFolder, typ1d);
+            Assert.IsTrue(typ1d.IsMboxFolder());
             var typ2d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMboxSpFile) ?? ".", out string leadin2d);
             Assert.IsTrue(string.IsNullOrEmpty(leadin2d));
-            Assert.AreEqual(InputType.MboxFolder, typ2d);
+            Assert.IsTrue(typ2d.IsMboxFolder());
             var typ3d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMbxFile) ?? ".", out string leadin3d);
             Assert.IsTrue(string.IsNullOrEmpty(leadin3d));
-            Assert.AreEqual(InputType.MboxFolder, typ3d);
+            Assert.IsTrue(typ3d.IsMboxFolder());
             var typ4d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlFile) ?? ".", out string leadin4d);
             Assert.IsTrue(string.IsNullOrEmpty(leadin4d));
-            Assert.AreEqual(InputType.EmlFolder, typ4d);
+            Assert.IsTrue(typ4d.IsEmlFolder());
             var typ5d = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlSpFile) ?? ".", out string leadin5d);
             Assert.IsTrue(string.IsNullOrEmpty(leadin5d));
-            Assert.AreEqual(InputType.MboxFolder, typ5d); //leading white space is not a valid eml file, but the folder contains other valid mbox files
+            Assert.IsTrue(typ5d.IsMboxFolder()); //leading white space is not a valid eml file, but the folder contains other valid mbox files
 
             var typ1s = MimeKitHelpers.DetermineInputType(sampleMboxFile, true, out string leadin1s);
             Assert.IsTrue(string.IsNullOrEmpty(leadin1s));
@@ -380,19 +380,19 @@ namespace UIUCLibrary.TestEaPdf
 
             var typ1ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMboxFile) ?? ".", true, out string leadin1ds);
             Assert.IsTrue(string.IsNullOrEmpty(leadin1ds));
-            Assert.AreEqual(InputType.MboxFolder, typ1ds);
+            Assert.IsTrue(typ1ds.IsMboxFolder());
             var typ2ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMboxSpFile) ?? ".", true, out string leadin2ds);
             Assert.IsTrue(string.IsNullOrEmpty(leadin2ds));
-            Assert.AreEqual(InputType.MboxFolder, typ2ds);
+            Assert.IsTrue(typ2ds.IsMboxFolder());
             var typ3ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleMbxFile) ?? ".", true, out string leadin3ds);
             Assert.IsTrue(string.IsNullOrEmpty(leadin3ds));
-            Assert.AreEqual(InputType.MboxFolder, typ3ds);
+            Assert.IsTrue(typ3ds.IsMboxFolder());
             var typ4ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlFile) ?? ".", true, out string leadin4ds);
             Assert.IsTrue(string.IsNullOrEmpty(leadin4ds));
-            Assert.AreEqual(InputType.EmlFolder, typ4ds);
+            Assert.IsTrue(typ4ds.IsEmlFolder());
             var typ5ds = MimeKitHelpers.DetermineInputType(Path.GetDirectoryName(sampleEmlSpFile) ?? ".", true, out string leadin5ds);
             Assert.IsTrue(string.IsNullOrEmpty(leadin5ds));
-            Assert.AreEqual(InputType.MixedFolder, typ5ds); //mixed folder because the Gmail folder contains both mbox and eml files
+            Assert.IsTrue(typ5ds.IsMixedFolder()); //mixed folder because the Gmail folder contains both mbox and eml files
         }
 
         [TestMethod]

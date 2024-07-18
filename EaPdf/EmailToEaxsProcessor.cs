@@ -56,14 +56,16 @@ namespace UIUCLibrary.EaPdf
         private readonly Dictionary<string, int> xGmailLabelCounts = new();
         private readonly Dictionary<string, int> xGmailLabelComboCounts = new();
 
-        //keep track of the files that have been created, key is the output file and value is the input file
-        private readonly Dictionary<string, string> createdFiles = new(StringComparer.OrdinalIgnoreCase); //TODO: For Unix , this should be case-sensitive, see https://stackoverflow.com/questions/23261886/cross-platform-filepaths-comparison
-
         //need to keep track of folders in case output file is split into multiple files and the split happens while processing a subfolder
         private readonly Stack<string> _folders = new();
 
         private bool skippingMessages = false; //will skip processing messages while this is true
         private bool allDone = false; //will stop processing messages when this is true
+
+        /// <summary>
+        /// List of XML output filenames created by the processor
+        /// </summary>
+        public HashSet<string> CreatedFiles { get; private set; } = new();
 
         /// <summary>
         /// Create a processor for email files, initializing the logger and settings from the configuration
@@ -122,12 +124,12 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails"></param>
         /// <param name="startingLocalId"></param>
         /// <param name="messageList"></param>
-        /// <param name="saveCsv"></param>
+        /// <param name="firstInvocation"></param>
         /// <returns></returns>
-        public long ConvertEmlToEaxs(string emlFilePath, string outFolderPath, string globalId, IEnumerable<string>? accntEmails, long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertEmlToEaxs(string emlFilePath, string outFolderPath, string globalId, IEnumerable<string>? accntEmails, long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
             var emails = accntEmails == null ? "" : string.Join(",", accntEmails);
-            return ConvertEmlToEaxs(emlFilePath, outFolderPath, globalId, emails, startingLocalId, messageList, saveCsv);
+            return ConvertEmlToEaxs(emlFilePath, outFolderPath, globalId, emails, startingLocalId, messageList, firstInvocation);
         }
 
         /// <summary>
@@ -140,13 +142,13 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails"></param>
         /// <param name="startingLocalId"></param>
         /// <param name="messageList"></param>
-        /// <param name="saveCsv"></param>
+        /// <param name="firstInvocation"></param>
         /// <returns></returns>
-        public long ConvertEmlToEaxs(string emlFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertEmlToEaxs(string emlFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
-            if (saveCsv)
+            if (firstInvocation)
             {
-                createdFiles.Clear();
+                CreatedFiles.Clear();
             }
 
             (MessageFileProperties msgFileProps, Stream xstream, XmlWriter xwriter) = MessageFileAndXmlStreamSetup(emlFilePath, outFolderPath, globalId, accntEmails);
@@ -163,7 +165,7 @@ namespace UIUCLibrary.EaPdf
             XmlStreamTeardown(xwriter, xstream);
 
             //write the csv file
-            if (saveCsv)
+            if (firstInvocation)
             {
                 SaveCsvs(msgFileProps.OutDirectoryName, msgFileProps.MessageFilePath, messageList);
             }
@@ -196,9 +198,14 @@ namespace UIUCLibrary.EaPdf
                 Directory.CreateDirectory(Path.GetDirectoryName(xmlFilePath) ?? "");
             }
 
+
             Stream xstream = new FileStream(xmlFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
             var xwriter = XmlWriter.Create(xstream, xset);
 
+            if (!CreatedFiles.Add(xmlFilePath))
+            {
+                throw new Exception($"XmlStreamSetup: The file '{xmlFilePath}' has already been created by this processor; this should not happen");
+            }
 
             xwriter.WriteStartDocument();
             WriteDocType(xwriter, null);
@@ -250,7 +257,7 @@ namespace UIUCLibrary.EaPdf
                 throw new ArgumentException($"The outFolderPath, '{fullOutFolderPath}', cannot be the same as or a child of the emlFilePath, '{fullInFilePath}', ignoring any extensions");
             }
 
-            var xmlFilePath = FilePathHelpers.GetXmlOutputFilePath(fullOutFolderPath, fullInFilePath, createdFiles);
+            var xmlFilePath = FilePathHelpers.GetXmlOutputFilePath(fullOutFolderPath, fullInFilePath);
 
             (XmlWriter xwriter, Stream xstream) = XmlStreamSetup(xmlFilePath, globalId, accntEmails);
 
@@ -277,10 +284,15 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails"></param>
         /// <param name="startingLocalId"></param>
         /// <param name="messageList"></param>
-        /// <param name="saveCsv"></param>  
+        /// <param name="firstInvocation"></param>  
         /// <returns></returns>
-        public long ConvertMixedMessagesToEaxs(string fileOrFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertMixedMessagesToEaxs(string fileOrFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
+            if (firstInvocation)
+            {
+                CreatedFiles.Clear();
+            }
+
             //UNDONE: Implement this function
             throw new NotImplementedException();
             //return 0;
@@ -295,12 +307,12 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails"></param>
         /// <param name="startingLocalId"></param>
         /// <param name="messageList"></param>
-        /// <param name="saveCsv"></param>
+        /// <param name="firstInvocation"></param>
         /// <returns></returns>
-        public long ConvertFolderOfEmlToEaxs(string emlFolderPath, string outFolderPath, string globalId, IEnumerable<string>? accntEmails, long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertFolderOfEmlToEaxs(string emlFolderPath, string outFolderPath, string globalId, IEnumerable<string>? accntEmails, long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
             var emails = accntEmails == null ? "" : string.Join(",", accntEmails);
-            return ConvertFolderOfEmlToEaxs(emlFolderPath, outFolderPath, globalId, emails, startingLocalId, messageList, saveCsv);
+            return ConvertFolderOfEmlToEaxs(emlFolderPath, outFolderPath, globalId, emails, startingLocalId, messageList, firstInvocation);
         }
 
         /// <summary>
@@ -312,13 +324,13 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails"></param>
         /// <param name="startingLocalId"></param>
         /// <param name="messageList"></param>
-        /// <param name="saveCsv"></param>
+        /// <param name="firstInvocation"></param>
         /// <returns></returns>
-        public long ConvertFolderOfEmlToEaxs(string emlFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertFolderOfEmlToEaxs(string emlFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
-            if (saveCsv)
+            if (firstInvocation)
             {
-                createdFiles.Clear();
+                CreatedFiles.Clear();
             }
 
             (string fullEmlFolderPath, string fullOutFolderPath) = MessageFolderSetup(emlFolderPath, outFolderPath, globalId);
@@ -355,7 +367,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     else
                     {
-                        WriteToLogErrorMessage(xwriter, $"The file '{emlFilePath}' does not appear to be an 'EML' file; it appears to be a '{msgFileProps.GetInputFileType(out _)}'; skipping file");
+                        WriteToLogErrorMessage(xwriter, $"ConvertFolderOfEmlToEaxs: The file '{emlFilePath}' does not appear to be an 'EML' file; it appears to be a '{msgFileProps.GetInputFileType(out _)}'; skipping file");
                         msgFileProps.FileWasSkipped = true;
                     }
 
@@ -366,6 +378,10 @@ namespace UIUCLibrary.EaPdf
                     if (!Settings.ForceParse && msgFileProps.FileWasSkipped)
                     {
                         File.Delete(msgFileProps.OutFilePath);
+                        if (!CreatedFiles.Remove(msgFileProps.OutFilePath))
+                        {
+                            throw new Exception($"ConvertFolderOfEmlToEaxs: The file '{msgFileProps.OutFilePath}' was not found in the CreatedFiles list; this should not happen");
+                        }
                     }
 
                     if (localId > prevLocalId)
@@ -394,7 +410,7 @@ namespace UIUCLibrary.EaPdf
             else
             {
 
-                var xmlFilePath = FilePathHelpers.GetXmlOutputFilePath(fullOutFolderPath, fullEmlFolderPath, createdFiles);
+                var xmlFilePath = FilePathHelpers.GetXmlOutputFilePath(fullOutFolderPath, fullEmlFolderPath);
 
                 _logger.LogInformation("Convert EML files in directory: '{fullMessageFolderPath}' into XML file: '{outFilePath}'", fullEmlFolderPath, xmlFilePath);
 
@@ -434,7 +450,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             //write the csv file
-            if (saveCsv)
+            if (firstInvocation)
             {
                 SaveCsvs(fullOutFolderPath, fullEmlFolderPath, messageList);
             }
@@ -485,12 +501,12 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails"></param>
         /// <param name="startingLocalId"></param>
         /// <param name="messageList"></param>
-        /// <param name="saveCsv"></param>
+        /// <param name="firstInvocation"></param>
         /// <returns></returns>
-        public long ConvertFolderOfMboxToEaxs(string mboxFolderPath, string outFolderPath, string globalId, IEnumerable<string>? accntEmails, long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertFolderOfMboxToEaxs(string mboxFolderPath, string outFolderPath, string globalId, IEnumerable<string>? accntEmails, long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
             var emails = accntEmails == null ? "" : string.Join(",", accntEmails);
-            return ConvertFolderOfMboxToEaxs(mboxFolderPath, outFolderPath, globalId, emails, startingLocalId, messageList, saveCsv);
+            return ConvertFolderOfMboxToEaxs(mboxFolderPath, outFolderPath, globalId, emails, startingLocalId, messageList, firstInvocation);
         }
 
 
@@ -503,14 +519,13 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <param name="startingLocalId">the number to start the localId number at</param>
         /// <param name="messageList">a list of MessageBrief objects to be used to create a CSV file</param>
-        /// <param name="saveCsv">whether to save the CSV file after converting the mbox folder</param>
+        /// <param name="firstInvocation">whether to save the CSV file after converting the mbox folder</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertFolderOfMboxToEaxs(string mboxFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertFolderOfMboxToEaxs(string mboxFolderPath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
-
-            if (saveCsv)
+            if (firstInvocation)
             {
-                createdFiles.Clear();
+                CreatedFiles.Clear();
             }
 
             (string fullMboxFolderPath, string fullOutFolderPath) = MessageFolderSetup(mboxFolderPath, outFolderPath, globalId);
@@ -527,14 +542,14 @@ namespace UIUCLibrary.EaPdf
 
                 foreach (string mboxFilePath in Directory.EnumerateFiles(mboxFolderPath))
                 {
-                    var inFileType = (InputFileType)MimeKitHelpers.DetermineInputType(mboxFilePath, out _);
+                    var inFileType = MimeKitHelpers.DetermineInputType(mboxFilePath, out _);
                     if (Settings.ForceParse || MimeKitHelpers.DoesMimeFormatMatchInputFileType(MimeFormat.Mbox, inFileType))
                     {
                         localId = ConvertMboxToEaxs(mboxFilePath, fullOutFolderPath, globalId, accntEmails, localId, messageList, false);
                     }
                     else
                     {
-                        _logger.LogError("The file '{mboxFilePath}' does not appear to be an 'MBOX' file; it appears to be a '{inFileType}'; skipping file", mboxFilePath, inFileType);
+                        _logger.LogError("ConvertFolderOfMboxToEaxs: The file '{mboxFilePath}' does not appear to be an 'MBOX' file; it appears to be a '{inFileType}'; skipping file", mboxFilePath, inFileType);
                     }
                     if (localId > prevLocalId)
                     {
@@ -552,7 +567,7 @@ namespace UIUCLibrary.EaPdf
             else
             {
 
-                var xmlFilePath = FilePathHelpers.GetXmlOutputFilePath(fullOutFolderPath, fullMboxFolderPath, createdFiles);
+                var xmlFilePath = FilePathHelpers.GetXmlOutputFilePath(fullOutFolderPath, fullMboxFolderPath);
 
                 _logger.LogInformation("Convert mbox files in directory: '{fullMessageFolderPath}' into XML file: '{outFilePath}'", fullMboxFolderPath, xmlFilePath);
 
@@ -579,7 +594,7 @@ namespace UIUCLibrary.EaPdf
                     }
                     else
                     {
-                        WriteToLogErrorMessage(xwriter, $"The file '{mboxFilePath}' does not appear to be an 'MBOX' file; it appears to be a '{mboxProps.GetInputFileType(out _)}'; skipping file");
+                        WriteToLogErrorMessage(xwriter, $"ConvertFolderOfMboxToEaxs: The file '{mboxFilePath}' does not appear to be an 'MBOX' file; it appears to be a '{mboxProps.GetInputFileType(out _)}'; skipping file");
                     }
                 }
 
@@ -589,7 +604,7 @@ namespace UIUCLibrary.EaPdf
             }
 
             //write the csv file
-            if (saveCsv)
+            if (firstInvocation)
             {
                 SaveCsvs(fullOutFolderPath, fullMboxFolderPath, messageList);
             }
@@ -606,12 +621,12 @@ namespace UIUCLibrary.EaPdf
         /// <param name="accntEmails"></param>
         /// <param name="startingLocalId"></param>
         /// <param name="messageList"></param>
-        /// <param name="saveCsv"></param>
+        /// <param name="firstInvocation"></param>
         /// <returns></returns>
-        public long ConvertMboxToEaxs(string mboxFilePath, string outFolderPath, string globalId, IEnumerable<string>? accntEmails, long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertMboxToEaxs(string mboxFilePath, string outFolderPath, string globalId, IEnumerable<string>? accntEmails, long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
             var emails = accntEmails == null ? "" : string.Join(",", accntEmails);
-            return ConvertMboxToEaxs(mboxFilePath, outFolderPath, globalId, emails, startingLocalId, messageList, saveCsv);
+            return ConvertMboxToEaxs(mboxFilePath, outFolderPath, globalId, emails, startingLocalId, messageList, firstInvocation);
         }
 
         /// <summary>
@@ -622,11 +637,11 @@ namespace UIUCLibrary.EaPdf
         /// <param name="globalId">Globally unique, permanent, absolute URI with no fragment conforming to the canonical form specified in RFC2396 as amended by RFC2732.</param>
         /// <param name="accntEmails">Comma-separated list of email addresses</param>
         /// <returns>the most recent localId number which is usually the total number of messages processed</returns>
-        public long ConvertMboxToEaxs(string mboxFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool saveCsv = true)
+        public long ConvertMboxToEaxs(string mboxFilePath, string outFolderPath, string globalId, string accntEmails = "", long startingLocalId = 0, List<MessageBrief>? messageList = null, bool firstInvocation = true)
         {
-            if (saveCsv)
+            if (firstInvocation)
             {
-                createdFiles.Clear();
+                CreatedFiles.Clear();
             }
 
             (MessageFileProperties msgFileProps, Stream xstream, XmlWriter xwriter) = MessageFileAndXmlStreamSetup(mboxFilePath, outFolderPath, globalId, accntEmails);
@@ -647,7 +662,7 @@ namespace UIUCLibrary.EaPdf
             XmlStreamTeardown(xwriter, xstream);
 
             //write the csv file
-            if (saveCsv)
+            if (firstInvocation)
             {
                 SaveCsvs(msgFileProps.OutDirectoryName, msgFileProps.MessageFilePath, messageList);
             }
@@ -659,23 +674,13 @@ namespace UIUCLibrary.EaPdf
 
         private void SaveCsvs(string outDirectoryName, string messageFilePath, List<MessageBrief> messageList)
         {
+
             var csvFilePath = Path.Combine(outDirectoryName, Path.GetFileName(Path.ChangeExtension(messageFilePath, "csv")));
             MessageBrief.SaveMessageBriefsToCsvFile(csvFilePath, messageList);
 #if DEBUG
             csvFilePath = Path.Combine(outDirectoryName, Path.GetFileNameWithoutExtension(messageFilePath) + "_stats.csv");
             SaveStatsToCsv(csvFilePath);
-            csvFilePath = Path.Combine(outDirectoryName, Path.GetFileNameWithoutExtension(messageFilePath) + "_outfiles.csv");
-            SaveOutFilesToCsv(csvFilePath);
 #endif
-        }
-
-        private void SaveOutFilesToCsv(string csvFilepath)
-        {
-            using (var writer = new StreamWriter(csvFilepath))
-            {
-                using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-                csv.WriteRecords(createdFiles);
-            }
         }
 
         private void SaveStatsToCsv(string csvFilepath)
@@ -769,7 +774,7 @@ namespace UIUCLibrary.EaPdf
 
             if (!validFile)
             {
-                string msg = $"The file '{msgFileProps.MessageFilePath}' does not appear to be an '{msgFileProps.MessageFormatName}' file; it appears to be an '{msgFileProps.GetInputFileType(out _)}'";
+                string msg = $"CheckIfFileIsCorrectFormat: The file '{msgFileProps.MessageFilePath}' does not appear to be an '{msgFileProps.MessageFormatName}' file; it appears to be an '{msgFileProps.GetInputFileType(out _)}'";
                 if (Settings.ForceParse)
                 {
                     msg += "; the ForceParse setting is true, so it is being processed anyway; look for additional errors or warnings in the log";
@@ -779,6 +784,7 @@ namespace UIUCLibrary.EaPdf
                 {
                     msg += "; skipping file";
                     WriteToLogErrorMessage(xwriter, msg);
+
                 }
             }
 
@@ -792,6 +798,16 @@ namespace UIUCLibrary.EaPdf
             if (!validFile && !Settings.ForceParse)
             {
                 msgFileProps.FileWasSkipped = true;
+
+                //if the messageList does not contain the output file then we can remove the output file from the created files list
+                if (!messageList.Any(brief => brief.DestinationFileName == msgFileProps.OutFilePath))
+                {
+                    if (!CreatedFiles.Remove(msgFileProps.OutFilePath))
+                    {
+                        throw new Exception($"ProcessFile: The file '{msgFileProps.OutFilePath}' was not found in the CreatedFiles list; this should not happen");
+                    }
+                }
+
                 return localId;
             }
 
@@ -1072,6 +1088,13 @@ namespace UIUCLibrary.EaPdf
             {
                 foreach (var dir in dirs)
                 {
+                    var type = MimeKitHelpers.DetermineInputType(dir, Settings.IncludeSubFolders, out _);
+
+                    //skip the folder if it is not an EML folder, unless ForceParse is true
+                    if (!type.IsEmlFolder() && !Settings.ForceParse)
+                        continue;
+
+                    //TODO: Skip the folder if it does not contain any EML files and if the forceparse=false
                     _logger.LogInformation("Processing Subfolder: {subfolderName}", dir);
 
                     //copy the message file properties into new class instance so we can change the file path
@@ -1095,7 +1118,7 @@ namespace UIUCLibrary.EaPdf
                     if (files != null && files.Length > 0)
                     {
 
-                        //this is all the files, so need to determine which ones are mbox files or not
+                        //this is all the files, so need to determine which ones are eml files or not
                         foreach (var file in files)
                         {
                             WriteToLogInfoMessage(xwriter, $"Processing EML file: {file}");
@@ -1205,7 +1228,7 @@ namespace UIUCLibrary.EaPdf
                         }
                         else
                         {
-                            WriteToLogErrorMessage(xwriter, $"Skipping file '{childMbox}' because it does not appear to be an MBOX file");
+                            WriteToLogErrorMessage(xwriter, $"ProcessChildMboxes: Skipping file '{childMbox}' because it does not appear to be an MBOX file");
                         }
 
                     }
@@ -1324,6 +1347,11 @@ namespace UIUCLibrary.EaPdf
             };
             xwriter = XmlWriter.Create(xstream, xset);
 
+            if (!CreatedFiles.Add(newXmlFilePath))
+            {
+                throw new Exception($"StartOverflowXmlFile: The file '{newXmlFilePath}' already exists");
+            }
+
             xwriter.WriteStartDocument();
             WriteDocType(xwriter, null);
             xwriter.WriteProcessingInstruction("ContinuedFrom", $"{Path.GetFileName(origXmlFilePath)}");
@@ -1367,6 +1395,11 @@ namespace UIUCLibrary.EaPdf
                 Encoding = System.Text.Encoding.UTF8
             };
             xwriter = XmlWriter.Create(xstream, xset);
+
+            if (!CreatedFiles.Add(newMsgFileProps.OutFilePath))
+            {
+                throw new Exception($"StartNewXmlFile: The file '{newMsgFileProps.OutFilePath}' already exists");
+            }
 
             xwriter.WriteStartDocument();
             WriteDocType(xwriter, null);
@@ -1446,7 +1479,9 @@ namespace UIUCLibrary.EaPdf
                 MessageID = message.MessageId,
                 Hash = Convert.ToHexString(mimeMsgProps.MessageHash, 0, mimeMsgProps.MessageHash.Length),
                 Errors = (string.IsNullOrWhiteSpace(mimeMsgProps.IncompleteErrorType) && string.IsNullOrWhiteSpace(mimeMsgProps.IncompleteErrorLocation)) ? 0 : 1,
-                FirstErrorMessage = $"{mimeMsgProps.IncompleteErrorLocation} {mimeMsgProps.IncompleteErrorType}".Trim()
+                FirstErrorMessage = $"{mimeMsgProps.IncompleteErrorLocation} {mimeMsgProps.IncompleteErrorType}".Trim(),
+                SourceFileName = msgFileProps.MessageFilePath,
+                DestinationFileName = msgFileProps.OutFilePath
 
             });
 

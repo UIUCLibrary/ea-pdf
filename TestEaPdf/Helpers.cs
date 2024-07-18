@@ -77,7 +77,7 @@ namespace UIUCLibrary.TestEaPdf
         }
 
 
-        public static List<string> GetExpectedFiles(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, InputFileType inFileType, MimeFormat mimeFormat)
+        public static List<string> GetExpectedFiles(bool includeSubs, bool oneFilePerMbox, string sampleFile, string outFolder, bool forceParse, InputType inFileType, MimeFormat mimeFormat)
         {
             List<string> expectedXmlFiles = new();
 
@@ -127,7 +127,7 @@ namespace UIUCLibrary.TestEaPdf
 
             string xmlPathStr = FilePathHelpers.GetXmlOutputFilePath(outFolder, sampleFile); 
 
-            var inFileType = (InputFileType)MimeKitHelpers.DetermineInputType(sampleFile, out _);
+            var inFileType = MimeKitHelpers.DetermineInputType(sampleFile, out _);
 
             if (forceParse || MimeKitHelpers.DoesMimeFormatMatchInputFileType(mimeFormat, inFileType)) //If we are forcing the parse or if the file type matches what is expected, we expect the xml file to be created
             {
@@ -161,7 +161,7 @@ namespace UIUCLibrary.TestEaPdf
                         foreach (var file in Directory.GetFiles(sampleSubDir))
                         {
                             //TODO: If forceParse is false, do not include files that are not mbox or eml
-                            if (forceParse || (InputFileType)MimeKitHelpers.DetermineInputType(file, includeSubs, out _) == inFileType)
+                            if (forceParse || MimeKitHelpers.DetermineInputType(file, includeSubs, out _) == inFileType)
                             {
                                 xmlPathStr = Path.Combine(outFolder, Path.GetFileName(sampleSubDir), $"{Path.GetFileName(file)}.xml");
                                 Assert.IsTrue(File.Exists(xmlPathStr));

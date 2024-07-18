@@ -53,7 +53,7 @@ namespace EaPdfCmd
 
                 //check for compatibility between the settings of the two processors
                 string foProc = _config["FoProcessors:Default"] ?? "Fop";
-                if (foProc.Equals("Xep", StringComparison.OrdinalIgnoreCase) && emailProc.Settings.WrapExternalContentInXml== false)
+                if (foProc.Equals("Xep", StringComparison.OrdinalIgnoreCase) && emailProc.Settings.WrapExternalContentInXml == false)
                 {
                     Errors.Add((LogLevel.Error, $"The 'WrapExternalContentInXml' setting is {emailProc.Settings.WrapExternalContentInXml}, and the 'FoProcessors:Default' setting is '{foProc}'. This is not supported."));
                     ExitCode = ReturnValue.ConfigurationError;
@@ -62,25 +62,29 @@ namespace EaPdfCmd
 
 
                 long ret = 0;
-                switch (inputType)
+                if (inputType == InputType.MboxFile)
                 {
-                    case InputType.MboxFile:
-                        ret = emailProc.ConvertMboxToEaxs(input.FullName, output.FullName, gid.ToString(), emails);
-                        break;
-                    case InputType.MboxFolder:
-                        ret = emailProc.ConvertFolderOfMboxToEaxs(input.FullName, output.FullName, gid.ToString(), emails);
-                        break;
-                    case InputType.EmlFile:
-                        ret = emailProc.ConvertEmlToEaxs(input.FullName, output.FullName, gid.ToString(), emails);
-                        break;
-                    case InputType.EmlFolder:
-                        ret = emailProc.ConvertFolderOfEmlToEaxs(input.FullName, output.FullName, gid.ToString(), emails);
-                        break;
-                    default:
-                        Errors.Add((LogLevel.Error, $"Input type '{inputType}' is not supported"));
-                        ExitCode = ReturnValue.UnsupportedInputType;
-                        return (int)ExitCode;
+                    ret = emailProc.ConvertMboxToEaxs(input.FullName, output.FullName, gid.ToString(), emails);
                 }
+                else if (inputType.IsMboxFolder())
+                {
+                    ret = emailProc.ConvertFolderOfMboxToEaxs(input.FullName, output.FullName, gid.ToString(), emails);
+                }
+                else if (inputType == InputType.EmlFile)
+                {
+                    ret = emailProc.ConvertEmlToEaxs(input.FullName, output.FullName, gid.ToString(), emails);
+                }
+                else if (inputType.IsEmlFolder())
+                {
+                    ret = emailProc.ConvertFolderOfEmlToEaxs(input.FullName, output.FullName, gid.ToString(), emails);
+                }
+                else
+                {
+                    Errors.Add((LogLevel.Error, $"Input type '{inputType}' is not supported"));
+                    ExitCode = ReturnValue.UnsupportedInputType;
+                    return (int)ExitCode;
+                }
+
 
                 if (ret <= 0)
                 {
@@ -91,7 +95,7 @@ namespace EaPdfCmd
                 else
                 {
                     var xmlFile = FilePathHelpers.GetXmlOutputFilePath(output.FullName, input.FullName);
-                    var pdfFile = Path.ChangeExtension(xmlFile,".pdf");
+                    var pdfFile = Path.ChangeExtension(xmlFile, ".pdf");
                     try
                     {
                         var files = pdfProc.ConvertEaxsToPdf(xmlFile, pdfFile);

@@ -84,11 +84,11 @@ namespace EaPdfCmd
                 {
                     ret.AppendLine($"The '{GetOptionName(nameof(In))}' file '{FilePathHelpers.ShortenedPath(In.FullName)}' is not a supported email file; it must be an MBOX or EML file.");
                 }
-                else if (inType == InputType.UnknownFolder)
+                else if (inType.IsUnknownFolder())
                 {
                     ret.AppendLine($"The '{GetOptionName(nameof(In))}' folder '{FilePathHelpers.ShortenedPath(In.FullName)}' does not contain supported email files; it must contain some MBOX or EML files.");
                 }
-                else if (inType == InputType.MixedFolder)
+                else if (inType.IsMixedFolder())
                 {
                     ret.AppendLine($"The '{GetOptionName(nameof(In))}' folder '{FilePathHelpers.ShortenedPath(In.FullName)}' contains both MBOX files and EML files, mixing file types is not currently supported.");
                 }

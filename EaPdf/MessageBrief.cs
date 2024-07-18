@@ -34,6 +34,14 @@ namespace UIUCLibrary.EaPdf
         [Index(8)]
         public string FirstErrorMessage { get; set; } = string.Empty;
 
+        [Name("Source Filename")]
+        [Index(9)]
+        public string SourceFileName { get; set; } = string.Empty;
+
+        [Name("Destination Filename")]
+        [Index(10)]
+        public string DestinationFileName { get; set; } = string.Empty;
+
         public override string ToString()
         {
             return $"{LocalId}: {MessageID} -- {Subject}";
@@ -45,7 +53,6 @@ namespace UIUCLibrary.EaPdf
             using var csvWriter = new CsvWriter(csvStream, CultureInfo.InvariantCulture);
             csvWriter.WriteRecords(messageList);
         }
-
 
     }
 }
