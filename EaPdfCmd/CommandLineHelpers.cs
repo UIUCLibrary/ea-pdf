@@ -191,17 +191,17 @@ namespace EaPdfCmd
                 parms.Add("FoProcessors:Default", cmdLineParams.FoProcessor.ToString());
             }
 
-            ////set the EmailToEaxsProcessorSettings:IncludeSubFolders from the command line
-            //if (cmdLineParams.IncludeSubFolders != null)
-            //{
-            //    parms.Add("EmailToEaxsProcessorSettings:IncludeSubFolders", cmdLineParams.IncludeSubFolders.ToString());
-            //}
+            //set the EmailToEaxsProcessorSettings:IncludeSubFolders from the command line
+            if (cmdLineParams.IncludeSubFolders != null)
+            {
+                parms.Add("EmailToEaxsProcessorSettings:IncludeSubFolders", cmdLineParams.IncludeSubFolders.ToString());
+            }
 
-            ////set the EmailToEaxsProcessorSettings:OneFilePerMessageFile from the command line
-            //if (cmdLineParams.OneFilePerMessageFile != null)
-            //{
-            //    parms.Add("EmailToEaxsProcessorSettings:OneFilePerMessageFile", cmdLineParams.OneFilePerMessageFile.ToString());
-            //}
+            //set the EmailToEaxsProcessorSettings:OneFilePerMessageFile from the command line
+            if (cmdLineParams.OneFilePerMessageFile != null)
+            {
+                parms.Add("EmailToEaxsProcessorSettings:OneFilePerMessageFile", cmdLineParams.OneFilePerMessageFile.ToString());
+            }
 
             hostBldr.Configuration.AddInMemoryCollection(parms);
         }
@@ -333,20 +333,6 @@ namespace EaPdfCmd
             if (preserveText != null & preserveText == true)
             {
                 logger.LogError($"The 'EmailToEaxsProcessorSettings:PreserveTextAttachmentTransferEncoding' setting is {preserveText}. This is not currently supported.");
-                return ReturnValue.ConfigurationError;
-            }
-
-            var includeSubFolders = config.GetValue<bool?>("EmailToEaxsProcessorSettings:IncludeSubFolders");
-            if (includeSubFolders != null && includeSubFolders == true)
-            {
-                logger.LogError($"The 'EmailToEaxsProcessorSettings:IncludeSubFolders' setting is {includeSubFolders}. This is not currently supported.");
-                return ReturnValue.ConfigurationError;
-            }
-
-            var oneFilePerMessageFile = config.GetValue<bool?>("EmailToEaxsProcessorSettings:OneFilePerMessageFile");
-            if (oneFilePerMessageFile != null && oneFilePerMessageFile == true)
-            {
-                logger.LogError($"The 'EmailToEaxsProcessorSettings:OneFilePerMessageFile' setting is {oneFilePerMessageFile}. This is not currently supported.");
                 return ReturnValue.ConfigurationError;
             }
 

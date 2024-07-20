@@ -85,6 +85,7 @@ namespace UIUCLibrary.EaPdf
 
         /// <summary>
         /// If true, each message file will have its own output file
+        /// If the message file contains multiple messages, the output will also contain multiple messages
         /// </summary>
         public bool OneFilePerMessageFile { get; set; } = false;
 

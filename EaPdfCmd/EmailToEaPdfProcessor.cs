@@ -85,6 +85,7 @@ namespace EaPdfCmd
                     return (int)ExitCode;
                 }
 
+                var xmlFiles = emailProc.CreatedFiles;
 
                 if (ret <= 0)
                 {
@@ -92,26 +93,35 @@ namespace EaPdfCmd
                     ExitCode = ReturnValue.EmailsToEaxsError;
                     return (int)ExitCode;
                 }
+                else if (xmlFiles == null || xmlFiles.Count == 0)
+                {
+                    Errors.Add((LogLevel.Error, $"Error converting emails to EAXS: no output files were created; review the log for details"));
+                    ExitCode = ReturnValue.EmailsToEaxsError;
+                    return (int)ExitCode;
+                }
                 else
                 {
-                    var xmlFile = FilePathHelpers.GetXmlOutputFilePath(output.FullName, input.FullName);
-                    var pdfFile = Path.ChangeExtension(xmlFile, ".pdf");
-                    try
+                    foreach (var xmlFile in xmlFiles)
                     {
-                        var files = pdfProc.ConvertEaxsToPdf(xmlFile, pdfFile);
-                    }
-                    catch (Exception ex)
-                    {
-                        Errors.Add((LogLevel.Error, ex.Message));
-                        ExitCode = ReturnValue.EaxsToPdfError;
-                        return (int)ExitCode;
+                        var pdfFile = Path.ChangeExtension(xmlFile, ".pdf");
+                        _logger.LogInformation($"Converting '{xmlFile}' to '{pdfFile}'");
+                        try
+                        {
+                            var files = pdfProc.ConvertEaxsToPdf(xmlFile, pdfFile);
+                        }
+                        catch (Exception ex)
+                        {
+                            Errors.Add((LogLevel.Error, ex.Message));
+                            ExitCode = ReturnValue.EaxsToPdfError;
+                            return (int)ExitCode;
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
                 Errors.Add((LogLevel.Error, ex.Message));
-                ExitCode = ReturnValue.EmailsToEaxsError;
+                ExitCode = ReturnValue.UnexpectedError;
                 return (int)ExitCode;
             }
 

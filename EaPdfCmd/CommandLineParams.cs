@@ -38,11 +38,11 @@ namespace EaPdfCmd
         [Option('f', "fo-processor", Required = false, HelpText = "Which XSL-FO processor to use.")]
         public FoProcessor? FoProcessor { get; set; }
 
-        //[Option('s', "include-sub-folders", Required = false, HelpText = "Include sub-folders.")]
-        //public TrueFalse? IncludeSubFolders { get; set; }
+        [Option('s', "include-sub-folders", Required = false, HelpText = "Include sub-folders.")]
+        public TrueFalse? IncludeSubFolders { get; set; }
 
-        //[Option('m', "one-file-per-message-file", Required = false, HelpText = "Output one file per message file.")]
-        //public TrueFalse? OneFilePerMessageFile { get; set; }
+        [Option('m', "one-file-per-message-file", Required = false, HelpText = "Output one file per message file.")]
+        public TrueFalse? OneFilePerMessageFile { get; set; }
 
         /// <summary>
         /// Validate whether the command line parameters are valid.
@@ -53,12 +53,6 @@ namespace EaPdfCmd
         {
 
             var ret = new StringBuilder();
-
-            //TODO: Temporarily disable some features
-            if (In.IsDirectory)
-            {
-                ret.AppendLine($"Option '{GetOptionName(nameof(In))}' must be a file; folders will be supported in the future.");
-            }
 
             if(In.Name.Equals("n", StringComparison.OrdinalIgnoreCase))
             {
