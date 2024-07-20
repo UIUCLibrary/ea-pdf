@@ -32,7 +32,7 @@
     "PreserveTextAttachmentTransferEncoding": true,
     "IncludeSubFolders": true,
     "ExternalContentFolder": "ExternalContentFolder",
-    "OneFilePerMessageFile": true,
+    "AllowMultipleSourceFilesPerOutputFile": true,
     "MaximumXmlFileSize": 100000,
     "SaveTextAsXhtml": true,
     "LogToXmlThreshold": "Warning",

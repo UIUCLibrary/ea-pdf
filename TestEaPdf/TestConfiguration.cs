@@ -50,7 +50,7 @@ namespace UIUCLibrary.TestEaPdf
             Assert.IsTrue(settings.PreserveTextAttachmentTransferEncoding);
             Assert.IsTrue(settings.IncludeSubFolders);
             Assert.AreEqual("ExternalContentFolder", settings.ExternalContentFolder);
-            Assert.IsTrue(settings.OneFilePerMessageFile);
+            Assert.IsTrue(settings.AllowMultipleSourceFilesPerOutputFile);
             Assert.AreEqual(100000, settings.MaximumXmlFileSize);
             Assert.IsTrue(settings.SaveTextAsXhtml);
             Assert.AreEqual(LogLevel.Warning, settings.LogToXmlThreshold);

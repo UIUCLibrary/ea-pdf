@@ -169,7 +169,7 @@ namespace UIUCLibrary.TestEaPdf
                     PreserveBinaryAttachmentTransferEncodingIfPossible = preserveBinaryEnc,
                     PreserveTextAttachmentTransferEncoding = preserveTextEnc,
                     IncludeSubFolders = includeSubs,
-                    OneFilePerMessageFile = oneFilePerMbox,
+                    AllowMultipleSourceFilesPerOutputFile = !oneFilePerMbox,
                     MaximumXmlFileSize = maxOutFileSize,
                     SaveTextAsXhtml = xhtml,
                     SkipUntilMessageId = skipUntilMessageId,

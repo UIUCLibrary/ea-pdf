@@ -197,10 +197,10 @@ namespace EaPdfCmd
                 parms.Add("EmailToEaxsProcessorSettings:IncludeSubFolders", cmdLineParams.IncludeSubFolders.ToString());
             }
 
-            //set the EmailToEaxsProcessorSettings:OneFilePerMessageFile from the command line
-            if (cmdLineParams.OneFilePerMessageFile != null)
+            //set the EmailToEaxsProcessorSettings:AllowMultipleSourceFilesPerOutputFile from the command line
+            if (cmdLineParams.AllowMultipleSourceFilesPerOutputFile != null)
             {
-                parms.Add("EmailToEaxsProcessorSettings:OneFilePerMessageFile", cmdLineParams.OneFilePerMessageFile.ToString());
+                parms.Add("EmailToEaxsProcessorSettings:AllowMultipleSourceFilesPerOutputFile", cmdLineParams.AllowMultipleSourceFilesPerOutputFile.ToString());
             }
 
             hostBldr.Configuration.AddInMemoryCollection(parms);

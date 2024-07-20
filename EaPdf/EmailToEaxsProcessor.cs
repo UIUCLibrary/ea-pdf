@@ -339,8 +339,10 @@ namespace UIUCLibrary.EaPdf
 
             long localId = startingLocalId;
 
-            if (Settings.OneFilePerMessageFile)
+            if (!Settings.AllowMultipleSourceFilesPerOutputFile)
             {
+                //each source file will have its own output file
+
                 long filesWithMessagesCnt = 0;
                 long filesWithoutMessagesCnt = 0;
                 long prevLocalId = startingLocalId;
@@ -409,6 +411,7 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
+                //all source files will be combined into a single output file
 
                 var xmlFilePath = FilePathHelpers.GetXmlOutputFilePath(fullOutFolderPath, fullEmlFolderPath);
 
@@ -534,8 +537,10 @@ namespace UIUCLibrary.EaPdf
 
             long localId = startingLocalId;
 
-            if (Settings.OneFilePerMessageFile)
+            if (!Settings.AllowMultipleSourceFilesPerOutputFile)
             {
+                //each source file will have its own output file
+
                 long filesWithMessagesCnt = 0;
                 long filesWithoutMessagesCnt = 0;
                 long prevLocalId = startingLocalId;
@@ -566,6 +571,7 @@ namespace UIUCLibrary.EaPdf
             }
             else
             {
+                //all source files will be combined into a single output file
 
                 var xmlFilePath = FilePathHelpers.GetXmlOutputFilePath(fullOutFolderPath, fullMboxFolderPath);
 
@@ -1059,7 +1065,7 @@ namespace UIUCLibrary.EaPdf
 
                 xwriter.WriteEndElement(); //wrapperElement
 
-                if (Settings.OneFilePerMessageFile)
+                if (!Settings.AllowMultipleSourceFilesPerOutputFile)
                     msgFileProps.AlreadySerialized = true;
             }
         }
@@ -1219,7 +1225,7 @@ namespace UIUCLibrary.EaPdf
 
                         if (Settings.ForceParse || childMsgFileProps.DoesMimeFormatMatchInputFileType())
                         {
-                            if (Settings.OneFilePerMessageFile)
+                            if (!Settings.AllowMultipleSourceFilesPerOutputFile)
                             {
                                 childMsgFileProps.OutFilePath = Path.Combine(childMsgFileProps.OutDirectoryName, Path.GetFileName(Path.GetDirectoryName(childMbox) ?? ""), Path.GetFileName(childMbox)) + ".xml";
                                 StartNewXmlFile(ref xwriter, ref xstream, msgFileProps, childMsgFileProps);

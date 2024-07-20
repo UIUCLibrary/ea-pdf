@@ -84,12 +84,13 @@ namespace UIUCLibrary.EaPdf
         public string ExternalContentFolder { get; set; } = "ExtBodyContent";
 
         /// <summary>
-        /// If true, each message file will have its own output file
-        /// If the message file contains multiple messages, the output will also contain multiple messages
+        /// If true and processing a folder of files, the output XML file will contain all messages from all mbox files in the folder
+        /// and the resulting PDF will contain multiple source files and all the messages from all the mbox files.  If it is false,
+        /// each input file will be processed separately, resulting in multiple output files.  The default is false.
         /// </summary>
-        public bool OneFilePerMessageFile { get; set; } = false;
+        public bool AllowMultipleSourceFilesPerOutputFile { get; set; } = false;
 
-        //TODO:  Add a OneFilePerMessage option, or maybe use an enum: OneFile, OneFilePerMessage, OneFilePerMessageFile
+        //FUTURE:  Maybe dd a OneFilePerMessage option, or maybe use an enum: OneFile, OneFilePerMessage, OneFilePerMessageFile
         //       See https://github.com/UIUCLibrary/ea-pdf/issues/6
 
         /// <summary>
@@ -168,7 +169,7 @@ namespace UIUCLibrary.EaPdf
             xwriter.WriteProcessingInstruction("PreserveTextAttachmentTransferEncoding", PreserveTextAttachmentTransferEncoding.ToString());
             xwriter.WriteProcessingInstruction("IncludeSubFolders", IncludeSubFolders.ToString());
             xwriter.WriteProcessingInstruction("ExternalContentFolder", ExternalContentFolder);
-            xwriter.WriteProcessingInstruction("OneFilePerMessageFile", OneFilePerMessageFile.ToString());
+            xwriter.WriteProcessingInstruction("AllowMultipleSourceFilesPerOutputFile", AllowMultipleSourceFilesPerOutputFile.ToString());
             xwriter.WriteProcessingInstruction("MaximumXmlFileSize", MaximumXmlFileSize.ToString());
             xwriter.WriteProcessingInstruction("SaveTextAsXhtml", SaveTextAsXhtml.ToString());
             xwriter.WriteProcessingInstruction("LogToXmlThreshold", LogToXmlThreshold.ToString());

@@ -104,21 +104,21 @@ namespace UIUCLibrary.TestEaPdf
             Assert.IsNotNull(argResults);
             Assert.IsTrue(argResults.Tag == ParserResultType.Parsed);
             Assert.IsNull(argResults.Value.IncludeSubFolders);
-            Assert.IsNull(argResults.Value.OneFilePerMessageFile);
+            Assert.IsNull(argResults.Value.AllowMultipleSourceFilesPerOutputFile);
 
             args = new string[] { "--in", "d:\\EmailsForTesting\\CommandLineTests\\emls", "--out", "d:\\EmailsForTesting\\CommandLineTests\\out\\", "-g", "mailto:thabing@gmail.com", "-s", "true", "-m", "true" };
             argResults = argParser.ParseArguments<CommandLineParams>(args);
             Assert.IsNotNull(argResults);
             Assert.IsTrue(argResults.Tag == ParserResultType.Parsed);
             Assert.IsTrue(argResults.Value.IncludeSubFolders?.ToBoolean());
-            Assert.IsTrue(argResults.Value.OneFilePerMessageFile?.ToBoolean());
+            Assert.IsTrue(argResults.Value.AllowMultipleSourceFilesPerOutputFile?.ToBoolean());
 
             args = new string[] { "--in", "d:\\EmailsForTesting\\CommandLineTests\\emls", "--out", "d:\\EmailsForTesting\\CommandLineTests\\out\\", "-g", "mailto:thabing@gmail.com", "-s", "false", "-m", "false" };
             argResults = argParser.ParseArguments<CommandLineParams>(args);
             Assert.IsNotNull(argResults);
             Assert.IsTrue(argResults.Tag == ParserResultType.Parsed);
             Assert.IsFalse(argResults.Value.IncludeSubFolders?.ToBoolean());
-            Assert.IsFalse(argResults.Value.OneFilePerMessageFile?.ToBoolean());
+            Assert.IsFalse(argResults.Value.AllowMultipleSourceFilesPerOutputFile?.ToBoolean());
 
         }
     }

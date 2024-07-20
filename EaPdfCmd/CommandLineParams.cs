@@ -41,8 +41,8 @@ namespace EaPdfCmd
         [Option('s', "include-sub-folders", Required = false, HelpText = "Include sub-folders.")]
         public TrueFalse? IncludeSubFolders { get; set; }
 
-        [Option('m', "one-file-per-message-file", Required = false, HelpText = "Output one file per message file.")]
-        public TrueFalse? OneFilePerMessageFile { get; set; }
+        [Option('m', "allow-multiple-source-files", Required = false, HelpText = "Allow multiple source files in a single PDF.")]
+        public TrueFalse? AllowMultipleSourceFilesPerOutputFile { get; set; }
 
         /// <summary>
         /// Validate whether the command line parameters are valid.

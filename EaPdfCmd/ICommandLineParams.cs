@@ -20,6 +20,6 @@ namespace EaPdfCmd
 
         TrueFalse? IncludeSubFolders { get; set; }
 
-        TrueFalse? OneFilePerMessageFile { get; set; }
+        TrueFalse? AllowMultipleSourceFilesPerOutputFile { get; set; }
     }
 }

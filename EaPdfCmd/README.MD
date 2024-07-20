@@ -179,7 +179,7 @@ The sample JSON configuration file included in the installation zip file is show
     "PreserveTextAttachmentTransferEncoding": false,
     "IncludeSubFolders": false,
     "ExternalContentFolder": "ExtBodyContent",
-    "OneFilePerMessageFile": false,
+    "AllowMultipleSourceFilesPerOutputFile": false,
     "MaximumXmlFileSize": 0, //no limit
     "SaveTextAsXhtml": true,
     "LogToXmlThreshold": "Information",
@@ -365,11 +365,11 @@ of EML files, all subfolders will also be processed recursively.
 The folder to save external content to, always relative to the output folder.  The default is 'ExtBodyContent'.  This folder will be
 created if it does not exist.
 
-##### OneFilePerMessageFile
+##### AllowMultipleSourceFilesPerOutputFile
 
-If true, each message file will have its own output XML file.  If false, all messages will be combined into a single output XML file.  The 
-default is false.  This currently does not effect the PDF output, only the XML output, so it should not be changed unless you have a 
-specific requirement.
+If true and processing a folder of files, the output XML file will contain all messages from all input files in the folder
+and the resulting single PDF will contain multiple source files and all the messages from all the input files.  If it is false,
+each input file will be processed separately, resulting in multiple output files.  The default is false.
 
 ##### MaximumXmlFileSize
 
