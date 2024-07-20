@@ -7,6 +7,9 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using UIUCLibrary.EaPdf.Helpers;
+using System.Collections.Generic;
+using System.Linq;
+using MimeKit;
 
 namespace UIUCLibrary.TestEaPdf
 {
@@ -43,34 +46,55 @@ namespace UIUCLibrary.TestEaPdf
         }
 
         //make sure the in and out arguments are [0],[1] and [2],[3], repectively
-        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file",   "--global-id", "mailto:thabing@illinois.edu", DisplayName = "MBOX_FILE")]
-        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder", "--global-id", "mailto:thabing@illinois.edu", DisplayName = "MBOX_FOLDER")]
-        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file",     "--global-id", "mailto:thabing@illinois.edu", DisplayName = "EML_FILE")]
-        [DataRow("--in", @"emls",               "--out", @"out\emls_folder",   "--global-id", "mailto:thabing@illinois.edu", DisplayName = "EML_FOLDER")]
+        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file",    "--global-id", "mailto:thabing@illinois.edu", DisplayName = "MBOX_FILE")]
+        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder",  "--global-id", "mailto:thabing@illinois.edu", DisplayName = "MBOX_FOLDER")]
+        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file",      "--global-id", "mailto:thabing@illinois.edu", DisplayName = "EML_FILE")]
+        [DataRow("--in", @"emls",               "--out", @"out\emls_folder",    "--global-id", "mailto:thabing@illinois.edu", DisplayName = "EML_FOLDER")]
+
+        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file_m",  "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "MBOX_FILE_MULTI")]
+        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder_m","--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "MBOX_FOLDER_MULTI")]
+        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file_m",    "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "EML_FILE_MULTI")]
+        [DataRow("--in", @"emls",               "--out", @"out\emls_folder_m",  "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "EML_FOLDER_MULTI")]
+
         [DataTestMethod]
         public void TestCommandLineOptions(params string[] args)
         {
-            var inFilePath = args[1];
-            var outFilePath = args[3];
+            var inFilePath = Path.GetFullPath(args[1]);
+            var outFilePath = Path.GetFullPath(args[3]);
 
-            if(Directory.Exists(outFilePath))
+            int dashM = args.ToList().IndexOf("-m");
+            bool allowMultipleSourceFilesPerOutputFile = dashM > 0 && args[dashM + 1].Equals("True", StringComparison.OrdinalIgnoreCase);
+
+            int dashS = args.ToList().IndexOf("-s");
+            bool includeSubFolders = dashS > 0 && args[dashS + 1].Equals("True", StringComparison.OrdinalIgnoreCase);
+
+            if (Directory.Exists(outFilePath))
                 Directory.Delete(outFilePath, true);
 
-            var xmlFile = new FileInfo(FilePathHelpers.GetXmlOutputFilePath(Path.GetFullPath(outFilePath), Path.GetFullPath(inFilePath)));
-            var pdfFile = new FileInfo(Path.ChangeExtension(xmlFile.FullName, ".pdf"));
 
             Task<int> tsk = EaPdfCmd.Program.Main(args);
-
             int ret = tsk.Result;
 
-            if (Directory.Exists(inFilePath))
+            Assert.AreEqual(0, ret);
+
+            InputType type = MimeKitHelpers.DetermineInputType(inFilePath, includeSubFolders, out string message);
+
+            if (type.IsMixedFolder() || type.IsUnknownFolder() || type == InputType.UnknownFile)
             {
-                //folders are not yet supported
-                Assert.AreEqual((int)ReturnValue.ArgumentError, ret);
+                Assert.Fail($"Unsupported input type: {type}");
             }
-            else
+
+            var mimeType = type.HasFlag(InputType.MboxFile) ? MimeFormat.Mbox : MimeFormat.Entity;
+
+            var xmlFilePaths = Helpers.GetExpectedFiles(includeSubFolders, !allowMultipleSourceFilesPerOutputFile, inFilePath, outFilePath, false, type, mimeType);
+
+            List<FileInfo> xmlFiles = xmlFilePaths.Select(f => new FileInfo(f)).ToList();
+
+
+            foreach (FileInfo xmlFile in xmlFiles)
             {
-                Assert.AreEqual(0, ret);
+                var pdfFile = new FileInfo(Path.ChangeExtension(xmlFile.FullName, ".pdf"));
+
                 Assert.IsTrue(xmlFile.Exists);
                 Assert.IsTrue(pdfFile.Exists);
 
@@ -81,6 +105,7 @@ namespace UIUCLibrary.TestEaPdf
                 fileAge = DateTime.Now.Subtract(pdfFile.LastWriteTime);
                 Assert.IsTrue(fileAge.TotalMinutes < 1);
             }
+
 
             //FUTURE: other checks???
         }
