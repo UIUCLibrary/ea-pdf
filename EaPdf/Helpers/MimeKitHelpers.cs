@@ -110,10 +110,11 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <summary>
         /// Define constants used as bit flags for the input type
         /// </summary>
-        public const uint INPUT_TYPE_UNKNOWN = 0x0;  //must be zero
-        public const uint INPUT_TYPE_MBOX = 0x1;
-        public const uint INPUT_TYPE_EML = 0x2;
-        //single bits up to 0x40000000 ca be used for other input types
+        public const uint INPUT_TYPE_UNTESTED = 0x0; //must be zero
+        public const uint INPUT_TYPE_UNKNOWN = 0x1;
+        public const uint INPUT_TYPE_MBOX = 0x2;
+        public const uint INPUT_TYPE_EML = 0x4;
+        //single bits up to 0x40000000 can be used for other input types
         public const uint INPUT_TYPE_FOLDER = 0x80000000; //last bit in uint indicates a folder
         public const uint INPUT_TYPE_FILE_MASK = 0x7FFFFFFF; //all bits except the last, mask out just the file type bits
 
@@ -902,7 +903,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             if (string.IsNullOrWhiteSpace(inputPath))
                 throw new ArgumentNullException(nameof(inputPath));
 
-            InputType ret = InputType.UnknownFile;
+            InputType ret = InputType.Untested;
 
             if (inputPath.TryGetDirectoryInfo(out var absDirPath, out string failureReasonDir) && absDirPath != null && absDirPath.Exists)
             {
@@ -978,64 +979,59 @@ namespace UIUCLibrary.EaPdf.Helpers
             return type.HasFlag(InputType.Folder);
         }
 
+        /// <summary>
+        /// Determine if the type represents a folder containing mixed email message files, 
+        /// unknown type and one other type does not count as mixed
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
         public static bool IsMixedFolder(this InputType type)
         {
-            //see if more than one bits below 0x8000 are set
-            uint singleFileFlags = (uint)type & MimeKitHelpers.INPUT_TYPE_FILE_MASK;
-            bool multipleFlagsSet = ((singleFileFlags & (singleFileFlags - 1)) != 0);
+            if (!type.IsFolder())
+                return false;
 
-            if (multipleFlagsSet && !type.IsFolder())
-            {
-                throw new Exception("If there are multiple type flags set, the type must be a folder");
-            }
+            if (type.HasFlag(InputType.MboxFile) && type.HasFlag(InputType.EmlFile))
+                return true;
 
-            return type.IsFolder() && multipleFlagsSet;
+            return false;
         }
 
         public static bool IsUnknownFolder(this InputType type)
         {
-            return type.IsFolderType(InputType.UnknownFile);
+            if (!type.IsFolder())
+                return false;
+
+            if(!type.HasFlag(InputType.UnknownFile))
+                return false;
+
+            if (type.HasFlag(InputType.MboxFile) || type.HasFlag(InputType.EmlFile))
+                return false;
+
+            return true;
         }
 
         public static bool IsMboxFolder(this InputType type)
         {
-            return type.IsFolderType(InputType.MboxFile);
+            if (!type.IsFolder())
+                return false;
+
+            if (type.HasFlag(InputType.MboxFile) && !type.HasFlag(InputType.EmlFile))
+                return true;
+
+            return false;
         }
 
         public static bool IsEmlFolder(this InputType type)
         {
-            return type.IsFolderType(InputType.EmlFile);
-        }
-
-        /// <summary>
-        /// Determine if the type represent a folder containing files of the specified fileType
-        /// </summary>
-        /// <param name="type"></param>
-        /// <param name="fileType"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
-        public static bool IsFolderType(this InputType type, InputType fileType)
-        {
-            if(fileType >= InputType.Folder)
-            {
-                throw new ArgumentException("Input fileType must be a single file type, not a folder type");
-            }
-
-            if(type.IsMixedFolder())
-            {
+            if (!type.IsFolder())
                 return false;
-            }
 
-            if (type.IsFolder())
-            {
-                if (type.HasFlag(fileType))
-                {
-                    return true;
-                }
-            }
+            if(type.HasFlag(InputType.EmlFile) && !type.HasFlag(InputType.MboxFile))
+                return true;
 
             return false;
         }
+
 
         #endregion DetermineMessageFileTypes
     }
@@ -1046,11 +1042,12 @@ namespace UIUCLibrary.EaPdf.Helpers
     [Flags]
     public enum InputType : uint
     {
+        Untested = MimeKitHelpers.INPUT_TYPE_UNTESTED, //0
+
         UnknownFile = MimeKitHelpers.INPUT_TYPE_UNKNOWN,
         MboxFile = MimeKitHelpers.INPUT_TYPE_MBOX, //Also Pine mbx files
         EmlFile = MimeKitHelpers.INPUT_TYPE_EML,
-
-        //add other message file type as needed, add appropriate extension methods as needed
+        //add other message file types as needed, add corresponding extension methods as needed
 
         Folder = MimeKitHelpers.INPUT_TYPE_FOLDER //indicates the input is a folder containing files, use bitmasks to determine the type of email message files in the folder
     }
