@@ -387,7 +387,8 @@ namespace UIUCLibrary.TestEaPdf
                     WrapExternalContentInXml = wrapExtContentInXml,  //must be true for XEP to properly attach external PDFs
                     SaveTextAsXhtml = true, //required to render html inside the PDF
                     MaximumXmlFileSize = maxFileSize,
-                    IncludeSubFolders = true
+                    IncludeSubFolders = true,
+                    AllowMultipleSourceFilesPerOutputFile = true
                 };
                 if (!string.IsNullOrWhiteSpace(skipAfterMsgId))
                     settings.SkipAfterMessageId = skipAfterMsgId;
