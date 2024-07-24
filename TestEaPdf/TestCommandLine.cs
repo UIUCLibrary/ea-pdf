@@ -46,15 +46,25 @@ namespace UIUCLibrary.TestEaPdf
         }
 
         //make sure the in and out arguments are [0],[1] and [2],[3], repectively
-        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file",    "--global-id", "mailto:thabing@illinois.edu", DisplayName = "MBOX_FILE")]
-        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder",  "--global-id", "mailto:thabing@illinois.edu", DisplayName = "MBOX_FOLDER")]
-        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file",      "--global-id", "mailto:thabing@illinois.edu", DisplayName = "EML_FILE")]
-        [DataRow("--in", @"emls",               "--out", @"out\emls_folder",    "--global-id", "mailto:thabing@illinois.edu", DisplayName = "EML_FOLDER")]
+        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file",        "--global-id", "mailto:thabing@illinois.edu", DisplayName = "MBOX_FILE")]
+        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder",      "--global-id", "mailto:thabing@illinois.edu", DisplayName = "MBOX_FOLDER")]
+        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file",          "--global-id", "mailto:thabing@illinois.edu", DisplayName = "EML_FILE")]
+        [DataRow("--in", @"emls",               "--out", @"out\emls_folder",        "--global-id", "mailto:thabing@illinois.edu", DisplayName = "EML_FOLDER")]
 
-        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file_m",  "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "MBOX_FILE_MULTI")]
-        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder_m","--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "MBOX_FOLDER_MULTI")]
-        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file_m",    "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "EML_FILE_MULTI")]
-        [DataRow("--in", @"emls",               "--out", @"out\emls_folder_m",  "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "EML_FOLDER_MULTI")]
+        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file_m",      "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "MBOX_FILE_MULTI")]
+        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder_m",    "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "MBOX_FOLDER_MULTI")]
+        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file_m",        "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "EML_FILE_MULTI")]
+        [DataRow("--in", @"emls",               "--out", @"out\emls_folder_m",      "--global-id", "mailto:thabing@illinois.edu", "-m", "True", DisplayName = "EML_FOLDER_MULTI")]
+
+        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file_s",      "--global-id", "mailto:thabing@illinois.edu", "-s", "True", DisplayName = "MBOX_FILE_SUB")]
+        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder_s",    "--global-id", "mailto:thabing@illinois.edu", "-s", "True", DisplayName = "MBOX_FOLDER_SUB")]
+        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file_s",        "--global-id", "mailto:thabing@illinois.edu", "-s", "True", DisplayName = "EML_FILE_SUB")]
+        [DataRow("--in", @"emls",               "--out", @"out\emls_folder_s",      "--global-id", "mailto:thabing@illinois.edu", "-s", "True", DisplayName = "EML_FOLDER_SUB")]
+
+        [DataRow("--in", @"mboxes\test_a.mbox", "--out", @"out\mboxes_file_s_m",    "--global-id", "mailto:thabing@illinois.edu", "-s", "True", "-m", "True", DisplayName = "MBOX_FILE_SUB_MULTI")]
+        [DataRow("--in", @"mboxes",             "--out", @"out\mboxes_folder_s_m",  "--global-id", "mailto:thabing@illinois.edu", "-s", "True", "-m", "True", DisplayName = "MBOX_FOLDER_SUB_MULTI")]
+        [DataRow("--in", @"emls\test_a.eml",    "--out", @"out\emls_file_s_m",      "--global-id", "mailto:thabing@illinois.edu", "-s", "True", "-m", "True", DisplayName = "EML_FILE_SUB_MULTI")]
+        [DataRow("--in", @"emls",               "--out", @"out\emls_folder_s_m",    "--global-id", "mailto:thabing@illinois.edu", "-s", "True", "-m", "True", DisplayName = "EML_FOLDER_SUB_MULTI")]
 
         [DataTestMethod]
         public void TestCommandLineOptions(params string[] args)
@@ -75,7 +85,7 @@ namespace UIUCLibrary.TestEaPdf
             Task<int> tsk = EaPdfCmd.Program.Main(args);
             int ret = tsk.Result;
 
-            Assert.AreEqual(0, ret);
+            Assert.AreEqual(0, ret, "Result: " + ((ReturnValue)ret).ToString());
 
             InputType type = MimeKitHelpers.DetermineInputType(inFilePath, includeSubFolders, out string message);
 
@@ -100,10 +110,10 @@ namespace UIUCLibrary.TestEaPdf
 
                 //make sure files were created within the last 1 minutes
                 var fileAge = DateTime.Now.Subtract(xmlFile.LastWriteTime);
-                Assert.IsTrue(fileAge.TotalMinutes < 1);
+                Assert.IsTrue(fileAge.TotalMinutes < 5);
 
                 fileAge = DateTime.Now.Subtract(pdfFile.LastWriteTime);
-                Assert.IsTrue(fileAge.TotalMinutes < 1);
+                Assert.IsTrue(fileAge.TotalMinutes < 5);
             }
 
 

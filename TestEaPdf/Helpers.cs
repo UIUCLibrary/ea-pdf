@@ -108,7 +108,15 @@ namespace UIUCLibrary.TestEaPdf
                 var files = Directory.GetFiles(sampleDir, "*", new EnumerationOptions() { RecurseSubdirectories = includeSubs });
                 foreach (var file in files)
                 {
-                    expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, file, outFolder, forceParse, mimeFormat));
+                    var newOutFolder = outFolder;
+                    //Determine if file is in a subdirectory of the sample directory
+                    if(!sampleDir.Equals(Path.GetDirectoryName(file), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase: StringComparison.Ordinal))
+                    {
+                        var relPath = Path.GetRelativePath(sampleDir, file);
+                        newOutFolder = Path.Combine(outFolder, Path.GetDirectoryName(relPath) ?? ".");
+                    };
+
+                    expectedXmlFiles.AddRange(GetExpectedFilesForFile(includeSubs, oneFilePerMbox, file, newOutFolder, forceParse, mimeFormat));
                 }
             }
             else
@@ -131,7 +139,7 @@ namespace UIUCLibrary.TestEaPdf
 
             if (forceParse || MimeKitHelpers.DoesMimeFormatMatchInputFileType(mimeFormat, inFileType)) //If we are forcing the parse or if the file type matches what is expected, we expect the xml file to be created
             {
-                Assert.IsTrue(File.Exists(xmlPathStr));
+                Assert.IsTrue(File.Exists(xmlPathStr), $"File '{xmlPathStr}' does not exist");
                 expectedXmlFiles.Add(xmlPathStr);
 
                 //Output might be split into multiple files

@@ -402,7 +402,8 @@ namespace UIUCLibrary.EaPdf
                     _folders.Push(Path.GetFileName(fullEmlFolderPath));
                     foreach (string emlSubfolderPath in Directory.EnumerateDirectories(fullEmlFolderPath))
                     {
-                        localId = ConvertFolderOfEmlToEaxs(emlSubfolderPath, outFolderPath, globalId, accntEmails, localId, messageList, false);
+                        string newOutFolderPath = Path.Combine(fullOutFolderPath, Path.GetFileName(emlSubfolderPath));
+                        localId = ConvertFolderOfEmlToEaxs(emlSubfolderPath, newOutFolderPath, globalId, accntEmails, localId, messageList, false);
                     }
 
                 }

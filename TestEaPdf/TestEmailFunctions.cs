@@ -1285,7 +1285,12 @@ namespace UIUCLibrary.TestEaPdf
             XmlNode? hashFuncNd = msgFilePropElem.SelectSingleNode("xm:Hash/xm:Function", xmlns);
             XmlNode? sizeNd = msgFilePropElem.SelectSingleNode("xm:Size", xmlns);
             XmlNode? relPath = msgFilePropElem.SelectSingleNode("xm:RelPath", xmlns);
-            string absPath = Path.Combine(outFolder, relPath?.InnerText ?? "");
+            Uri baseUri = new Uri(msgFilePropElem.BaseURI);
+            string absPath = Path.Combine(Path.GetDirectoryName(baseUri.LocalPath) ?? ".", relPath?.InnerText ?? "");
+
+            //need to make sure the absPath is relative to the xml file including subfolders and not just relative to the base output folder
+
+            Assert.IsTrue(File.Exists(absPath));
 
             if (hashFuncNd != null && hashValueNd != null)
             {

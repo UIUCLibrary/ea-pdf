@@ -370,7 +370,8 @@ namespace UIUCLibrary.TestEaPdf
             {
 
                 var inFile = Path.Combine(testFilesBaseDirectory, filePath);
-                var outFolder = Path.GetDirectoryName(inFile);
+                var suffix = "_mbox" + (saveAttachmentsExt ? "_ext" : "") + (wrapExtContentInXml ? "_wrap" : "");
+                var outFolder = Path.Combine(Path.GetDirectoryName(inFile) ?? ".", "out_" + Path.GetFileNameWithoutExtension(inFile) + suffix);
 
                 if (outFolder == null)
                     Assert.Fail("Could not get directory name from " + inFile);
@@ -408,7 +409,8 @@ namespace UIUCLibrary.TestEaPdf
             {
                 var xmlFile = Path.Combine(testFilesBaseDirectory, Path.GetDirectoryName(folderPath) ?? ".", Path.GetFileName(folderPath) + "Out", Path.ChangeExtension(Path.GetFileName(folderPath), "xml"));
                 var inFolder = Path.Combine(testFilesBaseDirectory, folderPath);
-                var outFolder = Path.Combine(Path.GetDirectoryName(inFolder) ?? ".", Path.GetFileName(inFolder) + "Out");
+                var suffix = "_eml" + (saveAttachmentsExt ? "_ext" : "") + (wrapExtContentInXml ? "_wrap" : "");
+                var outFolder = Path.Combine(Path.GetDirectoryName(inFolder) ?? ".", "out_" + Path.GetFileName(inFolder) + suffix);
 
                 var settings = new EmailToEaxsProcessorSettings
                 {
@@ -441,7 +443,7 @@ namespace UIUCLibrary.TestEaPdf
 
             var catalog = reader.Catalog;
 
-            if (catalog == null) 
+            if (catalog == null)
             {
                 logger?.LogDebug("PDF Catalog is missing; no further tests were run");
                 ret = false;
@@ -534,7 +536,7 @@ namespace UIUCLibrary.TestEaPdf
                 {
                     var pdfmailidVersion = xmpDoc.SelectSingleNode("//pdfmailid:version", xmlns)?.InnerText ?? "";
                     var pdfmailidRev = xmpDoc.SelectSingleNode("//pdfmailid:rev", xmlns)?.InnerText ?? "";
-                    if (string.IsNullOrWhiteSpace(pdfmailidVersion) || string.IsNullOrWhiteSpace(pdfmailidRev) )
+                    if (string.IsNullOrWhiteSpace(pdfmailidVersion) || string.IsNullOrWhiteSpace(pdfmailidRev))
                     {
                         logger?.LogDebug("EA-PDF identifying metadata (version or rev) is missing");
                         ret = false;
@@ -584,12 +586,12 @@ namespace UIUCLibrary.TestEaPdf
                     var pdfAttachmentCount = xmpDoc.SelectNodes("//pdfmailmeta:attachments/rdf:Seq/rdf:li", xmlns)?.Count ?? 0;
 
                     var pageMode = catalog.GetAsName(PdfName.Pagemode);
-                    if(pageMode == null )
+                    if (pageMode == null)
                     {
                         logger?.LogDebug("PageMode is not set");
                         ret = false;
                     }
-                    else if((pdfmailidConformance == PdfMailIdConformance.s || pdfmailidConformance == PdfMailIdConformance.si) && pdfAttachmentCount > 0 && !pageMode.ToString().Equals("/UseAttachments"))
+                    else if ((pdfmailidConformance == PdfMailIdConformance.s || pdfmailidConformance == PdfMailIdConformance.si) && pdfAttachmentCount > 0 && !pageMode.ToString().Equals("/UseAttachments"))
                     {
                         logger?.LogDebug("Conformance level is s and there are attachments, but PageMode is not set to /UseAttachments");
                         ret = false;
@@ -606,7 +608,7 @@ namespace UIUCLibrary.TestEaPdf
                     }
 
                     var viewerPreferences = catalog.GetAsDict(PdfName.Viewerpreferences);
-                    if(viewerPreferences == null)
+                    if (viewerPreferences == null)
                     {
                         logger?.LogDebug("ViewerPreferences is not set");
                         ret = false;
