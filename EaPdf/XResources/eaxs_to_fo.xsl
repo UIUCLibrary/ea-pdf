@@ -178,7 +178,7 @@
 			<fo:block background-color="beige" border="1px solid brown" padding="0.125em" >
 				<xsl:text>You may need to open the PDF reader's attachments list to download or open these f&zwnj;iles. 
 				The same attachment might have originated from multiple mail messages, possibly with different f&zwnj;ilenames, but only one copy will be attached to this PDF; 
-				however, each message will have a seperate annotation pointing to the same attachment.</xsl:text>
+				however, each message will have a seperate annotation pointing to the same embedded file.</xsl:text>
 			</fo:block>
 
 			<fo:block xsl:use-attribute-sets="h2"><xsl:call-template name="tag-H2"/>Source Email Files</fo:block>
@@ -193,10 +193,10 @@
 								<xsl:text>X_</xsl:text><xsl:value-of select="eaxs:Hash/eaxs:Value"/>
 							</xsl:variable>
 							<fo:list-item margin-top="5pt" >
-								<fo:list-item-label>
+								<fo:list-item-label end-indent="1em">
 									<fo:block font-weight="bold"><fo:inline>Source File <xsl:value-of select="position()"/>:</fo:inline></fo:block>
 								</fo:list-item-label>
-								<fo:list-item-body keep-together.within-column="always">
+								<fo:list-item-body start-indent="1em" keep-together.within-column="always">
 									<xsl:call-template name="file-list-2x2">
 										<xsl:with-param name="lbl-1">F&zwnj;ile name: </xsl:with-param>
 										<xsl:with-param name="body-1">
@@ -235,10 +235,10 @@
 								<xsl:text>MX_</xsl:text><xsl:value-of select="eaxs:Hash/eaxs:Value"/>
 							</xsl:variable>
 							<fo:list-item margin-top="5pt" >
-								<fo:list-item-label>
+								<fo:list-item-label end-indent="1em">
 									<fo:block font-weight="bold"><fo:inline>Source File <xsl:value-of select="position()"/>:</fo:inline></fo:block>
 								</fo:list-item-label>
-								<fo:list-item-body keep-together.within-column="always">
+								<fo:list-item-body start-indent="1em" keep-together.within-column="always">
 									<xsl:call-template name="file-list-2x2">
 										<xsl:with-param name="lbl-1">F&zwnj;ile name: </xsl:with-param>
 										<xsl:with-param name="body-1">
@@ -288,10 +288,10 @@
 						<xsl:variable name="multiple-names" select="count(fn:distinct-values(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/(eaxs:DispositionFileName | eaxs:ContentName))) > 1"/>
 						<xsl:variable name="multiple-msgs" select="count(//eaxs:SingleBody[*/eaxs:Hash/eaxs:Value = $hash]/ancestor::*[eaxs:MessageId][1]/eaxs:MessageId) > 1"/>
 						<fo:list-item margin-top="5pt">
-							<fo:list-item-label>
+							<fo:list-item-label end-indent="1em">
 								<fo:block font-weight="bold"><fo:inline>Attachment <xsl:value-of select="position()"/>:</fo:inline></fo:block>						
 							</fo:list-item-label>
-							<fo:list-item-body keep-together.within-column="always">
+							<fo:list-item-body start-indent="1em" keep-together.within-column="always">
 								<xsl:call-template name="file-list-2x2">
 									<xsl:with-param name="lbl-1">
 										<xsl:text>F&zwnj;ile name</xsl:text>
@@ -632,26 +632,26 @@
 				<fo:block xsl:use-attribute-sets="h1" ><xsl:call-template name="tag-H1"/>PDF Email Archive (PDF/mail-1<xsl:value-of select="$pdfmailid_conformance_norm"/>)</fo:block>
 				
 				<fo:list-block>
-					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-						<fo:list-item-label><fo:block>Created On: </fo:block></fo:list-item-label>
+					<fo:list-item xsl:use-attribute-sets="h2-font h2-space" >
+						<fo:list-item-label end-indent="1em"><fo:block>Created On: </fo:block></fo:list-item-label>
 						<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="fn:format-dateTime(fn:current-dateTime(), '[FNn], [MNn] [D], [Y], [h]:[m]:[s] [PN]')"/></fo:block></fo:list-item-body>
 					</fo:list-item>
 					
 					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-						<fo:list-item-label><fo:block>Created By: </fo:block></fo:list-item-label>
+						<fo:list-item-label end-indent="1em"><fo:block>Created By: </fo:block></fo:list-item-label>
 						<fo:list-item-body start-indent="6em">
 							<fo:list-block>
 								<fo:list-item>
-									<fo:list-item-label><fo:block/></fo:list-item-label>
-									<fo:list-item-body><fo:block><xsl:value-of select="$creator"/></fo:block></fo:list-item-body>
+									<fo:list-item-label end-indent="1em"><fo:block/></fo:list-item-label>
+									<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="$creator"/></fo:block></fo:list-item-body>
 								</fo:list-item>
 								<fo:list-item>
-									<fo:list-item-label><fo:block/></fo:list-item-label>
-									<fo:list-item-body><fo:block><xsl:value-of select="$producer"/></fo:block></fo:list-item-body>
+									<fo:list-item-label end-indent="1em"><fo:block/></fo:list-item-label>
+									<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="$producer"/></fo:block></fo:list-item-body>
 								</fo:list-item>
 								<fo:list-item>
-									<fo:list-item-label><fo:block/></fo:list-item-label>
-									<fo:list-item-body><fo:block><xsl:value-of select="$enhancer"/></fo:block></fo:list-item-body>
+									<fo:list-item-label end-indent="1em"><fo:block/></fo:list-item-label>
+									<fo:list-item-body start-indent="6em"><fo:block><xsl:value-of select="$enhancer"/></fo:block></fo:list-item-body>
 								</fo:list-item>
 							</fo:list-block>
 						</fo:list-item-body>
@@ -659,9 +659,9 @@
 					
 					<xsl:if test="/eaxs:Account/eaxs:EmailAddress">
 						<fo:list-item>
-							<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Accounts (<xsl:value-of select="count(/eaxs:Account/eaxs:EmailAddress)"/>): </fo:block></fo:list-item-label>
-							<fo:list-item-body>
-								<fo:list-block margin-top="2em" margin-left="1em">
+							<fo:list-item-label end-indent="1em" xsl:use-attribute-sets="h2-font h2-space"><fo:block>Accounts (<xsl:value-of select="count(/eaxs:Account/eaxs:EmailAddress)"/>): </fo:block></fo:list-item-label>
+							<fo:list-item-body  start-indent="1em">
+								<fo:list-block margin-top="2em">
 									<xsl:for-each select="/eaxs:Account/eaxs:EmailAddress">
 										<fo:list-item>
 											<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
@@ -674,15 +674,15 @@
 					</xsl:if>
 					
 					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-						<fo:list-item-label><fo:block>Global Id: </fo:block></fo:list-item-label>
+						<fo:list-item-label end-indent="1em"><fo:block>Global Id: </fo:block></fo:list-item-label>
 						<fo:list-item-body start-indent="5em"><fo:block><xsl:value-of select="/eaxs:Account/eaxs:GlobalId"/></fo:block></fo:list-item-body>
 					</fo:list-item>
 					
 					<xsl:if test="$ContinuedIn or $ContinuedFrom">
 						<fo:list-item>
-							<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Multipart Archive: </fo:block></fo:list-item-label>
-							<fo:list-item-body>
-								<fo:list-block margin-top="2em" margin-left="1em">
+							<fo:list-item-label end-indent="1em" xsl:use-attribute-sets="h2-font h2-space"><fo:block>Multipart Archive: </fo:block></fo:list-item-label>
+							<fo:list-item-body  start-indent="1em">
+								<fo:list-block margin-top="2em" >
 									<xsl:if test="$ContinuedFrom">
 										<fo:list-item>
 											<fo:list-item-label xsl:use-attribute-sets="h3-font" end-indent="label-end()"><fo:block><xsl:call-template name="tag-Span"/>&#x2022;</fo:block></fo:list-item-label>
@@ -702,13 +702,13 @@
 					
 					<!-- QUESTION: Do not count child messages? -->
 					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-						<fo:list-item-label><fo:block>Message Count: </fo:block></fo:list-item-label>
+						<fo:list-item-label end-indent="1em"><fo:block>Message Count: </fo:block></fo:list-item-label>
 						<fo:list-item-body start-indent="8em"><fo:block><xsl:value-of select="count(//eaxs:Message)"/></fo:block></fo:list-item-body>
 					</fo:list-item>
 					
 					<!-- QUESTION: Only count distinct attachments, based on the hash? -->
 					<fo:list-item xsl:use-attribute-sets="h2-font h2-space">
-						<fo:list-item-label><fo:block>Attachment Count: </fo:block></fo:list-item-label>
+						<fo:list-item-label end-indent="1em"><fo:block>Attachment Count: </fo:block></fo:list-item-label>
 						<fo:list-item-body start-indent="9.5em">
 							<fo:block>
 								<xsl:value-of select="count(//eaxs:SingleBody[(eaxs:ExtBodyContent or fn:lower-case(normalize-space(eaxs:BodyContent/eaxs:TransferEncoding)) = 'base64') and (fn:lower-case(normalize-space(@IsAttachment)) = 'true' or not(starts-with(fn:lower-case(normalize-space(eaxs:ContentType)),'text/')))])"/>
@@ -717,8 +717,8 @@
 					</fo:list-item>
 	
 					<fo:list-item>
-						<fo:list-item-label xsl:use-attribute-sets="h2-font h2-space"><fo:block>Folders (<xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message or eaxs:Folder])"/>): </fo:block></fo:list-item-label>
-						<fo:list-item-body>
+						<fo:list-item-label end-indent="1em" xsl:use-attribute-sets="h2-font h2-space"><fo:block>Folders (<xsl:value-of select="count(/eaxs:Account//eaxs:Folder[eaxs:Message or eaxs:Folder])"/>): </fo:block></fo:list-item-label>
+						<fo:list-item-body start-indent="1em">
 							<fo:block margin-top="2em">
 								<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderToc"/>
 							</fo:block>
@@ -733,7 +733,7 @@
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Folder" mode="RenderToc">
-		<fo:list-block margin-left="1em">
+		<fo:list-block>
 			<fo:list-item>
 				<fo:list-item-label end-indent="label-end()" xsl:use-attribute-sets="h3-font"><fo:block>&#x2022;</fo:block></fo:list-item-label>
 				<fo:list-item-body start-indent="body-start()" >
