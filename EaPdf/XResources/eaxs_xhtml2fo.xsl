@@ -745,19 +745,18 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
 
   <xsl:template name="process-style">
     <xsl:param name="style"/>
-    <!-- TODO:  The style might have a leading ; which should be removed -->
+    <!-- TODO:  The style might have a leading ; which should be removed -->  
     <!-- e.g., style="text-align: center; color: red"
          converted to text-align="center" color="red" -->
     <xsl:variable name="name"
-                  select="normalize-space(substring-before($style, ':'))"/>
+                  select="fn:lower-case(normalize-space(substring-before($style, ':')))"/>
     <xsl:if test="$name">
       <xsl:variable name="value-and-rest"
                     select="normalize-space(substring-after($style, ':'))"/>
       <xsl:variable name="value">
         <xsl:choose>
           <xsl:when test="contains($value-and-rest, ';')">
-            <xsl:value-of select="normalize-space(substring-before(
-                                  $value-and-rest, ';'))"/>
+            <xsl:value-of select="normalize-space(substring-before($value-and-rest, ';'))"/>
           </xsl:when>
           <xsl:otherwise>  
             <xsl:value-of select="$value-and-rest"/>
@@ -785,6 +784,18 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
           <xsl:attribute name="{$name}">
             <xsl:value-of select="my:ScaleToBodyHeight($value)"/>
           </xsl:attribute>
+        </xsl:when>
+        
+        <!-- TGH 2024-07-22 html:a is translated to fo:basic-link, but some attributes are not supported -->
+        
+        <xsl:when test="$name='width' and self::html:a">
+          <xsl:message>The basic-link does not support the <xsl:value-of select="$name"/>='<xsl:value-of select="$value"/>' attribute; it will be omitted.</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name='height' and self::html:a">
+          <xsl:message>The basic-link does not support the <xsl:value-of select="$name"/>='<xsl:value-of select="$value"/>' attribute; it will be omitted.</xsl:message>
+        </xsl:when>
+        <xsl:when test="$name='cursor'">
+          <xsl:message>Property <xsl:value-of select="$name"/>='<xsl:value-of select="$value"/>' is not supported; it will be omitted.</xsl:message>
         </xsl:when>
         
         <xsl:when test="$name = 'vertical-align' and (
