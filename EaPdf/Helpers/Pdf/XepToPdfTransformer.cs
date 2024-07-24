@@ -80,6 +80,10 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             //Except for exceptions, which are multiple lines with the first line being "...something.somethingException" and subsequent lines beginning with tab and being the stack trace
             //Debug and Trace messages are always just one line
 
+            //Get rid of superfluous or misleading messages
+
+            messages.RemoveAll(m => m.message.StartsWith("[warning] PDF Version 1.4 doesn't support Tab Order"));  //this is corrected in post-processing, so ne need for the warning
+
             List<(LogLevel level, string message)> ret = new();
 
             StringBuilder messageAccumulator = new();
