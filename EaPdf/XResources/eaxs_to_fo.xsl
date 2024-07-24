@@ -378,13 +378,6 @@
 	
 	<xsl:template name="bookmarks">
 		<fo:bookmark-tree>
-			<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderBookmarks"></xsl:apply-templates>
-		</fo:bookmark-tree>
-	</xsl:template>
-	
-	<xsl:template match="eaxs:Folder" mode="RenderBookmarks">
-		<xsl:param name="topfolder">true</xsl:param>
-		<xsl:if test="$topfolder='true'">
 			<fo:bookmark>
 				<xsl:attribute name="internal-destination">
 					<xsl:call-template name="ContentSetId">
@@ -393,7 +386,21 @@
 				</xsl:attribute>
 				<fo:bookmark-title>Cover Page</fo:bookmark-title>
 			</fo:bookmark>
-		</xsl:if>
+			<xsl:apply-templates select="/eaxs:Account/eaxs:Folder[eaxs:Message or eaxs:Folder]" mode="RenderBookmarks"></xsl:apply-templates>
+			<xsl:if test="$list-of-attachments='true'">
+				<fo:bookmark>
+					<xsl:attribute name="internal-destination">
+						<xsl:call-template name="ContentSetId">
+							<xsl:with-param name="type">AttachmentList</xsl:with-param>
+						</xsl:call-template>
+					</xsl:attribute>
+					<fo:bookmark-title>List of All Attachments</fo:bookmark-title>
+				</fo:bookmark>
+			</xsl:if>
+		</fo:bookmark-tree>
+	</xsl:template>
+	
+	<xsl:template match="eaxs:Folder" mode="RenderBookmarks">
 		<fo:bookmark>
 			<xsl:call-template name="InternalDestinationToMessageHeader"/>
 			<fo:bookmark-title>Folder: <xsl:value-of select="eaxs:Name"/></fo:bookmark-title>
@@ -412,16 +419,6 @@
 				</fo:bookmark>
 			</xsl:if>
 		</fo:bookmark>
-		<xsl:if test="$topfolder='true' and $list-of-attachments='true'">
-			<fo:bookmark>
-				<xsl:attribute name="internal-destination">
-					<xsl:call-template name="ContentSetId">
-						<xsl:with-param name="type">AttachmentList</xsl:with-param>
-					</xsl:call-template>
-				</xsl:attribute>
-				<fo:bookmark-title>List of All Attachments</fo:bookmark-title>
-			</fo:bookmark>
-		</xsl:if>
 	</xsl:template>
 	
 	<xsl:template match="eaxs:Message" mode="RenderBookmarks">
