@@ -56,7 +56,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             //so get the html back out of the HAP document and re-DeEntitize it, and then try to reload it; this seems to get rid of the problem
             try
             {
-                ret = hdoc.DocumentNode.OuterHtml;
+                ret = hdoc.DocumentNode.InnerHtml;
                 ret = FixCharacterEntities(ret);
                 hdoc.LoadHtml(ret);
             }
@@ -74,26 +74,46 @@ namespace UIUCLibrary.EaPdf.Helpers
             //move styles to inline with the elements
             ConvertToInlineCssUsingAngleSharpCss(htmlNode, ref messages);
 
+            hdoc.LoadHtml(htmlNode.OuterHtml);
+            htmlNode = hdoc.DocumentNode;
+
             //Normalize style properties and remove any inline style properties that are not supported by the HTML
             NormalizeStyleProperties(htmlNode, ref messages, ignoreHtmlIssues);
 
+            hdoc.LoadHtml(htmlNode.InnerHtml);
+            htmlNode = hdoc.DocumentNode;
+
             //The rgba function is not supported by the XSL-FO processor, so convert it to rgb
             //This must occur after the inlining process, because that will move rgba values from stylesheets to inline style attributes
-            ConvertStylesRgbaToRgb(hdoc, ref messages);
+            ConvertStylesRgbaToRgb(htmlNode, ref messages);
+
+            hdoc.LoadHtml(htmlNode.InnerHtml);
+            htmlNode = hdoc.DocumentNode;
 
             //Fix improperly nested lists
             FixImproprerlyNestedLists(htmlNode, ref messages, ignoreHtmlIssues);
 
+            hdoc.LoadHtml(htmlNode.InnerHtml);
+            htmlNode = hdoc.DocumentNode;
+
             //Fix non-unique id attributes -- make sure to do this after inlining the styles, because the inlining will require the ids to match
             //The XSL-FO processor will complain if ids are not unique
-            FixNonUniqueIdValues(hdoc, ref messages, ignoreHtmlIssues);
+            FixNonUniqueIdValues(htmlNode, ref messages, ignoreHtmlIssues);
 
-            ConvertRelativeUrlsToAbsolute(hdoc);
+            hdoc.LoadHtml(htmlNode.InnerHtml);
+            htmlNode = hdoc.DocumentNode;
+
+            ConvertRelativeUrlsToAbsolute(htmlNode);
+
+            hdoc.LoadHtml(htmlNode.InnerHtml);
+            htmlNode = hdoc.DocumentNode;
 
             //If an element has the "display: none" style set, delete it from the xhtml.  make sure this is after the inlining process
-            RemoveDisplayNone(hdoc);
+            RemoveDisplayNone(htmlNode);
 
-            ret = htmlNode.OuterHtml;
+            hdoc.LoadHtml(htmlNode.InnerHtml);
+            htmlNode = hdoc.DocumentNode;
+            ret = htmlNode.InnerHtml;
 
             if (XmlHelpers.TryReplaceInvalidXMLChars(ref ret, out string msg))
             {
@@ -108,9 +128,9 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         const string RGBA_REGEX = @"rgba\(\s*(?<r>[^,]+?)\s*,\s*(?<g>[^,]+?)\s*,\s*(?<b>[^,]+?)\s*,\s*(?<a>[^,]+?)\s*\)";
 
-        private static void ConvertStylesRgbaToRgb(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages)
+        private static void ConvertStylesRgbaToRgb(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages)
         {
-            var styleNodes = hdoc.DocumentNode.SelectNodes("//*/@style[contains(translate(.,'RGBA','rgba'), 'rgba')]");
+            var styleNodes = htmlNode.SelectNodes("//*/@style[contains(translate(.,'RGBA','rgba'), 'rgba')]");
             if (styleNodes == null || styleNodes.Count == 0)
             {
                 return;
@@ -230,9 +250,9 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="hdoc"></param>
         /// <param name="messages"></param>
         /// <param name="ignoreHtmlIssues"></param>
-        private static void RemoveDisplayNone(HtmlDocument hdoc)
+        private static void RemoveDisplayNone(HtmlNode htmlNode)
         {
-            var displayNoneNodes = hdoc.DocumentNode.QuerySelectorAll("*[style*='display:none']");
+            var displayNoneNodes = htmlNode.QuerySelectorAll("*[style*='display:none']");
 
             List<HtmlNode> toRemove = new();
             foreach (var node in displayNoneNodes)
@@ -244,9 +264,9 @@ namespace UIUCLibrary.EaPdf.Helpers
 
         }
 
-        private static void ConvertRelativeUrlsToAbsolute(HtmlDocument hdoc)
+        private static void ConvertRelativeUrlsToAbsolute(HtmlNode htmlNode)
         {
-            var baseNode = hdoc.DocumentNode.SelectSingleNode("/html/head/base");
+            var baseNode = htmlNode.SelectSingleNode("/html/head/base");
 
             if (baseNode == null)
                 return;
@@ -264,7 +284,7 @@ namespace UIUCLibrary.EaPdf.Helpers
             var baseUri = new Uri(href, UriKind.RelativeOrAbsolute);
 
             //get all the img src attributes
-            var imgNodes = hdoc.DocumentNode.QuerySelectorAll("img");
+            var imgNodes = htmlNode.QuerySelectorAll("img");
             if (imgNodes != null)
             {
                 foreach (var imgNode in imgNodes)
@@ -292,10 +312,10 @@ namespace UIUCLibrary.EaPdf.Helpers
         /// <param name="hdoc"></param>
         /// <param name="messages"></param>
         /// <param name="ignoreHtmlIssues"></param>
-        private static void FixNonUniqueIdValues(HtmlDocument hdoc, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
+        private static void FixNonUniqueIdValues(HtmlNode htmlNode, ref List<(LogLevel level, string message)> messages, bool ignoreHtmlIssues)
         {
 
-            var nodes = hdoc.DocumentNode.QuerySelectorAll("*[id]"); //Note: the Xpath equivalent "//*[@id]" doesn't seem to work for some reason
+            var nodes = htmlNode.QuerySelectorAll("*[id]"); //Note: the Xpath equivalent "//*[@id]" doesn't seem to work for some reason
             Dictionary<string, int> idCnts = new();
 
             if (nodes != null)
