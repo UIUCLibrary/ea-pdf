@@ -266,29 +266,29 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
   <xsl:attribute-set name="ul">
     <xsl:attribute name="space-before">1em</xsl:attribute>
     <xsl:attribute name="space-after">1em</xsl:attribute>
-    <xsl:attribute name="provisional-distance-between-starts">1em</xsl:attribute>
-    <xsl:attribute name="provisional-label-separation">0.25em</xsl:attribute>
+    <xsl:attribute name="provisional-distance-between-starts">2em</xsl:attribute>
+    <xsl:attribute name="provisional-label-separation">0.125em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="ul-nested">
     <xsl:attribute name="space-before">0pt</xsl:attribute>
     <xsl:attribute name="space-after">0pt</xsl:attribute>
-    <xsl:attribute name="provisional-distance-between-starts">1em</xsl:attribute>
-    <xsl:attribute name="provisional-label-separation">0.25em</xsl:attribute>
+    <xsl:attribute name="provisional-distance-between-starts">2em</xsl:attribute>
+    <xsl:attribute name="provisional-label-separation">0.125em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="ol">
     <xsl:attribute name="space-before">1em</xsl:attribute>
     <xsl:attribute name="space-after">1em</xsl:attribute>
-    <xsl:attribute name="provisional-distance-between-starts">1em</xsl:attribute>
-    <xsl:attribute name="provisional-label-separation">0.25em</xsl:attribute>
+    <xsl:attribute name="provisional-distance-between-starts">2em</xsl:attribute>
+    <xsl:attribute name="provisional-label-separation">0.125em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="ol-nested">
     <xsl:attribute name="space-before">0pt</xsl:attribute>
     <xsl:attribute name="space-after">0pt</xsl:attribute>
-    <xsl:attribute name="provisional-distance-between-starts">1em</xsl:attribute>
-    <xsl:attribute name="provisional-label-separation">0.25em</xsl:attribute>
+    <xsl:attribute name="provisional-distance-between-starts">2em</xsl:attribute>
+    <xsl:attribute name="provisional-label-separation">0.125em</xsl:attribute>
   </xsl:attribute-set>
 
   <xsl:attribute-set name="ul-li">
@@ -368,7 +368,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
   <xsl:attribute-set name="table">
     <xsl:attribute name="border-collapse">separate</xsl:attribute>
     <xsl:attribute name="border-spacing">2px</xsl:attribute>
-    <xsl:attribute name="border">1px</xsl:attribute>
+    <xsl:attribute name="border">1px solid</xsl:attribute>
     <!--
     <xsl:attribute name="border-style">outset</xsl:attribute>
     -->
@@ -396,7 +396,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
   <xsl:attribute-set name="th">
     <xsl:attribute name="font-weight"><xsl:value-of select="$Bolder"/></xsl:attribute>
     <xsl:attribute name="text-align">center</xsl:attribute>
-    <xsl:attribute name="border">1px</xsl:attribute>
+    <xsl:attribute name="border">1px solid</xsl:attribute>
     <!--
     <xsl:attribute name="border-style">inset</xsl:attribute>
     -->
@@ -404,7 +404,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
   </xsl:attribute-set>
 
   <xsl:attribute-set name="td">
-    <xsl:attribute name="border">1px</xsl:attribute>
+    <xsl:attribute name="border">1px solid</xsl:attribute>
     <!--
     <xsl:attribute name="border-style">inset</xsl:attribute>
     -->
@@ -1429,7 +1429,7 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
           <xsl:message terminate="no">Attribute border='<xsl:value-of select="@border"/>' is not a number; using it as is in the FO</xsl:message>
         </xsl:when>
         <xsl:when test="@border &gt; 0">
-          <xsl:attribute name="border"><xsl:value-of select="@border"/>px</xsl:attribute>
+          <xsl:attribute name="border"><xsl:value-of select="@border"/>px solid</xsl:attribute>
         </xsl:when>
       </xsl:choose>
       <xsl:choose>
@@ -2266,10 +2266,16 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING O
       </xsl:otherwise>
     </xsl:choose>
     <xsl:if test="@title">
-      <xsl:attribute name="role">
-        <!-- TODO: This needs to use one of the custom FOP or XEP attributes instead of role -->
-        <xsl:value-of select="@title"/>
-      </xsl:attribute>
+      <xsl:choose>
+        <xsl:when test="not(fn:starts-with(fn:lower-case(normalize-space(@title)),'http'))">
+          <xsl:call-template name="tag-element">
+            <xsl:with-param name="tag" select="@title"/>
+          </xsl:call-template>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:message>HTML link title attribute title="<xsl:value-of select="@title"/>" is a URI; it is being ignored.</xsl:message>
+        </xsl:otherwise>
+      </xsl:choose>
     </xsl:if>
     <xsl:apply-templates/>
   </xsl:template>
