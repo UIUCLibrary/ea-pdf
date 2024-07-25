@@ -205,7 +205,8 @@ namespace UIUCLibrary.EaPdf
                 { "ContinuedFrom", Path.GetFileName(prevPdfFilePath) },
                 { "ContinuedIn", Path.GetFileName(nextPdfFilePath)},
                 { "creator", XmpCreatorTool },
-                { "enhancer", ConfigHelpers.GetNamespaceVersionString(typeof(iTextSharp.text.pdf.PdfReader)) }
+                { "enhancer", ConfigHelpers.GetNamespaceVersionString(typeof(iTextSharp.text.pdf.PdfReader)) },
+                { "complex-script", complexScripts ? "true" : "false" }
             };
 
             //first transform the EAXS to FO using XSLT
@@ -232,7 +233,7 @@ namespace UIUCLibrary.EaPdf
                     _logger.LogInformation("Disabling '{version}' complex script support; no complex scripts were detected.", _xslfo.ProcessorVersion);
                     extraCmdLineParams = "-nocs";
                 }
-                else
+                else if(complexScripts && _xslfo.ProcessorVersion.StartsWith("FOP"))
                 {
                     _logger.LogInformation("Enabling '{version}' complex script support; complex scripts were detected.", _xslfo.ProcessorVersion);
                 }

@@ -60,6 +60,10 @@
 	<xsl:param name="ContinuedFrom"></xsl:param>
 	<xsl:param name="ContinuedIn"></xsl:param>
 	
+	<!-- does the file contain complex scripts, such as Hebrew or arabic -->
+	<xsl:param name="complex-script">true</xsl:param>
+	<xsl:param name="default-lang">en</xsl:param><!-- used for message bodies if nothing else is indicated; in mixed language environments 'und' might be a better default -->
+	
 	<xsl:variable name="pdfmailid_conformance">
 		<xsl:choose>
 			<xsl:when test="count(//eaxs:Message) &lt;= 1">s</xsl:when>
@@ -1237,7 +1241,7 @@
 			<xsl:if test="count(ancestor::eaxs:ChildMessage) > 0">
 				<xsl:call-template name="hr"/>
 			</xsl:if>
-			<fo:block xsl:use-attribute-sets="h3"><xsl:call-template name="tag-H3"/>
+			<fo:block xsl:use-attribute-sets="h3" xml:lang="en"><xsl:call-template name="tag-H3"/>
 				<xsl:call-template name="RepeatString"><xsl:with-param name="Count" select="1 + count(ancestor::eaxs:ChildMessage)"></xsl:with-param></xsl:call-template>
 				<xsl:text> Child Message </xsl:text> 
 				<xsl:value-of select="eaxs:LocalId"/>
@@ -1250,7 +1254,7 @@
 	
 	<xsl:template match="eaxs:DeliveryStatus" mode="RenderContent">
 		<xsl:variable name="ContentType" select="fn:lower-case(normalize-space(../eaxs:ContentType))"/>
-		<fo:block xsl:use-attribute-sets="delivery-status"><xsl:call-template name="tag-Art"/>
+		<fo:block xsl:use-attribute-sets="delivery-status" xml:lang="en"><xsl:call-template name="tag-Art"/>
 			<xsl:if test="../eaxs:ContentLanguage">
 				<xsl:attribute name="xml:lang"><xsl:value-of select="../eaxs:ContentLanguage"/></xsl:attribute>
 			</xsl:if>
@@ -1299,22 +1303,21 @@
 				<fo:block xsl:use-attribute-sets="pre">
 					
 					<!-- NOTE:  Using the xml:lang (or language) attribute can interfer with Apache FOP's complex script functionality -->
-					<xsl:if test="$fo-processor!='fop'">
+					<xsl:if test="$fo-processor!='fop' or fn:lower-case(normalize-space($complex-script))='false'">
 						<xsl:choose>
 							<xsl:when test="ancestor::*/eaxs:ContentLanguage">
 								<xsl:attribute name="xml:lang"><xsl:value-of select="ancestor::*/eaxs:ContentLanguage"/></xsl:attribute>
 							</xsl:when>
 							<xsl:otherwise>
-								<xsl:attribute name="xml:lang">en</xsl:attribute>
+								<xsl:attribute name="xml:lang"><xsl:value-of select="$default-lang"/></xsl:attribute>
 							</xsl:otherwise>
 						</xsl:choose>
 					</xsl:if>
-					
 					<xsl:call-template name="process-pre"/>
 				</fo:block>			
 			</xsl:when>	
 			<xsl:otherwise>
-				<fo:block>
+				<fo:block xml:lang="en">
 					<fo:inline font-style="italic">BLANK</fo:inline>					
 				</fo:block>
 			</xsl:otherwise>
@@ -1327,7 +1330,7 @@
 				<fo:block><xsl:call-template name="tag-Div"></xsl:call-template>
 					
 					<!-- NOTE:  Using the xml:lang (or language) attribute can interfer with Apache FOP's complex script functionality -->
-					<xsl:if test="$fo-processor!='fop'">
+					<xsl:if test="$fo-processor!='fop' or fn:lower-case(normalize-space($complex-script))='false'">
 						<xsl:choose>
 							<xsl:when test="html:html/@xml:lang">
 								<xsl:attribute name="xml:lang"><xsl:value-of select="html:html/@xml:lang"/></xsl:attribute>
@@ -1342,7 +1345,7 @@
 								<xsl:attribute name="xml:lang"><xsl:value-of select="ancestor::*/eaxs:ContentLanguage"/></xsl:attribute>
 							</xsl:when>
 							<xsl:otherwise>
-								<xsl:attribute name="xml:lang">en</xsl:attribute>
+								<xsl:attribute name="xml:lang"><xsl:value-of select="$default-lang"/></xsl:attribute>
 							</xsl:otherwise>
 						</xsl:choose>
 						<!-- TODO: Also try to determine xml:lang attribute from html root or html head -->
@@ -1394,7 +1397,7 @@
 				</fo:block>
 			</xsl:when>	
 			<xsl:otherwise>
-				<fo:block>
+				<fo:block xml:lang="en">
 					<fo:inline font-style="italic">BLANK</fo:inline>
 				</fo:block>
 			</xsl:otherwise>
