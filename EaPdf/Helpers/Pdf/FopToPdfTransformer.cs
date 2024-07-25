@@ -88,6 +88,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             //The first line of the message is the date and time, the second line is the log level, and the rest of the lines are the message
             //Debug and Trace messages are always on their own line
 
+            //fix some typos in the log messages
+            messages = messages.Select(m => (m.level, m.message.Replace("Æ", "'").Replace("æ", "'"))).ToList();
+
             List<(LogLevel level, string message)> ret = new();
 
             StringBuilder messageAccumulator = new();
