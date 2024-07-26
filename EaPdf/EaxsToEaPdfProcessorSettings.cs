@@ -69,6 +69,11 @@ namespace UIUCLibrary.EaPdf
 
         public string XsltRootXmpFilePath { get; set; } = "XResources\\eaxs_to_root_xmp.xsl";
 
+        /// <summary>
+        /// Will save the intermediate FO files to the output directory; useful for debugging
+        /// </summary>
+        public bool SaveFoFiles { get; set; } = false;
+
 
         /// <summary>
         /// Mapping of unicode language scripts to font families

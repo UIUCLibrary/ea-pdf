@@ -51,6 +51,7 @@
     "XsltFoFilePath": "XResources\\aaa.xsl",
     "XsltDpartFilePath": "XResources\\bbb.xsl",
     "XsltRootXmpFilePath": "XResources\\ccc.xsl",
+    "SaveFoFiles": false,
 
     /*
         Mapping of unicode language scripts to font families.  This is used to select the appropriate font family for a given script.  The font family names must exist in the FO processor's font configuration.

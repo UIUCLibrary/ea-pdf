@@ -253,10 +253,11 @@ namespace UIUCLibrary.EaPdf
                 throw new Exception($"EAXS transformation to FO failed, status: {status}; review log details.");
             }
 
-#if !DEBUG
-            //Delete the intermediate FO file
-            File.Delete(foFilePath);
-#endif
+            if (!Settings.SaveFoFiles)
+            {
+                //Delete the intermediate FO file
+                File.Delete(foFilePath);
+            }
 
 #if DEBUG
             //save intermediate version of the PDF before post processing
