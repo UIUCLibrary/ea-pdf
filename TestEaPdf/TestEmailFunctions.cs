@@ -491,10 +491,10 @@ namespace UIUCLibrary.TestEaPdf
         //The expected error, warning, and message counts were set by running the test scripts as of 2024-02-29
 
         //Gmail Exports
-        [DataRow("Gmail\\Eml\\Inbox", "out_Inbox", "MD5", false, false, false, false, false, false, 0, 75, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
+        [DataRow("Gmail\\Eml\\Inbox", "out_Inbox", "MD5", false, false, false, false, false, false, 0, 78, 330, DisplayName = "xhtml-gmail-emls")] //gmail mbox export file
         [DataRow("Gmail\\Eml\\Inbox\\2016-06-23 143920 d3eb274969.eml", "out_d3eb274969", "MD5", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-23-143920-d3eb274969")] //gmail mbox export file with some weirdness
         [DataRow("Gmail\\Eml\\Inbox\\2016-06-24 002410 57b3136fd3.eml", "out_57b3136fd3", "MD5", false, false, false, false, false, false, 0, 1, 1, DisplayName = "xhtml-gmail-emls-2016-06-24-002410-57b3136fd3")] //gmail mbox export file with some html issues
-        [DataRow("Gmail\\account.mbox", "out_account", "MD5", false, false, false, false, false, false, 0, 75, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
+        [DataRow("Gmail\\account.mbox", "out_account", "MD5", false, false, false, false, false, false, 0, 78, 331, DisplayName = "xhtml-gmail-mbox")] //gmail mbox export file
 
         //Mozilla mbox with child mboxes, different combinations of settings
         [DataRow("MozillaThunderbird\\DLF Distributed Library", "out_dlf-sha1", "SHA1", false, false, false, false, false, false, 0, 9, 384, DisplayName = "xhtml-moz-dlf-sha1")]
@@ -515,9 +515,9 @@ namespace UIUCLibrary.TestEaPdf
 
 
         //Pine mbox folder
-        [DataRow("Pine", "out_pine", "MD5", false, false, false, false, false, false, 0, 583, 20799, DisplayName = "xhtml-pine-folder-one-file")]
-        [DataRow("Pine", "out_pine-one", "MD5", false, false, false, false, false, false, 0, 583, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
-        [DataRow("Pine", "out_pine-many", "MD5", false, false, false, false, false, true, 0, 583, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
+        [DataRow("Pine", "out_pine", "MD5", false, false, false, false, false, false, 0, 584, 20799, DisplayName = "xhtml-pine-folder-one-file")]
+        [DataRow("Pine", "out_pine-one", "MD5", false, false, false, false, false, false, 0, 584, 20799, DisplayName = "xhtml-pine-folder-one-file-in-subfolder")]
+        [DataRow("Pine", "out_pine-many", "MD5", false, false, false, false, false, true, 0, 584, 20799, DisplayName = "xhtml-pine-folder-one-file-per-in-subfolder")]
         //Pine mbox files with special properties
         [DataRow("Pine\\sent-mail-aug-2007", "out_pine-sent-mail-aug-2007", "MD5", false, false, false, false, false, false, 0, 278, 1301, DisplayName = "xhtml-pine-sent-mail-aug-2007")] //not an mbox file
         [DataRow("Pine\\sent-mail-jul-2006", "out_pine-sent-mail-jul-2006", "MD5", false, false, false, false, false, false, 0, 1, 466, DisplayName = "xhtml-pine-sent-mail-jul-2006")] //not an mbox file
