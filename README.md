@@ -20,8 +20,8 @@ This solution consists of three projects:
 - Console Application (EaPdfCmd)
 - Unit and Integrations Tests (TestEaPdf)
 
-Refer to the README.md file in the EaPdfCmd project for more information on how to use the code.
+Refer to the README.md file in the EaPdfCmd project for more information on how to use the tool.
 
 Also note that the most of the sample emails used in the tests are not currently included in the code repository.  For
-the time being you will need to substitute your own emails for testing purposes.  
+the time being you will need to substitute your own sample emails for testing purposes.  
 
