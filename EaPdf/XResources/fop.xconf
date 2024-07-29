@@ -20,13 +20,18 @@
 		<renderer mime="application/pdf">
 			<pdf-a-mode>PDF/A-3a</pdf-a-mode><!-- Note: This may be overridden during post-processing, depending on the processor and other factors -->
 			<version>1.7</version>
-			<!--<filterList>
+			
+			<!-- Uncomment to turn on compression
+			<filterList>
 				<value>flate</value>
-			</filterList>-->
-
+			</filterList>
+			-->
+			<!-- Comment to turn on compression -->
 			<filterList>
 				<value>null</value>
 			</filterList>
+			
+			
 			<filterList type="image">
 				<value>flate</value>
 				<value>ascii-85</value>

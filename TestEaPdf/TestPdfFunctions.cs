@@ -101,8 +101,8 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToPdfProcessorLargeFiles(string inPath, string foProcessor, bool ext, bool wrap)
         {
             //FUTURE: skip for the time being, takes too long
-            //if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
-            //    Assert.Inconclusive("Test is commented out");
+            if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+                Assert.Inconclusive("Test is commented out");
 
             TestEaxsToPdfProcessor(inPath, foProcessor, ext, wrap);
         }
@@ -282,8 +282,8 @@ namespace UIUCLibrary.TestEaPdf
         public void TestEaxsToPdfProcessorWithContinuations(string inPath, string foProcessor, bool ext, bool wrap, long maxOutFileSize)
         {
             //FUTURE: skip for the time being, takes too long
-            //if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
-            //    Assert.Inconclusive("Test is commented out");
+            if (foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
+                Assert.Inconclusive("Test is commented out");
 
             if (!foProcessor.Equals("fop", System.StringComparison.OrdinalIgnoreCase) && !foProcessor.Equals("xep", System.StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"The {nameof(foProcessor)} param must be either 'fop' or 'xep', ignoring case", nameof(foProcessor));

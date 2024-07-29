@@ -229,8 +229,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 throw new Exception("Real EmbeddedFile not found");
             }
 
-            var size = realFStream.GetAsNumber(PdfName.LENGTH)?.IntValue ?? 0;
-            if (size == 0)
+
+            if (ITextSharpHelpers.IsZeroLengthStream(realFStream))
             {
                 throw new Exception("Real EmbeddedFile size is 0");
             }
@@ -240,8 +240,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 var (fIndRef, fStream) = GetFilespecEmbeddedFile(filespec);
 
-                var dummySize = fStream.GetAsNumber(PdfName.LENGTH)?.IntValue ?? 0;
-                if (dummySize != 0)
+                if (!ITextSharpHelpers.IsZeroLengthStream(fStream))
                 {
                     throw new Exception("Dummy EmbeddedFile size is not 0");
                 }
