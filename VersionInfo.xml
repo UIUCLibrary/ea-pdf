@@ -5,7 +5,7 @@
 	
 	<PropertyGroup>
 		<VersionPrefix>0.5.0</VersionPrefix>
-		<VersionSuffix>beta.1</VersionSuffix>
+		<VersionSuffix>beta.2</VersionSuffix>
 		<IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion><!-- Include Git Commit ID -->
 		<Company>University of Illinois Board of Trustees</Company>
 		<Copyright>Copyright $([System.DateTime]::Now.ToString('yyyy')) University of Illinois Board of Trustees. All Rights Reserved.</Copyright>

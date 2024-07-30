@@ -61,3 +61,7 @@
 - Updated the FOP transformer code so that it supports the `ClassPath` and `MainClass` methods for running Java files.  The `JarFilePath` settings has been removed.
   This allowed the upgrade to latest FOP 2.9 version. One shortcoming of FOP 2.9 is that it does not correctly report its own version number, so some accommodations 
   were made for this.
+
+  ### 0.5.1-beta.2 (2024-07-30)
+- Fixed some last minute problems related to activating PDF compression
+- Fixed some last minute problems related to how duplicate filenames and duplicate files are handled.

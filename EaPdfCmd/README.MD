@@ -383,7 +383,7 @@ be changed. Note that the setting will not effect how the content is embedded in
 
 For MBOX files, subfolders in the same directory as the MBOX file and which match the name of the MBOX file, ignoring extensions, (this is how the Mozilla 
 Thunderbird email client stores emails) will also be processed, including all of its files and subfolders recursively. This will have an
-effect if the `-i, --in` option if a single MBOX file or a folder of MBOX files.
+effect if the `-i, --in` option is a single MBOX file or a folder of MBOX files.
 
 For a folder of EML files, all subfolders will also be processed recursively, looking for EML files.  For EML files, this parameter is only used if the
 `-i, --in` option is a folder of EML files.  It is ignored if the input is a single EML file.
