@@ -1,15 +1,44 @@
 ﻿using iTextSharp.text.pdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UIUCLibrary.EaPdf.Helpers.Pdf
 {
     public static class ITextSharpHelpers
     {
+        /// <summary>
+        /// Make the names unique by appending a number in parentheses to the name if it is not unique.
+        /// </summary>
+        /// <param name="nameList"></param>
+        /// <returns></returns>
+        public static List<KeyValuePair<string, PdfIndirectReference>> MakeUniqueNames(List<KeyValuePair<string, PdfIndirectReference>> nameList)
+        {
+            Dictionary<string, int> stringCounts = new();
 
+            List<KeyValuePair<string, PdfIndirectReference>> result = new();
+
+            foreach (var kvp in nameList)
+            {
+                if (stringCounts.ContainsKey(kvp.Key))
+                {
+                    stringCounts[kvp.Key]++;
+                    result.Add(new KeyValuePair<string, PdfIndirectReference>($"{kvp.Key} ({stringCounts[kvp.Key]})",kvp.Value));
+                }
+                else
+                {
+                    stringCounts[kvp.Key] = 0;
+                    result.Add(kvp);
+                }
+            }
+
+            return result;
+        }
+
+
+        /// <summary>
+        /// Compare two PdfIndirectReference objects for equality.
+        /// </summary>
+        /// <param name="indRef1"></param>
+        /// <param name="indRef2"></param>
+        /// <returns></returns>
         public static bool EqualsIndRef(this PdfIndirectReference indRef1, PdfIndirectReference indRef2)
         {
             if (indRef1 == null || indRef2 == null)

@@ -82,7 +82,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
             //Get rid of superfluous or misleading messages
 
-            messages.RemoveAll(m => m.message.StartsWith("[warning] PDF Version 1.4 doesn't support Tab Order"));  //this is corrected in post-processing, so ne need for the warning
+            messages.RemoveAll(m => m.message.StartsWith("[warning] PDF Version 1.4 doesn't support Tab Order"));  //this is corrected in post-processing, so no need for the warning
 
             List<(LogLevel level, string message)> ret = new();
 

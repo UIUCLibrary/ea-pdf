@@ -31,7 +31,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
 
         /// <summary>
         /// Track references to Filespec dictionaries by checksum and messageId
-        /// Assumes that the same message will not contain multiple attachments of the exact same file or checksum
+        /// Assumes that the _same message_ will not contain multiple attachments of the exact same file or checksum
         /// </summary>
         private Dictionary<(string checksum, string messageId), PdfIndirectReference> FilespecsByCheckSum = new();
 
@@ -205,7 +205,7 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
                 throw new Exception("Real filespecs not found");
             }
 
-            //get the real EmbeddedFile stream and makler sure that each real filespec points to the same EmbeddedFile
+            //get the real EmbeddedFile stream and make sure that each real filespec points to the same EmbeddedFile
             PdfIndirectReference? realFIndRef = null;
             PdfStream? realFStream = null;
             foreach (var (annotation, filespec, indRef) in realFileSpecs)
@@ -495,7 +495,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
         /// <returns></returns>
         private PdfDictionary ConvertToNameTree(List<KeyValuePair<string, PdfIndirectReference>> nameList)
         {
-            var sortedNameList = nameList.OrderBy(kv => kv.Key).ToList();
+            var uniqNameList = ITextSharpHelpers.MakeUniqueNames(nameList);
+
+            var sortedNameList = uniqNameList.OrderBy(kv => kv.Key,StringComparer.Ordinal).ToList();
 
             //Start with the most basic structure, a single Names dictionary at the root; this seems to be what FOP already uses regardless of the number of entries
             var names = new PdfArray();
@@ -524,7 +526,8 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             var f = fileSpec.GetAsString(PdfName.F) ?? throw new Exception("Filespec F not found");
 
             //Just use the filename as the name tree name; there might be duplicates which can cause problems for some viewers
-            return f.ToString();
+            //Some names might have file path components which should be removed
+            return Path.GetFileName(f.ToString());
 
             ////Use the file extension and the checksum to create a unique name for the name tree
             ////This avoids duplicates, but causes some viewers to display the wrong attachment files
@@ -558,58 +561,65 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             {
                 var embeddedFile = embeddedFileGrp.First();
 
-                var descs = embeddedFileGrp.Select(e => e.Description).ToList();
-
-                var objs = GetObjsFromNameTreeStartingWith(destsDict, "X_" + embeddedFile.Hash);
-                if (objs.Count == 0) continue;
-
-                var annotFileSpecList = annotFileSpecDict[embeddedFileGrp.Key];
-                foreach (var annotFileSpec in annotFileSpecList) //There can be multiple annotations pointing to the same embedded file 
+                var dests = GetObjsFromNameTreeStartingWith(destsDict, "X_" + embeddedFile.Hash);
+                if (dests.Count == 0) 
                 {
-
-                    for (int objNum = 0; objNum < objs.Count; objNum++)
-                    {
-
-                        var fileSpecIndRef = annotFileSpec.indRef;
-                        if (objNum > 0)
-                        {
-                            //if there are multiple annotations pointing to the same embedded file, create a new filespec for each annotation
-                            var embeddedFileIndRef = annotFileSpec.filespec.GetAsDict(PdfName.EF).GetAsIndirectObject(PdfName.F);
-                            fileSpecIndRef = AddFilespec(embeddedFileGrp.ElementAt(objNum), embeddedFileIndRef);
-                        }
-
-                        var (obj, indRef) = objs[objNum];
-                        var linkAnnots = linkAnnotations[indRef.ToString()];
-                        foreach (var linkAnnot in linkAnnots)
-                        {
-                            var d = new PdfDate();
-
-                            //convert the link annotation into a file attachment annotation
-                            linkAnnot.Put(PdfName.Subtype, PdfName.Fileattachment);
-                            linkAnnot.Put(PdfName.Name, new PdfName("Paperclip"));
-                            linkAnnot.Put(PdfName.Nm, new PdfString(embeddedFileGrp.Key, PdfObject.TEXT_UNICODE));
-                            linkAnnot.Put(PdfName.Contents, new PdfString(embeddedFileGrp.ElementAt(objNum).Description, PdfObject.TEXT_UNICODE));
-                            linkAnnot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
-                            linkAnnot.Put(PdfName.Creationdate, d);
-                            linkAnnot.Put(PdfName.M, d);
-                            linkAnnot.Put(PdfName.Fs, fileSpecIndRef);
-
-                            //to ensure PDF/A-3 compliance, the file attachment annotation must be listed in an AF array somewhere in the document
-                            var af = new PdfArray();
-                            af.Add(fileSpecIndRef);
-                            linkAnnot.Put(new PdfName("AF"), af);
-
-                            var ap = new PdfDictionary();
-                            ap.Put(PdfName.N, annotAppearanceStream.IndirectReference);
-                            linkAnnot.Put(PdfName.Ap, ap);
-                            linkAnnot.Remove(PdfName.A);
-                            linkAnnot.Remove(PdfName.H);
-                            linkAnnot.Remove(PdfName.Structparent);
-                        }
-                    }
+                    _logger.LogTrace($"AddFileAttachmentAnnots: No Dest found matching 'X_{embeddedFile.Hash}...'");
+                    continue;
                 }
 
+                var annotFileSpecList = annotFileSpecDict[embeddedFileGrp.Key];
+                if (annotFileSpecList.Count == 0) 
+                { 
+                    throw new Exception("AddFileAttachmentAnnots: There should be a filespec for every embedded file."); 
+                }
+
+                if(annotFileSpecList.Count != dests.Count)
+                {
+                    throw new Exception("AddFileAttachmentAnnots: The number of matching links should match the number of file specs.");
+                }
+
+                int objNum = 0;
+                foreach (var annotFileSpec in annotFileSpecList) //There can be multiple annotations pointing to the same embedded file 
+                {
+                    var fileSpecIndRef = annotFileSpec.indRef;
+
+                    var (dest, destIndRef) = dests[objNum];
+                    var linkAnnots = linkAnnotations[destIndRef.ToString()];
+                    foreach (var linkAnnot in linkAnnots)
+                    {
+                        UpdateLinkAnnot(linkAnnot, embeddedFileGrp.Key, embeddedFileGrp.ElementAt(objNum).Description, fileSpecIndRef, annotAppearanceStream);
+                    }
+                    objNum++;
+                }
             }
+        }
+
+        private void UpdateLinkAnnot(PdfDictionary linkAnnot, string nm, string desc, PdfIndirectReference fileSpecIndRef, PdfIndirectObject annotAppearanceStream)
+        {
+            var d = new PdfDate();
+
+            //convert the link annotation into a file attachment annotation
+            linkAnnot.Put(PdfName.Subtype, PdfName.Fileattachment);
+            linkAnnot.Put(PdfName.Name, new PdfName("Paperclip"));
+            linkAnnot.Put(PdfName.Nm, new PdfString(nm, PdfObject.TEXT_UNICODE));
+            linkAnnot.Put(PdfName.Contents, new PdfString(desc, PdfObject.TEXT_UNICODE));
+            linkAnnot.Put(PdfName.T, new PdfString($"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name} {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}", PdfObject.TEXT_UNICODE));
+            linkAnnot.Put(PdfName.Creationdate, d);
+            linkAnnot.Put(PdfName.M, d);
+            linkAnnot.Put(PdfName.Fs, fileSpecIndRef);
+
+            //to ensure PDF/A-3 compliance, the file attachment annotation must be listed in an AF array somewhere in the document
+            var af = new PdfArray();
+            af.Add(fileSpecIndRef);
+            linkAnnot.Put(new PdfName("AF"), af);
+
+            var ap = new PdfDictionary();
+            ap.Put(PdfName.N, annotAppearanceStream.IndirectReference);
+            linkAnnot.Put(PdfName.Ap, ap);
+            linkAnnot.Remove(PdfName.A);
+            linkAnnot.Remove(PdfName.H);
+            linkAnnot.Remove(PdfName.Structparent);
         }
 
         private PdfIndirectObject AddAnnotAppearanceStream()
@@ -1292,6 +1302,9 @@ namespace UIUCLibrary.EaPdf.Helpers.Pdf
             }
         }
 
+        /// <summary>
+        /// Cleanup and close the PdfReader and PdfStamper objects
+        /// </summary>
         private void CloseAndDispose()
         {
             _reader.RemoveUnusedObjects(); //this gets rid of orphaned XMP metadata objects, maybe among others
